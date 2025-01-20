@@ -4,7 +4,11 @@ from django.db.models import QuerySet, Count
 from django_filters.rest_framework.backends import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from rest_framework import generics
-from rest_framework.authentication import SessionAuthentication, TokenAuthentication, BasicAuthentication
+from rest_framework.authentication import (
+    SessionAuthentication,
+    TokenAuthentication,
+    BasicAuthentication,
+)
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -12,8 +16,13 @@ from rest_framework.views import APIView
 
 from .filter import IncomeFilter, get_category_expense_statistics
 from .models import Expense, Category
-from .serializers import ExpenseSerializer, CategorySerializerExpenses, ExpenseSerializersAdd, ExpenseSerializersPut, \
-    ExpenseSerializersPatch
+from .serializers import (
+    ExpenseSerializer,
+    CategorySerializerExpenses,
+    ExpenseSerializersAdd,
+    ExpenseSerializersPut,
+    ExpenseSerializersPatch,
+)
 
 
 class ExpensePagination(PageNumberPagination):
@@ -59,7 +68,7 @@ class ExpenseView(generics.ListCreateAPIView):
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context['request'] = self.request
+        context["request"] = self.request
         return context
 
     def get_serializer_class(self):
@@ -68,7 +77,7 @@ class ExpenseView(generics.ListCreateAPIView):
          выбрать нужный сериализатор для разных методов.
         :return:
         """
-        if self.request.method == 'POST':
+        if self.request.method == "POST":
             return ExpenseSerializersAdd
         return ExpenseSerializer
 
@@ -111,7 +120,7 @@ class ExpenseView(generics.ListCreateAPIView):
     ),
     delete=extend_schema(description="Удалить расход."),
 )
-@extend_schema(tags=['Expenses'])
+@extend_schema(tags=["Expenses"])
 class RetrieveUpdateDeleteExpense(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ExpenseSerializersAdd
     permission_classes = (IsAuthenticated,)
@@ -139,7 +148,9 @@ class RetrieveUpdateDeleteExpense(generics.RetrieveUpdateDestroyAPIView):
         amount = instance.amount  # Сохраняем сумму расхода
 
         # Обновляем баланс счета, добавляя обратно сумму расхода
-        account.balance += amount  # Предполагается, что у вас есть поле balance в модели Account
+        account.balance += (
+            amount  # Предполагается, что у вас есть поле balance в модели Account
+        )
         account.save()
         instance.delete()
 
@@ -183,10 +194,9 @@ class ListCategoryExpense(generics.ListCreateAPIView):
         :return QuerySet:  Возвращает список категорий расходов.
         """
         return (
-            Category.objects
-            .filter(user=self.request.user)
-            .annotate(usage_count=Count('expenses'))
-            .order_by('-usage_count')
+            Category.objects.filter(user=self.request.user)
+            .annotate(usage_count=Count("expenses"))
+            .order_by("-usage_count")
         )
 
     def perform_create(self, serializer) -> None:
@@ -239,8 +249,12 @@ class CategoryExpenseStatisticsView(APIView):
     @extend_schema(tags=["Expenses"])
     @extend_schema(
         parameters=[
-            OpenApiParameter('year', int, description='Год для статистики', required=True),
-            OpenApiParameter('month', int, description='Месяц для статистики', required=True),
+            OpenApiParameter(
+                "year", int, description="Год для статистики", required=True
+            ),
+            OpenApiParameter(
+                "month", int, description="Месяц для статистики", required=True
+            ),
         ]
     )
     def get(self, request, *args, **kwargs) -> Response:
@@ -248,8 +262,8 @@ class CategoryExpenseStatisticsView(APIView):
         Метод для получения статистики за выбранный месяц.
         :return: Список с категориями и суммой расхода за эту категорию.
         """
-        year: int = request.query_params.get('year', dt.now(UTC).year)
-        month: int = request.query_params.get('month', dt.now(UTC).month)
+        year: int = request.query_params.get("year", dt.now(UTC).year)
+        month: int = request.query_params.get("month", dt.now(UTC).month)
         if not year or not month:
             return Response({"error": "Year and month are required."}, status=400)
 
