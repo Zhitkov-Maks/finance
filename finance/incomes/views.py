@@ -113,7 +113,7 @@ class CategoryPagination(PageNumberPagination):
     max_page_size = 100
 
 
-@extend_schema(tags=["Incomes"])
+@extend_schema(tags=["Incomes_category"])
 @ListCategoryIncomeSchema
 class ListCategory(generics.ListCreateAPIView):
     serializer_class = CategorySerializer
@@ -142,7 +142,7 @@ class ListCategory(generics.ListCreateAPIView):
         serializer.save(user=self.request.user)
 
 
-@extend_schema(tags=["Incomes"])
+@extend_schema(tags=["Incomes_category"])
 @RetrieveUpdateDeleteCategoryIncomeSchema
 class RetrieveUpdateDeleteCategory(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = CategorySerializer
