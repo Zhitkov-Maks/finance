@@ -1,4 +1,5 @@
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from django.db.models import QuerySet
+from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.authentication import (
     TokenAuthentication,
@@ -10,11 +11,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Account
+from .schemas import listAccountSchema, RetrieveUpdateDeleteAccountSchema
 from .serialisers import (
     AccountSerializer,
-    AccountSerializerDetail,
-    AccountPutSerializer,
-    AccountPatchSerializer,
+    AccountSerializerDetail
 )
 
 
@@ -25,24 +25,7 @@ class AccountPagination(PageNumberPagination):
 
 
 @extend_schema(tags=["Accounts"])
-@extend_schema_view(
-    get=extend_schema(
-        description="Получить список всех счетов текущего пользователя. "
-        "Каждый аккаунт связан с пользователем и содержит "
-        "информацию о балансе.",
-        responses={
-            200: AccountSerializer(),
-        },
-    ),
-    post=extend_schema(
-        description="Создать новый счет для текущего пользователя. "
-        "Укажите название счета и начальный баланс.",
-        request=AccountSerializer,
-        responses={
-            201: AccountSerializer,
-        },
-    ),
-)
+@listAccountSchema
 class ListAccounts(generics.ListCreateAPIView):
     pagination_class = AccountPagination
     serializer_class = AccountSerializer
@@ -53,7 +36,11 @@ class ListAccounts(generics.ListCreateAPIView):
         SessionAuthentication,
     )
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
+        """
+        Переопределил метод для показа счетов только конкретного пользователя.
+        :return Queryset: Список счетов пользователя.
+        """
         return Account.objects.filter(user=self.request.user.pk).order_by("-balance")
 
     def perform_create(self, serializer):
@@ -70,30 +57,7 @@ class ListAccounts(generics.ListCreateAPIView):
 
 
 @extend_schema(tags=["Accounts"])
-@extend_schema_view(
-    get=extend_schema(
-        description="Получить детальную информацию о счете. В счет добавляется информация о "
-        "последних доходах и расходах за последние 30 дней.",
-        responses={
-            200: AccountSerializerDetail(many=True),
-        },
-    ),
-    put=extend_schema(
-        description="Обновить все данные о счете(название и баланс)",
-        request=AccountPutSerializer,
-        responses={
-            200: AccountSerializer,
-        },
-    ),
-    patch=extend_schema(
-        description="Изменить баланс счета.",
-        request=AccountPatchSerializer,
-        responses={
-            200: AccountSerializer,
-        },
-    ),
-    delete=extend_schema(description="Удалить счет."),
-)
+@RetrieveUpdateDeleteAccountSchema
 class RetrieveUpdateDeleteAccount(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAuthenticated,)
     authentication_classes = (
@@ -103,9 +67,13 @@ class RetrieveUpdateDeleteAccount(generics.RetrieveUpdateDestroyAPIView):
     )
 
     def get_serializer_class(self):
+        """
+        Переопределен метод для выбора сериализатора в зависимости от запроса.
+        :return:
+        """
         if self.request.method == "GET":
             return AccountSerializerDetail
         return AccountSerializer
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         return Account.objects.filter(user=self.request.user)
