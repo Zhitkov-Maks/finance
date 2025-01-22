@@ -2,7 +2,7 @@ from datetime import datetime as dt, UTC
 
 from django.db.models import QuerySet, Count
 from django_filters.rest_framework.backends import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import generics
 from rest_framework.authentication import (
     SessionAuthentication,
@@ -12,16 +12,19 @@ from rest_framework.authentication import (
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from .filter import IncomeFilter, get_category_expense_statistics
 from .models import Expense, Category
 from .serializers import (
     ExpenseSerializer,
     CategorySerializerExpenses,
-    ExpenseSerializersAdd,
-    ExpenseSerializersPut,
-    ExpenseSerializersPatch,
+    ExpenseSerializersAdd, CategoryExpenseStatisticsSerializer,
+)
+from .views_schemas import (
+    RetrieveUpdateDeleteCategoryExpenseSchema,
+    ExpenseViewSchema,
+    RetrieveUpdateDeleteExpenseSchema,
+    ListCategoryExpenseSchema,
 )
 
 
@@ -32,21 +35,7 @@ class ExpensePagination(PageNumberPagination):
 
 
 @extend_schema(tags=["Expenses"])
-@extend_schema_view(
-    get=extend_schema(
-        description="Получить список расходов у конкретного пользователя..",
-        responses={
-            200: ExpenseSerializer(),
-        },
-    ),
-    post=extend_schema(
-        description="Создать новый расход.",
-        request=ExpenseSerializersAdd,
-        responses={
-            201: ExpenseSerializer,
-        },
-    ),
-)
+@ExpenseViewSchema
 class ExpenseView(generics.ListCreateAPIView):
     pagination_class = ExpensePagination
     serializer_class = ExpenseSerializersAdd
@@ -97,30 +86,7 @@ class ExpenseView(generics.ListCreateAPIView):
 
 
 @extend_schema(tags=["Expenses"])
-@extend_schema_view(
-    get=extend_schema(
-        description="Получение подробной информации о расходе.",
-        responses={
-            200: ExpenseSerializer(many=True),
-        },
-    ),
-    put=extend_schema(
-        description="Обновить все данные о расходе.",
-        request=ExpenseSerializersPut,
-        responses={
-            200: ExpenseSerializer,
-        },
-    ),
-    patch=extend_schema(
-        description="Изменить сумму расхода",
-        request=ExpenseSerializersPatch,
-        responses={
-            200: ExpenseSerializer,
-        },
-    ),
-    delete=extend_schema(description="Удалить расход."),
-)
-@extend_schema(tags=["Expenses"])
+@RetrieveUpdateDeleteExpenseSchema
 class RetrieveUpdateDeleteExpense(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ExpenseSerializersAdd
     permission_classes = (IsAuthenticated,)
@@ -148,11 +114,33 @@ class RetrieveUpdateDeleteExpense(generics.RetrieveUpdateDestroyAPIView):
         amount = instance.amount  # Сохраняем сумму расхода
 
         # Обновляем баланс счета, добавляя обратно сумму расхода
-        account.balance += (
-            amount  # Предполагается, что у вас есть поле balance в модели Account
-        )
+        account.balance += amount
         account.save()
         instance.delete()
+
+    def perform_update(self, serializer) -> None:
+        """
+        Переопределяем метод для обновления расхода и корректировки баланса счета.
+        :param serializer: Сериализатор с новыми данными.
+        """
+        # Получаем экземпляр расхода перед обновлением
+        instance = self.get_object()
+
+        # Сохраняем старую сумму расхода
+        old_amount = instance.amount
+
+        # Получаем новую сумму из сериализатора
+        new_amount = serializer.validated_data.get("amount", old_amount)
+
+        # Обновляем объект с новыми данными
+        serializer.save()
+
+        # Получаем счет, связанный с расходом
+        account = instance.account
+
+        # Корректируем баланс: вычитаем старую сумму и добавляем новую
+        account.balance += (new_amount - old_amount)
+        account.save()
 
 
 class ExpenseCategoryPagination(PageNumberPagination):
@@ -162,21 +150,7 @@ class ExpenseCategoryPagination(PageNumberPagination):
 
 
 @extend_schema(tags=["Expenses_category"])
-@extend_schema_view(
-    get=extend_schema(
-        description="Получить список категорий расходов..",
-        responses={
-            200: CategorySerializerExpenses(),
-        },
-    ),
-    post=extend_schema(
-        description="Создать новую категорию для расходов.",
-        request=ExpenseSerializersAdd,
-        responses={
-            201: CategorySerializerExpenses,
-        },
-    ),
-)
+@ListCategoryExpenseSchema
 class ListCategoryExpense(generics.ListCreateAPIView):
     serializer_class = CategorySerializerExpenses
     pagination_class = ExpenseCategoryPagination
@@ -205,22 +179,7 @@ class ListCategoryExpense(generics.ListCreateAPIView):
 
 
 @extend_schema(tags=["Expenses_category"])
-@extend_schema_view(
-    get=extend_schema(
-        description="Получение подробной информации о категории.",
-        responses={
-            200: CategorySerializerExpenses(),
-        },
-    ),
-    put=extend_schema(
-        description="Обновить данные о категории расхода",
-        request=CategorySerializerExpenses,
-        responses={
-            200: ExpenseSerializer,
-        },
-    ),
-    delete=extend_schema(description="Удалить категорию расхода."),
-)
+@RetrieveUpdateDeleteCategoryExpenseSchema
 class RetrieveUpdateDeleteCategoryExpense(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = CategorySerializerExpenses
     permission_classes = (IsAuthenticated,)
@@ -238,13 +197,14 @@ class RetrieveUpdateDeleteCategoryExpense(generics.RetrieveUpdateDestroyAPIView)
         return Category.objects.filter(user=self.request.user)
 
 
-class CategoryExpenseStatisticsView(APIView):
+class CategoryExpenseStatisticsView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = (
         TokenAuthentication,
         BasicAuthentication,
         SessionAuthentication,
     )
+    serializer_class = CategoryExpenseStatisticsSerializer
 
     @extend_schema(tags=["Expenses"])
     @extend_schema(
@@ -268,4 +228,5 @@ class CategoryExpenseStatisticsView(APIView):
             return Response({"error": "Year and month are required."}, status=400)
 
         statistics = get_category_expense_statistics(request.user, year, month)
-        return Response(statistics)
+        serializer = self.get_serializer(statistics, many=True)
+        return Response(serializer.data)

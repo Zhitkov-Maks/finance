@@ -9,8 +9,9 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-
+import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -18,7 +19,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
-
+load_dotenv()
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-0_dl2(457x2=$))e23a%5y9xwc29zm6_=xz=q7+92fc%pn04n='
 
@@ -37,9 +38,20 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'app_user.apps.AppUserConfig',
+    'rest_framework',
+    'rest_framework.authtoken',
+    'djoser',
+    'accounts.apps.AccountsConfig',
+    'expenses.apps.ExpensesConfig',
+    'incomes.apps.IncomesConfig',
+    'django_filters',
+    'drf_spectacular',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -48,6 +60,13 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+CORS_ALLOW_ALL_ORIGINS = True  # Разрешить все источники (не рекомендуется в продакшене)
+# Или укажите конкретные источники
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",  # URL вашего фронтенда
+#     "https://example.com",
+# ]
 
 ROOT_URLCONF = 'finance.urls'
 
@@ -73,11 +92,22 @@ WSGI_APPLICATION = 'finance.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DB_NAME", "postgres"),
+        "USER": os.getenv("DB_USER", "admin"),
+        "PASSWORD": os.getenv("DB_PASS", "password"),
+        "HOST": os.getenv("DB_HOST", "localhost"),
+        "PORT": os.getenv("DB_PORT", "5432"),
+    },
 }
 
 
@@ -121,3 +151,44 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+DJOSER = {
+    'USER_CREATE_PASSWORD_RETYPE': True,
+    'SERIALIZERS': {
+        'user_create': 'app_user.serializers.UserCreateSerializer',
+        'user': 'app_user.serializers.UserCreateSerializer',
+    },
+}
+
+AUTH_USER_MODEL = 'app_user.CustomUser'
+
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Личный учет финансов',  # Название вашего приложения
+    'DESCRIPTION': 'Это API для управления вашими доходами и расходами, позволяет отслеживать ваши финансы..',
+    'VERSION': '0.1.0',
+    'CONTACT': {
+        'name': 'Житков Максим',
+        'email': 'm-zhitkov@inbox.ru',
+    },
+    'LICENSE': {
+        'name': 'MIT License',
+        'url': 'https://opensource.org/licenses/MIT',
+    },
+    'SERVERS': [
+        {'url': 'http://localhost:8000', 'description': 'Локальная среда разработки'},
+        {'url': 'https://api.example.com', 'description': 'Продакшн'},
+    ],
+    # Дополнительные настройки
+    'SCHEMA_PATH_PREFIX': '/api/',
+}

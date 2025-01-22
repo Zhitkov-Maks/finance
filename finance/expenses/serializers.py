@@ -29,10 +29,17 @@ class ExpenseSerializersAdd(BaseSerializerExpenses):
     class Meta(BaseSerializerExpenses.Meta):
         fields = BaseSerializerExpenses.Meta.fields
 
+
 class ExpenseSerializersPut(BaseSerializerExpenses):
     class Meta(BaseSerializerExpenses.Meta):
         fields = ["amount", "category", "account", "create_at"]
 
+
 class ExpenseSerializersPatch(BaseSerializerExpenses):
     class Meta(BaseSerializerExpenses.Meta):
         fields = ["amount"]
+
+
+class CategoryExpenseStatisticsSerializer(serializers.Serializer):
+    category_name = serializers.CharField(source='category__name')
+    total_amount = serializers.DecimalField(max_digits=10, decimal_places=2)
