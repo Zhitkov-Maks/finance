@@ -114,9 +114,7 @@ class RetrieveUpdateDeleteExpense(generics.RetrieveUpdateDestroyAPIView):
         amount = instance.amount  # Сохраняем сумму расхода
 
         # Обновляем баланс счета, добавляя обратно сумму расхода
-        account.balance += (
-            amount  # Предполагается, что у вас есть поле balance в модели Account
-        )
+        account.balance += amount
         account.save()
         instance.delete()
 
