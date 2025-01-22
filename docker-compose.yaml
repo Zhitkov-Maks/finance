@@ -1,0 +1,40 @@
+services:
+  finance-db:
+    image: postgres:15-alpine
+    container_name: finance-db
+    environment:
+      - "POSTGRES_USER=${DB_USER}"
+      - "POSTGRES_PASSWORD=${DB_PASS}"
+      - "POSTGRES_DB=${DB_NAME}"
+    ports:
+      - '5432:5432'
+    restart: always
+    volumes:
+      - ./finance-db/:/var/lib/postgresql/data
+    env_file:
+      - ./.env
+
+#  nginx:
+#    build: ./nginx
+#    ports:
+#      - "80:80"
+#    volumes:
+#      - ./staticfiles:/shop/staticfiles
+#      - ./media:/shop/media
+#    depends_on:
+#      - app
+
+#  app:
+#    build:
+#      dockerfile: Dockerfile
+#    stop_signal: SIGKILL
+#    expose:
+#      - 8000
+#    container_name: django_app
+#    restart: always
+#    env_file:
+#      - .env
+#    depends_on:
+#      - db
+#    volumes:
+#      - ./media:/shop/media
