@@ -17,7 +17,10 @@ from .serializers import (
 ExpenseViewSchema = extend_schema_view(
     get=extend_schema(
         description="Получить список расходов у конкретного пользователя..",
-        responses={200: ExpenseSerializer, 401: IsNotAuthentication},
+        responses={
+            200: ExpenseSerializer,
+            401: IsNotAuthentication
+        },
     ),
     post=extend_schema(
         description="Создать новый расход.",
