@@ -9,6 +9,10 @@ from accounts.models import Account
 
 
 class Category(models.Model):
+    """
+    Модель для представления категорий доходов пользователя.
+    """
+
     name = models.CharField(max_length=100, verbose_name="Название")
     user = models.ForeignKey(
         CustomUser, on_delete=models.CASCADE, related_name="categories", db_index=True
@@ -25,6 +29,10 @@ class Category(models.Model):
 
 
 class Income(models.Model):
+    """
+    Модель для представления доходов пользователя.
+    """
+
     amount = models.DecimalField(
         max_digits=10,
         decimal_places=2,
