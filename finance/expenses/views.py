@@ -3,7 +3,7 @@ from datetime import datetime as dt, UTC
 
 from django.db.models import QuerySet, Count
 from django_filters.rest_framework.backends import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiParameter, extend_schema_view
 from rest_framework import generics
 from rest_framework.authentication import (
     SessionAuthentication,
@@ -15,6 +15,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from accounts.models import Account
+from accounts.serializers.serializers_transfer import NotFoundError, IsNotAuthentication
+from incomes.serializers import CategoryIncomeStatisticsSerializer
 from .filter import IncomeFilter, get_category_expense_statistics
 from .models import Expense, Category
 from .serializers import (
@@ -218,6 +220,25 @@ class RetrieveUpdateDeleteCategoryExpense(generics.RetrieveUpdateDestroyAPIView)
         return Category.objects.filter(user=self.request.user)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=["Expenses"],
+        parameters=[
+            OpenApiParameter(
+                "year", int, description="Год для статистики", required=True
+            ),
+            OpenApiParameter(
+                "month", int, description="Месяц для статистики", required=True
+            ),
+        ],
+        description="Получение статистики расходов за переданный месяц и год.",
+        responses={
+            200: CategoryIncomeStatisticsSerializer,
+            401: IsNotAuthentication,
+            404: NotFoundError,
+        },
+    )
+)
 class CategoryExpenseStatisticsView(generics.GenericAPIView):
     """
     Класс для получения статистики по переданному году и месяцу.
@@ -231,17 +252,6 @@ class CategoryExpenseStatisticsView(generics.GenericAPIView):
     )
     serializer_class = CategoryExpenseStatisticsSerializer
 
-    @extend_schema(tags=["Expenses"])
-    @extend_schema(
-        parameters=[
-            OpenApiParameter(
-                "year", int, description="Год для статистики", required=True
-            ),
-            OpenApiParameter(
-                "month", int, description="Месяц для статистики", required=True
-            ),
-        ]
-    )
     def get(self, request, *args, **kwargs) -> Response:
         """
         Метод для получения статистики за выбранный месяц.
