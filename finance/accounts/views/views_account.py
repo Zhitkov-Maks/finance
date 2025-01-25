@@ -10,11 +10,11 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Account
-from .schemas import listAccountSchema, RetrieveUpdateDeleteAccountSchema
-from .serialisers import (
+from accounts.models import Account
+from accounts.schemas import listAccountSchema, RetrieveUpdateDeleteAccountSchema
+from accounts.serializers.serializers_account import (
     AccountSerializer,
-    AccountSerializerDetail
+    AccountSerializerDetail,
 )
 
 
@@ -27,6 +27,10 @@ class AccountPagination(PageNumberPagination):
 @extend_schema(tags=["Accounts"])
 @listAccountSchema
 class ListAccounts(generics.ListCreateAPIView):
+    """
+    Класс для получения списка счетов или создания нового счета пользователя.
+    """
+
     pagination_class = AccountPagination
     serializer_class = AccountSerializer
     permission_classes = (IsAuthenticated,)
@@ -44,6 +48,10 @@ class ListAccounts(generics.ListCreateAPIView):
         return Account.objects.filter(user=self.request.user.pk).order_by("-balance")
 
     def perform_create(self, serializer):
+        """
+        Метод переопределяется, чтобы включить текущего пользователя
+        в качестве дополнительного аргумента при сохранении сериализатора
+        """
         serializer.save(user=self.request.user)
 
     def create(self, request, *args, **kwargs):
@@ -59,6 +67,10 @@ class ListAccounts(generics.ListCreateAPIView):
 @extend_schema(tags=["Accounts"])
 @RetrieveUpdateDeleteAccountSchema
 class RetrieveUpdateDeleteAccount(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Класс для редактирования, удаления и просмотра конкретного счета.
+    """
+
     permission_classes = (IsAuthenticated,)
     authentication_classes = (
         TokenAuthentication,
@@ -76,4 +88,7 @@ class RetrieveUpdateDeleteAccount(generics.RetrieveUpdateDestroyAPIView):
         return AccountSerializer
 
     def get_queryset(self) -> QuerySet:
+        """
+        Переопределен метод для фильтрации по пользователю.
+        """
         return Account.objects.filter(user=self.request.user)
