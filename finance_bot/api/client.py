@@ -44,8 +44,9 @@ class Client:
         ) as client:
             async with client.delete(
                     url=self.url, headers=self.header) as response:
-                data: dict = await response.json()
-                return response.status, data
+                if response.status != 204:
+                    return response.status, await response.json()
+                return response.status, {"result": True}
 
     async def patch(self) -> Tuple[int, dict]:
         """A method for implementing patch requests."""
