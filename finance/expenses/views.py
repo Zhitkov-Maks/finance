@@ -1,8 +1,9 @@
+import decimal
 from datetime import datetime as dt, UTC
 
 from django.db.models import QuerySet, Count
 from django_filters.rest_framework.backends import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiParameter, extend_schema_view
 from rest_framework import generics
 from rest_framework.authentication import (
     SessionAuthentication,
@@ -13,12 +14,16 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from accounts.models import Account
+from accounts.serializers.serializers_transfer import NotFoundError, IsNotAuthentication
+from incomes.serializers import CategoryIncomeStatisticsSerializer
 from .filter import IncomeFilter, get_category_expense_statistics
 from .models import Expense, Category
 from .serializers import (
     ExpenseSerializer,
     CategorySerializerExpenses,
-    ExpenseSerializersAdd, CategoryExpenseStatisticsSerializer,
+    ExpenseSerializersAdd,
+    CategoryExpenseStatisticsSerializer,
 )
 from .views_schemas import (
     RetrieveUpdateDeleteCategoryExpenseSchema,
@@ -28,7 +33,11 @@ from .views_schemas import (
 )
 
 
-class ExpensePagination(PageNumberPagination):
+class Pagination(PageNumberPagination):
+    """
+    Класс для реализации пагинации.
+    """
+
     page_size = 10
     page_size_query_param = "page_size"
     max_page_size = 100
@@ -37,7 +46,11 @@ class ExpensePagination(PageNumberPagination):
 @extend_schema(tags=["Expenses"])
 @ExpenseViewSchema
 class ExpenseView(generics.ListCreateAPIView):
-    pagination_class = ExpensePagination
+    """
+    Класс для добавления расхода и для показа списка расходов.
+    """
+
+    pagination_class = Pagination
     serializer_class = ExpenseSerializersAdd
     permission_classes = (IsAuthenticated,)
     filter_backends = (DjangoFilterBackend,)
@@ -56,6 +69,9 @@ class ExpenseView(generics.ListCreateAPIView):
         return Expense.objects.filter(user=self.request.user)
 
     def get_serializer_context(self):
+        """
+        Добавляем request в сериализатор.
+        """
         context = super().get_serializer_context()
         context["request"] = self.request
         return context
@@ -63,7 +79,7 @@ class ExpenseView(generics.ListCreateAPIView):
     def get_serializer_class(self):
         """
         Переопределяем чтобы,
-         выбрать нужный сериализатор для разных методов.
+        выбрать нужный сериализатор для разных методов.
         :return:
         """
         if self.request.method == "POST":
@@ -76,18 +92,19 @@ class ExpenseView(generics.ListCreateAPIView):
         с выбранного счета.
         :param serializer: Сериализатор.
         """
-        # Сохранение объекта с текущим пользователем и пришедшими данными
-        income = serializer.save(user=self.request.user)
-        # Получаем счет куда поступил расход
-        account = income.account
-        # Обновляем и сохраняем баланс счета
-        account.balance -= income.amount
+        expense: Expense = serializer.save(user=self.request.user)
+        account: Account = expense.account
+        account.balance -= expense.amount
         account.save()
 
 
 @extend_schema(tags=["Expenses"])
 @RetrieveUpdateDeleteExpenseSchema
 class RetrieveUpdateDeleteExpense(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Класс для редактирования, удаления и получения детальной информации о расходе.
+    """
+
     serializer_class = ExpenseSerializersAdd
     permission_classes = (IsAuthenticated,)
     authentication_classes = (
@@ -110,8 +127,10 @@ class RetrieveUpdateDeleteExpense(generics.RetrieveUpdateDestroyAPIView):
         с которого было списание.
         :param instance: Объект расхода.
         """
-        account = instance.account  # Получаем счет, с которого был списан расход
-        amount = instance.amount  # Сохраняем сумму расхода
+        account: Account = (
+            instance.account
+        )  # Получаем счет, с которого был списан расход
+        amount: decimal = instance.amount  # Сохраняем сумму расхода
 
         # Обновляем баланс счета, добавляя обратно сумму расхода
         account.balance += amount
@@ -124,36 +143,35 @@ class RetrieveUpdateDeleteExpense(generics.RetrieveUpdateDestroyAPIView):
         :param serializer: Сериализатор с новыми данными.
         """
         # Получаем экземпляр расхода перед обновлением
-        instance = self.get_object()
+        instance: Expense = self.get_object()
 
         # Сохраняем старую сумму расхода
-        old_amount = instance.amount
+        old_amount: decimal = instance.amount
 
         # Получаем новую сумму из сериализатора
-        new_amount = serializer.validated_data.get("amount", old_amount)
+        new_amount: decimal = serializer.validated_data.get("amount", old_amount)
 
         # Обновляем объект с новыми данными
         serializer.save()
 
         # Получаем счет, связанный с расходом
-        account = instance.account
+        account: Account = instance.account
 
         # Корректируем баланс: вычитаем старую сумму и добавляем новую
-        account.balance += (new_amount - old_amount)
+        account.balance += new_amount - old_amount
         account.save()
-
-
-class ExpenseCategoryPagination(PageNumberPagination):
-    page_size = 10
-    page_size_query_param = "page_size"
-    max_page_size = 100
 
 
 @extend_schema(tags=["Expenses_category"])
 @ListCategoryExpenseSchema
 class ListCategoryExpense(generics.ListCreateAPIView):
+    """
+    Класс для получения списка категорий у пользователя, а так же создание
+    новой категории.
+    """
+
     serializer_class = CategorySerializerExpenses
-    pagination_class = ExpenseCategoryPagination
+    pagination_class = Pagination
     permission_classes = (IsAuthenticated,)
     authentication_classes = (
         TokenAuthentication,
@@ -181,6 +199,10 @@ class ListCategoryExpense(generics.ListCreateAPIView):
 @extend_schema(tags=["Expenses_category"])
 @RetrieveUpdateDeleteCategoryExpenseSchema
 class RetrieveUpdateDeleteCategoryExpense(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Класс для редактирования, удаления и получения детальной информации о категории.
+    """
+
     serializer_class = CategorySerializerExpenses
     permission_classes = (IsAuthenticated,)
     authentication_classes = (
@@ -188,6 +210,7 @@ class RetrieveUpdateDeleteCategoryExpense(generics.RetrieveUpdateDestroyAPIView)
         BasicAuthentication,
         SessionAuthentication,
     )
+    http_method_names: list = ["get", "put", "delete"]
 
     def get_queryset(self) -> QuerySet:
         """
@@ -197,7 +220,30 @@ class RetrieveUpdateDeleteCategoryExpense(generics.RetrieveUpdateDestroyAPIView)
         return Category.objects.filter(user=self.request.user)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=["Expenses"],
+        parameters=[
+            OpenApiParameter(
+                "year", int, description="Год для статистики", required=True
+            ),
+            OpenApiParameter(
+                "month", int, description="Месяц для статистики", required=True
+            ),
+        ],
+        description="Получение статистики расходов за переданный месяц и год.",
+        responses={
+            200: CategoryIncomeStatisticsSerializer,
+            401: IsNotAuthentication,
+            404: NotFoundError,
+        },
+    )
+)
 class CategoryExpenseStatisticsView(generics.GenericAPIView):
+    """
+    Класс для получения статистики по переданному году и месяцу.
+    """
+
     permission_classes = [IsAuthenticated]
     authentication_classes = (
         TokenAuthentication,
@@ -206,17 +252,6 @@ class CategoryExpenseStatisticsView(generics.GenericAPIView):
     )
     serializer_class = CategoryExpenseStatisticsSerializer
 
-    @extend_schema(tags=["Expenses"])
-    @extend_schema(
-        parameters=[
-            OpenApiParameter(
-                "year", int, description="Год для статистики", required=True
-            ),
-            OpenApiParameter(
-                "month", int, description="Месяц для статистики", required=True
-            ),
-        ]
-    )
     def get(self, request, *args, **kwargs) -> Response:
         """
         Метод для получения статистики за выбранный месяц.

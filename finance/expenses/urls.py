@@ -4,7 +4,8 @@ from .views import (
     ExpenseView,
     RetrieveUpdateDeleteExpense,
     ListCategoryExpense,
-    RetrieveUpdateDeleteCategoryExpense, CategoryExpenseStatisticsView,
+    RetrieveUpdateDeleteCategoryExpense,
+    CategoryExpenseStatisticsView,
 )
 
 urlpatterns = [

@@ -1,24 +1,46 @@
 from rest_framework import serializers
 
 from .models import Income, Category
-from accounts.serialisers import AccountSerializer
+from accounts.serializers.serializers_account import AccountSerializer
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    """
+    Нужен для сериализации категорий доходов.
+    """
+
     class Meta:
         model = Category
         fields = ["id", "name"]
 
 
 class IncomeSerializer(serializers.ModelSerializer):
+    """
+    Нужен для сериализации доходов.
+    """
+
     category = CategorySerializer(read_only=True)
     account = AccountSerializer(read_only=True)
+
     class Meta:
         model = Income
-        fields = ['id', 'amount', "create_at", "category", "account"]
+        fields = ["id", "amount", "create_at", "category", "account"]
 
 
 class IncomeSerializersAdd(serializers.ModelSerializer):
+    """
+    Нужен для сериализации входных данных для добавления дохода.
+    """
+
     class Meta:
         model = Income
-        fields = ['id', 'amount', "create_at", "category", "account"]
+        fields = ["id", "amount", "create_at", "category", "account"]
+
+
+class CategoryIncomeStatisticsSerializer(serializers.Serializer):
+    """
+    Нужен для показа статистики доходов по месяцам.
+    """
+
+    category_name = serializers.CharField(source="category__name")
+    total_amount = serializers.DecimalField(max_digits=10, decimal_places=2)

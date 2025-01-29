@@ -5,19 +5,21 @@ from .views import (
     RetrieveUpdateDeleteIncome,
     ListCategory,
     RetrieveUpdateDeleteCategory,
+    CategoryIncomeStatisticsView,
 )
 
 urlpatterns = [
-    path("incomes/", IncomeView.as_view(), name="incomes"),
+    path("", IncomeView.as_view(), name="incomes"),
     path(
-        "incomes/<int:pk>/",
+        "<int:pk>/",
         RetrieveUpdateDeleteIncome.as_view(),
         name="retrieve-update-delete-income",
     ),
-    path("incomes/category/", ListCategory.as_view(), name="category"),
+    path("category/", ListCategory.as_view(), name="category"),
     path(
-        "incomes/category/<int:pk>/",
+        "category/<int:pk>/",
         RetrieveUpdateDeleteCategory.as_view(),
         name="retrieve-update-delete-category",
     ),
+    path("statistics/", CategoryIncomeStatisticsView.as_view(), name="statistics"),
 ]

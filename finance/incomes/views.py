@@ -1,8 +1,9 @@
 import decimal
+from datetime import datetime as dt, UTC
 
 from django.db.models import QuerySet, Count
 from django_filters.rest_framework.backends import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter, extend_schema_view
 from rest_framework import generics
 from rest_framework.authentication import (
     SessionAuthentication,
@@ -11,9 +12,11 @@ from rest_framework.authentication import (
 )
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from accounts.models import Account
-from .filter import IncomeFilter
+from accounts.serializers.serializers_transfer import NotFoundError, IsNotAuthentication
+from .filter import IncomeFilter, get_category_income_statistics
 from .models import Income, Category
 from .schemas import (
     IncomesViewSchema,
@@ -21,10 +24,15 @@ from .schemas import (
     ListCategoryIncomeSchema,
     RetrieveUpdateDeleteCategoryIncomeSchema,
 )
-from .serializers import IncomeSerializer, CategorySerializer, IncomeSerializersAdd
+from .serializers import (
+    IncomeSerializer,
+    CategorySerializer,
+    IncomeSerializersAdd,
+    CategoryIncomeStatisticsSerializer,
+)
 
 
-class IncomePagination(PageNumberPagination):
+class Pagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = "page_size"
     max_page_size = 100
@@ -33,7 +41,11 @@ class IncomePagination(PageNumberPagination):
 @extend_schema(tags=["Incomes"])
 @IncomesViewSchema
 class IncomeView(generics.ListCreateAPIView):
-    pagination_class = IncomePagination
+    """
+    Класс для получения списка доходов и создания нового дохода.
+    """
+
+    pagination_class = Pagination
     serializer_class = IncomeSerializersAdd
     permission_classes = (IsAuthenticated,)
     filter_backends = (DjangoFilterBackend,)
@@ -45,19 +57,25 @@ class IncomeView(generics.ListCreateAPIView):
     )
 
     def get_queryset(self) -> QuerySet:
+        """
+        Метод переопределен для фильтрации доходов по пользователю.
+        """
         return Income.objects.filter(user=self.request.user)
 
     def get_serializer_class(self):
+        """
+        Выбор сериализатора в зависимости от метода.
+        """
         if self.request.method == "POST":
             return IncomeSerializersAdd
         return IncomeSerializer
 
     def perform_create(self, serializer) -> None:
-        # Сохранение объекта с текущим пользователем и пришедшими данными
-        income = serializer.save(user=self.request.user)
-        # Получаем счет куда поступил доход
-        account = income.account
-        # Обновляем и сохраняем баланс счета
+        """
+        Добавление баланса в выбранный счет.
+        """
+        income: Income = serializer.save(user=self.request.user)
+        account: Account = income.account
         account.balance += income.amount  # Добавьте сумму дохода к балансу
         account.save()
 
@@ -65,6 +83,10 @@ class IncomeView(generics.ListCreateAPIView):
 @extend_schema(tags=["Incomes"])
 @RetrieveUpdateDeleteIncomeSchema
 class RetrieveUpdateDeleteIncome(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Класс для редактирования, удаления и получения детальной информации о доходе.
+    """
+
     serializer_class = IncomeSerializersAdd
     permission_classes = (IsAuthenticated,)
     authentication_classes = (
@@ -73,7 +95,11 @@ class RetrieveUpdateDeleteIncome(generics.RetrieveUpdateDestroyAPIView):
         SessionAuthentication,
     )
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
+        """
+        Метод переопределен для фильтрации по пользователю.
+        :return:
+        """
         return Income.objects.filter(user=self.request.user)
 
     def perform_destroy(self, instance: Income) -> None:
@@ -83,9 +109,8 @@ class RetrieveUpdateDeleteIncome(generics.RetrieveUpdateDestroyAPIView):
         :param instance: Объект дохода.
         """
         account: Account = instance.account  # Получаем счет
-        amount = instance.amount  # Сохраняем сумму дохода
+        amount: decimal = instance.amount  # Сохраняем сумму дохода
 
-        # Обновляем баланс счета
         account.balance -= amount
         account.save()
         instance.delete()
@@ -100,24 +125,20 @@ class RetrieveUpdateDeleteIncome(generics.RetrieveUpdateDestroyAPIView):
         new_amount: decimal = serializer.validated_data.get("amount", old_amount)
         serializer.save()
 
-        # Получаем счет, связанный с доходом
         account: Account = instance.account
-        # Корректируем баланс: вычитаем старую сумму и добавляем новую
         account.balance -= new_amount - old_amount
         account.save()
-
-
-class CategoryPagination(PageNumberPagination):
-    page_size = 10
-    page_size_query_param = "page_size"
-    max_page_size = 100
 
 
 @extend_schema(tags=["Incomes_category"])
 @ListCategoryIncomeSchema
 class ListCategory(generics.ListCreateAPIView):
+    """
+    Класс для получения списка категорий пользователя, а так же создания новой категории.
+    """
+
     serializer_class = CategorySerializer
-    pagination_class = CategoryPagination
+    pagination_class = Pagination
     permission_classes = (IsAuthenticated,)
     authentication_classes = (
         TokenAuthentication,
@@ -145,6 +166,10 @@ class ListCategory(generics.ListCreateAPIView):
 @extend_schema(tags=["Incomes_category"])
 @RetrieveUpdateDeleteCategoryIncomeSchema
 class RetrieveUpdateDeleteCategory(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Класс для редактирования категорий, удаления и получения подробной информации.
+    """
+
     serializer_class = CategorySerializer
     permission_classes = (IsAuthenticated,)
     authentication_classes = (
@@ -152,6 +177,7 @@ class RetrieveUpdateDeleteCategory(generics.RetrieveUpdateDestroyAPIView):
         BasicAuthentication,
         SessionAuthentication,
     )
+    http_method_names = ["get", "put", "delete"]
 
     def get_queryset(self) -> QuerySet:
         """
@@ -159,3 +185,50 @@ class RetrieveUpdateDeleteCategory(generics.RetrieveUpdateDestroyAPIView):
         собственным категориям, а не к категориям других пользователей.
         """
         return Category.objects.filter(user=self.request.user)
+
+
+@extend_schema_view(
+    get=extend_schema(
+        tags=["Incomes"],
+        parameters=[
+            OpenApiParameter(
+                "year", int, description="Год для статистики", required=True
+            ),
+            OpenApiParameter(
+                "month", int, description="Месяц для статистики", required=True
+            ),
+        ],
+        description="Получение статистики доходов за переданный месяц и год.",
+        responses={
+            200: CategoryIncomeStatisticsSerializer,
+            401: IsNotAuthentication,
+            404: NotFoundError,
+        },
+    )
+)
+class CategoryIncomeStatisticsView(generics.GenericAPIView):
+    """
+    Класс для получения статистики доходов по переданному году и месяцу.
+    """
+
+    permission_classes = [IsAuthenticated]
+    authentication_classes = (
+        TokenAuthentication,
+        BasicAuthentication,
+        SessionAuthentication,
+    )
+    serializer_class = CategoryIncomeStatisticsSerializer
+
+    def get(self, request, *args, **kwargs) -> Response:
+        """
+        Метод для получения статистики за выбранный месяц.
+        :return: Список с категориями и суммой расхода за эту категорию.
+        """
+        year: int = request.query_params.get("year", dt.now(UTC).year)
+        month: int = request.query_params.get("month", dt.now(UTC).month)
+        if not year or not month:
+            return Response({"error": "Year and month are required."}, status=400)
+
+        statistics = get_category_income_statistics(request.user, year, month)
+        serializer = self.get_serializer(statistics, many=True)
+        return Response(serializer.data)

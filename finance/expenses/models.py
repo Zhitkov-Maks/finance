@@ -8,6 +8,9 @@ from accounts.models import Account
 
 
 class Category(models.Model):
+    """
+    Модель для представления категорий расходов пользователя.
+    """
     name = models.CharField(max_length=100, verbose_name="Название расхода")
     user = models.ForeignKey(
         CustomUser, on_delete=models.CASCADE, related_name="classes", db_index=True
@@ -24,6 +27,10 @@ class Category(models.Model):
 
 
 class Expense(models.Model):
+    """
+    Модель для представления расходов пользователя.
+    """
+
     amount = models.DecimalField(
         max_digits=10,
         decimal_places=2,
