@@ -35,7 +35,7 @@ async def start_account(callback: CallbackQuery, state: FSMContext):
 
     await state.set_state(AccountsState.show)
     await callback.message.answer(
-        text=f"Баланс на ваших счетах составляет {total_balance:_}₽",
+        text=f"Баланс {total_balance:_}₽. Без учета неактивных счетов.",
         reply_markup=keyword,
     )
 
