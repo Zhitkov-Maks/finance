@@ -4,12 +4,17 @@ from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 
-from api.accounts import get_all_accounts, get_full_info, delete_account_by_id
+from api.accounts import (
+    get_all_accounts,
+    get_full_info,
+    delete_account_by_id,
+    change_toggle_active,
+)
 from handlers.decorator_handler import decorator_errors
 from keyboards.accounts import create_list_account, get_action_accounts
 from keyboards.keyboards import confirm_menu, main_menu
 from states.accounts import AccountsState
-from utils.accounts import generate_message_answer
+from utils.accounts import generate_message_answer, update_account_state
 
 account = Router()
 
@@ -31,7 +36,7 @@ async def start_account(callback: CallbackQuery, state: FSMContext):
     await state.set_state(AccountsState.show)
     await callback.message.answer(
         text=f"Баланс на ваших счетах составляет {total_balance:_}₽",
-        reply_markup=keyword
+        reply_markup=keyword,
     )
 
 
@@ -66,19 +71,42 @@ async def prev_output_list_habits(call: CallbackQuery, state: FSMContext) -> Non
     await call.message.edit_reply_markup(reply_markup=keyword)
 
 
+@account.callback_query(F.data == "change-toggle")
+async def change_toggle(callback: CallbackQuery, state: FSMContext) -> None:
+    """Toggle the active status of an account."""
+    data = await state.get_data()
+    account_id = data.get("account_id")
+    current_active = data.get("is_active", False)
+
+    # Toggle the activity status
+    new_active_status = not current_active
+    await change_toggle_active(account_id, callback.from_user.id, new_active_status)
+
+    # Fetch updated account info
+    response = await get_full_info(int(account_id), callback.from_user.id)
+    await update_account_state(state, response)
+
+    # Update reply markup based on new active status
+    keyword = await get_action_accounts(response.get("is_active"))
+    await callback.message.edit_reply_markup(reply_markup=keyword)
+
+
 @account.callback_query(AccountsState.show, F.data.isdigit())
 @decorator_errors
 async def detail_account(call: CallbackQuery, state: FSMContext) -> None:
     """Show detailed account information."""
-    response = await get_full_info(int(call.data), call.from_user.id)
-    text: str = await generate_message_answer(response)
+    account_id = int(call.data)
 
-    await state.update_data(account_id=call.data, account=response.get("name"))
-    await state.set_state(AccountsState.action)
+    # Fetch account info
+    response = await get_full_info(account_id, call.from_user.id)
+    await update_account_state(state, response)
 
-    keyword: InlineKeyboardMarkup = await get_action_accounts()
+    # Generate and send the response text
+    text = await generate_message_answer(response)
     await call.message.answer(
-        text=text, parse_mode="HTML", reply_markup=keyword
+        text=text,
+        parse_mode="HTML",
+        reply_markup=await get_action_accounts(response.get("is_active")),
     )
 
 
@@ -86,10 +114,7 @@ async def detail_account(call: CallbackQuery, state: FSMContext) -> None:
 async def remove_confirm(callback: CallbackQuery, state: FSMContext) -> None:
     """Confirmation of deletion."""
     await state.set_state(AccountsState.remove)
-    await callback.message.answer(
-        text="Вы уверены?",
-        reply_markup=confirm_menu
-    )
+    await callback.message.answer(text="Вы уверены?", reply_markup=confirm_menu)
 
 
 @account.callback_query(AccountsState.remove, F.data == "continue")
@@ -102,6 +127,5 @@ async def remove_account_by_id(callback: CallbackQuery, state: FSMContext) -> No
     await delete_account_by_id(data["account_id"], callback.from_user.id)
     await state.clear()
     await callback.message.answer(
-        text=f"Счет <{data['account']}> был удален!",
-        reply_markup=main_menu
+        text=f"Счет <{data['account']}> был удален!", reply_markup=main_menu
     )
