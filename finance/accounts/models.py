@@ -15,6 +15,7 @@ class Account(models.Model):
     balance = models.DecimalField(
         max_digits=10, decimal_places=2, default=0, verbose_name="Баланс"
     )
+    is_active = models.BooleanField(default=True, verbose_name="Показать/Скрыть")
 
     def __str__(self):
         return self.name

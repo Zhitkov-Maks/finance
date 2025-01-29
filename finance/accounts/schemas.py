@@ -4,7 +4,7 @@ from accounts.serializers.serializers_account import (
     AccountSerializer,
     AccountSerializerDetail,
     AccountPutSerializer,
-    AccountPatchSerializer,
+    AccountPatchSerializer, AccountListResponseSerializer,
 )
 from accounts.serializers.serializers_transfer import (
     TransferSerializer,
@@ -14,20 +14,20 @@ from accounts.serializers.serializers_transfer import (
 )
 
 
-# Схемы для получения списка счетов и для создания нового счета.
+# Assuming AccountSerializer is defined correctly elsewhere
 listAccountSchema = extend_schema_view(
     get=extend_schema(
         description="Получить список всех счетов текущего пользователя. "
-        "Каждый аккаунт связан с пользователем и содержит "
-        "информацию о балансе.",
+                    "Каждый аккаунт связан с пользователем и содержит "
+                    "информацию о балансе.",
         responses={
-            200: AccountSerializer(),
+            200: AccountListResponseSerializer,
             401: IsNotAuthentication,
         },
     ),
     post=extend_schema(
         description="Создать новый счет для текущего пользователя. "
-        "Укажите название счета и начальный баланс.",
+                    "Укажите название счета и начальный баланс.",
         request=AccountSerializer,
         responses={
             201: AccountSerializer,

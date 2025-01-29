@@ -1,6 +1,3 @@
-from datetime import timedelta
-
-from django.utils import timezone
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
@@ -36,12 +33,19 @@ class AccountExpenseSerializer(serializers.ModelSerializer):
         fields = ["id", "amount", "create_at"]
 
 
-class AccountSerializer(BaseAccountSerializer):
+
+class AccountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Account
+        fields = ['id', 'name', 'balance', 'is_active']
+
+
+class AccountListResponseSerializer(serializers.Serializer):
     """
-    Нужен для получения списка счетов.
+    Сериализатор для отображения списка счетов с общим балансом.
     """
-    class Meta(BaseAccountSerializer.Meta):
-        pass
+    accounts = serializers.ListField(child=AccountSerializer())
+    total_balance = serializers.DecimalField(max_digits=10, decimal_places=2)
 
 
 class AccountSerializerDetail(serializers.ModelSerializer):
@@ -54,18 +58,16 @@ class AccountSerializerDetail(serializers.ModelSerializer):
 
     class Meta:
         model = Account
-        fields = ["id", "name", "balance", "incomes", "expenses"]
+        fields = ["id", "name", "balance", "is_active", "incomes", "expenses"]
 
     @extend_schema_field(AccountIncomeSerializer(many=True))
     def get_incomes(self, obj):
-        two_weeks_ago = timezone.now() - timedelta(days=30)
-        incomes_queryset = obj.incomes.filter(create_at__gte=two_weeks_ago)
+        incomes_queryset = obj.incomes.order_by('-create_at')[:10]
         return AccountIncomeSerializer(incomes_queryset, many=True).data
 
-    @extend_schema_field(AccountIncomeSerializer(many=True))
+    @extend_schema_field(AccountExpenseSerializer(many=True))
     def get_expenses(self, obj):
-        two_weeks_ago = timezone.now() - timedelta(days=30)
-        expenses_queryset = obj.expenses.filter(create_at__gte=two_weeks_ago)
+        expenses_queryset = obj.expenses.order_by('-create_at')[:10]
         return AccountExpenseSerializer(expenses_queryset, many=True).data
 
 
@@ -83,3 +85,12 @@ class AccountPatchSerializer(BaseAccountSerializer):
     """
     class Meta(BaseAccountSerializer.Meta):
         fields = ["balance"]
+
+
+class AccountToggleStatusSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для отображения информации о счете после переключения активности.
+    """
+    class Meta:
+        model = Account
+        fields = ['is_active']

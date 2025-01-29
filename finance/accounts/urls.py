@@ -1,6 +1,10 @@
 from django.urls import path
 
-from .views.views_account import ListAccounts, RetrieveUpdateDeleteAccount
+from .views.views_account import (
+    ListAccounts,
+    RetrieveUpdateDeleteAccount,
+    ToggleAccountActiveStatusView,
+)
 from .views.views_transfer import (
     TransferFundsView,
     TransferHistoryView,
@@ -17,4 +21,9 @@ urlpatterns = [
     path("transfer/", TransferFundsView.as_view(), name="transfer_funds"),
     path("transfers/history/", TransferHistoryView.as_view(), name="transfer_history"),
     path("transfer/<int:pk>/", TransferDetailView.as_view(), name="transfer_detail"),
+    path(
+        "<int:pk>/toggle-active/",
+        ToggleAccountActiveStatusView.as_view(),
+        name="toggle-account-active",
+    ),
 ]
