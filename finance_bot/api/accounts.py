@@ -33,7 +33,7 @@ async def get_all_accounts(user_id: int, page=1, page_size=10) -> dict:
 
 async def get_full_info(
     account_id: int, user_id: int
-) -> dict[str, list[dict[str, int]] | dict[str, str] | float]:
+) -> dict[str, list[dict[str, int]] | dict[str, str] | float | bool]:
     """
     Request for detailed account information.
     :param account_id: ID account.
@@ -77,5 +77,20 @@ async def edit_account(account_id: int, user_id: int, data: dict) -> None:
     else:
         status_code, response = await client.put()
 
+    if status_code != 200:
+        raise HTTPException(response.get("detail"))
+
+
+async def change_toggle_active(account_id: int, user_id: int, is_active: bool) -> None:
+    """
+    Request to change account status.
+    :param account_id:
+    :param user_id:
+    :param is_active:
+    :return:
+    """
+    url: str = accounts_url + f"{account_id}/toggle-active/"
+    client: Client = await create_client(user_id, url, {"is_active": is_active})
+    status_code, response = await client.patch()
     if status_code != 200:
         raise HTTPException(response.get("detail"))
