@@ -7,7 +7,7 @@ from aiogram.types import Message, CallbackQuery
 from api.auth import registration, login_user
 from config import BOT_TOKEN
 from states.register import RegisterState
-from keyboards.keyboards import cancel, main_menu
+from keyboards.keyboards import cancel_, main_menu
 from loader import enter_email, password, success_registration
 from utils.register import is_valid_email, is_valid_password, create_data
 
@@ -19,7 +19,7 @@ bot = Bot(token=BOT_TOKEN)
 async def input_email(call: CallbackQuery, state: FSMContext) -> None:
     """The handler for the email request."""
     await state.set_state(RegisterState.email)
-    await call.message.answer(text=enter_email, parse_mode="HTML", reply_markup=cancel)
+    await call.message.answer(text=enter_email, parse_mode="HTML", reply_markup=cancel_)
 
 
 @register_route.message(RegisterState.email)
@@ -33,12 +33,12 @@ async def input_password(
         await state.update_data(email=mess.text)
         await state.set_state(RegisterState.password)
         await mess.answer(
-            text=password, parse_mode="HTML", reply_markup=cancel
+            text=password, parse_mode="HTML", reply_markup=cancel_
         )
     else:
         text: str = "Ваш email не соответствует требованиям! "
         await mess.answer(
-            text=text + enter_email, parse_mode="HTML", reply_markup=cancel
+            text=text + enter_email, parse_mode="HTML", reply_markup=cancel_
         )
 
 
@@ -66,5 +66,5 @@ async def final_registration(
     else:
         text: str = "Ваш пароль не соответствует требованиям! "
         await message.answer(
-            text=text + password, parse_mode="HTML", reply_markup=cancel
+            text=text + password, parse_mode="HTML", reply_markup=cancel_
         )
