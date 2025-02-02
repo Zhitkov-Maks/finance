@@ -66,18 +66,21 @@ async def delete_object_by_id(url: str, user_id: int) -> None:
         raise HTTPException(response.get("detail"))
 
 
-async def edit_object(url: str, user_id: int, data: dict) -> None:
+async def edit_object(url: str, user_id: int, data: dict, method: str) -> dict:
     """
     Request for account change.
+    :param method:
     :param data: Dictionary with data for editing.
     :param url: URL.
     :param user_id: ID user.
     """
     client: Client = await create_client(user_id, url, data)
-    if data["name"] is None:
+    if method == "PATCH":
         status_code, response = await client.patch()
     else:
         status_code, response = await client.put()
 
     if status_code != 200:
         raise HTTPException(response.get("detail"))
+
+    return response
