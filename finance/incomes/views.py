@@ -28,7 +28,7 @@ from .serializers import (
     IncomeSerializer,
     CategorySerializer,
     IncomeSerializersAdd,
-    CategoryIncomeStatisticsSerializer, IncomeSerializerGet,
+    CategoryIncomeStatisticsSerializer, IncomeSerializerGet, IncomeSerializersPatch,
 )
 
 
@@ -102,13 +102,26 @@ class RetrieveUpdateDeleteIncome(generics.RetrieveUpdateDestroyAPIView):
     Класс для редактирования, удаления и получения детальной информации о доходе.
     """
 
-    serializer_class = IncomeSerializerGet
+    serializer_class = IncomeSerializer
     permission_classes = (IsAuthenticated,)
     authentication_classes = (
         TokenAuthentication,
         BasicAuthentication,
         SessionAuthentication,
     )
+
+    def get_serializer_class(self):
+
+        if self.request.method == "PUT":
+            return IncomeSerializersAdd
+
+        elif self.request.method == "PATCH":
+            return IncomeSerializersPatch
+
+        elif self.request.method == "GET":
+            return IncomeSerializerGet
+
+        return super().get_serializer_class()
 
     def get_queryset(self) -> QuerySet:
         """

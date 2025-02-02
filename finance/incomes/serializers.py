@@ -44,6 +44,12 @@ class IncomeSerializerGet(serializers.ModelSerializer):
         fields = ["id", "amount", "create_at", "category", "account"]
 
 
+class IncomeSerializersPatch(serializers.ModelSerializer):
+    class Meta:
+        model = Income
+        fields = ["amount"]
+
+
 class CategoryIncomeStatisticsSerializer(serializers.Serializer):
     """
     Нужен для показа статистики доходов по месяцам.
