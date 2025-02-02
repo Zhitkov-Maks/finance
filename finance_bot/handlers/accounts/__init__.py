@@ -1,7 +1,7 @@
 __all__ = [
     "account",
-    "edit"
+    "edit_acc_router"
 ]
 
-from handlers.accounts.edit_account import edit
+from handlers.accounts.edit_account import edit_acc_router
 from handlers.accounts.accounts import account
