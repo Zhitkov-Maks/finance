@@ -60,7 +60,7 @@ class Income(models.Model):
         db_index=True,
         verbose_name="Счет",
     )
-    create_at = models.DateTimeField(auto_now=True, verbose_name="Дата операции")
+    create_at = models.DateTimeField(verbose_name="Дата операции")
 
     def __str__(self):
         return f"{self.amount} {self.category.name} {self.user.email}"

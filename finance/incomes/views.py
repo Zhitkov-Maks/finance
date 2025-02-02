@@ -4,7 +4,7 @@ from datetime import datetime as dt, UTC
 from django.db.models import QuerySet, Count
 from django_filters.rest_framework.backends import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, OpenApiParameter, extend_schema_view
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.authentication import (
     SessionAuthentication,
     TokenAuthentication,
@@ -28,7 +28,7 @@ from .serializers import (
     IncomeSerializer,
     CategorySerializer,
     IncomeSerializersAdd,
-    CategoryIncomeStatisticsSerializer,
+    CategoryIncomeStatisticsSerializer, IncomeSerializerGet,
 )
 
 
@@ -46,7 +46,7 @@ class IncomeView(generics.ListCreateAPIView):
     """
 
     pagination_class = Pagination
-    serializer_class = IncomeSerializersAdd
+    serializer_class = IncomeSerializer
     permission_classes = (IsAuthenticated,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = IncomeFilter
@@ -76,8 +76,23 @@ class IncomeView(generics.ListCreateAPIView):
         """
         income: Income = serializer.save(user=self.request.user)
         account: Account = income.account
-        account.balance += income.amount  # Добавьте сумму дохода к балансу
+        account.balance += income.amount
         account.save()
+
+    def create(self, request, *args, **kwargs):
+        """
+        Переопределение метода создания для возврата сериализованного
+        объекта с использованием другого сериализатора.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        self.perform_create(serializer)
+
+        # Используем другой сериализатор для возврата созданного объекта
+        response_serializer = IncomeSerializer(serializer.instance)
+
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 
 @extend_schema(tags=["Incomes"])
@@ -87,7 +102,7 @@ class RetrieveUpdateDeleteIncome(generics.RetrieveUpdateDestroyAPIView):
     Класс для редактирования, удаления и получения детальной информации о доходе.
     """
 
-    serializer_class = IncomeSerializersAdd
+    serializer_class = IncomeSerializerGet
     permission_classes = (IsAuthenticated,)
     authentication_classes = (
         TokenAuthentication,

@@ -19,8 +19,8 @@ class IncomeSerializer(serializers.ModelSerializer):
     Нужен для сериализации доходов.
     """
 
-    category = CategorySerializer(read_only=True)
-    account = AccountSerializer(read_only=True)
+    category = CategorySerializer()
+    account = AccountSerializer()
 
     class Meta:
         model = Income
@@ -31,7 +31,14 @@ class IncomeSerializersAdd(serializers.ModelSerializer):
     """
     Нужен для сериализации входных данных для добавления дохода.
     """
+    class Meta:
+        model = Income
+        fields = ["id", "amount", "create_at", "category", "account"]
 
+
+class IncomeSerializerGet(serializers.ModelSerializer):
+    category = CategorySerializer(read_only=True)
+    account = AccountSerializer(read_only=True)
     class Meta:
         model = Income
         fields = ["id", "amount", "create_at", "category", "account"]
