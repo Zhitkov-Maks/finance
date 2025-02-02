@@ -5,7 +5,7 @@ from aiogram.utils.markdown import hbold
 
 from api.common import edit_object, get_full_info
 from handlers.decorator_handler import decorator_errors
-from keyboards.incomes import choice_edit, get_action_incomes
+from keyboards.incomes import choice_edit, get_action
 from keyboards.keyboards import cancel_
 from states.incomes import EditIncomesState, IncomesState
 from utils.accounts import is_valid_balance
@@ -68,5 +68,5 @@ async def edit_income_request(message: Message, state: FSMContext) -> None:
     await message.answer(
         text=hbold(text),
         parse_mode="HTML",
-        reply_markup=await get_action_incomes(),
+        reply_markup=await get_action(),
     )

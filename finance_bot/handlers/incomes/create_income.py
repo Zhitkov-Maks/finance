@@ -38,13 +38,15 @@ async def create_income_choice_date(callback: CallbackQuery, state: FSMContext) 
 
     year: int = datetime.now().year
     month: int = datetime.now().month
-    keyboard: InlineKeyboardMarkup = await create_calendar(year, month)
+    keyboard: InlineKeyboardMarkup = await create_calendar(
+        year, month, "prev_cal_inc", "next_cal_inc"
+    )
 
     await state.update_data(year=year, month=month)
     await callback.message.answer(text="Выберите дату дохода", reply_markup=keyboard)
 
 
-@create_inc_router.callback_query(F.data.in_(["next_cal", "prev_cal"]))
+@create_inc_router.callback_query(F.data.in_(["next_cal_inc", "prev_cal_inc"]))
 @decorator_errors
 async def next_and_prev_month(callback: CallbackQuery, state: FSMContext) -> None:
     """
@@ -52,12 +54,15 @@ async def next_and_prev_month(callback: CallbackQuery, state: FSMContext) -> Non
     Generates calendars depending on the month.
     """
     data: Dict[str, str | int] = await state.get_data()
-    year, month = await get_date(data, callback.data)
+    action: str = "prev" if callback.data == "prev_cal_inc" else "next"
+    year, month = await get_date(data, action)
 
     await state.update_data(year=year, month=month)
     await state.set_state(CreateIncomes.date)
     await callback.message.edit_reply_markup(
-        reply_markup=await create_calendar(year, month)
+        reply_markup=await create_calendar(
+            year, month, "prev_cal_inc", "next_cal_inc"
+        )
     )
 
 
@@ -133,7 +138,7 @@ async def create_income_choice_category(
     )
 
 
-@create_inc_router.callback_query(F.data.in_(["next_ci", "prev_ci"]))
+@create_inc_router.callback_query(F.data.in_(["next_cat_inc", "prev_cat_inc"]))
 @decorator_errors
 async def next_prev_output_list_category(
     call: CallbackQuery, state: FSMContext
@@ -189,8 +194,9 @@ async def create_income_final(message: Message, state: FSMContext) -> None:
     dict_for_request: dict[str, str | float | int] = await create_new_incomes_data(
         data, float(message.text)
     )
-    response: dict[str, int | dict[str, int | str]] = \
-        await create_new_object(usr_id, incomes_url, dict_for_request)
+    response: dict[str, int | dict[str, int | str]] = await create_new_object(
+        usr_id, incomes_url, dict_for_request
+    )
     answer_message: str = await gen_answer_message(response)
 
     await state.clear()

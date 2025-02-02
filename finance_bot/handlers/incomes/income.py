@@ -8,8 +8,8 @@ from aiogram.utils.markdown import hbold
 from api.common import get_all_objects, get_full_info, delete_object_by_id
 from config import PAGE_SIZE
 from handlers.decorator_handler import decorator_errors
-from keyboards.incomes import incomes_keyboards, create_list_incomes, get_action_incomes
-from keyboards.keyboards import confirm_menu, main_menu
+from keyboards.incomes import incomes_keyboards, get_action
+from keyboards.keyboards import confirm_menu, create_list_incomes_expenses
 from states.incomes import IncomesState
 from utils.incomes import get_incomes_url, generate_message_income_info, incomes_by_id
 
@@ -36,7 +36,7 @@ async def incomes_get_history(callback: CallbackQuery, state: FSMContext) -> Non
     )
 
     await state.update_data(page=page)
-    keyword: InlineKeyboardMarkup = await create_list_incomes(result)
+    keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(result)
 
     await state.set_state(IncomesState.show)
     await callback.message.answer(
@@ -58,7 +58,7 @@ async def next_prev_output_list_incomes(call: CallbackQuery, state: FSMContext) 
 
     url: str = await get_incomes_url(page, page_size=PAGE_SIZE)
     result: Dict[str, list] = await get_all_objects(url, call.from_user.id)
-    keyword: InlineKeyboardMarkup = await create_list_incomes(result)
+    keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(result)
 
     await state.set_state(IncomesState.show)
     await state.update_data(page=page)
@@ -72,8 +72,9 @@ async def detail_incomes(call: CallbackQuery, state: FSMContext) -> None:
     income_id: int = int(call.data)
     url: str = await incomes_by_id(income_id)
 
-    response: dict[str, int | str | dict[str, int | str]] = \
-        await get_full_info(url, call.from_user.id)
+    response: dict[str, int | str | dict[str, int | str]] = await get_full_info(
+        url, call.from_user.id
+    )
     await state.update_data(income_id=income_id)
     text: str = await generate_message_income_info(response)
 
@@ -81,7 +82,7 @@ async def detail_incomes(call: CallbackQuery, state: FSMContext) -> None:
     await call.message.answer(
         text=hbold(text),
         parse_mode="HTML",
-        reply_markup=await get_action_incomes(),
+        reply_markup=await get_action(),
     )
 
 
@@ -103,7 +104,18 @@ async def remove_income_by_id(callback: CallbackQuery, state: FSMContext) -> Non
     url: str = await incomes_by_id(income_id)
 
     await delete_object_by_id(url, callback.from_user.id)
-    await state.clear()
+
+    page: int = data.get("page", 1)
+    url: str = await get_incomes_url(page, page_size=PAGE_SIZE)
+    result: dict[str, int | list[dict[str, int | str | dict[str, str]]]] = (
+        await get_all_objects(url, callback.from_user.id)
+    )
+
+    await state.update_data(page=page)
+    keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(result)
+
+    await state.set_state(IncomesState.show)
     await callback.message.answer(
-        text=f"Доход был удален!", reply_markup=main_menu
+        text=f"Запись была удалена.",
+        reply_markup=keyword,
     )
