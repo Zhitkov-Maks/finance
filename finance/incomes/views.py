@@ -149,13 +149,29 @@ class RetrieveUpdateDeleteIncome(generics.RetrieveUpdateDestroyAPIView):
         :param serializer: Сериализатор с новыми данными.
         """
         instance: Income = self.get_object()
+
+        # Получаем старый и новый счет
+        old_account: Account = instance.account
+        new_account: Account = serializer.validated_data.get("account", old_account)
+
+        # Получаем старую и новую сумму
         old_amount: decimal = instance.amount
         new_amount: decimal = serializer.validated_data.get("amount", old_amount)
+
+        # Сохраняем изменения в объекте дохода
         serializer.save()
 
-        account: Account = instance.account
-        account.balance -= new_amount - old_amount
-        account.save()
+        # Корректировка баланса старого счета, если он изменился
+        if new_account != old_account:
+            old_account.balance -= old_amount  # Уменьшаем баланс старого счета
+            old_account.save()
+
+            new_account.balance += new_amount  # Увеличиваем баланс нового счета
+            new_account.save()
+        else:
+            # Если счет не изменился, просто корректируем баланс на одном счете
+            old_account.balance += new_amount - old_amount
+            old_account.save()
 
 
 @extend_schema(tags=["Incomes_category"])
