@@ -69,13 +69,8 @@ async def edited_account_balance(message: Message, state: FSMContext) -> None:
         )
         return
 
-<<<<<<< HEAD
-    edit_data: dict = {"balance": message.text}
-    method: str = "PUT"
-=======
     method: str = "PUT"
     edit_data: dict = {"balance": message.text}
->>>>>>> 582aeffe74e52786f204a60cdbb644fbe16f093c
     if name is None:
         method = "PATCH"
     else:
