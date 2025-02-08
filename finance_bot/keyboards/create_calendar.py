@@ -4,8 +4,7 @@ from typing import List, Tuple
 
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-
-from loader import MONTH_DATA, DAYS_LIST
+from utils.create_calendar import DAYS_LIST, MONTH_DATA
 
 
 async def create_list_with_calendar_days(
