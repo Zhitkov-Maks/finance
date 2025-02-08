@@ -5,7 +5,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 async def get_action() -> InlineKeyboardMarkup:
     """
-    An online keyboard with options for actions for a specific income.
+    An inline keyboard with options for actions for a specific income.
     :return: The inline keyboard.
     """
     return InlineKeyboardMarkup(
@@ -33,15 +33,6 @@ async def get_action() -> InlineKeyboardMarkup:
         ]
     )
 
-incomes_buttons: List[List[InlineKeyboardButton]] = [
-    [
-        InlineKeyboardButton(text="История", callback_data="incomes_history"),
-        InlineKeyboardButton(text="Добавить", callback_data="incomes_add"),
-    ]
-]
-
-incomes_keyboards = InlineKeyboardMarkup(inline_keyboard=incomes_buttons)
-
 
 choice_edit_buttons: List[List[InlineKeyboardButton]] = [
     [
@@ -56,5 +47,5 @@ choice_edit_buttons: List[List[InlineKeyboardButton]] = [
     ]
 ]
 
-
+# Keyboard for editing selection.
 choice_edit: InlineKeyboardMarkup = InlineKeyboardMarkup(inline_keyboard=choice_edit_buttons)
