@@ -28,7 +28,7 @@ listAccountSchema = extend_schema_view(
     post=extend_schema(
         description="Создать новый счет для текущего пользователя. "
                     "Укажите название счета и начальный баланс.",
-        request=AccountSerializer,
+        request=AccountPutSerializer,
         responses={
             201: AccountSerializer,
             400: ValidationError,

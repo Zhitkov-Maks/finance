@@ -17,6 +17,7 @@ from accounts.serializers.serializers_account import (
     AccountSerializer,
     AccountSerializerDetail,
     AccountToggleStatusSerializer,
+    AccountGetSerializer,
 )
 
 
@@ -41,6 +42,11 @@ class ListAccounts(generics.ListCreateAPIView):
         BasicAuthentication,
         SessionAuthentication,
     )
+
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return AccountGetSerializer
+        return super().get_serializer_class()
 
     def get_queryset(self) -> QuerySet:
         """
