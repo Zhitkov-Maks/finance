@@ -10,4 +10,4 @@ COPY . ./finance
 
 WORKDIR ./finance
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "finance.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8001", "finance.wsgi:application"]
