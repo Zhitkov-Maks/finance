@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   finance_db:
     image: postgres:15-alpine
@@ -15,6 +13,13 @@ services:
       - ./finance-db/:/var/lib/postgresql/data
     env_file:
       - ./.env
+    networks:
+      - app_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   django_app:
     build:
@@ -27,7 +32,10 @@ services:
     env_file:
       - .env
     depends_on:
-      - finance_db
+      finance_db:
+        condition: service_healthy
+    networks:
+      - app_network
 
   finance_bot:
     container_name: finance_bot
@@ -42,3 +50,9 @@ services:
     restart: always
     depends_on:
       - django_app
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
