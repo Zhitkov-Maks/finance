@@ -103,7 +103,7 @@ async def next_and_prev_month(callback: CallbackQuery, state: FSMContext) -> Non
     await state.update_data(year=year, month=month)
 
     url, text = await get_url_and_type_message(type_operation, year, month)
-    result: dict = await statistics_current_month(url, callback.from_user.id)
+    result: dict = await get_full_info(url, callback.from_user.id)
     message: str = await gen_message_statistics(result)
 
     keyboard_markup = await get_month(year, month)

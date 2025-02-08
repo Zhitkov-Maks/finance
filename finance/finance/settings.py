@@ -21,12 +21,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 load_dotenv()
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-0_dl2(457x2=$))e23a%5y9xwc29zm6_=xz=q7+92fc%pn04n='
+SECRET_KEY = os.getenv("SECRET_KEY", "")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "0.0.0.0",
+    "localhost",
+]
 
 
 # Application definition
@@ -187,7 +190,7 @@ SPECTACULAR_SETTINGS = {
     },
     'SERVERS': [
         {'url': 'http://localhost:8000', 'description': 'Локальная среда разработки'},
-        {'url': 'https://api.example.com', 'description': 'Продакшн'},
+        {'url': 'https://94.241.143.71:80', 'description': 'Продакшн'},
     ],
     # Дополнительные настройки
     'SCHEMA_PATH_PREFIX': '/api/',
