@@ -79,6 +79,14 @@ class AccountPutSerializer(BaseAccountSerializer):
         fields = ["name", "balance"]
 
 
+class AccountGetSerializer(BaseAccountSerializer):
+    """
+    Нужен для полного редактирования счета.
+    """
+    class Meta(BaseAccountSerializer.Meta):
+        fields = ["id", "name", "balance"]
+
+
 class AccountPatchSerializer(BaseAccountSerializer):
     """
     Нужен для частичного редактирования.

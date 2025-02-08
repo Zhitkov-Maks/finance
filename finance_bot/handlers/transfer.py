@@ -4,13 +4,14 @@ from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 
-from api.accounts import get_all_accounts
+from api.common import get_all_objects
 from api.transfer import create_transfer
+from config import PAGE_SIZE
 from handlers.decorator_handler import decorator_errors
-from keyboards.accounts import create_list_account
 from keyboards.keyboards import cancel_, main_menu
+from keyboards.transfer import create_list_transfer_accounts
 from states.accounts import TransferStates
-from utils.accounts import is_valid_balance
+from utils.accounts import is_valid_balance, account_url
 
 transfer = Router()
 
@@ -23,12 +24,13 @@ async def start_transfer(callback: CallbackQuery, state: FSMContext) -> None:
     """
     page: int = 1
     account_id: int = (await state.get_data()).get("account_id")
+    url: str = await account_url(page, page_size=PAGE_SIZE)
     result: Dict[
         str, str | List[Dict[str, float | List[Dict[str, int | float | str]]]]
-    ] = await get_all_accounts(callback.from_user.id, page=page)
+    ] = await get_all_objects(url, callback.from_user.id)
 
     await state.update_data(page=page)
-    keyword: InlineKeyboardMarkup = await create_list_account(
+    keyword: InlineKeyboardMarkup = await create_list_transfer_accounts(
         result, int(account_id), transfer=True
     )
     await state.set_state(TransferStates.action)
@@ -38,22 +40,25 @@ async def start_transfer(callback: CallbackQuery, state: FSMContext) -> None:
     )
 
 
-@transfer.callback_query(F.data.in_(["next_page", "prev_page"]))
+@transfer.callback_query(F.data.in_(["next_tr", "prev_tr"]))
 @decorator_errors
 async def next_prev_output_list_habits(call: CallbackQuery, state: FSMContext) -> None:
     """Show more invoices if any."""
     page: int = (await state.get_data()).get("page")
     account_id = (await state.get_data()).get("account_id")
-    if call.data == "next_page":
+
+    if call.data == "next_tr":
         page += 1
     else:
         page -= 1
 
+    url: str = await account_url(page, page_size=PAGE_SIZE)
+
     result: Dict[
         str, str | List[Dict[str, float | List[Dict[str, int | float | str]]]]
-    ] = await get_all_accounts(call.from_user.id, page=page)
+    ] = await get_all_objects(url, call.from_user.id)
 
-    keyword: InlineKeyboardMarkup = await create_list_account(
+    keyword: InlineKeyboardMarkup = await create_list_transfer_accounts(
         result, int(account_id), transfer=True
     )
     await state.update_data(page=page)

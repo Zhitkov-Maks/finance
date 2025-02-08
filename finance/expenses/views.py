@@ -4,7 +4,7 @@ from datetime import datetime as dt, UTC
 from django.db.models import QuerySet, Count
 from django_filters.rest_framework.backends import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, OpenApiParameter, extend_schema_view
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.authentication import (
     SessionAuthentication,
     TokenAuthentication,
@@ -17,13 +17,14 @@ from rest_framework.response import Response
 from accounts.models import Account
 from accounts.serializers.serializers_transfer import NotFoundError, IsNotAuthentication
 from incomes.serializers import CategoryIncomeStatisticsSerializer
-from .filter import IncomeFilter, get_category_expense_statistics
+from .filter import ExpenseFilter, get_category_expense_statistics
 from .models import Expense, Category
 from .serializers import (
     ExpenseSerializer,
     CategorySerializerExpenses,
     ExpenseSerializersAdd,
-    CategoryExpenseStatisticsSerializer,
+    ExpenseSerializersPatch,
+    ExpenseSerializersPut, StatisticsResponseSerializer,
 )
 from .views_schemas import (
     RetrieveUpdateDeleteCategoryExpenseSchema,
@@ -51,10 +52,9 @@ class ExpenseView(generics.ListCreateAPIView):
     """
 
     pagination_class = Pagination
-    serializer_class = ExpenseSerializersAdd
     permission_classes = (IsAuthenticated,)
     filter_backends = (DjangoFilterBackend,)
-    filterset_class = IncomeFilter
+    filterset_class = ExpenseFilter
     authentication_classes = (
         TokenAuthentication,
         BasicAuthentication,
@@ -97,6 +97,21 @@ class ExpenseView(generics.ListCreateAPIView):
         account.balance -= expense.amount
         account.save()
 
+    def create(self, request, *args, **kwargs):
+        """
+        Переопределение метода создания для возврата сериализованного
+        объекта с использованием другого сериализатора.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        self.perform_create(serializer)
+
+        # Используем другой сериализатор для возврата созданного объекта
+        response_serializer = ExpenseSerializer(serializer.instance)
+
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
 
 @extend_schema(tags=["Expenses"])
 @RetrieveUpdateDeleteExpenseSchema
@@ -121,6 +136,19 @@ class RetrieveUpdateDeleteExpense(generics.RetrieveUpdateDestroyAPIView):
         """
         return Expense.objects.filter(user=self.request.user)
 
+    def get_serializer_class(self):
+
+        if self.request.method == "PUT":
+            return ExpenseSerializersPut
+
+        elif self.request.method == "PATCH":
+            return ExpenseSerializersPatch
+
+        elif self.request.method == "GET":
+            return ExpenseSerializer
+
+        return super().get_serializer_class()
+
     def perform_destroy(self, instance: Expense) -> None:
         """
         Переопределяем метод, чтобы вернуть сумму расхода на баланс счета,
@@ -137,29 +165,48 @@ class RetrieveUpdateDeleteExpense(generics.RetrieveUpdateDestroyAPIView):
         account.save()
         instance.delete()
 
-    def perform_update(self, serializer) -> None:
+    def perform_update(self, serializer: ExpenseSerializer) -> None:
         """
-        Переопределяем метод для обновления расхода и корректировки баланса счета.
+        Переопределяем метод для обновления дохода и корректировки баланса счета.
         :param serializer: Сериализатор с новыми данными.
         """
-        # Получаем экземпляр расхода перед обновлением
         instance: Expense = self.get_object()
 
-        # Сохраняем старую сумму расхода
-        old_amount: decimal = instance.amount
+        # Получаем старый и новый счет
+        old_account: Account = instance.account
+        new_account: Account = serializer.validated_data.get("account", old_account)
 
-        # Получаем новую сумму из сериализатора
+        # Получаем старую и новую сумму
+        old_amount: decimal = instance.amount
         new_amount: decimal = serializer.validated_data.get("amount", old_amount)
 
-        # Обновляем объект с новыми данными
+        # Сохраняем изменения в объекте дохода
         serializer.save()
 
-        # Получаем счет, связанный с расходом
-        account: Account = instance.account
+        # Корректировка баланса старого счета, если он изменился
+        if new_account != old_account:
+            old_account.balance += old_amount
+            old_account.save()
 
-        # Корректируем баланс: вычитаем старую сумму и добавляем новую
-        account.balance += new_amount - old_amount
+            new_account.balance -= new_amount
+            new_account.save()
+        else:
+            # Если счет не изменился, просто корректируем баланс на одном счете
+            old_account.balance += new_amount - old_amount
+            old_account.save()
+
+    def perform_create(self, serializer: ExpenseSerializer) -> None:
+        """
+        Переопределяем метод для создания нового расхода и корректировки баланса счета.
+        :param serializer: Сериализатор с новыми данными.
+        """
+        expense: Expense = serializer.save(user=self.request.user)
+
+        account: Account = expense.account
+        amount: decimal = expense.amount
+        account.balance -= amount
         account.save()
+
 
 
 @extend_schema(tags=["Expenses_category"])
@@ -250,7 +297,7 @@ class CategoryExpenseStatisticsView(generics.GenericAPIView):
         BasicAuthentication,
         SessionAuthentication,
     )
-    serializer_class = CategoryExpenseStatisticsSerializer
+    serializer_class = StatisticsResponseSerializer
 
     def get(self, request, *args, **kwargs) -> Response:
         """
@@ -263,5 +310,11 @@ class CategoryExpenseStatisticsView(generics.GenericAPIView):
             return Response({"error": "Year and month are required."}, status=400)
 
         statistics = get_category_expense_statistics(request.user, year, month)
-        serializer = self.get_serializer(statistics, many=True)
+        total_amount = sum(float(item['total_amount']) for item in statistics)  # Подсчет общей суммы
+
+        response_data = {
+            "statistics": statistics,
+            "total_amount": total_amount,
+        }
+        serializer = self.get_serializer(response_data)
         return Response(serializer.data)

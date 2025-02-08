@@ -77,7 +77,7 @@ ListCategoryExpenseSchema = extend_schema_view(
     ),
     post=extend_schema(
         description="Создать новую категорию для расходов.",
-        request=ExpenseSerializersAdd,
+        request=CategorySerializerExpenses,
         responses={
             201: CategorySerializerExpenses,
             400: ValidationError,

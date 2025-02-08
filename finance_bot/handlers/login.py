@@ -52,7 +52,7 @@ async def final_authentication(message: Message, state: FSMContext) -> None:
         data: Dict[str, str] = await create_data(email, message.text)
         result: str | None = await login_user(data, message.from_user.id)
         if result is None:
-            await message.answer(success_auth, reply_markup=main_menu)
+            await message.answer(success_auth, reply_markup=main_menu, parse_mode="HTML")
         else:
             await message.answer(
                 result, reply_markup=await generate_inline_keyboard_reset()

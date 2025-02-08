@@ -4,7 +4,7 @@ from datetime import datetime as dt, UTC
 from django.db.models import QuerySet, Count
 from django_filters.rest_framework.backends import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, OpenApiParameter, extend_schema_view
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.authentication import (
     SessionAuthentication,
     TokenAuthentication,
@@ -28,7 +28,7 @@ from .serializers import (
     IncomeSerializer,
     CategorySerializer,
     IncomeSerializersAdd,
-    CategoryIncomeStatisticsSerializer,
+    CategoryIncomeStatisticsSerializer, IncomeSerializerGet, IncomeSerializersPatch, StatisticsResponseSerializer,
 )
 
 
@@ -46,7 +46,7 @@ class IncomeView(generics.ListCreateAPIView):
     """
 
     pagination_class = Pagination
-    serializer_class = IncomeSerializersAdd
+    serializer_class = IncomeSerializer
     permission_classes = (IsAuthenticated,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = IncomeFilter
@@ -76,8 +76,23 @@ class IncomeView(generics.ListCreateAPIView):
         """
         income: Income = serializer.save(user=self.request.user)
         account: Account = income.account
-        account.balance += income.amount  # Добавьте сумму дохода к балансу
+        account.balance += income.amount
         account.save()
+
+    def create(self, request, *args, **kwargs):
+        """
+        Переопределение метода создания для возврата сериализованного
+        объекта с использованием другого сериализатора.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        self.perform_create(serializer)
+
+        # Используем другой сериализатор для возврата созданного объекта
+        response_serializer = IncomeSerializer(serializer.instance)
+
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 
 @extend_schema(tags=["Incomes"])
@@ -87,13 +102,26 @@ class RetrieveUpdateDeleteIncome(generics.RetrieveUpdateDestroyAPIView):
     Класс для редактирования, удаления и получения детальной информации о доходе.
     """
 
-    serializer_class = IncomeSerializersAdd
+    serializer_class = IncomeSerializer
     permission_classes = (IsAuthenticated,)
     authentication_classes = (
         TokenAuthentication,
         BasicAuthentication,
         SessionAuthentication,
     )
+
+    def get_serializer_class(self):
+
+        if self.request.method == "PUT":
+            return IncomeSerializersAdd
+
+        elif self.request.method == "PATCH":
+            return IncomeSerializersPatch
+
+        elif self.request.method == "GET":
+            return IncomeSerializerGet
+
+        return super().get_serializer_class()
 
     def get_queryset(self) -> QuerySet:
         """
@@ -121,13 +149,29 @@ class RetrieveUpdateDeleteIncome(generics.RetrieveUpdateDestroyAPIView):
         :param serializer: Сериализатор с новыми данными.
         """
         instance: Income = self.get_object()
+
+        # Получаем старый и новый счет
+        old_account: Account = instance.account
+        new_account: Account = serializer.validated_data.get("account", old_account)
+
+        # Получаем старую и новую сумму
         old_amount: decimal = instance.amount
         new_amount: decimal = serializer.validated_data.get("amount", old_amount)
+
+        # Сохраняем изменения в объекте дохода
         serializer.save()
 
-        account: Account = instance.account
-        account.balance -= new_amount - old_amount
-        account.save()
+        # Корректировка баланса старого счета, если он изменился
+        if new_account != old_account:
+            old_account.balance -= old_amount  # Уменьшаем баланс старого счета
+            old_account.save()
+
+            new_account.balance += new_amount  # Увеличиваем баланс нового счета
+            new_account.save()
+        else:
+            # Если счет не изменился, просто корректируем баланс на одном счете
+            old_account.balance += new_amount - old_amount
+            old_account.save()
 
 
 @extend_schema(tags=["Incomes_category"])
@@ -217,7 +261,7 @@ class CategoryIncomeStatisticsView(generics.GenericAPIView):
         BasicAuthentication,
         SessionAuthentication,
     )
-    serializer_class = CategoryIncomeStatisticsSerializer
+    serializer_class = StatisticsResponseSerializer
 
     def get(self, request, *args, **kwargs) -> Response:
         """
@@ -230,5 +274,11 @@ class CategoryIncomeStatisticsView(generics.GenericAPIView):
             return Response({"error": "Year and month are required."}, status=400)
 
         statistics = get_category_income_statistics(request.user, year, month)
-        serializer = self.get_serializer(statistics, many=True)
+        total_amount = sum(float(item['total_amount']) for item in statistics)  # Подсчет общей суммы
+
+        response_data = {
+            "statistics": statistics,
+            "total_amount": total_amount,
+        }
+        serializer = self.get_serializer(response_data)
         return Response(serializer.data)

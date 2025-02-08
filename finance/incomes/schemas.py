@@ -5,7 +5,8 @@ from accounts.serializers.serializers_transfer import (
     IsNotAuthentication,
     NotFoundError,
 )
-from .serializers import CategorySerializer, IncomeSerializer, IncomeSerializersAdd
+from .serializers import CategorySerializer, IncomeSerializer, IncomeSerializersAdd, IncomeSerializerGet, \
+    IncomeSerializersPatch
 
 IncomesViewSchema = extend_schema_view(
     get=extend_schema(
@@ -31,7 +32,7 @@ RetrieveUpdateDeleteIncomeSchema = extend_schema_view(
     get=extend_schema(
         description="Получение подробной информации о доходе.",
         responses={
-            200: IncomeSerializersAdd(many=True),
+            200: IncomeSerializerGet(many=True),
             401: IsNotAuthentication,
             404: NotFoundError,
         },
@@ -48,7 +49,7 @@ RetrieveUpdateDeleteIncomeSchema = extend_schema_view(
     ),
     patch=extend_schema(
         description="Изменить сумму дохода",
-        request=IncomeSerializersAdd,
+        request=IncomeSerializersPatch,
         responses={
             200: IncomeSerializersAdd,
             400: ValidationError,
