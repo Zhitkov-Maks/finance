@@ -24,11 +24,13 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = [
     "0.0.0.0",
     "localhost",
+    "api",  # Добавьте это
+    "127.0.0.1",
 ]
 
 
@@ -64,12 +66,13 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True  # Разрешить все источники (не рекомендуется в продакшене)
-# Или укажите конкретные источники
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:3000",  # URL вашего фронтенда
-#     "https://example.com",
-# ]
+CORS_ALLOW_ALL_ORIGINS = False
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8000",
+    "https://0.0.0.0:8000",
+    "http://api:8000"
+]
 
 ROOT_URLCONF = 'finance.urls'
 

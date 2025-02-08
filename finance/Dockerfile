@@ -10,4 +10,4 @@ COPY . ./finance
 
 WORKDIR ./finance
 
-CMD ["sh", "-c", "python manage.py runserver 0.0.0.0:8000"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "finance.wsgi:application"]
