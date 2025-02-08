@@ -20,5 +20,7 @@ async def invalid_message_text(message: Message, state: FSMContext) -> None:
 @invalid_router.callback_query(F.data)
 async def invalid_callback(callback: CallbackQuery) -> None:
     """A handler for buttons that don't have any actions."""
-    await callback.answer(text="Я не могу вам ничего показать, так как "
-                               "на мне нет никаких данных.")
+    await callback.answer(
+        text="Я не могу вам ничего показать, так как на мне нет никаких данных.",
+        show_alert=True
+    )
