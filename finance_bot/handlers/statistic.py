@@ -88,7 +88,7 @@ async def get_statistic_for_month(callback: CallbackQuery, state: FSMContext) ->
     await callback.message.answer(
         text=hbold(text + f"\n{message}"),
         parse_mode="HTML",
-        reply_markup=await get_month(year, month),
+        reply_markup=await get_month(year, month, callback.data),
     )
 
 

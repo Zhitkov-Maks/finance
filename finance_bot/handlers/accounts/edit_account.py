@@ -69,8 +69,12 @@ async def edited_account_balance(message: Message, state: FSMContext) -> None:
         )
         return
 
-    edit_data: dict = {"name": name, "balance": message.text}
-    method: str = "PATCH" if name is not None else "PUT"
+    method: str = "PUT"
+    edit_data: dict = {"balance": message.text}
+    if name is None:
+        method = "PATCH"
+    else:
+        edit_data.update(name=name)
     await edit_object(url, usr_id, edit_data, method)
 
     response: dict = await get_full_info(url, usr_id)
