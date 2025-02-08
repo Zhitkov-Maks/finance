@@ -71,3 +71,11 @@ class CategoryExpenseStatisticsSerializer(serializers.Serializer):
 
     category_name = serializers.CharField(source="category__name")
     total_amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
+class StatisticsResponseSerializer(serializers.Serializer):
+    """
+    Сериализатор для общего ответа со статистикой расходов.
+    """
+    statistics = CategoryExpenseStatisticsSerializer(many=True)
+    total_amount = serializers.DecimalField(max_digits=10, decimal_places=2)

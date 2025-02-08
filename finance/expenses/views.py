@@ -17,13 +17,14 @@ from rest_framework.response import Response
 from accounts.models import Account
 from accounts.serializers.serializers_transfer import NotFoundError, IsNotAuthentication
 from incomes.serializers import CategoryIncomeStatisticsSerializer
-from .filter import IncomeFilter, get_category_expense_statistics
+from .filter import ExpenseFilter, get_category_expense_statistics
 from .models import Expense, Category
 from .serializers import (
     ExpenseSerializer,
     CategorySerializerExpenses,
     ExpenseSerializersAdd,
-    CategoryExpenseStatisticsSerializer, ExpenseSerializersPatch, ExpenseSerializersPut,
+    ExpenseSerializersPatch,
+    ExpenseSerializersPut, StatisticsResponseSerializer,
 )
 from .views_schemas import (
     RetrieveUpdateDeleteCategoryExpenseSchema,
@@ -53,7 +54,7 @@ class ExpenseView(generics.ListCreateAPIView):
     pagination_class = Pagination
     permission_classes = (IsAuthenticated,)
     filter_backends = (DjangoFilterBackend,)
-    filterset_class = IncomeFilter
+    filterset_class = ExpenseFilter
     authentication_classes = (
         TokenAuthentication,
         BasicAuthentication,
@@ -296,7 +297,7 @@ class CategoryExpenseStatisticsView(generics.GenericAPIView):
         BasicAuthentication,
         SessionAuthentication,
     )
-    serializer_class = CategoryExpenseStatisticsSerializer
+    serializer_class = StatisticsResponseSerializer
 
     def get(self, request, *args, **kwargs) -> Response:
         """
@@ -309,5 +310,11 @@ class CategoryExpenseStatisticsView(generics.GenericAPIView):
             return Response({"error": "Year and month are required."}, status=400)
 
         statistics = get_category_expense_statistics(request.user, year, month)
-        serializer = self.get_serializer(statistics, many=True)
+        total_amount = sum(float(item['total_amount']) for item in statistics)  # Подсчет общей суммы
+
+        response_data = {
+            "statistics": statistics,
+            "total_amount": total_amount,
+        }
+        serializer = self.get_serializer(response_data)
         return Response(serializer.data)
