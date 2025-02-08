@@ -88,7 +88,7 @@ async def get_statistic_for_month(callback: CallbackQuery, state: FSMContext) ->
     await callback.message.answer(
         text=hbold(text + f"\n{message}"),
         parse_mode="HTML",
-        reply_markup=await get_month(year, month),
+        reply_markup=await get_month(year, month, callback.data),
     )
 
 
@@ -106,7 +106,7 @@ async def next_and_prev_month(callback: CallbackQuery, state: FSMContext) -> Non
     result: dict = await get_full_info(url, callback.from_user.id)
     message: str = await gen_message_statistics(result)
 
-    keyboard_markup = await get_month(year, month)
+    keyboard_markup = await get_month(year, month, type_operation)
 
     try:
         await callback.message.edit_text(
