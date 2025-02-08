@@ -79,6 +79,7 @@ async def prev_output_list_habits(call: CallbackQuery, state: FSMContext) -> Non
 
 
 @account.callback_query(F.data == "change-toggle")
+@decorator_errors
 async def change_toggle(callback: CallbackQuery, state: FSMContext) -> None:
     """Toggle the active status of an account."""
     data: dict = await state.get_data()
