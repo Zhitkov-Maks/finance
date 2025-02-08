@@ -1,28 +1,26 @@
 from typing import List, Dict
 
-from aiogram.types import InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
 async def create_list_account(
     data: Dict[str, str | List[Dict[str, float | List[Dict[str, int | float | str]]]]],
-    current_account: int = 0,
-    transfer: bool = False,
+    prev: str = "prev_acc",
+    next_d: str = "next_acc"
 ) -> InlineKeyboardMarkup:
     """
-    Creates an online keyboard.
-    :param transfer: If the keyboard is for translation,
-                    then you need a name to show to the user,
-                    not just an id.
-    :param current_account: We do not show the current account
-                            during the transfer
+    Creates an inline keyboard.
+    :param next_d: The name for the callback_data when
+                        forming the keyboard.
+    :param prev: The name for the callback_data when
+                        forming the keyboard.
     :param data: Dictionary with query data.
     :return: The inline keyboard.
     """
     inline_buttons: List[List[InlineKeyboardButton]] = []
     previous, next_ = data.get("previous"), data.get("next")
     for item in data.get("results")[0].get("accounts"):
-        if item.get("id") != current_account:
-            id_: int = str(item.get("id")) + f"_{item.get("name")}" if transfer else item.get("id")
+            id_: int = item.get("id")
             inline_buttons.append(
                 [
                     InlineKeyboardButton(
@@ -35,10 +33,10 @@ async def create_list_account(
     next_data, text_next = "None next", "-"
 
     if previous is not None:
-        prev_data, text_prev = "prev_page", "<<"
+        prev_data, text_prev = prev, "<<"
 
     if next_ is not None:
-        next_data, text_next = "next_page", ">>"
+        next_data, text_next = next_d, ">>"
 
     inline_buttons.append(
         [
@@ -50,13 +48,10 @@ async def create_list_account(
     return InlineKeyboardMarkup(inline_keyboard=inline_buttons)
 
 
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
-
 async def get_action_accounts(is_active: bool) -> InlineKeyboardMarkup:
     """
     The function generates a keyboard for the action
-    according to a specific habit.
+    according to a specific account.
     :return InlineKeyboardMarkup: Use the keyboard to select actions.
     """
     toggle =  "✅" if is_active else"❌"
@@ -105,4 +100,6 @@ choice_edit_button: list[list[InlineKeyboardButton]] = [
         )
     ]
 ]
+
+# Keyboard for editing selection.
 choice_inline_edit = InlineKeyboardMarkup(inline_keyboard=choice_edit_button)
