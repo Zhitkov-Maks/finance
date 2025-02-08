@@ -57,21 +57,53 @@ menu_bot: List[List[InlineKeyboardButton]] = [
         ],
         [
             InlineKeyboardButton(
+                text="📉",
+                callback_data="statistic_exp"
+            ),
+            InlineKeyboardButton(
+                text="💰",
+                callback_data="accounts_data"
+            ),
+            InlineKeyboardButton(
+                text="💲",
+                callback_data="expenses_by_incomes"
+            ),
+            InlineKeyboardButton(
+                text="📈",
+                callback_data="statistic_inc"
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                text="➖",
+                callback_data="expense_add"
+            ),
+            InlineKeyboardButton(
+                text="🏦",
+                callback_data="accounts_add"
+            ),
+            InlineKeyboardButton(
+                text="➕",
+                callback_data="incomes_add"
+            )
+        ],
+        [
+            InlineKeyboardButton(
                 text="Счета",
                 callback_data="accounts"
             ),
             InlineKeyboardButton(
                 text="Доходы",
-                callback_data="incomes"
+                callback_data="incomes_history"
             ),
             InlineKeyboardButton(
                 text="Расходы",
-                callback_data="expenses"
+                callback_data="expenses_history"
             )
         ],
         [
             InlineKeyboardButton(
-                text="Добавление/Удаление категорий",
+                text="Категории",
                 callback_data="categories"
             )
         ]
