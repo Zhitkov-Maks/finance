@@ -8,15 +8,15 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 from aiogram.utils.markdown import hbold
 
 from api.common import get_all_objects, create_new_object
-from config import PAGE_SIZE, incomes_url, expenses_url
+from config import PAGE_SIZE, expenses_url
 from handlers.decorator_handler import decorator_errors
 from keyboards.accounts import create_list_account
 from keyboards.category import create_list_category
 from keyboards.create_calendar import create_calendar
 from keyboards.keyboards import cancel_, main_menu
-from loader import date_pattern
 from states.expenses import CreateExpenseState, EditExpenseState
 from utils.accounts import account_url, is_valid_balance
+from utils.common import date_pattern
 from utils.create_calendar import get_date
 from utils.expenses import (
     get_expenses_category_url,
@@ -157,6 +157,7 @@ async def next_prev_output_list_category(
 
     url: str = await get_expenses_category_url(page, PAGE_SIZE)
     result: Dict[str, list] = await get_all_objects(url, call.from_user.id)
+
     keyword: InlineKeyboardMarkup = await create_list_category(
         result, "prev_cat_exp", "next_cat_exp"
     )

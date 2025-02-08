@@ -10,7 +10,11 @@ from keyboards.incomes import get_action
 from keyboards.keyboards import cancel_
 from states.expenses import EditExpenseState, ExpensesState
 from utils.accounts import is_valid_balance
-from utils.expenses import create_new_expenses_data, generate_message_expense_info, expense_url_by_id
+from utils.expenses import (
+    create_new_expenses_data,
+    generate_message_expense_info,
+    expense_url_by_id,
+)
 
 exp_edit_router = Router()
 
@@ -19,8 +23,7 @@ exp_edit_router = Router()
 async def edit_expense_choice(callback: CallbackQuery) -> None:
     """A handler for selecting an expense editing option."""
     await callback.message.answer(
-        text="Выберите вариант редактирования.",
-        reply_markup=choice_expense_edit
+        text="Выберите вариант редактирования.", reply_markup=choice_expense_edit
     )
 
 
@@ -33,8 +36,7 @@ async def edit_balance(callback: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(EditExpenseState.amount)
     await state.update_data(method="PATCH")
     await callback.message.answer(
-        text="Введите новую сумму расхода.",
-        reply_markup=cancel_
+        text="Введите новую сумму расхода.", reply_markup=cancel_
     )
 
 
@@ -58,12 +60,13 @@ async def edit_expense_request(message: Message, state: FSMContext) -> None:
 
     else:
         edit_data: dict[str, str | float | int] = await create_new_expenses_data(
-        data, float(message.text)
-    )
+            data, float(message.text)
+        )
 
     await edit_object(url, usr_id, edit_data, method)
-    response: dict[str, int | str | dict[str, int | str]] = \
-        await get_full_info(url, usr_id)
+    response: dict[str, int | str | dict[str, int | str]] = await get_full_info(
+        url, usr_id
+    )
 
     text: str = await generate_message_expense_info(response)
     await state.set_state(ExpensesState.action)

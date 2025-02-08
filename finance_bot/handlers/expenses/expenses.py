@@ -8,8 +8,8 @@ from aiogram.utils.markdown import hbold
 from api.common import get_all_objects, get_full_info, delete_object_by_id
 from config import PAGE_SIZE
 from handlers.decorator_handler import decorator_errors
-from keyboards.expenses import expenses_keyboard, get_action
-from keyboards.keyboards import confirm_menu, main_menu, create_list_incomes_expenses
+from keyboards.expenses import get_action
+from keyboards.keyboards import confirm_menu, create_list_incomes_expenses
 from states.expenses import ExpensesState
 from utils.expenses import (
     get_expense_url,
@@ -20,14 +20,6 @@ from utils.expenses import (
 expense_router: Router = Router()
 
 
-@expense_router.callback_query(F.data == "expenses")
-async def start_work_expenses(callback: CallbackQuery) -> None:
-    """A handler for selecting the next action."""
-    await callback.message.answer(
-        text="Выберите операцию с расходами.", reply_markup=expenses_keyboard
-    )
-
-
 @expense_router.callback_query(F.data == "expenses_history")
 @decorator_errors
 async def expenses_get_history(callback: CallbackQuery, state: FSMContext) -> None:
@@ -35,6 +27,7 @@ async def expenses_get_history(callback: CallbackQuery, state: FSMContext) -> No
     data: dict[str, str | int] = await state.get_data()
     page: int = data.get("page", 1)
     url: str = await get_expense_url(page, page_size=PAGE_SIZE)
+
     result: dict[str, int | list[dict[str, int | str | dict[str, str]]]] = (
         await get_all_objects(url, callback.from_user.id)
     )
