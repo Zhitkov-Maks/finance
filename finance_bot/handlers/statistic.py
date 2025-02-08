@@ -8,7 +8,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 from aiogram.utils.markdown import hbold
 
-from api.statistics import statistics_current_month
+from api.common import get_full_info
 from config import statistic_url, accounts_url
 from handlers.decorator_handler import decorator_errors
 from keyboards.statistic import get_month
@@ -82,7 +82,7 @@ async def get_statistic_for_month(callback: CallbackQuery, state: FSMContext) ->
     await state.update_data(month=month, year=year, type_=callback.data)
 
     url, text = await get_url_and_type_message(callback.data, year, month)
-    result: dict = await statistics_current_month(url, callback.from_user.id)
+    result: dict = await get_full_info(url, callback.from_user.id)
     message: str = await gen_message_statistics(result)
 
     await callback.message.answer(
