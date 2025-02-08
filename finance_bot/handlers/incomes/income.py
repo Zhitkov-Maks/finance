@@ -8,20 +8,12 @@ from aiogram.utils.markdown import hbold
 from api.common import get_all_objects, get_full_info, delete_object_by_id
 from config import PAGE_SIZE
 from handlers.decorator_handler import decorator_errors
-from keyboards.incomes import incomes_keyboards, get_action
+from keyboards.incomes import get_action
 from keyboards.keyboards import confirm_menu, create_list_incomes_expenses
 from states.incomes import IncomesState
 from utils.incomes import get_incomes_url, generate_message_income_info, incomes_by_id
 
 incomes = Router()
-
-
-@incomes.callback_query(F.data == "incomes")
-async def start_work_incomes(callback: CallbackQuery) -> None:
-    """A handler for selecting the next action."""
-    await callback.message.answer(
-        text="Выберите операцию с доходами.", reply_markup=incomes_keyboards
-    )
 
 
 @incomes.callback_query(F.data == "incomes_history")
