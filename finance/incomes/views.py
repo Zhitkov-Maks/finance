@@ -28,7 +28,7 @@ from .serializers import (
     IncomeSerializer,
     CategorySerializer,
     IncomeSerializersAdd,
-    CategoryIncomeStatisticsSerializer, IncomeSerializerGet, IncomeSerializersPatch,
+    CategoryIncomeStatisticsSerializer, IncomeSerializerGet, IncomeSerializersPatch, StatisticsResponseSerializer,
 )
 
 
@@ -261,7 +261,7 @@ class CategoryIncomeStatisticsView(generics.GenericAPIView):
         BasicAuthentication,
         SessionAuthentication,
     )
-    serializer_class = CategoryIncomeStatisticsSerializer
+    serializer_class = StatisticsResponseSerializer
 
     def get(self, request, *args, **kwargs) -> Response:
         """
@@ -274,5 +274,11 @@ class CategoryIncomeStatisticsView(generics.GenericAPIView):
             return Response({"error": "Year and month are required."}, status=400)
 
         statistics = get_category_income_statistics(request.user, year, month)
-        serializer = self.get_serializer(statistics, many=True)
+        total_amount = sum(float(item['total_amount']) for item in statistics)  # Подсчет общей суммы
+
+        response_data = {
+            "statistics": statistics,
+            "total_amount": total_amount,
+        }
+        serializer = self.get_serializer(response_data)
         return Response(serializer.data)
