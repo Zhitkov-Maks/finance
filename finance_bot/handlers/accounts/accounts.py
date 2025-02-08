@@ -18,16 +18,17 @@ from utils.accounts import (
     account_by_id,
 )
 
-account = Router()
+account: Router = Router()
 
 
 @account.callback_query(F.data == "accounts")
 @decorator_errors
 async def start_account(callback: CallbackQuery, state: FSMContext):
     """Show a list of accounts."""
-    data = await state.get_data()
+    data: dict = await state.get_data()
     page: int = data.get("page", 1)
     url: str = await account_url(page, PAGE_SIZE)
+
     result: Dict[
         str, str | List[Dict[str, float | List[Dict[str, int | float | str]]]]
     ] = await get_all_objects(url, callback.from_user.id)
@@ -38,7 +39,7 @@ async def start_account(callback: CallbackQuery, state: FSMContext):
 
     await state.set_state(AccountsState.show)
     await callback.message.answer(
-        text=f"Баланс {total_balance:_}₽. Без учета неактивных счетов.",
+        text=f"Баланс {total_balance:_}₽",
         reply_markup=keyword,
     )
 
@@ -80,21 +81,21 @@ async def prev_output_list_habits(call: CallbackQuery, state: FSMContext) -> Non
 @account.callback_query(F.data == "change-toggle")
 async def change_toggle(callback: CallbackQuery, state: FSMContext) -> None:
     """Toggle the active status of an account."""
-    data = await state.get_data()
-    account_id = data.get("account_id")
+    data: dict = await state.get_data()
+    account_id: int = data.get("account_id")
     current_active: bool = data.get("is_active", False)
     url: str = await account_by_id(account_id)
 
     # Toggle the activity status
-    new_active_status = not current_active
+    new_active_status: bool = not current_active
     await change_toggle_active(account_id, callback.from_user.id, new_active_status)
 
     # Fetch updated account info
-    response = await get_full_info(url, callback.from_user.id)
+    response: dict = await get_full_info(url, callback.from_user.id)
     await update_account_state(state, response)
 
     # Update reply markup based on new active status
-    keyword = await get_action_accounts(response.get("is_active"))
+    keyword: InlineKeyboardMarkup = await get_action_accounts(response.get("is_active"))
     await callback.message.edit_reply_markup(reply_markup=keyword)
 
 
@@ -102,15 +103,16 @@ async def change_toggle(callback: CallbackQuery, state: FSMContext) -> None:
 @decorator_errors
 async def detail_account(call: CallbackQuery, state: FSMContext) -> None:
     """Show detailed account information."""
-    account_id = int(call.data)
+    account_id: int = int(call.data)
     url: str = await account_by_id(account_id)
 
     # Fetch account info
-    response = await get_full_info(url, call.from_user.id)
+    response: dict = await get_full_info(url, call.from_user.id)
     await update_account_state(state, response)
 
     # Generate and send the response text
-    text = await generate_message_answer(response)
+    text: str = await generate_message_answer(response)
+    await state.set_state(AccountsState.action)
     await call.message.answer(
         text=text,
         parse_mode="HTML",
@@ -128,12 +130,11 @@ async def remove_confirm(callback: CallbackQuery, state: FSMContext) -> None:
 @account.callback_query(AccountsState.remove, F.data == "continue")
 @decorator_errors
 async def remove_account_by_id(callback: CallbackQuery, state: FSMContext) -> None:
-    """
-    The final account deletion handler.
-    """
+    """The final account deletion handler."""
     data: dict = await state.get_data()
     account_id: int = data.get("account_id")
     url: str = await account_by_id(account_id)
+
     await delete_object_by_id(url, callback.from_user.id)
     await state.clear()
     await callback.message.answer(

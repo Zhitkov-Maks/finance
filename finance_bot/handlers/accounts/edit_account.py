@@ -14,7 +14,7 @@ from loader import new_balance
 from states.accounts import AccountsEditState, AccountsState
 from utils.accounts import generate_message_answer, is_valid_balance, account_by_id
 
-edit_acc_router = Router()
+edit_acc_router: Router = Router()
 
 
 @edit_acc_router.callback_query(F.data == "edit")
@@ -73,7 +73,7 @@ async def edited_account_balance(message: Message, state: FSMContext) -> None:
     method: str = "PATCH" if name is not None else "PUT"
     await edit_object(url, usr_id, edit_data, method)
 
-    response = await get_full_info(url, usr_id)
+    response: dict = await get_full_info(url, usr_id)
     text: str = await generate_message_answer(response)
 
     await state.set_state(AccountsState.action)
