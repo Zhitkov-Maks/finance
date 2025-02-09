@@ -87,10 +87,7 @@ async def get_message_incomes_by_expenses(
         plt.ylabel("Сумма (₽)")
 
         for i, v in enumerate(df["Сумма"]):
-            if v > 0:
-                offset = 200
-            else:
-                offset = -50  # Для отрицательных значений
+            offset = 200
 
             plt.text(
                 i,
@@ -109,17 +106,5 @@ async def get_message_incomes_by_expenses(
         plt.clf()
         return os.path.abspath(filename)
 
-    except FileNotFoundError as e:
-        print(
-            f"Ошибка при генерации графика для пользователя {usr_id}: Файл не найден ({e})"
-        )
-
-    except PermissionError as e:
-        print(
-            f"Ошибка при генерации графика для пользователя {usr_id}: Нет прав доступа к файлу ({e})"
-        )
-
-    except ValueError as e:
-        print(
-            f"Ошибка при генерации графика для пользователя {usr_id}: Некорректное значение данных ({e})"
-        )
+    except (FileNotFoundError, PermissionError, ValueError):
+        pass
