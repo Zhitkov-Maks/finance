@@ -47,5 +47,10 @@ def decorator_errors(func: Callable[P, T]) -> Callable[P, T]:
                 parse_mode="HTML",
                 reply_markup=main_menu,
             )
-
+        except (FileNotFoundError, PermissionError, ValueError):
+            await state.clear()
+            await bot.send_message(
+                arg.from_user.id,
+                text=hbold(str(FileNotFoundError)),
+            )
     return wrapper

@@ -47,16 +47,6 @@ async def create_list_incomes_expenses(
 menu_bot: List[List[InlineKeyboardButton]] = [
         [
             InlineKeyboardButton(
-                text="Войти",
-                callback_data="login"
-            ),
-             InlineKeyboardButton(
-                 text="Регистрация",
-                 callback_data="register"
-            )
-        ],
-        [
-            InlineKeyboardButton(
                 text="📉",
                 callback_data="statistic_exp"
             ),
@@ -75,17 +65,17 @@ menu_bot: List[List[InlineKeyboardButton]] = [
         ],
         [
             InlineKeyboardButton(
-                text="➖",
-                callback_data="expense_add"
+                text="➕",
+                callback_data="incomes_add"
             ),
             InlineKeyboardButton(
                 text="🏦",
                 callback_data="accounts_add"
             ),
             InlineKeyboardButton(
-                text="➕",
-                callback_data="incomes_add"
-            )
+                text="➖",
+                callback_data="expense_add"
+            ),
         ],
         [
             InlineKeyboardButton(

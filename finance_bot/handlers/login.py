@@ -2,7 +2,7 @@ from typing import Dict
 
 from aiogram import Router, F, Bot
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message
 
 from api.auth import login_user
 from config import BOT_TOKEN
@@ -16,11 +16,11 @@ auth = Router()
 bot = Bot(token=BOT_TOKEN)
 
 
-@auth.callback_query(F.data == "login")
-async def input_email(call: CallbackQuery, state: FSMContext) -> None:
+@auth.message(F.text == "/login")
+async def input_email(message: Message, state: FSMContext) -> None:
     """The handler for the email request."""
     await state.set_state(LoginState.email)
-    await call.message.answer(text=enter_email, parse_mode="HTML", reply_markup=cancel_)
+    await message.answer(text=enter_email, parse_mode="HTML", reply_markup=cancel_)
 
 
 @auth.message(LoginState.email)

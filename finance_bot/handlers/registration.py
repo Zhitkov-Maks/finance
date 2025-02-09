@@ -2,7 +2,7 @@ from typing import Dict
 
 from aiogram import Router, F, Bot
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message
 
 from api.auth import registration, login_user
 from config import BOT_TOKEN
@@ -15,11 +15,11 @@ register_route = Router()
 bot = Bot(token=BOT_TOKEN)
 
 
-@register_route.callback_query(F.data == "register")
-async def input_email(call: CallbackQuery, state: FSMContext) -> None:
+@register_route.message(F.text == "/reg")
+async def input_email(message: Message, state: FSMContext) -> None:
     """The handler for the email request."""
     await state.set_state(RegisterState.email)
-    await call.message.answer(text=enter_email, parse_mode="HTML", reply_markup=cancel_)
+    await message.answer(text=enter_email, parse_mode="HTML", reply_markup=cancel_)
 
 
 @register_route.message(RegisterState.email)
