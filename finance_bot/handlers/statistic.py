@@ -1,22 +1,25 @@
 import asyncio
+import os
 from datetime import datetime
 from typing import Dict
 
 from aiogram import Router, F
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, FSInputFile
 from aiogram.utils.markdown import hbold
 
 from api.common import get_full_info
 from config import statistic_url, accounts_url
 from handlers.decorator_handler import decorator_errors
+from keyboards.keyboards import main_menu
 from keyboards.statistic import get_month
 from utils.create_calendar import get_date, MONTH_DATA
 from utils.statistic import (
     gen_message_statistics,
     get_statistic_current_month,
-    get_url_and_type_message
+    get_url_and_type_message,
+    get_message_incomes_by_expenses,
 )
 
 statistic_route: Router = Router()
@@ -66,9 +69,11 @@ async def incomes_to_expenses(call: CallbackQuery, state: FSMContext) -> None:
             call.from_user.id,
         ),
     )
-
-    message: str = f"Доходы / Расходы  {round(amount_incomes - amount_expenses, 2)}₽"
-    await call.answer(text=message, show_alert=True)
+    filename: str = await get_message_incomes_by_expenses(
+        amount_incomes, amount_expenses, call.from_user.id, year, month
+    )
+    await call.message.answer_photo(FSInputFile(filename), reply_markup=main_menu)
+    os.remove(filename)
 
 
 @statistic_route.callback_query(F.data.in_(["statistic_exp", "statistic_inc"]))

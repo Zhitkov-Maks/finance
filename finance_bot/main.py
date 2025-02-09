@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
+from aiogram.utils.markdown import hbold
 
 from config import BOT_TOKEN
 from handlers.category import category_route
@@ -17,7 +18,7 @@ from handlers.registration import register_route
 from handlers.accounts import account, edit_acc_router, create_acc_route
 from handlers.transfer import transfer
 from keyboards.keyboards import main_menu
-from loader import greeting
+from loader import greeting, main_menu_text
 from handlers.statistic import statistic_route
 
 bot = Bot(token=BOT_TOKEN)
@@ -50,14 +51,19 @@ async def greeting_handler(message: Message) -> None:
 async def handler_main(call: CallbackQuery, state: FSMContext) -> None:
     """Show base bot's menu."""
     await state.clear()
-    await call.message.answer(text="Меню", reply_markup=main_menu)
+    await call.message.delete_reply_markup()
+    await call.message.answer(
+        text=hbold(main_menu_text), reply_markup=main_menu, parse_mode="HTML"
+    )
 
 
 @dp.message(F.text == "/main")
 async def handler_main(message: Message, state: FSMContext) -> None:
     """Show base bot's menu."""
     await state.clear()
-    await message.answer(text="Меню", reply_markup=main_menu)
+    await message.answer(
+        text=hbold(main_menu_text), reply_markup=main_menu, parse_mode="HTML"
+    )
 
 
 async def main() -> None:

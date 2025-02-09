@@ -9,3 +9,5 @@ pydantic==2.10.6
 pydantic_core==2.27.2
 python-decouple==3.8
 python-dotenv==1.0.1
+matplotlib==3.10.0
+pandas==2.2.3
