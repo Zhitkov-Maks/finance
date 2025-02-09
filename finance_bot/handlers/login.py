@@ -1,3 +1,4 @@
+import asyncio
 from typing import Dict
 
 from aiogram import Router, F, Bot
@@ -10,6 +11,7 @@ from keyboards.keyboards import main_menu, cancel_
 from keyboards.reset import generate_inline_keyboard_reset
 from loader import enter_email, password, success_auth
 from states.login import LoginState
+from utils.common import remove_message_after_delay
 from utils.register import is_valid_email, is_valid_password, create_data
 
 auth = Router()
@@ -20,6 +22,7 @@ bot = Bot(token=BOT_TOKEN)
 async def input_email(message: Message, state: FSMContext) -> None:
     """The handler for the email request."""
     await state.set_state(LoginState.email)
+    asyncio.create_task(remove_message_after_delay(60, message))
     await message.answer(text=enter_email, parse_mode="HTML", reply_markup=cancel_)
 
 
@@ -27,7 +30,7 @@ async def input_email(message: Message, state: FSMContext) -> None:
 async def input_password(mess: Message, state: FSMContext) -> None:
     """The handler for the password request."""
     valid: bool = is_valid_email(mess.text)
-
+    asyncio.create_task(remove_message_after_delay(60, mess))
     if valid:
         await state.update_data(email=mess.text)
         await state.set_state(LoginState.password)
@@ -46,7 +49,7 @@ async def input_password(mess: Message, state: FSMContext) -> None:
 async def final_authentication(message: Message, state: FSMContext) -> None:
     """The handler authenticates the user."""
     valid: bool = is_valid_password(message.text)
-
+    asyncio.create_task(remove_message_after_delay(15, message))
     if valid:
         email: str = (await state.get_data())["email"]
         data: Dict[str, str] = await create_data(email, message.text)
