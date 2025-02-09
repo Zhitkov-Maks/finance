@@ -1,3 +1,5 @@
+import asyncio
+
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
@@ -9,6 +11,7 @@ from keyboards.incomes import choice_edit, get_action
 from keyboards.keyboards import cancel_
 from states.incomes import EditIncomesState, IncomesState
 from utils.accounts import is_valid_balance
+from utils.common import remove_message_after_delay
 from utils.incomes import incomes_by_id, generate_message_income_info, create_new_incomes_data
 
 inc_edit_router = Router()
@@ -17,9 +20,12 @@ inc_edit_router = Router()
 @inc_edit_router.callback_query(F.data == "edit_income")
 async def edit_income_choice(callback: CallbackQuery) -> None:
     """A handler for selecting an income editing option."""
-    await callback.message.answer(
-        text="Выберите вариант редактирования.",
-        reply_markup=choice_edit
+    text = "Выберите вариант редактирования."
+    if not callback.message.text:
+        await callback.message.delete()
+
+    await (callback.message.edit_text if callback.message.text else callback.message.answer)(
+        text=text, reply_markup=choice_edit
     )
 
 
@@ -31,7 +37,7 @@ async def edit_balance(callback: CallbackQuery, state: FSMContext) -> None:
     """
     await state.set_state(EditIncomesState.amount)
     await state.update_data(method="PATCH")
-    await callback.message.answer(
+    await callback.message.edit_text(
         text="Введите новую сумму дохода.",
         reply_markup=cancel_
     )
@@ -65,6 +71,7 @@ async def edit_income_request(message: Message, state: FSMContext) -> None:
 
     text: str = await generate_message_income_info(response)
     await state.set_state(IncomesState.action)
+    asyncio.create_task(remove_message_after_delay(60, message))
     await message.answer(
         text=hbold(text),
         parse_mode="HTML",

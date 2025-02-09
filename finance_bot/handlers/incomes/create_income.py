@@ -1,3 +1,4 @@
+import asyncio
 import re
 from datetime import datetime
 from typing import Dict, List
@@ -16,7 +17,7 @@ from keyboards.create_calendar import create_calendar
 from keyboards.keyboards import cancel_, main_menu
 from states.incomes import CreateIncomes, EditIncomesState
 from utils.accounts import account_url, is_valid_balance
-from utils.common import date_pattern
+from utils.common import date_pattern, remove_message_after_delay
 from utils.create_calendar import get_date
 from utils.incomes import (
     get_incomes_category_url,
@@ -43,7 +44,14 @@ async def create_income_choice_date(callback: CallbackQuery, state: FSMContext) 
     )
 
     await state.update_data(year=year, month=month)
-    await callback.message.answer(text="Выберите дату дохода", reply_markup=keyboard)
+    text = "Выберите дату дохода"
+
+    if not callback.message.text:
+        await callback.message.delete()
+
+    await (callback.message.edit_text if callback.message.text else callback.message.answer)(
+        text=text, reply_markup=keyboard
+    )
 
 
 @create_inc_router.callback_query(F.data.in_(["next_cal_inc", "prev_cal_inc"]))
@@ -60,9 +68,7 @@ async def next_and_prev_month(callback: CallbackQuery, state: FSMContext) -> Non
     await state.update_data(year=year, month=month)
     await state.set_state(CreateIncomes.date)
     await callback.message.edit_reply_markup(
-        reply_markup=await create_calendar(
-            year, month, "prev_cal_inc", "next_cal_inc"
-        )
+        reply_markup=await create_calendar(year, month, "prev_cal_inc", "next_cal_inc")
     )
 
 
@@ -88,7 +94,7 @@ async def create_income_choice_account(
     )
 
     await state.set_state(CreateIncomes.account)
-    await callback.message.answer(
+    await callback.message.edit_text(
         text="Выберите счет: ",
         reply_markup=keyword,
     )
@@ -133,7 +139,7 @@ async def create_income_choice_category(
         url, callback.from_user.id
     )
     keyboard: InlineKeyboardMarkup = await create_list_category(result)
-    await callback.message.answer(
+    await callback.message.edit_text(
         text="Выберите категорию дохода: ", reply_markup=keyboard
     )
 
@@ -175,7 +181,9 @@ async def create_income_input_amount(
     else:
         await state.set_state(EditIncomesState.amount)
 
-    await callback.message.answer(text="Введите сумму дохода: ", reply_markup=cancel_)
+    await callback.message.edit_text(
+        text="Введите сумму дохода: ", reply_markup=cancel_
+    )
 
 
 @create_inc_router.message(CreateIncomes.amount)
@@ -184,7 +192,6 @@ async def create_income_final(message: Message, state: FSMContext) -> None:
     """The final handler for the request to create a new income."""
     data: dict[str, str | int] = await state.get_data()
     usr_id: int = message.from_user.id
-
     if not is_valid_balance(message.text):
         await message.answer(
             "Invalid balance format. Please enter a valid number.", reply_markup=cancel_
@@ -200,6 +207,7 @@ async def create_income_final(message: Message, state: FSMContext) -> None:
     answer_message: str = await gen_answer_message(response)
 
     await state.clear()
+    asyncio.create_task(remove_message_after_delay(30, message))
     await message.answer(
         text=hbold(answer_message), parse_mode="HTML", reply_markup=main_menu
     )

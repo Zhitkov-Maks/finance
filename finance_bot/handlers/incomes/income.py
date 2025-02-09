@@ -13,7 +13,7 @@ from keyboards.keyboards import confirm_menu, create_list_incomes_expenses
 from states.incomes import IncomesState
 from utils.incomes import get_incomes_url, generate_message_income_info, incomes_by_id
 
-incomes = Router()
+incomes: Router = Router()
 
 
 @incomes.callback_query(F.data == "incomes_history")
@@ -31,9 +31,12 @@ async def incomes_get_history(callback: CallbackQuery, state: FSMContext) -> Non
     keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(result)
 
     await state.set_state(IncomesState.show)
-    await callback.message.answer(
-        text=f"Ваши доходы.",
-        reply_markup=keyword,
+    text = "Ваши доходы."
+    if not callback.message.text:
+        await callback.message.delete()
+
+    await (callback.message.edit_text if callback.message.text else callback.message.answer)(
+        text=text, reply_markup=keyword
     )
 
 
@@ -71,7 +74,7 @@ async def detail_incomes(call: CallbackQuery, state: FSMContext) -> None:
     text: str = await generate_message_income_info(response)
 
     await state.set_state(IncomesState.action)
-    await call.message.answer(
+    await call.message.edit_text(
         text=hbold(text),
         parse_mode="HTML",
         reply_markup=await get_action(),
@@ -82,7 +85,7 @@ async def detail_incomes(call: CallbackQuery, state: FSMContext) -> None:
 async def remove_confirm(callback: CallbackQuery, state: FSMContext) -> None:
     """Confirmation of deletion."""
     await state.set_state(IncomesState.remove)
-    await callback.message.answer(text="Вы уверены?", reply_markup=confirm_menu)
+    await callback.message.edit_text(text="Вы уверены?", reply_markup=confirm_menu)
 
 
 @incomes.callback_query(IncomesState.remove, F.data == "continue")
@@ -107,7 +110,7 @@ async def remove_income_by_id(callback: CallbackQuery, state: FSMContext) -> Non
     keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(result)
 
     await state.set_state(IncomesState.show)
-    await callback.message.answer(
+    await callback.message.edit_text(
         text=f"Запись была удалена.",
         reply_markup=keyword,
     )

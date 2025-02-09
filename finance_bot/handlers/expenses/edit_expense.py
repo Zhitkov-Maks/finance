@@ -1,3 +1,5 @@
+import asyncio
+
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
@@ -10,6 +12,7 @@ from keyboards.incomes import get_action
 from keyboards.keyboards import cancel_
 from states.expenses import EditExpenseState, ExpensesState
 from utils.accounts import is_valid_balance
+from utils.common import remove_message_after_delay
 from utils.expenses import (
     create_new_expenses_data,
     generate_message_expense_info,
@@ -22,7 +25,7 @@ exp_edit_router = Router()
 @exp_edit_router.callback_query(F.data == "edit_expense")
 async def edit_expense_choice(callback: CallbackQuery) -> None:
     """A handler for selecting an expense editing option."""
-    await callback.message.answer(
+    await callback.message.edit_text(
         text="Выберите вариант редактирования.", reply_markup=choice_expense_edit
     )
 
@@ -35,7 +38,7 @@ async def edit_balance(callback: CallbackQuery, state: FSMContext) -> None:
     """
     await state.set_state(EditExpenseState.amount)
     await state.update_data(method="PATCH")
-    await callback.message.answer(
+    await callback.message.edit_text(
         text="Введите новую сумму расхода.", reply_markup=cancel_
     )
 
@@ -48,7 +51,6 @@ async def edit_expense_request(message: Message, state: FSMContext) -> None:
     expense_id, usr_id = data["expense_id"], message.from_user.id
     method: str = data.get("method", "PUT")
     url: str = await expense_url_by_id(expense_id)
-
     if not is_valid_balance(message.text):
         await message.answer(
             "Invalid balance format. Please enter a valid number.", reply_markup=cancel_
@@ -70,6 +72,7 @@ async def edit_expense_request(message: Message, state: FSMContext) -> None:
 
     text: str = await generate_message_expense_info(response)
     await state.set_state(ExpensesState.action)
+    asyncio.create_task(remove_message_after_delay(60, message))
     await message.answer(
         text=hbold(text),
         parse_mode="HTML",
