@@ -79,6 +79,7 @@ async def next_and_prev_month(callback: CallbackQuery, state: FSMContext) -> Non
     CreateExpenseState.date,
     lambda callback_query: re.match(date_pattern, callback_query.data),
 )
+@decorator_errors
 async def create_expense_choice_account(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
@@ -169,7 +170,7 @@ async def next_prev_output_list_category(
         result, "prev_cat_exp", "next_cat_exp"
     )
 
-    await state.set_state(CreateExpenseState.account)
+    await state.set_state(CreateExpenseState.expense_category)
     await state.update_data(page=page)
     await call.message.edit_reply_markup(reply_markup=keyword)
 

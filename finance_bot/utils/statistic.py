@@ -56,7 +56,7 @@ async def gen_message_statistics(data: dict) -> str:
         percent: float = category_amount / total_amount * 100
 
         # Используем вертикальные линии как разделители
-        message += f"{category_name} ... {category_amount:,.2f}₽ ... {percent:.02f}%\n{50 * '-'}\n"
+        message += f"{category_name} ... {category_amount:,.2f}₽ ... {percent:.02f}%\n{55 * '-'}\n"
 
     if len(message) == 0:
         message = "За данный месяц нет данных."

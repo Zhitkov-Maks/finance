@@ -42,4 +42,4 @@ categories_message: dict[str, str] = {
 
 main_menu_text: str = "Основное меню бота 🥷."
 
-category_statistic_text: str = "Ваши {operation} по категориям: " + f"\n{50 * "-"}"
+category_statistic_text: str = "Ваши {operation} по категориям: " + f"\n{55 * "-"}"
