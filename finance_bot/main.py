@@ -51,8 +51,7 @@ async def greeting_handler(message: Message) -> None:
 async def handler_main(call: CallbackQuery, state: FSMContext) -> None:
     """Show base bot's menu."""
     await state.clear()
-    await call.message.delete_reply_markup()
-    await call.message.answer(
+    await call.message.edit_text(
         text=hbold(main_menu_text), reply_markup=main_menu, parse_mode="HTML"
     )
 

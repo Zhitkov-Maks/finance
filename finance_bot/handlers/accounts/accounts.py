@@ -3,6 +3,7 @@ from typing import Dict, List
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup
+from aiogram.utils.markdown import hbold
 
 from api.accounts import change_toggle_active
 from api.common import get_all_objects, get_full_info, delete_object_by_id
@@ -38,9 +39,11 @@ async def start_account(callback: CallbackQuery, state: FSMContext):
     keyword: InlineKeyboardMarkup = await create_list_account(result)
 
     await state.set_state(AccountsState.show)
-    await callback.message.answer(
-        text=f"Баланс {total_balance:_}₽",
+    text: str = f"Баланс {total_balance:_}₽"
+    await callback.message.edit_text(
+        text=hbold(text),
         reply_markup=keyword,
+        parse_mode="HTML",
     )
 
 
@@ -114,7 +117,7 @@ async def detail_account(call: CallbackQuery, state: FSMContext) -> None:
     # Generate and send the response text
     text: str = await generate_message_answer(response)
     await state.set_state(AccountsState.action)
-    await call.message.answer(
+    await call.message.edit_text(
         text=text,
         parse_mode="HTML",
         reply_markup=await get_action_accounts(response.get("is_active")),
@@ -125,7 +128,9 @@ async def detail_account(call: CallbackQuery, state: FSMContext) -> None:
 async def remove_confirm(callback: CallbackQuery, state: FSMContext) -> None:
     """Confirmation of deletion."""
     await state.set_state(AccountsState.remove)
-    await callback.message.answer(text="Вы уверены?", reply_markup=confirm_menu)
+    await callback.message.edit_text(
+        text=hbold("Вы уверены?"), reply_markup=confirm_menu, parse_mode="HTML"
+    )
 
 
 @account.callback_query(AccountsState.remove, F.data == "continue")
@@ -138,6 +143,8 @@ async def remove_account_by_id(callback: CallbackQuery, state: FSMContext) -> No
 
     await delete_object_by_id(url, callback.from_user.id)
     await state.clear()
-    await callback.message.answer(
-        text=f"Счет <{data['account']}> был удален!", reply_markup=main_menu
+    await callback.message.edit_text(
+        text=hbold(f"Счет <{data['account']}> был удален!"),
+        reply_markup=main_menu,
+        parse_mode="HTML"
     )

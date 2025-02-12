@@ -1,8 +1,10 @@
+import asyncio
 from typing import Dict, List
 
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
+from aiogram.utils.markdown import hbold
 
 from api.common import get_all_objects
 from api.transfer import create_transfer
@@ -12,6 +14,7 @@ from keyboards.keyboards import cancel_, main_menu
 from keyboards.transfer import create_list_transfer_accounts
 from states.accounts import TransferStates
 from utils.accounts import is_valid_balance, account_url
+from utils.common import remove_message_after_delay
 
 transfer = Router()
 
@@ -34,9 +37,10 @@ async def start_transfer(callback: CallbackQuery, state: FSMContext) -> None:
         result, int(account_id), transfer=True
     )
     await state.set_state(TransferStates.action)
-    await callback.message.answer(
-        text="Выберите счет куда перевести 💵",
+    await callback.message.edit_text(
+        text=hbold("Выберите счет куда перевести 💵"),
         reply_markup=keyword,
+        parse_mode="HTML"
     )
 
 
@@ -72,9 +76,12 @@ async def get_account_transfer_out(callback: CallbackQuery, state: FSMContext) -
     await state.update_data(transfer_out=callback.data.split("_")[0])
     await state.update_data(account_out=callback.data.split("_")[1])
     await state.set_state(TransferStates.amount)
-    await callback.message.answer(
-        text="Введите сумму перевода 💰💰💰.", reply_markup=cancel_
+    answer: Message = await callback.message.edit_text(
+        text=hbold("Введите сумму перевода 💰💰💰."),
+        reply_markup=cancel_,
+        parse_mode="HTML"
     )
+    asyncio.create_task(remove_message_after_delay(60, answer))
 
 
 @transfer.message(TransferStates.amount)
@@ -85,16 +92,20 @@ async def get_amount_transfer(message: Message, state: FSMContext) -> None:
     usr_id: int = message.from_user.id
     amount: str = message.text
     name, name_out = data.get("account"), data.get("account_out")
+    messages_to_delete: list[Message] = [message]
 
     if not is_valid_balance(message.text):
-        await message.answer(
+        error: Message =await message.answer(
             "Invalid balance format. Please enter a valid number.", reply_markup=cancel_
         )
+        messages_to_delete.append(error)
         return
 
     await create_transfer(transfer_in, transfer_out, usr_id, float(message.text))
     await state.clear()
     await message.answer(
-        text=f"Перевод с {name} 👉🏻 {name_out} на сумму {amount}₽.",
+        text=hbold(f"Перевод с {name} 👉🏻 {name_out} на сумму {amount}₽."),
         reply_markup=main_menu,
+        parse_mode="HTML",
     )
+    asyncio.create_task(remove_message_after_delay(60, messages_to_delete))

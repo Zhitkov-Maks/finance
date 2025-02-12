@@ -39,11 +39,8 @@ async def expenses_get_history(callback: CallbackQuery, state: FSMContext) -> No
 
     await state.set_state(ExpensesState.show)
     text = "Ваши последние расходы."
-    if not callback.message.text:
-        await callback.message.delete()
-
-    await (callback.message.edit_text if callback.message.text else callback.message.answer)(
-        text=text, reply_markup=keyword
+    await callback.message.edit_text(
+        text=hbold(text), reply_markup=keyword, parse_mode="HTML"
     )
 
 @expense_router.callback_query(F.data.in_(["next_exp", "prev_exp"]))
@@ -95,7 +92,11 @@ async def detail_incomes(call: CallbackQuery, state: FSMContext) -> None:
 async def remove_confirm(callback: CallbackQuery, state: FSMContext) -> None:
     """Confirmation of deletion."""
     await state.set_state(ExpensesState.remove)
-    await callback.message.edit_text(text="Вы уверены?", reply_markup=confirm_menu)
+    await callback.message.edit_text(
+        text=hbold("Вы уверены?"),
+        reply_markup=confirm_menu,
+        parse_mode="HTML",
+    )
 
 
 @expense_router.callback_query(ExpensesState.remove, F.data == "continue")
@@ -122,6 +123,7 @@ async def remove_expense_by_id(callback: CallbackQuery, state: FSMContext) -> No
 
     await state.set_state(ExpensesState.show)
     await callback.message.edit_text(
-        text=f"Запись была удалена.",
+        text=hbold(f"Запись была удалена."),
         reply_markup=keyword,
+        parse_mode="HTML",
     )

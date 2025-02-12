@@ -4,6 +4,7 @@ from typing import Dict
 from aiogram import Router, F, Bot
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
+from aiogram.utils.markdown import hbold
 
 from api.auth import login_user
 from config import BOT_TOKEN
@@ -22,48 +23,62 @@ bot = Bot(token=BOT_TOKEN)
 async def input_email(message: Message, state: FSMContext) -> None:
     """The handler for the email request."""
     await state.set_state(LoginState.email)
-    asyncio.create_task(remove_message_after_delay(60, message))
-    await message.answer(text=enter_email, parse_mode="HTML", reply_markup=cancel_)
+    answer: Message = await message.answer(
+        text=enter_email, parse_mode="HTML", reply_markup=cancel_
+    )
+    asyncio.create_task(remove_message_after_delay(60, [message, answer]))
 
 
 @auth.message(LoginState.email)
 async def input_password(mess: Message, state: FSMContext) -> None:
     """The handler for the password request."""
     valid: bool = is_valid_email(mess.text)
-    asyncio.create_task(remove_message_after_delay(60, mess))
+    messages_to_delete: list[Message] = [mess]
+
     if valid:
         await state.update_data(email=mess.text)
         await state.set_state(LoginState.password)
-        await mess.answer(
+        answer = await mess.answer(
             text=password, parse_mode="HTML", reply_markup=cancel_
         )
-
     else:
-        text: str = "Ваш email не соответствует требованиям! "
-        await mess.answer(
+        text: str = hbold("Ваш email не соответствует требованиям! ")
+        answer = await mess.answer(
             text=text + enter_email, parse_mode="HTML", reply_markup=cancel_
         )
+
+    messages_to_delete.append(answer)
+    asyncio.create_task(remove_message_after_delay(60, messages_to_delete))
 
 
 @auth.message(LoginState.password)
 async def final_authentication(message: Message, state: FSMContext) -> None:
     """The handler authenticates the user."""
     valid: bool = is_valid_password(message.text)
-    asyncio.create_task(remove_message_after_delay(15, message))
+    messages_to_delete: list[Message] = [message]
+
     if valid:
         email: str = (await state.get_data())["email"]
         data: Dict[str, str] = await create_data(email, message.text)
         result: str | None = await login_user(data, message.from_user.id)
+
         if result is None:
-            await message.answer(success_auth, reply_markup=main_menu, parse_mode="HTML")
+            success_mess: Message = await message.answer(
+                success_auth, reply_markup=main_menu, parse_mode="HTML"
+            )
+            messages_to_delete.append(success_mess)
         else:
-            await message.answer(
+            error_mess: Message = await message.answer(
                 result, reply_markup=await generate_inline_keyboard_reset()
             )
-        await state.clear()
+            messages_to_delete.append(error_mess)
 
+        await state.clear()
     else:
         text: str = "Ваш пароль не соответствует требованиям! "
-        await message.answer(
+        error_password: Message = await message.answer(
             text=text + password, parse_mode="HTML", reply_markup=cancel_
         )
+        messages_to_delete.append(error_password)
+
+    asyncio.create_task(remove_message_after_delay(60, messages_to_delete))
