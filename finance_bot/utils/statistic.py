@@ -1,8 +1,3 @@
-import os
-
-import matplotlib.pyplot as plt
-import pandas as pd
-
 from api.common import get_full_info
 from config import statistic_url
 from loader import category_statistic_text
@@ -65,42 +60,20 @@ async def gen_message_statistics(data: dict) -> str:
 
 
 async def get_message_incomes_by_expenses(
-    amount_inc: float, amount_exp: float, usr_id: int, year: int, month: int
+    amount_inc: float,
+    amount_exp: float,
+    year: int,
+    month: int
 ) -> str:
     """
     Generating a graphic image of the income-to-expense ratio.
     :param month: Month to display the date.
-    :param year: Year to display the date
-    :param usr_id: The telegram user's ID
+    :param year: Year to display the date.
     :param amount_inc: The amount of incomes.
     :param amount_exp: The amount of expenses.
     :return: The path to the file to send to the user.
     """
-    data: dict = {"Категория": ["Доходы", "Расходы"], "Сумма": [amount_inc, amount_exp]}
-    df: pd.DataFrame = pd.DataFrame(data)
-
-    plt.figure(figsize=(8, 7))
-    plt.bar(df["Категория"], df["Сумма"], color=["green", "red"])
-    plt.title(f"{MONTH_DATA[month]} {year}г")
-    plt.xlabel("Категория")
-    plt.ylabel("Сумма (₽)")
-
-    for i, v in enumerate(df["Сумма"]):
-        offset = 200
-
-        plt.text(
-            i,
-            v + offset if v >= 0 else v - abs(offset),
-            str(v),
-            color="black",
-            ha="center",
-        )
-
-    filename = f"finances_{usr_id}_graph.png"
-
-    # Saving the graph to a file (temporary file)
-    plt.savefig(filename)
-
-    # Cleaning up the current Matplotlib instance
-    plt.clf()
-    return os.path.abspath(filename)
+    return (f"{MONTH_DATA[month]} {year}г\n"
+            f"Потрачено - {amount_exp:,.2f}\n"
+            f"Заработано - {amount_inc:,.2f}\n"
+            f"Итог => {amount_inc - amount_exp:,.2f}\n")

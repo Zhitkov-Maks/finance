@@ -46,11 +46,10 @@ async def create_income_choice_date(callback: CallbackQuery, state: FSMContext) 
     await state.update_data(year=year, month=month)
     text = "Выберите дату дохода"
 
-    if not callback.message.text:
-        await callback.message.delete()
-
-    await (callback.message.edit_text if callback.message.text else callback.message.answer)(
-        text=text, reply_markup=keyboard
+    await callback.message.edit_text(
+        text=hbold(text),
+        reply_markup=keyboard,
+        parse_mode="HTML",
     )
 
 
@@ -95,8 +94,9 @@ async def create_income_choice_account(
 
     await state.set_state(CreateIncomes.account)
     await callback.message.edit_text(
-        text="Выберите счет: ",
+        text=hbold("Выберите счет: "),
         reply_markup=keyword,
+        parse_mode="HTML",
     )
 
 
@@ -140,7 +140,9 @@ async def create_income_choice_category(
     )
     keyboard: InlineKeyboardMarkup = await create_list_category(result)
     await callback.message.edit_text(
-        text="Выберите категорию дохода: ", reply_markup=keyboard
+        text=hbold("Выберите категорию дохода: "),
+        reply_markup=keyboard,
+        parse_mode="HTML",
     )
 
 
@@ -181,9 +183,12 @@ async def create_income_input_amount(
     else:
         await state.set_state(EditIncomesState.amount)
 
-    await callback.message.edit_text(
-        text="Введите сумму дохода: ", reply_markup=cancel_
+    answer: Message = await callback.message.edit_text(
+        text=hbold("Введите сумму дохода: "),
+        reply_markup=cancel_,
+        parse_mode="HTML",
     )
+    asyncio.create_task(remove_message_after_delay(60, answer))
 
 
 @create_inc_router.message(CreateIncomes.amount)
@@ -193,9 +198,10 @@ async def create_income_final(message: Message, state: FSMContext) -> None:
     data: dict[str, str | int] = await state.get_data()
     usr_id: int = message.from_user.id
     if not is_valid_balance(message.text):
-        await message.answer(
+        err_mess: Message = await message.answer(
             "Invalid balance format. Please enter a valid number.", reply_markup=cancel_
         )
+        asyncio.create_task(remove_message_after_delay(60, err_mess))
         return
 
     dict_for_request: dict[str, str | float | int] = await create_new_incomes_data(
@@ -211,3 +217,4 @@ async def create_income_final(message: Message, state: FSMContext) -> None:
     await message.answer(
         text=hbold(answer_message), parse_mode="HTML", reply_markup=main_menu
     )
+    asyncio.create_task(remove_message_after_delay(60, message))

@@ -58,12 +58,12 @@ async def generate_message_answer(
     :param data: Necessary data to generate a message.
     :return str:A message to show to the user
     """
-    message: str = f"{hbold(data.get("name"))} 👉🏻 "
+    message: str = f"{data.get("name")} 👉🏻 "
     message += f"{float(data.get('balance')):_}₽\n"
-    message += hbold("\nПоследние доходы 😉\n") + await get_last_incomes_expenses(
+    message += "\nПоследние доходы 😉\n" + await get_last_incomes_expenses(
         data.get("incomes")
     )
-    message += hbold("\nПоследние расходы 🫢\n") + await get_last_incomes_expenses(
+    message += "\nПоследние расходы 🫢\n" + await get_last_incomes_expenses(
         data.get("expenses")
     )
     return message

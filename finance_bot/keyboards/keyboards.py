@@ -79,12 +79,12 @@ menu_bot: List[List[InlineKeyboardButton]] = [
         ],
         [
             InlineKeyboardButton(
-                text="Счета",
-                callback_data="accounts"
-            ),
-            InlineKeyboardButton(
                 text="Доходы",
                 callback_data="incomes_history"
+            ),
+            InlineKeyboardButton(
+                text="Счета",
+                callback_data="accounts"
             ),
             InlineKeyboardButton(
                 text="Расходы",

@@ -21,11 +21,10 @@ inc_edit_router = Router()
 async def edit_income_choice(callback: CallbackQuery) -> None:
     """A handler for selecting an income editing option."""
     text = "Выберите вариант редактирования."
-    if not callback.message.text:
-        await callback.message.delete()
-
-    await (callback.message.edit_text if callback.message.text else callback.message.answer)(
-        text=text, reply_markup=choice_edit
+    await callback.message.edit_text(
+        text=hbold(text),
+        reply_markup=choice_edit,
+        parse_mode="HTML"
     )
 
 
@@ -37,10 +36,13 @@ async def edit_balance(callback: CallbackQuery, state: FSMContext) -> None:
     """
     await state.set_state(EditIncomesState.amount)
     await state.update_data(method="PATCH")
-    await callback.message.edit_text(
-        text="Введите новую сумму дохода.",
-        reply_markup=cancel_
+    answer: Message = await callback.message.edit_text(
+        text=hbold("Введите новую сумму дохода."),
+        reply_markup=cancel_,
+        parse_mode="HTML"
     )
+    asyncio.create_task(remove_message_after_delay(60, answer))
+
 
 @inc_edit_router.message(EditIncomesState.amount)
 @decorator_errors
@@ -52,9 +54,10 @@ async def edit_income_request(message: Message, state: FSMContext) -> None:
     url: str = await incomes_by_id(income_id)
 
     if not is_valid_balance(message.text):
-        await message.answer(
+        err_mess: Message = await message.answer(
             "Invalid balance format. Please enter a valid number.", reply_markup=cancel_
         )
+        asyncio.create_task(remove_message_after_delay(60, err_mess))
         return
 
     if method == "PATCH":
@@ -77,3 +80,4 @@ async def edit_income_request(message: Message, state: FSMContext) -> None:
         parse_mode="HTML",
         reply_markup=await get_action(),
     )
+    asyncio.create_task(remove_message_after_delay(60, message))

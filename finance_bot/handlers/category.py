@@ -1,3 +1,5 @@
+import asyncio
+
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup
@@ -17,10 +19,11 @@ from keyboards.category import (
     create_list_category,
     get_categories_action,
 )
-from keyboards.keyboards import cancel_, main_menu, confirm_menu
+from keyboards.keyboards import cancel_, confirm_menu
 from loader import categories_message
 from states.category import CategoryState
 from utils.category import get_url
+from utils.common import remove_message_after_delay
 
 category_route: Router = Router()
 
@@ -31,8 +34,10 @@ async def start_working_category(callback: CallbackQuery) -> None:
     The handler for getting started with categories shows
     the keyboard with possible actions.
     """
-    await callback.message.answer(
-        text="Выберите действие.", reply_markup=inline_type_categories
+    await callback.message.edit_text(
+        text=hbold("Выберите действие."),
+        reply_markup=inline_type_categories,
+        parse_mode="HTML"
     )
 
 
@@ -53,8 +58,10 @@ async def show_categories(callback: CallbackQuery, state: FSMContext) -> None:
     keyword: InlineKeyboardMarkup = await create_list_category(
         result, "prev_category", "next_category"
     )
-    await callback.message.answer(
-        text=categories_message[callback.data], reply_markup=keyword
+    await callback.message.edit_text(
+        text=hbold(categories_message[callback.data]),
+        reply_markup=keyword,
+        parse_mode="HTML"
     )
 
 
@@ -92,7 +99,7 @@ async def detail_category(call: CallbackQuery, state: FSMContext) -> None:
     text: str = response.get("name")
 
     await state.set_state(CategoryState.action)
-    await call.message.answer(
+    await call.message.edit_text(
         text=hbold("Категория: <" + text + ">. Выберите действие."),
         parse_mode="HTML",
         reply_markup=await get_categories_action(data["category"]),
@@ -104,9 +111,12 @@ async def choice_category(callback: CallbackQuery, state: FSMContext) -> None:
     """A handler for entering a new income or expense category."""
     await state.update_data(category=callback.data)
     await state.set_state(CategoryState.type_category)
-    await callback.message.answer(
-        text="Введите название категории", reply_markup=cancel_
+    answer: Message = await callback.message.edit_text(
+        text=hbold("Введите название категории"),
+        reply_markup=cancel_,
+        parse_mode="HTML"
     )
+    asyncio.create_task(remove_message_after_delay(60, answer))
 
 
 @category_route.message(CategoryState.type_category)
@@ -115,11 +125,16 @@ async def create_category(message: Message, state: FSMContext) -> None:
     """The handler sends a request to save the category."""
     data: dict[str, str] = await state.get_data()
     category: str = data["category"]
-    await create_new_object(
+    result: dict = await create_new_object(
         message.from_user.id, categories_urls[category], {"name": message.text}
     )
+    await state.update_data(category_id=result.get("id"))
+
+    await state.set_state(CategoryState.action)
     await message.answer(
-        text=categories_message[category].format(message.text), reply_markup=main_menu
+        text=hbold(categories_message[category].format(message.text)),
+        reply_markup=inline_type_categories,
+        parse_mode="HTML"
     )
 
 
@@ -127,7 +142,11 @@ async def create_category(message: Message, state: FSMContext) -> None:
 async def remove_confirm(callback: CallbackQuery, state: FSMContext) -> None:
     """Confirmation of deletion."""
     await state.set_state(CategoryState.remove)
-    await callback.message.answer(text="Вы уверены?", reply_markup=confirm_menu)
+    await callback.message.edit_text(
+        text=hbold("Вы уверены?"),
+        reply_markup=confirm_menu,
+        parse_mode="HTML"
+    )
 
 
 @category_route.callback_query(CategoryState.remove, F.data == "continue")
@@ -153,8 +172,10 @@ async def remove_category_by_id(callback: CallbackQuery, state: FSMContext) -> N
     keyword: InlineKeyboardMarkup = await create_list_category(
         result, "prev_category", "next_category"
     )
-    await callback.message.answer(
-        text="Категория была удалена. Текущий список категорий.", reply_markup=keyword
+    await callback.message.edit_text(
+        text=hbold("Ok, Категория удалена!"),
+        reply_markup=keyword,
+        parse_mode="HTML"
     )
 
 
@@ -162,10 +183,12 @@ async def remove_category_by_id(callback: CallbackQuery, state: FSMContext) -> N
 async def edit_route_name(callback: CallbackQuery, state: FSMContext) -> None:
     """Handler for editing categories."""
     await state.set_state(CategoryState.edit)
-    await callback.message.answer(
-        text="Введите название категории: ",
+    answer: Message = await callback.message.edit_text(
+        text=hbold("Введите название категории: "),
         reply_markup=cancel_,
+        parse_mode="HTML"
     )
+    asyncio.create_task(remove_message_after_delay(60, answer))
 
 
 @category_route.message(CategoryState.edit)
@@ -185,3 +208,4 @@ async def edit_category(message: Message, state: FSMContext) -> None:
         parse_mode="HTML",
         reply_markup=await get_categories_action(data["category"]),
     )
+    asyncio.create_task(remove_message_after_delay(60, message))

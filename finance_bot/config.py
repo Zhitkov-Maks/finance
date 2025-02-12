@@ -6,7 +6,7 @@ from decouple import config
 BOT_TOKEN: str = config("TOKEN")
 API_ADDRESS: str = config("API_ADDRESS")
 BASE_URL: str = API_ADDRESS + "/api/v1/"
-PAGE_SIZE = 3
+PAGE_SIZE = 5
 
 token_data: Dict[int, dict] = {}
 register_url: str = BASE_URL + "auth/users/"

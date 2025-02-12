@@ -1,12 +1,11 @@
 import asyncio
-import os
 from datetime import datetime
 from typing import Dict
 
 from aiogram import Router, F
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, FSInputFile
+from aiogram.types import CallbackQuery
 from aiogram.utils.markdown import hbold
 
 from api.common import get_full_info
@@ -69,11 +68,10 @@ async def incomes_to_expenses(call: CallbackQuery, state: FSMContext) -> None:
             call.from_user.id,
         ),
     )
-    filename: str = await get_message_incomes_by_expenses(
-        amount_incomes, amount_expenses, call.from_user.id, year, month
+    message: str = await get_message_incomes_by_expenses(
+        amount_incomes, amount_expenses, year, month
     )
-    await call.message.answer_photo(FSInputFile(filename), reply_markup=main_menu)
-    os.remove(filename)
+    await call.answer(message, reply_markup=main_menu, show_alert=True)
 
 
 @statistic_route.callback_query(F.data.in_(["statistic_exp", "statistic_inc"]))
@@ -90,7 +88,7 @@ async def get_statistic_for_month(callback: CallbackQuery, state: FSMContext) ->
     result: dict = await get_full_info(url, callback.from_user.id)
     message: str = await gen_message_statistics(result)
 
-    await callback.message.answer(
+    await callback.message.edit_text(
         text=hbold(text + f"\n{message}"),
         parse_mode="HTML",
         reply_markup=await get_month(year, month, callback.data),

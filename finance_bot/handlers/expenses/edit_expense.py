@@ -19,14 +19,16 @@ from utils.expenses import (
     expense_url_by_id,
 )
 
-exp_edit_router = Router()
+exp_edit_router: Router = Router()
 
 
 @exp_edit_router.callback_query(F.data == "edit_expense")
 async def edit_expense_choice(callback: CallbackQuery) -> None:
     """A handler for selecting an expense editing option."""
     await callback.message.edit_text(
-        text="Выберите вариант редактирования.", reply_markup=choice_expense_edit
+        text=hbold("Выберите вариант редактирования."),
+        reply_markup=choice_expense_edit,
+        parse_mode="HTML",
     )
 
 
@@ -39,7 +41,9 @@ async def edit_balance(callback: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(EditExpenseState.amount)
     await state.update_data(method="PATCH")
     await callback.message.edit_text(
-        text="Введите новую сумму расхода.", reply_markup=cancel_
+        text=hbold("Введите новую сумму расхода."),
+        reply_markup=cancel_,
+        parse_mode="HTML",
     )
 
 
@@ -52,9 +56,10 @@ async def edit_expense_request(message: Message, state: FSMContext) -> None:
     method: str = data.get("method", "PUT")
     url: str = await expense_url_by_id(expense_id)
     if not is_valid_balance(message.text):
-        await message.answer(
-            "Invalid balance format. Please enter a valid number.", reply_markup=cancel_
+        err_mess: Message = await message.answer(
+            "Неверный формат ввода, попробуйте еще раз.", reply_markup=cancel_
         )
+        asyncio.create_task(remove_message_after_delay(60, err_mess))
         return
 
     if method == "PATCH":
@@ -72,9 +77,9 @@ async def edit_expense_request(message: Message, state: FSMContext) -> None:
 
     text: str = await generate_message_expense_info(response)
     await state.set_state(ExpensesState.action)
-    asyncio.create_task(remove_message_after_delay(60, message))
     await message.answer(
         text=hbold(text),
         parse_mode="HTML",
         reply_markup=await get_action(),
     )
+    asyncio.create_task(remove_message_after_delay(60, message))

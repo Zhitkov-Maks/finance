@@ -23,7 +23,7 @@ async def create_header(user_id: int) -> str:
         raise KeyError("Вы не авторизованы!")
 
 
-async def remove_message_after_delay(delay: int, message: Message):
+async def remove_message_after_delay(delay: int, message: Message | list[Message]):
     """
     Deleting important user data with a delay.
 
@@ -32,4 +32,8 @@ async def remove_message_after_delay(delay: int, message: Message):
     :return: None.
     """
     await asyncio.sleep(delay)
-    await message.delete()
+    if isinstance(message, Message):
+        await message.delete()
+    else:
+        for mess in message:
+            await mess.delete()

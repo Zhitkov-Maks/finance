@@ -47,11 +47,8 @@ async def create_expense_choice_date(
 
     await state.update_data(year=year, month=month)
     text = "Выберите дату расхода"
-    if not callback.message.text:
-        await callback.message.delete()
-
-    await (callback.message.edit_text if callback.message.text else callback.message.answer)(
-        text=text, reply_markup=keyword
+    await callback.message.edit_text(
+        text=hbold(text), reply_markup=keyword, parse_mode="HTML"
     )
 
 
@@ -69,9 +66,7 @@ async def next_and_prev_month(callback: CallbackQuery, state: FSMContext) -> Non
     await state.update_data(year=year, month=month)
     await state.set_state(CreateExpenseState.date)
     await callback.message.edit_reply_markup(
-        reply_markup=await create_calendar(
-            year, month, "prev_cal_exp", "next_cal_exp"
-        )
+        reply_markup=await create_calendar(year, month, "prev_cal_exp", "next_cal_exp")
     )
 
 
@@ -99,8 +94,9 @@ async def create_expense_choice_account(
 
     await state.set_state(CreateExpenseState.account)
     await callback.message.edit_text(
-        text="Выберите счет: ",
+        text=hbold("Выберите счет: "),
         reply_markup=keyword,
+        parse_mode="HTML"
     )
 
 
@@ -146,7 +142,9 @@ async def create_income_choice_category(
         result, "prev_cat_exp", "next_cat_exp"
     )
     await callback.message.edit_text(
-        text="Выберите категорию расхода: ", reply_markup=keyboard
+        text=hbold("Выберите категорию расхода: "),
+        reply_markup=keyboard,
+        parse_mode="HTML",
     )
 
 
@@ -188,7 +186,10 @@ async def create_expense_input_amount(
     else:
         await state.set_state(EditExpenseState.amount)
 
-    await callback.message.edit_text(text="Введите сумму расхода: ", reply_markup=cancel_)
+    answer: Message = await callback.message.edit_text(
+        text=hbold("Введите сумму расхода: "), reply_markup=cancel_, parse_mode="HTML"
+    )
+    asyncio.create_task(remove_message_after_delay(60, answer))
 
 
 @create_exp_router.message(CreateExpenseState.amount)
@@ -198,9 +199,10 @@ async def create_expense_final(message: Message, state: FSMContext) -> None:
     data: dict[str, str | int] = await state.get_data()
     usr_id: int = message.from_user.id
     if not is_valid_balance(message.text):
-        await message.answer(
+        err_mess: Message = await message.answer(
             "Invalid balance format. Please enter a valid number.", reply_markup=cancel_
         )
+        asyncio.create_task(remove_message_after_delay(60, err_mess))
         return
 
     dict_for_request: dict[str, str | float | int] = await create_new_expenses_data(
@@ -210,7 +212,7 @@ async def create_expense_final(message: Message, state: FSMContext) -> None:
         usr_id, expenses_url, dict_for_request
     )
     answer_message: str = await gen_answer_message_expense(response)
-    asyncio.create_task(remove_message_after_delay(60, message))
     await message.answer(
         text=hbold(answer_message), parse_mode="HTML", reply_markup=main_menu
     )
+    asyncio.create_task(remove_message_after_delay(60, message))
