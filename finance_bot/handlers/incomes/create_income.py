@@ -1,4 +1,3 @@
-import asyncio
 import re
 from datetime import datetime
 from typing import Dict, List
@@ -17,7 +16,7 @@ from keyboards.create_calendar import create_calendar
 from keyboards.keyboards import cancel_, main_menu
 from states.incomes import CreateIncomes, EditIncomesState
 from utils.accounts import account_url, is_valid_balance
-from utils.common import date_pattern, remove_message_after_delay
+from utils.common import date_pattern
 from utils.create_calendar import get_date
 from utils.incomes import (
     get_incomes_category_url,
@@ -183,12 +182,11 @@ async def create_income_input_amount(
     else:
         await state.set_state(EditIncomesState.amount)
 
-    answer: Message = await callback.message.edit_text(
+    await callback.message.edit_text(
         text=hbold("Введите сумму дохода: "),
         reply_markup=cancel_,
         parse_mode="HTML",
     )
-    asyncio.create_task(remove_message_after_delay(60, answer))
 
 
 @create_inc_router.message(CreateIncomes.amount)
@@ -198,10 +196,9 @@ async def create_income_final(message: Message, state: FSMContext) -> None:
     data: dict[str, str | int] = await state.get_data()
     usr_id: int = message.from_user.id
     if not is_valid_balance(message.text):
-        err_mess: Message = await message.answer(
+        await message.answer(
             "Invalid balance format. Please enter a valid number.", reply_markup=cancel_
         )
-        asyncio.create_task(remove_message_after_delay(60, err_mess))
         return
 
     dict_for_request: dict[str, str | float | int] = await create_new_incomes_data(
@@ -213,8 +210,6 @@ async def create_income_final(message: Message, state: FSMContext) -> None:
     answer_message: str = await gen_answer_message(response)
 
     await state.clear()
-    asyncio.create_task(remove_message_after_delay(30, message))
     await message.answer(
         text=hbold(answer_message), parse_mode="HTML", reply_markup=main_menu
     )
-    asyncio.create_task(remove_message_after_delay(60, message))

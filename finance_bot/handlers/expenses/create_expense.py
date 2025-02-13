@@ -1,4 +1,3 @@
-import asyncio
 import re
 from datetime import datetime
 from typing import Dict, List
@@ -17,7 +16,7 @@ from keyboards.create_calendar import create_calendar
 from keyboards.keyboards import cancel_, main_menu
 from states.expenses import CreateExpenseState, EditExpenseState
 from utils.accounts import account_url, is_valid_balance
-from utils.common import date_pattern, remove_message_after_delay
+from utils.common import date_pattern
 from utils.create_calendar import get_date
 from utils.expenses import (
     get_expenses_category_url,
@@ -186,10 +185,9 @@ async def create_expense_input_amount(
     else:
         await state.set_state(EditExpenseState.amount)
 
-    answer: Message = await callback.message.edit_text(
+    await callback.message.edit_text(
         text=hbold("Введите сумму расхода: "), reply_markup=cancel_, parse_mode="HTML"
     )
-    asyncio.create_task(remove_message_after_delay(60, answer))
 
 
 @create_exp_router.message(CreateExpenseState.amount)
@@ -199,10 +197,9 @@ async def create_expense_final(message: Message, state: FSMContext) -> None:
     data: dict[str, str | int] = await state.get_data()
     usr_id: int = message.from_user.id
     if not is_valid_balance(message.text):
-        err_mess: Message = await message.answer(
+        await message.answer(
             "Invalid balance format. Please enter a valid number.", reply_markup=cancel_
         )
-        asyncio.create_task(remove_message_after_delay(60, err_mess))
         return
 
     dict_for_request: dict[str, str | float | int] = await create_new_expenses_data(
@@ -215,4 +212,3 @@ async def create_expense_final(message: Message, state: FSMContext) -> None:
     await message.answer(
         text=hbold(answer_message), parse_mode="HTML", reply_markup=main_menu
     )
-    asyncio.create_task(remove_message_after_delay(60, message))

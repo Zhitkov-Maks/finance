@@ -11,7 +11,11 @@ from handlers.decorator_handler import decorator_errors
 from keyboards.incomes import get_action
 from keyboards.keyboards import confirm_menu, create_list_incomes_expenses
 from states.incomes import IncomesState
-from utils.incomes import get_incomes_url, generate_message_income_info, incomes_by_id
+from utils.incomes import (
+    get_incomes_url,
+    generate_message_income_info,
+    incomes_by_id
+)
 
 incomes: Router = Router()
 

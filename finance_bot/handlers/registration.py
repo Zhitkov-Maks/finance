@@ -22,7 +22,11 @@ async def input_email(message: Message, state: FSMContext) -> None:
     """The handler for the email request."""
     await state.set_state(RegisterState.email)
     asyncio.create_task(remove_message_after_delay(60, message))
-    await message.answer(text=enter_email, parse_mode="HTML", reply_markup=cancel_)
+    await message.answer(
+        text=enter_email,
+        parse_mode="HTML",
+        reply_markup=cancel_
+    )
 
 
 @register_route.message(RegisterState.email)

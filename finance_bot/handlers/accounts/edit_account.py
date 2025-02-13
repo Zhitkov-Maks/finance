@@ -1,5 +1,3 @@
-import asyncio
-
 from aiogram import Router, F
 from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
@@ -21,7 +19,6 @@ from utils.accounts import (
     is_valid_balance,
     account_by_id
 )
-from utils.common import remove_message_after_delay
 
 edit_acc_router: Router = Router()
 
@@ -40,12 +37,11 @@ async def choice_edit(callback: CallbackQuery):
 async def full_edit(callback: CallbackQuery, state: FSMContext) -> None:
     """Handler for full account editing."""
     await state.set_state(AccountsEditState.name)
-    answer: Message = await callback.message.edit_text(
+    await callback.message.edit_text(
         text=hbold("Введите новое имя счета: "),
         reply_markup=cancel_,
         parse_mode="HTML",
     )
-    asyncio.create_task(remove_message_after_delay(60, answer))
 
 
 @edit_acc_router.message(AccountsEditState.name)
@@ -53,10 +49,9 @@ async def input_new_name(message: Message, state: FSMContext) -> None:
     """Handler for new account name."""
     await state.update_data(name=message.text)
     await state.set_state(AccountsEditState.balance)
-    answer: Message = await message.answer(
+    await message.answer(
         text=hbold(new_balance), reply_markup=cancel_, parse_mode="HTML"
     )
-    asyncio.create_task(remove_message_after_delay(60, [message, answer]))
 
 
 @edit_acc_router.callback_query(F.data == "edit_balance")
@@ -84,10 +79,9 @@ async def edited_account_balance(message: Message, state: FSMContext) -> None:
     url: str = await account_by_id(account_id)
 
     if not is_valid_balance(message.text):
-        error_message: Message = await message.answer(
+        await message.answer(
             "Неверный формат ввода, будьте внимательнее.", reply_markup=cancel_
         )
-        asyncio.create_task(remove_message_after_delay(60, error_message))
         return
 
     method: str = "PUT"
@@ -105,4 +99,3 @@ async def edited_account_balance(message: Message, state: FSMContext) -> None:
     keyword: InlineKeyboardMarkup = await get_action_accounts(response.get("is_active"))
 
     await message.answer(text=hbold(text), parse_mode="HTML", reply_markup=keyword)
-    asyncio.create_task(remove_message_after_delay(60, message))
