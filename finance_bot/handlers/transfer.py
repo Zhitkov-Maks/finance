@@ -1,4 +1,3 @@
-import asyncio
 from typing import Dict, List
 
 from aiogram import Router, F
@@ -14,9 +13,8 @@ from keyboards.keyboards import cancel_, main_menu
 from keyboards.transfer import create_list_transfer_accounts
 from states.accounts import TransferStates
 from utils.accounts import is_valid_balance, account_url
-from utils.common import remove_message_after_delay
 
-transfer = Router()
+transfer: Router = Router()
 
 
 @transfer.callback_query(F.data == "transfer")
@@ -76,12 +74,11 @@ async def get_account_transfer_out(callback: CallbackQuery, state: FSMContext) -
     await state.update_data(transfer_out=callback.data.split("_")[0])
     await state.update_data(account_out=callback.data.split("_")[1])
     await state.set_state(TransferStates.amount)
-    answer: Message = await callback.message.edit_text(
+    await callback.message.edit_text(
         text=hbold("Введите сумму перевода 💰💰💰."),
         reply_markup=cancel_,
         parse_mode="HTML"
     )
-    asyncio.create_task(remove_message_after_delay(60, answer))
 
 
 @transfer.message(TransferStates.amount)
@@ -92,13 +89,11 @@ async def get_amount_transfer(message: Message, state: FSMContext) -> None:
     usr_id: int = message.from_user.id
     amount: str = message.text
     name, name_out = data.get("account"), data.get("account_out")
-    messages_to_delete: list[Message] = [message]
 
     if not is_valid_balance(message.text):
-        error: Message =await message.answer(
+        await message.answer(
             "Invalid balance format. Please enter a valid number.", reply_markup=cancel_
         )
-        messages_to_delete.append(error)
         return
 
     await create_transfer(transfer_in, transfer_out, usr_id, float(message.text))
@@ -108,4 +103,3 @@ async def get_amount_transfer(message: Message, state: FSMContext) -> None:
         reply_markup=main_menu,
         parse_mode="HTML",
     )
-    asyncio.create_task(remove_message_after_delay(60, messages_to_delete))

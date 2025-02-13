@@ -1,5 +1,3 @@
-import asyncio
-
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
@@ -12,7 +10,6 @@ from keyboards.incomes import get_action
 from keyboards.keyboards import cancel_
 from states.expenses import EditExpenseState, ExpensesState
 from utils.accounts import is_valid_balance
-from utils.common import remove_message_after_delay
 from utils.expenses import (
     create_new_expenses_data,
     generate_message_expense_info,
@@ -56,10 +53,9 @@ async def edit_expense_request(message: Message, state: FSMContext) -> None:
     method: str = data.get("method", "PUT")
     url: str = await expense_url_by_id(expense_id)
     if not is_valid_balance(message.text):
-        err_mess: Message = await message.answer(
+        await message.answer(
             "Неверный формат ввода, попробуйте еще раз.", reply_markup=cancel_
         )
-        asyncio.create_task(remove_message_after_delay(60, err_mess))
         return
 
     if method == "PATCH":
@@ -82,4 +78,3 @@ async def edit_expense_request(message: Message, state: FSMContext) -> None:
         parse_mode="HTML",
         reply_markup=await get_action(),
     )
-    asyncio.create_task(remove_message_after_delay(60, message))

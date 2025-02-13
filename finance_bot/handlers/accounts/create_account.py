@@ -1,5 +1,3 @@
-import asyncio
-
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
@@ -11,7 +9,6 @@ from handlers.decorator_handler import decorator_errors
 from keyboards.keyboards import cancel_, main_menu
 from states.accounts import AccountsCreateState
 from utils.accounts import is_valid_balance
-from utils.common import remove_message_after_delay
 
 create_acc_route: Router = Router()
 
@@ -20,12 +17,11 @@ create_acc_route: Router = Router()
 async def account_input_name(callback: CallbackQuery, state: FSMContext) -> None:
     """Handler for entering the name of the new account."""
     await state.set_state(AccountsCreateState.name)
-    answer: Message = await callback.message.edit_text(
+    await callback.message.edit_text(
         text=hbold("Введите название счета."),
         reply_markup=cancel_,
         parse_mode="HTML",
     )
-    asyncio.create_task(remove_message_after_delay(60 * 3, message=answer))
 
 
 @create_acc_route.message(AccountsCreateState.name)
@@ -36,12 +32,11 @@ async def save_name_input_balance(message: Message, state: FSMContext) -> None:
     """
     await state.set_state(AccountsCreateState.balance)
     await state.update_data(name=message.text)
-    answer: Message = await message.answer(
+    await message.answer(
         text=hbold("Введите баланс счета: "),
         reply_markup=cancel_,
         parse_mode="HTML",
     )
-    asyncio.create_task(remove_message_after_delay(60, message=[message, answer]))
 
 
 @create_acc_route.message(AccountsCreateState.balance)
@@ -51,10 +46,9 @@ async def create_account(message: Message, state: FSMContext) -> None:
     data: dict[str, str | int] = await state.get_data()
     usr_id: int = message.from_user.id
     if not is_valid_balance(message.text):
-        answer: Message = await message.answer(
+        await message.answer(
             "Invalid balance format. Please enter a valid number.", reply_markup=cancel_
         )
-        asyncio.create_task(remove_message_after_delay(60, message=answer))
         return
 
     await create_new_object(

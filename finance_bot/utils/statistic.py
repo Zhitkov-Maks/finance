@@ -47,7 +47,7 @@ async def gen_message_statistics(data: dict) -> str:
 
     for item in data["statistics"]:
         category_name: str = item.get("category_name")
-        category_amount: float = float(item['total_amount'])
+        category_amount: float = float(item["total_amount"])
         percent: float = category_amount / total_amount * 100
 
         # Используем вертикальные линии как разделители
@@ -60,10 +60,7 @@ async def gen_message_statistics(data: dict) -> str:
 
 
 async def get_message_incomes_by_expenses(
-    amount_inc: float,
-    amount_exp: float,
-    year: int,
-    month: int
+    amount_inc: float, amount_exp: float, year: int, month: int
 ) -> str:
     """
     Generating a graphic image of the income-to-expense ratio.
@@ -73,7 +70,10 @@ async def get_message_incomes_by_expenses(
     :param amount_exp: The amount of expenses.
     :return: The path to the file to send to the user.
     """
-    return (f"{MONTH_DATA[month]} {year}г\n"
-            f"Потрачено - {amount_exp:,.2f}\n"
-            f"Заработано - {amount_inc:,.2f}\n"
-            f"Итог => {amount_inc - amount_exp:,.2f}\n")
+    sign: str = "+" if (amount_inc - amount_exp) > 0 else "-"
+    return (
+        f"{MONTH_DATA[month]} {year}г\n"
+        f"Потрачено: -{amount_exp:,.2f}₽\n"
+        f"Заработано: +{amount_inc:,.2f}₽\n"
+        f"Итог: {sign}{amount_inc - amount_exp:,.2f}₽\n"
+    )

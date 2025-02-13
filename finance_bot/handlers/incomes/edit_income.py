@@ -1,5 +1,3 @@
-import asyncio
-
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
@@ -11,8 +9,11 @@ from keyboards.incomes import choice_edit, get_action
 from keyboards.keyboards import cancel_
 from states.incomes import EditIncomesState, IncomesState
 from utils.accounts import is_valid_balance
-from utils.common import remove_message_after_delay
-from utils.incomes import incomes_by_id, generate_message_income_info, create_new_incomes_data
+from utils.incomes import (
+    incomes_by_id,
+    generate_message_income_info,
+    create_new_incomes_data
+)
 
 inc_edit_router = Router()
 
@@ -36,12 +37,11 @@ async def edit_balance(callback: CallbackQuery, state: FSMContext) -> None:
     """
     await state.set_state(EditIncomesState.amount)
     await state.update_data(method="PATCH")
-    answer: Message = await callback.message.edit_text(
+    await callback.message.edit_text(
         text=hbold("Введите новую сумму дохода."),
         reply_markup=cancel_,
         parse_mode="HTML"
     )
-    asyncio.create_task(remove_message_after_delay(60, answer))
 
 
 @inc_edit_router.message(EditIncomesState.amount)
@@ -54,10 +54,9 @@ async def edit_income_request(message: Message, state: FSMContext) -> None:
     url: str = await incomes_by_id(income_id)
 
     if not is_valid_balance(message.text):
-        err_mess: Message = await message.answer(
+        await message.answer(
             "Invalid balance format. Please enter a valid number.", reply_markup=cancel_
         )
-        asyncio.create_task(remove_message_after_delay(60, err_mess))
         return
 
     if method == "PATCH":
@@ -74,10 +73,8 @@ async def edit_income_request(message: Message, state: FSMContext) -> None:
 
     text: str = await generate_message_income_info(response)
     await state.set_state(IncomesState.action)
-    asyncio.create_task(remove_message_after_delay(60, message))
     await message.answer(
         text=hbold(text),
         parse_mode="HTML",
         reply_markup=await get_action(),
     )
-    asyncio.create_task(remove_message_after_delay(60, message))
