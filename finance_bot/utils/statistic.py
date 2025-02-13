@@ -70,7 +70,7 @@ async def get_message_incomes_by_expenses(
     :param amount_exp: The amount of expenses.
     :return: The path to the file to send to the user.
     """
-    sign: str = "+" if (amount_inc - amount_exp) > 0 else "-"
+    sign: str = "+" if (amount_inc - amount_exp) > 0 else ""
     return (
         f"{MONTH_DATA[month]} {year}г\n"
         f"Потрачено: -{amount_exp:,.2f}₽\n"
