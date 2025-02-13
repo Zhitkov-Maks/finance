@@ -28,8 +28,8 @@ statistic_route: Router = Router()
 @decorator_errors
 async def get_expenses_for_month(call: CallbackQuery, state: FSMContext) -> None:
     """A handler for displaying the amount of income or expense."""
-    month: int = datetime.now().month
-    year: int = datetime.now().year
+    data: dict = await state.get_data()
+    month, year = data["month"], data["year"]
     url: str = statistic_url[call.data].format(month=month, year=year)
 
     amount: float = await get_statistic_current_month(url, call.from_user.id)
@@ -47,7 +47,7 @@ async def get_expenses_for_month(call: CallbackQuery, state: FSMContext) -> None
     """Handler for displaying the balance of all accounts."""
     url: str = accounts_url + "?page=1&page_size=1"
     amount: float = await get_statistic_current_month(url, call.from_user.id, True)
-    answer: str = f"На ваших счетах {amount}₽"
+    answer: str = f"На ваших счетах {amount:,.2f}₽"
     await call.answer(answer, show_alert=True)
 
 
