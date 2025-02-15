@@ -29,7 +29,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     "0.0.0.0",
     "localhost",
-    "api",  # Добавьте это
+    "api",
     "127.0.0.1",
     "94.241.143.71",
 ]
@@ -67,12 +67,12 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8000",
-    "https://0.0.0.0:8000",
-    "http://api:8000"
+    "http://localhost:8001",
+    "https://0.0.0.0:8001",
+    "http://api:8001"
 ]
 
 ROOT_URLCONF = 'finance.urls'
@@ -80,7 +80,7 @@ ROOT_URLCONF = 'finance.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -95,16 +95,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'finance.wsgi.application'
 
-
-# Database
-# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
 
 DATABASES = {
     "default": {
@@ -175,6 +165,8 @@ DJOSER = {
         'user_create': 'app_user.serializers.UserCreateSerializer',
         'user': 'app_user.serializers.UserCreateSerializer',
     },
+    'PASSWORD_RESET_CONFIRM_URL': '#/password-reset/{uid}/{token}',
+    'PASSWORD_RESET_EMAIL': 'app_user.views.CustomPasswordResetEmail',
 }
 
 AUTH_USER_MODEL = 'app_user.CustomUser'
@@ -193,9 +185,18 @@ SPECTACULAR_SETTINGS = {
         'url': 'https://opensource.org/licenses/MIT',
     },
     'SERVERS': [
-        {'url': 'http://localhost:8000', 'description': 'Локальная среда разработки'},
+        {'url': 'http://localhost:8001', 'description': 'Локальная среда разработки'},
         {'url': 'https://94.241.143.71:80', 'description': 'Продакшн'},
     ],
     # Дополнительные настройки
     'SCHEMA_PATH_PREFIX': '/api/',
 }
+
+EMAIL_HOST = 'smtp.yandex.ru'
+EMAIL_PORT = 465
+EMAIL_USE_TLS = False
+EMAIL_USE_SSL = True
+
+EMAIL_HOST_USER = 'teoretickzhitkov@yandex.ru'
+EMAIL_HOST_PASSWORD = 'erboqowrxmlwvcrc'
+DEFAULT_FROM_EMAIL = 'teoretickzhitkov@yandex.ru'
