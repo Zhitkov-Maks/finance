@@ -24,7 +24,7 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = [
     "0.0.0.0",
@@ -192,11 +192,11 @@ SPECTACULAR_SETTINGS = {
     'SCHEMA_PATH_PREFIX': '/api/',
 }
 
-EMAIL_HOST = 'smtp.yandex.ru'
-EMAIL_PORT = 465
-EMAIL_USE_TLS = False
-EMAIL_USE_SSL = True
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
 
-EMAIL_HOST_USER = 'teoretickzhitkov@yandex.ru'
-EMAIL_HOST_PASSWORD = 'erboqowrxmlwvcrc'
-DEFAULT_FROM_EMAIL = 'teoretickzhitkov@yandex.ru'
+EMAIL_HOST_USER = 'seva00mir@gmail.com'
+EMAIL_HOST_PASSWORD = 'xvlt ohqh lhwz qqiz'
+DEFAULT_FROM_EMAIL = 'seva00mir@gmail.com'
