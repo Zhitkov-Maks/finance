@@ -18,7 +18,10 @@ class Client:
             async with client.post(
                 url=self.url, json=self.data, headers=self.header
             ) as response:
-                data: dict = await response.json()
+                if response.status == 204:
+                    data = {}
+                else:
+                    data: dict = await response.json()
                 return response.status, data
 
     async def get(self) -> Tuple[int, Dict[str, List[Dict[str, int]] | Dict[str, str]]]:

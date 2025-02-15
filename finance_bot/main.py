@@ -16,6 +16,7 @@ from handlers.invalid_handlers import invalid_router
 from handlers.login import auth
 from handlers.registration import register_route
 from handlers.accounts import account, edit_acc_router, create_acc_route
+from handlers.reset_password import reset_router
 from handlers.transfer import transfer
 from keyboards.keyboards import main_menu
 from loader import greeting, main_menu_text
@@ -38,6 +39,7 @@ dp.include_router(expense_router)
 dp.include_router(category_route)
 dp.include_router(create_acc_route)
 dp.include_router(statistic_route)
+dp.include_router(reset_router)
 dp.include_router(invalid_router)
 
 

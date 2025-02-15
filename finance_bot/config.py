@@ -28,3 +28,6 @@ categories_urls: dict = {
     "income": incomes_url + "category/{id}/",
     "expense": expenses_url + "category/{id}/"
 }
+
+reset_password_url = BASE_URL + "auth/users/reset_password/"
+reset_password_confirm_url = BASE_URL + "auth/users/reset_password_confirm/"
