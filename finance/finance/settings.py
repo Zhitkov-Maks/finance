@@ -24,7 +24,7 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = [
     "0.0.0.0",
@@ -67,13 +67,13 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_ALL_ORIGINS = True
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8001",
-    "http://0.0.0.0:8001",
-    "http://api:8001"
-]
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:8000",
+#     "http://0.0.0.0:8000",
+#     "http://api:8000"
+# ]
 
 ROOT_URLCONF = 'finance.urls'
 
@@ -185,7 +185,7 @@ SPECTACULAR_SETTINGS = {
         'url': 'https://opensource.org/licenses/MIT',
     },
     'SERVERS': [
-        {'url': 'http://localhost:8001', 'description': 'Локальная среда разработки'},
+        {'url': 'http://localhost:8000', 'description': 'Локальная среда разработки'},
         {'url': 'https://94.241.143.71:80', 'description': 'Продакшн'},
     ],
     # Дополнительные настройки
@@ -193,9 +193,9 @@ SPECTACULAR_SETTINGS = {
 }
 
 EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False
+EMAIL_PORT = 465
+EMAIL_USE_TLS = False
+EMAIL_USE_SSL = True
 
 EMAIL_HOST_USER = 'seva00mir@gmail.com'
 EMAIL_HOST_PASSWORD = 'xvlt ohqh lhwz qqiz'

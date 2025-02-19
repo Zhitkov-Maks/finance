@@ -12,7 +12,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from accounts.models import Account
-from accounts.schemas import listAccountSchema, RetrieveUpdateDeleteAccountSchema
+from accounts.schemas import (
+    listAccountSchema,
+    RetrieveUpdateDeleteAccountSchema
+)
 from accounts.serializers.serializers_account import (
     AccountSerializer,
     AccountSerializerDetail,

@@ -5,6 +5,7 @@ from .views.views_account import (
     RetrieveUpdateDeleteAccount,
     ToggleAccountActiveStatusView,
 )
+from .views.views_debt import DebtsViewSet
 from .views.views_transfer import (
     TransferFundsView,
     TransferHistoryView,
@@ -25,5 +26,10 @@ urlpatterns = [
         "<int:pk>/toggle-active/",
         ToggleAccountActiveStatusView.as_view(),
         name="toggle-account-active",
+    ),
+    path(
+        "transfer/debt/",
+        DebtsViewSet.as_view({"get": "list", "post": "create"}),
+        name="debt",
     ),
 ]
