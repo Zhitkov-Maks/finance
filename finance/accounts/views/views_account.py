@@ -56,7 +56,9 @@ class ListAccounts(generics.ListCreateAPIView):
         Переопределил метод для показа счетов только конкретного пользователя.
         :return Queryset: Список счетов пользователя.
         """
-        return Account.objects.filter(user=self.request.user.pk).order_by("-balance")
+        return (Account.objects
+                .filter(user=self.request.user.pk)
+                .filter(is_system_account=False).order_by("-balance"))
 
     def perform_create(self, serializer):
         """
@@ -81,7 +83,9 @@ class ListAccounts(generics.ListCreateAPIView):
         queryset = self.get_queryset()
 
         # Calculate total balance across all accounts once
-        total_balance = queryset.filter(is_active=True).aggregate(total=Sum("balance"))["total"] or 0
+        total_balance = queryset.filter(is_active=True).aggregate(
+            total=Sum("balance")
+        )["total"] or 0
 
         # Paginate the queryset using DRF's pagination class
         page = self.paginate_queryset(queryset)

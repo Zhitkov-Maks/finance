@@ -42,7 +42,9 @@ class TransferFundsView(generics.CreateAPIView):
         Переопределяем метод для перевода баланса между счетами.
         """
         source_account: Account = serializer.validated_data["source_account"]
-        destination_account: Account = serializer.validated_data["destination_account"]
+        destination_account: Account = serializer.validated_data[
+            "destination_account"
+        ]
         amount: decimal = serializer.validated_data["amount"]
 
         source_account.balance -= amount
@@ -55,7 +57,10 @@ class TransferFundsView(generics.CreateAPIView):
         return transfer
 
     def post(self, request, *args, **kwargs):
-        """Переопределяем метод для вызова валидации, сохранения и возврата ответа."""
+        """
+        Переопределяем метод для вызова валидации,
+        сохранения и возврата ответа.
+        """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -105,7 +110,8 @@ class TransferHistoryView(generics.ListAPIView):
 @TransferRetrieveViewSchema
 class TransferDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
-    Класс для редактирования удаления и получения подробной информации о переводе.
+    Класс для редактирования удаления и получения подробной
+    информации о переводе.
     """
 
     serializer_class = TransferSerializer
