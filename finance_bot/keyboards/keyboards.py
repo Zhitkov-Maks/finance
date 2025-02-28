@@ -2,6 +2,8 @@ from typing import List
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
+from utils.common import create_pagination_buttons
+
 
 async def create_list_incomes_expenses(
     data: dict[str, list],
@@ -24,22 +26,10 @@ async def create_list_incomes_expenses(
 
         inline_buttons.append([InlineKeyboardButton(text=text, callback_data=str(id_))])
 
-    prev_data, text_prev = "None prev", "-"
-    next_data, text_next = "None next", "-"
-
-    if previous is not None:
-        prev_data, text_prev = prev, "<<"
-
-    if next_ is not None:
-        next_data, text_next = next_d, ">>"
-
-    inline_buttons.append(
-        [
-            InlineKeyboardButton(text=text_prev, callback_data=prev_data),
-            InlineKeyboardButton(text="Меню", callback_data="main"),
-            InlineKeyboardButton(text=text_next, callback_data=next_data),
-        ]
+    lst_menu: list = await create_pagination_buttons(
+        previous, next_, prev, next_d
     )
+    inline_buttons.append(lst_menu)
     return InlineKeyboardMarkup(inline_keyboard=inline_buttons)
 
 
