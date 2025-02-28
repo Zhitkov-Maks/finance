@@ -6,6 +6,7 @@ from rest_framework.authentication import (
     SessionAuthentication,
 )
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -28,6 +29,7 @@ from accounts.views.util import (
     create_debt_or_lend_transfer,
     repay_debt
 )
+from accounts.views.views_account import AccountPagination
 from app_user.models import CustomUser
 
 
@@ -127,32 +129,31 @@ class RepayDebtView(APIView):
 
 
 @DebtListSchema
-class DebtListView(APIView):
+class DebtListView(ListAPIView):
     """Класс для получения списка долгов."""
     permission_classes = [IsAuthenticated]
+    pagination_class = AccountPagination
     authentication_classes = (
         TokenAuthentication,
         BasicAuthentication,
         SessionAuthentication,
     )
+    serializer_class = DebtListSerializer
 
-    def get(self, request) -> Response:
+    def get_queryset(self):
         """Переопределяем метод для фильтрации долгов."""
-        debt_type: str = request.GET.get('type')
+        debt_type: str = self.request.GET.get('type')
 
         if debt_type == 'debt' or debt_type == 'lend':
-            debts = (Debt.objects.filter(
-                transfer__source_account__user=request.user
-            ).filter(transfer__destination_account__name=debt_type))
+            return Debt.objects.filter(
+                transfer__source_account__user=self.request.user
+            ).filter(transfer__destination_account__name=debt_type)
 
         else:
-            debts = Debt.objects.filter(
-                Q(transfer__source_account__user=request.user) |
-                Q(transfer__destination_account__user=request.user)
+            return Debt.objects.filter(
+                Q(transfer__source_account__user=self.request.user) |
+                Q(transfer__destination_account__user=self.request.user)
             )
-
-        serializer = DebtListSerializer(debts, many=True)
-        return Response(serializer.data)
 
 
 @DebtDetailSchema
