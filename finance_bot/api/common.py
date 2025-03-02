@@ -16,7 +16,7 @@ async def create_client(user_id: int, url: str, data=None) -> Client:
     return client
 
 
-async def create_new_object(user_id, url: str, data: dict) -> dict:
+async def create_new_object(user_id, url: str, data: dict = None) -> dict:
     """
     A function for creating a new object.
     :param user_id: The user ID.
