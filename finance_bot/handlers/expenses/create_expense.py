@@ -220,6 +220,7 @@ async def create_expense_final(message: Message, state: FSMContext) -> None:
         usr_id, expenses_url, dict_for_request
     )
     answer_message: str = await gen_answer_message_expense(response)
+    await state.clear()
     await message.answer(
         text=hbold(answer_message), parse_mode="HTML", reply_markup=main_menu
     )
