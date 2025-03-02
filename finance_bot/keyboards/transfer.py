@@ -2,9 +2,11 @@ from typing import Dict, List
 
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+from utils.common import create_pagination_buttons
+
 
 async def create_list_transfer_accounts(
-    data: Dict[str, str | List[Dict[str, float | List[Dict[str, int | float | str]]]]],
+    data: dict,
     current_account: int = 0,
     transfer: bool = False,
 ) -> InlineKeyboardMarkup:
@@ -22,29 +24,20 @@ async def create_list_transfer_accounts(
     previous, next_ = data.get("previous"), data.get("next")
     for item in data.get("results")[0].get("accounts"):
         if item.get("id") != current_account:
-            id_: int = str(item.get("id")) + f"_{item.get("name")}" if transfer else item.get("id")
+            id_: int = str(item.get("id")) + f"_{item.get("name")}" \
+                if transfer else item.get("id")
+
             inline_buttons.append(
                 [
                     InlineKeyboardButton(
-                        text=f"{item.get("name")} / {float(item.get('balance')):_}₽",
+                        text=f"{item.get("name")} / "
+                             f"{float(item.get('balance')):_}₽",
                         callback_data=str(id_)
                     )
                 ])
 
-    prev_data, text_prev = "None prev", "-"
-    next_data, text_next = "None next", "-"
-
-    if previous is not None:
-        prev_data, text_prev = "prev_tr", "<<"
-
-    if next_ is not None:
-        next_data, text_next = "next_tr", ">>"
-
-    inline_buttons.append(
-        [
-            InlineKeyboardButton(text=text_prev, callback_data=prev_data),
-            InlineKeyboardButton(text="Меню", callback_data="main"),
-            InlineKeyboardButton(text=text_next, callback_data=next_data),
-        ]
+    lst_menu: list = await create_pagination_buttons(
+        previous, next_, "prev_tr", "next_tr"
     )
+    inline_buttons.append(lst_menu)
     return InlineKeyboardMarkup(inline_keyboard=inline_buttons)
