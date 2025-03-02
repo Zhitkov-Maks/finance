@@ -48,4 +48,6 @@ choice_edit_buttons: List[List[InlineKeyboardButton]] = [
 ]
 
 # Keyboard for editing selection.
-choice_edit: InlineKeyboardMarkup = InlineKeyboardMarkup(inline_keyboard=choice_edit_buttons)
+choice_edit: InlineKeyboardMarkup = InlineKeyboardMarkup(
+    inline_keyboard=choice_edit_buttons
+)

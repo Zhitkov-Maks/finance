@@ -22,9 +22,12 @@ async def create_list_incomes_expenses(
     for item in data.get("results"):
         id_: int = item.get("id")
         dt: str = f"📆 {item['create_at'][8:10]}-{item['create_at'][5:7]}"
-        text: str = f"{dt}  💰{item.get("amount")}₽  {item.get('category').get('name')}"
+        text: str = (f"{dt}  💰{item.get("amount")}₽  "
+                     f"{item.get('category').get('name')}")
 
-        inline_buttons.append([InlineKeyboardButton(text=text, callback_data=str(id_))])
+        inline_buttons.append(
+            [InlineKeyboardButton(text=text, callback_data=str(id_))]
+        )
 
     lst_menu: list = await create_pagination_buttons(
         previous, next_, prev, next_d
@@ -85,6 +88,10 @@ menu_bot: List[List[InlineKeyboardButton]] = [
             InlineKeyboardButton(
                 text="Категории",
                 callback_data="categories"
+            ),
+            InlineKeyboardButton(
+                text="Долги",
+                callback_data="debt_and_lends"
             )
         ]
     ]
@@ -111,4 +118,6 @@ confirm: List[List[InlineKeyboardButton]] = [
 ]
 
 # Inline action confirmation buttons
-confirm_menu: InlineKeyboardMarkup = InlineKeyboardMarkup(inline_keyboard=confirm)
+confirm_menu: InlineKeyboardMarkup = InlineKeyboardMarkup(
+    inline_keyboard=confirm
+)
