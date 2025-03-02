@@ -13,8 +13,7 @@ from accounts.serializers.serializers_account import (
 from accounts.serializers.serializers_debt import (
     DebtDetailSerializer,
     DebtListSerializer,
-    DebtRepaymentSerializer,
-    DebtCreateSerializer, SuccessSerializer
+    SuccessSerializer
 )
 from accounts.serializers.serializers_transfer import (
     TransferSerializer,
@@ -51,8 +50,9 @@ listAccountSchema = extend_schema_view(
 # Схемы для просмотра, удаления и редактирования конкретного счета.
 RetrieveUpdateDeleteAccountSchema = extend_schema_view(
     get=extend_schema(
-        description="Получить детальную информацию о счете. В счет добавляется информация о "
-        "последних доходах и расходах за последние 30 дней.",
+        description="Получить детальную информацию о счете. В счет добавляется "
+                    "информация о последних доходах и расходах за "
+                    "последние 30 дней.",
         responses={
             200: AccountSerializerDetail(many=True),
             404: NotFoundError,
