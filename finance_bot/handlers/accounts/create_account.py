@@ -14,7 +14,9 @@ create_acc_route: Router = Router()
 
 
 @create_acc_route.callback_query(F.data == "accounts_add")
-async def account_input_name(callback: CallbackQuery, state: FSMContext) -> None:
+async def account_input_name(
+        callback: CallbackQuery, state: FSMContext
+) -> None:
     """Handler for entering the name of the new account."""
     await state.set_state(AccountsCreateState.name)
     await callback.message.edit_text(
@@ -47,15 +49,18 @@ async def create_account(message: Message, state: FSMContext) -> None:
     usr_id: int = message.from_user.id
     if not is_valid_balance(message.text):
         await message.answer(
-            "Invalid balance format. Please enter a valid number.", reply_markup=cancel_
+            "Invalid balance format. Please enter a valid number.",
+            reply_markup=cancel_
         )
         return
 
     await create_new_object(
-        usr_id, accounts_url, {"name": data["name"], "balance": message.text}
+        usr_id, accounts_url,
+        {"name": data["name"], "balance": message.text}
     )
 
-    answer_message: str = f"Счет <{data["name"]}>, баланс: {float(message.text):,}₽ создан."
+    answer_message: str = (f"Счет <{data["name"]}>, "
+                           f"баланс: {float(message.text):,}₽ создан.")
     await state.clear()
     await message.answer(
         text=hbold(answer_message), parse_mode="HTML", reply_markup=main_menu
