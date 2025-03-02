@@ -71,6 +71,7 @@ class Debt(models.Model):
     class Meta:
         verbose_name = "долг"
         verbose_name_plural = "долги"
+        ordering = ["-transfer__timestamp"]
 
     def __str__(self):
         return f"Debt of {self.transfer.amount} to {self.borrower_description}"
