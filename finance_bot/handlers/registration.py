@@ -6,7 +6,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from api.auth import registration, login_user
-from config import BOT_TOKEN
+from api.common import create_new_object
+from config import BOT_TOKEN, debt_create_accounts_url
 from states.register import RegisterState
 from keyboards.keyboards import cancel_, main_menu
 from loader import enter_email, password, success_registration
@@ -67,6 +68,9 @@ async def final_registration(
         if result is None:
             await login_user(data, message.from_user.id)
             await message.answer(success_registration, reply_markup=main_menu)
+            await create_new_object(
+                message.from_user.id, debt_create_accounts_url
+            )
         else:
             await message.answer(result, reply_markup=main_menu)
         await state.clear()
