@@ -47,7 +47,9 @@ async def show_categories(callback: CallbackQuery, state: FSMContext) -> None:
     """A handler for displaying income or expense categories."""
     data: dict = await state.get_data()
     page: int = data.get("page", 1)
-    url: str = categories_urls[callback.data].format(page=page, page_size=PAGE_SIZE)
+    url: str = categories_urls[callback.data].format(
+        page=page, page_size=PAGE_SIZE
+    )
 
     result: dict = await get_all_objects(url, callback.from_user.id)
     await state.set_state(CategoryState.show)
@@ -65,7 +67,9 @@ async def show_categories(callback: CallbackQuery, state: FSMContext) -> None:
 
 @category_route.callback_query(F.data.in_(["next_category", "prev_category"]))
 @decorator_errors
-async def next_and_prev_category(callback: CallbackQuery, state: FSMContext) -> None:
+async def next_and_prev_category(
+        callback: CallbackQuery, state: FSMContext
+) -> None:
     """A function for getting the next or previous categories."""
     page: int = (await state.get_data()).get("page")
     category: str = (await state.get_data()).get("category")
@@ -92,6 +96,7 @@ async def detail_category(call: CallbackQuery, state: FSMContext) -> None:
     """Show detailed category information."""
     await state.update_data(category_id=int(call.data))
     data: dict = await state.get_data()
+
     url, category = await get_url(data)
     response: dict = await get_full_info(url, call.from_user.id)
     text: str = response.get("name")
@@ -123,7 +128,8 @@ async def create_category(message: Message, state: FSMContext) -> None:
     data: dict[str, str] = await state.get_data()
     category: str = data["category"]
     result: dict = await create_new_object(
-        message.from_user.id, categories_urls[category], {"name": message.text}
+        message.from_user.id, categories_urls[category],
+        {"name": message.text}
     )
     await state.update_data(category_id=result.get("id"))
 
@@ -148,7 +154,9 @@ async def remove_confirm(callback: CallbackQuery, state: FSMContext) -> None:
 
 @category_route.callback_query(CategoryState.remove, F.data == "continue")
 @decorator_errors
-async def remove_category_by_id(callback: CallbackQuery, state: FSMContext) -> None:
+async def remove_category_by_id(
+        callback: CallbackQuery, state: FSMContext
+) -> None:
     """
     The final handler for category deletion.
     """
@@ -158,7 +166,8 @@ async def remove_category_by_id(callback: CallbackQuery, state: FSMContext) -> N
 
     page: int = data.get("page", 1)
     type_ = (
-        "list_incomes_category" if category == "income" else "list_expenses_category"
+        "list_incomes_category"
+        if category == "income" else "list_expenses_category"
     )
     url: str = categories_urls[type_].format(page=page, page_size=PAGE_SIZE)
 
