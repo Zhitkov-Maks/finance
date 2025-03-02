@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict
 
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
@@ -27,8 +27,12 @@ from utils.incomes import (
 create_inc_router: Router = Router()
 
 
-@create_inc_router.callback_query(F.data.in_(["incomes_add", "edit_income_full"]))
-async def create_income_choice_date(callback: CallbackQuery, state: FSMContext) -> None:
+@create_inc_router.callback_query(
+    F.data.in_(["incomes_add", "edit_income_full"])
+)
+async def create_income_choice_date(
+        callback: CallbackQuery, state: FSMContext
+) -> None:
     """
     It is needed when creating and editing income.
     A handler for showing the user a calendar for selecting a date.
@@ -54,7 +58,9 @@ async def create_income_choice_date(callback: CallbackQuery, state: FSMContext) 
 
 @create_inc_router.callback_query(F.data.in_(["next_cal_inc", "prev_cal_inc"]))
 @decorator_errors
-async def next_and_prev_month(callback: CallbackQuery, state: FSMContext) -> None:
+async def next_and_prev_month(
+        callback: CallbackQuery, state: FSMContext
+) -> None:
     """
     Processes commands for the previous or next month.
     Generates calendars depending on the month.
@@ -66,7 +72,9 @@ async def next_and_prev_month(callback: CallbackQuery, state: FSMContext) -> Non
     await state.update_data(year=year, month=month)
     await state.set_state(CreateIncomes.date)
     await callback.message.edit_reply_markup(
-        reply_markup=await create_calendar(year, month, "prev_cal_inc", "next_cal_inc")
+        reply_markup=await create_calendar(
+            year, month, "prev_cal_inc", "next_cal_inc"
+        )
     )
 
 
@@ -78,13 +86,11 @@ async def create_income_choice_account(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
     """A handler for selecting an account to add/change income to."""
-    data: dict[str, str | int] = await state.get_data()
+    data: dict = await state.get_data()
     page: int = data.get("page", 1)
     url: str = await account_url(page, PAGE_SIZE)
 
-    result: Dict[
-        str, str | List[Dict[str, float | List[Dict[str, int | float | str]]]]
-    ] = await get_all_objects(url, callback.from_user.id)
+    result: dict = await get_all_objects(url, callback.from_user.id)
 
     await state.update_data(page=page, date=callback.data)
     keyword: InlineKeyboardMarkup = await create_list_account(
@@ -101,7 +107,9 @@ async def create_income_choice_account(
 
 @create_inc_router.callback_query(F.data.in_(["next_ci", "prev_ci"]))
 @decorator_errors
-async def next_prev_output_list_incomes(call: CallbackQuery, state: FSMContext) -> None:
+async def next_prev_output_list_incomes(
+        call: CallbackQuery, state: FSMContext
+) -> None:
     """Show more accounts if any."""
     page: int = (await state.get_data()).get("page")
 
@@ -134,10 +142,9 @@ async def create_income_choice_category(
     await state.set_state(CreateIncomes.income_category)
 
     url: str = await get_incomes_category_url(page=page, page_size=PAGE_SIZE)
-    result: dict[str, int | list[dict[str, int | str]]] = await get_all_objects(
-        url, callback.from_user.id
-    )
+    result: dict = await get_all_objects(url, callback.from_user.id)
     keyboard: InlineKeyboardMarkup = await create_list_category(result)
+
     await callback.message.edit_text(
         text=hbold("Выберите категорию дохода: "),
         reply_markup=keyboard,
@@ -169,7 +176,9 @@ async def next_prev_output_list_category(
     await call.message.edit_reply_markup(reply_markup=keyword)
 
 
-@create_inc_router.callback_query(CreateIncomes.income_category, F.data.isdigit())
+@create_inc_router.callback_query(
+    CreateIncomes.income_category, F.data.isdigit()
+)
 async def create_income_input_amount(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
@@ -195,16 +204,18 @@ async def create_income_final(message: Message, state: FSMContext) -> None:
     """The final handler for the request to create a new income."""
     data: dict[str, str | int] = await state.get_data()
     usr_id: int = message.from_user.id
+
     if not is_valid_balance(message.text):
         await message.answer(
-            "Invalid balance format. Please enter a valid number.", reply_markup=cancel_
+            "Invalid balance format. Please enter a valid number.",
+            reply_markup=cancel_
         )
         return
 
-    dict_for_request: dict[str, str | float | int] = await create_new_incomes_data(
+    dict_for_request: dict = await create_new_incomes_data(
         data, float(message.text)
     )
-    response: dict[str, int | dict[str, int | str]] = await create_new_object(
+    response: dict = await create_new_object(
         usr_id, incomes_url, dict_for_request
     )
     answer_message: str = await gen_answer_message(response)
