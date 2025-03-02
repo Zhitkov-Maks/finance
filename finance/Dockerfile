@@ -9,5 +9,3 @@ RUN pip install --no-cache-dir -r ./requirements.txt
 COPY . ./finance
 
 WORKDIR ./finance
-
-CMD ["gunicorn", "--bind", "0.0.0.0:8001", "finance.wsgi:application"]
