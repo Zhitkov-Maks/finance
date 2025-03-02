@@ -238,7 +238,7 @@ class ListCategoryExpense(generics.ListCreateAPIView):
         return (
             Category.objects.filter(user=self.request.user)
             .annotate(usage_count=Count("expenses"))
-            .order_by("-usage_count").order_by("name")
+            .order_by("-usage_count", "name")
         )
 
     def perform_create(self, serializer) -> None:
