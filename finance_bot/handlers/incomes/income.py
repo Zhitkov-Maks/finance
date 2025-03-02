@@ -22,14 +22,14 @@ incomes: Router = Router()
 
 @incomes.callback_query(F.data == "incomes_history")
 @decorator_errors
-async def incomes_get_history(callback: CallbackQuery, state: FSMContext) -> None:
+async def incomes_get_history(
+        callback: CallbackQuery, state: FSMContext
+) -> None:
     """A handler for displaying the latest incomes."""
     data: dict[str, str | int] = await state.get_data()
     page: int = data.get("page", 1)
     url: str = await get_incomes_url(page, page_size=PAGE_SIZE)
-    result: dict[str, int | list[dict[str, int | str | dict[str, str]]]] = (
-        await get_all_objects(url, callback.from_user.id)
-    )
+    result: dict = await get_all_objects(url, callback.from_user.id)
 
     await state.update_data(page=page)
     keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(result)
@@ -45,7 +45,9 @@ async def incomes_get_history(callback: CallbackQuery, state: FSMContext) -> Non
 
 @incomes.callback_query(F.data.in_(["next_inc", "prev_inc"]))
 @decorator_errors
-async def next_prev_output_list_incomes(call: CallbackQuery, state: FSMContext) -> None:
+async def next_prev_output_list_incomes(
+        call: CallbackQuery, state: FSMContext
+) -> None:
     """Show more incomes if any."""
     page: int = (await state.get_data()).get("page")
 
@@ -70,9 +72,7 @@ async def detail_incomes(call: CallbackQuery, state: FSMContext) -> None:
     income_id: int = int(call.data)
     url: str = await incomes_by_id(income_id)
 
-    response: dict[str, int | str | dict[str, int | str]] = await get_full_info(
-        url, call.from_user.id
-    )
+    response: dict = await get_full_info(url, call.from_user.id)
     await state.update_data(income_id=income_id)
     text: str = await generate_message_income_info(response)
 
@@ -97,7 +97,9 @@ async def remove_confirm(callback: CallbackQuery, state: FSMContext) -> None:
 
 @incomes.callback_query(IncomesState.remove, F.data == "continue")
 @decorator_errors
-async def remove_income_by_id(callback: CallbackQuery, state: FSMContext) -> None:
+async def remove_income_by_id(
+        callback: CallbackQuery, state: FSMContext
+) -> None:
     """
     The final income deletion handler.
     """
@@ -109,9 +111,7 @@ async def remove_income_by_id(callback: CallbackQuery, state: FSMContext) -> Non
 
     page: int = data.get("page", 1)
     url: str = await get_incomes_url(page, page_size=PAGE_SIZE)
-    result: dict[str, int | list[dict[str, int | str | dict[str, str]]]] = (
-        await get_all_objects(url, callback.from_user.id)
-    )
+    result: dict = await get_all_objects(url, callback.from_user.id)
 
     await state.update_data(page=page)
     keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(result)

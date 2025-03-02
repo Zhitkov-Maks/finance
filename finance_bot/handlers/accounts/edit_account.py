@@ -80,22 +80,30 @@ async def edited_account_balance(message: Message, state: FSMContext) -> None:
 
     if not is_valid_balance(message.text):
         await message.answer(
-            "Неверный формат ввода, будьте внимательнее.", reply_markup=cancel_
+            "Неверный формат ввода, будьте внимательнее.",
+            reply_markup=cancel_
         )
         return
 
     method: str = "PUT"
     edit_data: dict = {"balance": message.text}
+
     if name is None:
         method = "PATCH"
     else:
         edit_data.update(name=name)
-    await edit_object(url, usr_id, edit_data, method)
 
+    await edit_object(url, usr_id, edit_data, method)
     response: dict = await get_full_info(url, usr_id)
     text: str = await generate_message_answer(response)
 
     await state.set_state(AccountsState.action)
-    keyword: InlineKeyboardMarkup = await get_action_accounts(response.get("is_active"))
+    keyword: InlineKeyboardMarkup = await get_action_accounts(
+        response.get("is_active")
+    )
 
-    await message.answer(text=hbold(text), parse_mode="HTML", reply_markup=keyword)
+    await message.answer(
+        text=hbold(text),
+        parse_mode="HTML",
+        reply_markup=keyword
+    )

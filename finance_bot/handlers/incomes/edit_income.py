@@ -15,7 +15,7 @@ from utils.incomes import (
     create_new_incomes_data
 )
 
-inc_edit_router = Router()
+inc_edit_router: Router = Router()
 
 
 @inc_edit_router.callback_query(F.data == "edit_income")
@@ -55,7 +55,8 @@ async def edit_income_request(message: Message, state: FSMContext) -> None:
 
     if not is_valid_balance(message.text):
         await message.answer(
-            "Invalid balance format. Please enter a valid number.", reply_markup=cancel_
+            "Invalid balance format. Please enter a valid number.",
+            reply_markup=cancel_
         )
         return
 
@@ -63,8 +64,8 @@ async def edit_income_request(message: Message, state: FSMContext) -> None:
         edit_data: dict = {"amount": float(message.text)}
 
     else:
-        edit_data: dict[str, str | float | int] = await create_new_incomes_data(
-        data, float(message.text)
+        edit_data: dict = await create_new_incomes_data(
+            data, float(message.text)
     )
 
     await edit_object(url, usr_id, edit_data, method)

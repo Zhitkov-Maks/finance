@@ -42,7 +42,9 @@ async def create_list_category(
         inline_buttons.append(
             [
                 InlineKeyboardButton(
-                    text=f"{item.get("name")}", callback_data=str(item.get("id"))
+                    text=f"{item.get("name")}",
+                    callback_data=str(item.get("id")
+                    )
                 )
             ]
         )
@@ -76,17 +78,33 @@ async def create_list_category(
 
 type_category_buttons: list[list[InlineKeyboardButton]] = [
     [
-        InlineKeyboardButton(text="Доходы ➕ кат.", callback_data="add_income"),
-        InlineKeyboardButton(text="Расходы ➕ кат.", callback_data="add_expense"),
+        InlineKeyboardButton(
+            text="Доходы ➕ кат.",
+            callback_data="add_income"
+        ),
+        InlineKeyboardButton(
+            text="Расходы ➕ кат.",
+            callback_data="add_expense"
+        ),
     ],
     [
-        InlineKeyboardButton(text="Доходы", callback_data="list_incomes_category"),
-        InlineKeyboardButton(text="В меню", callback_data="main"),
-        InlineKeyboardButton(text="Расходы", callback_data="list_expenses_category"),
+        InlineKeyboardButton(
+            text="Доходы",
+            callback_data="list_incomes_category"
+        ),
+        InlineKeyboardButton(
+            text="В меню",
+            callback_data="main"
+        ),
+        InlineKeyboardButton(
+            text="Расходы",
+            callback_data="list_expenses_category"
+        ),
     ],
 ]
 
-# The keyboard is used to select an action when clicking on the Work with categories button.
+# The keyboard is used to select an action when clicking
+# on the Work with categories button.
 inline_type_categories: InlineKeyboardMarkup = InlineKeyboardMarkup(
     inline_keyboard=type_category_buttons
 )

@@ -197,6 +197,6 @@ EMAIL_PORT = 465
 EMAIL_USE_TLS = False
 EMAIL_USE_SSL = True
 
-EMAIL_HOST_USER = 'seva00mir@gmail.com'
-EMAIL_HOST_PASSWORD = 'xvlt ohqh lhwz qqiz'
-DEFAULT_FROM_EMAIL = 'seva00mir@gmail.com'
+EMAIL_HOST_USER = os.getenv("MAIL")
+EMAIL_HOST_PASSWORD = os.getenv("MAIL_PASSWORD")
+DEFAULT_FROM_EMAIL = os.getenv("MAIL")

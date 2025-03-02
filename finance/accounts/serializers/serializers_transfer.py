@@ -10,14 +10,22 @@ class TransferSerializer(serializers.ModelSerializer):
     Нужен для сериализации и валидации данных для работы с переводами
     между своими счетами.
     """
+
     class Meta:
         model = Transfer
-        fields = ["source_account", "destination_account", "amount", "timestamp"]
+        fields = [
+            "source_account",
+            "destination_account",
+            "amount",
+            "timestamp"
+        ]
 
     def validate(self, attrs):
         """
-        Дополнительная валидация счетов при переводе денег между своими счетами.
+        Дополнительная валидация счетов при переводе денег
+        между своими счетами.
         """
+
         source_account: Account = attrs.get("source_account")
         destination_account: Account = attrs.get("destination_account")
         amount: decimal = attrs.get("amount")
@@ -38,23 +46,26 @@ class TransferSerializer(serializers.ModelSerializer):
 
 
 class IsNotAuthentication(serializers.Serializer):
-    """
-     Нужен для отображения в openapi на указание ошибки аутентификации.
-    """
+    """Нужен для отображения в openapi на указание ошибки аутентификации."""
+
     detail = serializers.CharField()
 
 
 class ValidationError(serializers.Serializer):
     """
-     Нужен для отображения в openapi на указание ошибки переданного значения.
+     Нужен для отображения в openapi на указание ошибки
+     переданного значения.
     """
+
     detail = serializers.ListField(child=serializers.CharField())
 
 
 class NotFoundError(serializers.Serializer):
     """
-     Нужен для отображения в openapi на указание ошибки получения счета по ID.
+     Нужен для отображения в openapi на указание ошибки получения
+     счета по ID.
     """
+
     detail = serializers.CharField()
 
 
@@ -65,4 +76,10 @@ class TransferResponseSerializer(serializers.Serializer):
     """
     class Meta:
         model = Transfer
-        fields = ['id', 'source_account', 'destination_account', 'amount', 'timestamp']
+        fields = [
+            'id',
+            'source_account',
+            'destination_account',
+            'amount',
+            'timestamp'
+        ]

@@ -1,10 +1,15 @@
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import (
+    extend_schema,
+    extend_schema_view,
+    OpenApiParameter
+)
 
 from accounts.serializers.serializers_transfer import (
     IsNotAuthentication,
     ValidationError,
     NotFoundError,
 )
+from incomes.serializers import CategoryIncomeStatisticsSerializer
 from .serializers import (
     CategorySerializerExpenses,
     ExpenseSerializer,
@@ -114,4 +119,31 @@ RetrieveUpdateDeleteCategoryExpenseSchema = extend_schema_view(
             404: NotFoundError,
         },
     ),
+)
+
+
+expense_statistic_schema = extend_schema_view(
+    get=extend_schema(
+        tags=["Expenses"],
+        parameters=[
+            OpenApiParameter(
+                "year",
+                int,
+                description="Год для статистики",
+                required=True
+            ),
+            OpenApiParameter(
+                "month",
+                int,
+                description="Месяц для статистики",
+                required=True
+            ),
+        ],
+        description="Получение статистики расходов за переданный месяц и год.",
+        responses={
+            200: CategoryIncomeStatisticsSerializer,
+            401: IsNotAuthentication,
+            404: NotFoundError,
+        },
+    )
 )

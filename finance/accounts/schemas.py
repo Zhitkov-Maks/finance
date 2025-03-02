@@ -1,10 +1,19 @@
-from drf_spectacular.utils import extend_schema_view, extend_schema
-
+from drf_spectacular.utils import (
+    extend_schema_view,
+    extend_schema,
+    OpenApiParameter
+)
 from accounts.serializers.serializers_account import (
     AccountSerializer,
     AccountSerializerDetail,
     AccountPutSerializer,
-    AccountPatchSerializer, AccountListResponseSerializer,
+    AccountPatchSerializer,
+    AccountListResponseSerializer,
+)
+from accounts.serializers.serializers_debt import (
+    DebtDetailSerializer,
+    DebtListSerializer,
+    SuccessSerializer
 )
 from accounts.serializers.serializers_transfer import (
     TransferSerializer,
@@ -41,8 +50,9 @@ listAccountSchema = extend_schema_view(
 # Схемы для просмотра, удаления и редактирования конкретного счета.
 RetrieveUpdateDeleteAccountSchema = extend_schema_view(
     get=extend_schema(
-        description="Получить детальную информацию о счете. В счет добавляется информация о "
-        "последних доходах и расходах за последние 30 дней.",
+        description="Получить детальную информацию о счете. В счет добавляется "
+                    "информация о последних доходах и расходах за "
+                    "последние 30 дней.",
         responses={
             200: AccountSerializerDetail(many=True),
             404: NotFoundError,
@@ -135,4 +145,72 @@ TransferRetrieveViewSchema = extend_schema_view(
             404: NotFoundError,
         },
     ),
+)
+
+
+DebtListSchema = extend_schema_view(
+    get=extend_schema(
+        tags=["Debt"],
+        parameters=[
+            OpenApiParameter(
+                "type", str, description="debt или lend", required=True
+            ),
+        ],
+        description="Получение списка ваших долгов или ваших должников.",
+        responses={
+            200: DebtListSerializer,
+            401: IsNotAuthentication,
+            404: NotFoundError,
+        },
+    )
+)
+
+
+DebtDetailSchema = extend_schema_view(
+    get=extend_schema(
+        tags=["Debt"],
+        description="Получение информации о конкретном долге.",
+        responses={
+            200: DebtDetailSerializer,
+            401: IsNotAuthentication,
+            404: NotFoundError,
+        },
+    )
+)
+
+
+DebtRepaySchema = extend_schema_view(
+    post=extend_schema(
+        tags=["Debt"],
+        description="Работа с погашением долгов. В полу type должно быть "
+                    "указано либо debt либо lend.",
+        responses={
+            201: SuccessSerializer,
+            401: IsNotAuthentication,
+            404: NotFoundError,
+        }
+    )
+)
+
+
+DebtCreateSchema = extend_schema_view(
+    post=extend_schema(
+        tags=["Debt"],
+        description="Работа с добавлением долга.",
+        responses={
+            201: SuccessSerializer,
+            401: IsNotAuthentication,
+            404: NotFoundError,
+        }
+    )
+)
+
+DebtCreateAccountsSchema = extend_schema_view(
+    post=extend_schema(
+        tags=["Debt"],
+        description="Создание счетов: взять в долг, дать в долг.",
+        responses={
+            201: SuccessSerializer,
+        }
+    )
 )

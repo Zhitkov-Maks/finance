@@ -7,7 +7,8 @@ from aiogram.types import Message
 from aiogram.utils.markdown import hbold
 
 from api.auth import login_user
-from config import BOT_TOKEN
+from api.common import create_new_object
+from config import BOT_TOKEN, debt_create_accounts_url
 from keyboards.keyboards import main_menu, cancel_
 from keyboards.reset import generate_inline_keyboard_reset
 from loader import enter_email, password, success_auth
@@ -58,10 +59,12 @@ async def final_authentication(message: Message, state: FSMContext) -> None:
         email: str = (await state.get_data())["email"]
         data: Dict[str, str] = await create_data(email, message.text)
         result: str | None = await login_user(data, message.from_user.id)
-
         if result is None:
             await message.answer(
                 success_auth, reply_markup=main_menu, parse_mode="HTML"
+            )
+            await create_new_object(
+                message.from_user.id, debt_create_accounts_url
             )
         else:
             await message.answer(

@@ -17,7 +17,9 @@ reset_router: Router = Router()
 
 
 @reset_router.callback_query(F.data == "reset")
-async def start_reset_password(callback: CallbackQuery, state: FSMContext) -> None:
+async def start_reset_password(
+        callback: CallbackQuery, state: FSMContext
+) -> None:
     """Processing the password reset command, requests an email."""
     await state.set_state(ResetPassword.email)
     await callback.message.edit_text(
@@ -125,5 +127,7 @@ async def final_reset_password(message: Message, state: FSMContext) -> None:
         await state.clear()
     else:
         await message.answer(
-            text=hbold("Введите новый пароль."), parse_mode="HTML", reply_markup=cancel_
+            text=hbold("Введите новый пароль."),
+            parse_mode="HTML",
+            reply_markup=cancel_
         )

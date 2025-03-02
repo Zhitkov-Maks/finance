@@ -8,8 +8,10 @@ from accounts.models import Account
 
 class BaseAccountSerializer(serializers.ModelSerializer):
     """
-    Базовый класс для сериализации счетов. Предназначен для переиспользования.
+    Базовый класс для сериализации счетов.
+    Предназначен для переиспользования.
     """
+
     class Meta:
         model = Account
         fields = ["id", "name", "balance"]
@@ -17,8 +19,10 @@ class BaseAccountSerializer(serializers.ModelSerializer):
 
 class AccountIncomeSerializer(serializers.ModelSerializer):
     """
-    Нужен для отображения доходов при получении детальной информации о конкретном счете.
+    Нужен для отображения доходов при получении детальной
+    информации о конкретном счете.
     """
+
     class Meta:
         model = Income
         fields = ["id", "amount", "create_at"]
@@ -26,8 +30,10 @@ class AccountIncomeSerializer(serializers.ModelSerializer):
 
 class AccountExpenseSerializer(serializers.ModelSerializer):
     """
-    Нужен для отображения расходов при получении детальной информации о конкретном счете.
+    Нужен для отображения расходов при получении детальной
+    информации о конкретном счете.
     """
+
     class Meta:
         model = Expense
         fields = ["id", "amount", "create_at"]
@@ -35,24 +41,27 @@ class AccountExpenseSerializer(serializers.ModelSerializer):
 
 
 class AccountSerializer(serializers.ModelSerializer):
+    """Нужен для базовой работы со счетами."""
+
     class Meta:
         model = Account
         fields = ['id', 'name', 'balance', 'is_active']
 
 
 class AccountListResponseSerializer(serializers.Serializer):
-    """
-    Сериализатор для отображения списка счетов с общим балансом.
-    """
+    """Сериализатор для отображения списка счетов с общим балансом."""
+
     accounts = serializers.ListField(child=AccountSerializer())
     total_balance = serializers.DecimalField(max_digits=10, decimal_places=2)
 
 
 class AccountSerializerDetail(serializers.ModelSerializer):
     """
-    Нужен для получения детальной информации о счете, которая будет включать в себя
-    и информация о доходах и расходах по данному счету за последний месяц.
+    Нужен для получения детальной информации о счете, которая будет
+    включать в себя и информация о доходах и расходах по данному
+    счету за последний месяц.
     """
+
     incomes = serializers.SerializerMethodField()
     expenses = serializers.SerializerMethodField()
 
@@ -72,33 +81,32 @@ class AccountSerializerDetail(serializers.ModelSerializer):
 
 
 class AccountPutSerializer(BaseAccountSerializer):
-    """
-    Нужен для полного редактирования счета.
-    """
+    """Нужен для полного редактирования счета."""
+
     class Meta(BaseAccountSerializer.Meta):
         fields = ["name", "balance"]
 
 
 class AccountGetSerializer(BaseAccountSerializer):
-    """
-    Нужен для полного редактирования счета.
-    """
+    """Нужен для полного редактирования счета."""
+
     class Meta(BaseAccountSerializer.Meta):
         fields = ["id", "name", "balance"]
 
 
 class AccountPatchSerializer(BaseAccountSerializer):
-    """
-    Нужен для частичного редактирования.
-    """
+    """Нужен для частичного редактирования."""
+
     class Meta(BaseAccountSerializer.Meta):
         fields = ["balance"]
 
 
 class AccountToggleStatusSerializer(serializers.ModelSerializer):
     """
-    Сериализатор для отображения информации о счете после переключения активности.
+    Сериализатор для отображения информации о счете
+    после переключения активности.
     """
+
     class Meta:
         model = Account
         fields = ['is_active']

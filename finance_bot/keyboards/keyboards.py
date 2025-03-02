@@ -2,6 +2,8 @@ from typing import List
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
+from utils.common import create_pagination_buttons
+
 
 async def create_list_incomes_expenses(
     data: dict[str, list],
@@ -20,26 +22,17 @@ async def create_list_incomes_expenses(
     for item in data.get("results"):
         id_: int = item.get("id")
         dt: str = f"📆 {item['create_at'][8:10]}-{item['create_at'][5:7]}"
-        text: str = f"{dt}  💰{item.get("amount")}₽  {item.get('category').get('name')}"
+        text: str = (f"{dt}  💰{item.get("amount")}₽  "
+                     f"{item.get('category').get('name')}")
 
-        inline_buttons.append([InlineKeyboardButton(text=text, callback_data=str(id_))])
+        inline_buttons.append(
+            [InlineKeyboardButton(text=text, callback_data=str(id_))]
+        )
 
-    prev_data, text_prev = "None prev", "-"
-    next_data, text_next = "None next", "-"
-
-    if previous is not None:
-        prev_data, text_prev = prev, "<<"
-
-    if next_ is not None:
-        next_data, text_next = next_d, ">>"
-
-    inline_buttons.append(
-        [
-            InlineKeyboardButton(text=text_prev, callback_data=prev_data),
-            InlineKeyboardButton(text="Меню", callback_data="main"),
-            InlineKeyboardButton(text=text_next, callback_data=next_data),
-        ]
+    lst_menu: list = await create_pagination_buttons(
+        previous, next_, prev, next_d
     )
+    inline_buttons.append(lst_menu)
     return InlineKeyboardMarkup(inline_keyboard=inline_buttons)
 
 
@@ -95,6 +88,10 @@ menu_bot: List[List[InlineKeyboardButton]] = [
             InlineKeyboardButton(
                 text="Категории",
                 callback_data="categories"
+            ),
+            InlineKeyboardButton(
+                text="Долги",
+                callback_data="debt_and_lends"
             )
         ]
     ]
@@ -121,4 +118,6 @@ confirm: List[List[InlineKeyboardButton]] = [
 ]
 
 # Inline action confirmation buttons
-confirm_menu: InlineKeyboardMarkup = InlineKeyboardMarkup(inline_keyboard=confirm)
+confirm_menu: InlineKeyboardMarkup = InlineKeyboardMarkup(
+    inline_keyboard=confirm
+)

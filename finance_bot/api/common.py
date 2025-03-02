@@ -5,13 +5,24 @@ from utils.common import create_header
 
 
 async def create_client(user_id: int, url: str, data=None) -> Client:
-    """A function for configuring the client."""
+    """
+    A function for configuring the client.
+    :param user_id: The user ID.
+    :param url: The URL.
+    :param data: The data.
+    """
     client: Client = Client(url=url, data=data)
     client.header.update(Authorization=await create_header(user_id))
     return client
 
 
-async def create_new_object(user_id, url: str, data: dict) -> dict:
+async def create_new_object(user_id, url: str, data: dict = None) -> dict:
+    """
+    A function for creating a new object.
+    :param user_id: The user ID.
+    :param url: The URL.
+    :param data: The data.
+    """
     client: Client = await create_client(user_id, url, data)
     status_code, response = await client.post()
     if status_code != 201:

@@ -2,9 +2,11 @@ from typing import List, Dict
 
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+from utils.common import create_pagination_buttons
+
 
 async def create_list_account(
-    data: Dict[str, str | List[Dict[str, float | List[Dict[str, int | float | str]]]]],
+    data: dict,
     prev: str = "prev_acc",
     next_d: str = "next_acc"
 ) -> InlineKeyboardMarkup:
@@ -17,35 +19,24 @@ async def create_list_account(
     :param data: Dictionary with query data.
     :return: The inline keyboard.
     """
-    inline_buttons: List[List[InlineKeyboardButton]] = []
+    keyboards: List[List[InlineKeyboardButton]] = []
     previous, next_ = data.get("previous"), data.get("next")
     for item in data.get("results")[0].get("accounts"):
             id_: int = item.get("id")
-            inline_buttons.append(
+            keyboards.append(
                 [
                     InlineKeyboardButton(
-                        text=f"{item.get("name")} / {float(item.get('balance')):_}₽",
+                        text=f"{item.get("name")} /"
+                             f" {float(item.get('balance')):_}₽",
                         callback_data=str(id_)
                     )
                 ])
 
-    prev_data, text_prev = "None prev", "-"
-    next_data, text_next = "None next", "-"
-
-    if previous is not None:
-        prev_data, text_prev = prev, "<<"
-
-    if next_ is not None:
-        next_data, text_next = next_d, ">>"
-
-    inline_buttons.append(
-        [
-            InlineKeyboardButton(text=text_prev, callback_data=prev_data),
-            InlineKeyboardButton(text="Меню", callback_data="main"),
-            InlineKeyboardButton(text=text_next, callback_data=next_data),
-        ]
+    lst_menu: list = await create_pagination_buttons(
+        previous, next_, prev, next_d
     )
-    return InlineKeyboardMarkup(inline_keyboard=inline_buttons)
+    keyboards.append(lst_menu)
+    return InlineKeyboardMarkup(inline_keyboard=keyboards)
 
 
 async def get_action_accounts(is_active: bool) -> InlineKeyboardMarkup:

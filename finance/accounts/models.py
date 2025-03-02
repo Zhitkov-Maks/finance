@@ -10,12 +10,18 @@ class Account(models.Model):
 
     name = models.CharField(max_length=50, verbose_name="Название счета")
     user = models.ForeignKey(
-        CustomUser, on_delete=models.CASCADE, db_index=True, related_name="accounts"
+        CustomUser,
+        on_delete=models.CASCADE,
+        db_index=True,
+        related_name="accounts"
     )
     balance = models.DecimalField(
         max_digits=10, decimal_places=2, default=0, verbose_name="Баланс"
     )
-    is_active = models.BooleanField(default=True, verbose_name="Показать/Скрыть")
+    is_active = models.BooleanField(
+        default=True, verbose_name="Показать/Скрыть"
+    )
+    is_system_account = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
@@ -34,13 +40,38 @@ class Transfer(models.Model):
     """
 
     source_account = models.ForeignKey(
-        Account, on_delete=models.CASCADE, related_name='transfers_out'
+        Account, on_delete=models.CASCADE, related_name="transfers_out"
     )
     destination_account = models.ForeignKey(
-        Account, on_delete=models.CASCADE, related_name='transfers_in'
+        Account, on_delete=models.CASCADE, related_name="transfers_in"
     )
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     timestamp = models.DateTimeField()
 
+    class Meta:
+        verbose_name = "перевод"
+        verbose_name_plural = "переводы"
+        ordering = ["timestamp"]
+
     def __str__(self):
-        return f"Transfer of {self.amount} from {self.source_account} to {self.destination_account}"
+        return (f"Transfer of {self.amount} from "
+                f"{self.source_account} to {self.destination_account}")
+
+
+class Debt(models.Model):
+    """
+    Модель для представления долгов между счетами.
+    """
+
+    transfer = models.OneToOneField(
+        Transfer, on_delete=models.CASCADE, related_name="debt"
+    )
+    borrower_description = models.CharField(max_length=100)
+
+    class Meta:
+        verbose_name = "долг"
+        verbose_name_plural = "долги"
+        ordering = ["-transfer__timestamp"]
+
+    def __str__(self):
+        return f"Debt of {self.transfer.amount} to {self.borrower_description}"

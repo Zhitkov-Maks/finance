@@ -39,10 +39,12 @@ async def generate_message_income_info(
     :return str: A message for the user.
     """
     return (
-        f"Дата операции 📆: {data['create_at'][8:10]}-{data['create_at'][5:7]}.\n"
+        f"Дата операции 📆: "
+            f"{data['create_at'][8:10]}-{data['create_at'][5:7]}.\n"
         f"Сумма дохода 💰: {float(data.get('amount')):,}₽. \n"
         f"Счет: {data.get('account').get('name')}.\n"
-        f"Текущий баланс счета 💵: {float(data.get('account').get('balance')):,}₽.\n"
+        f"Текущий баланс счета 💵: "
+            f"{float(data.get('account').get('balance')):,}₽.\n"
         f"Категория дохода: {data.get('category').get('name')}.\n"
     )
 
@@ -64,9 +66,12 @@ async def create_new_incomes_data(
     }
 
 
-async def gen_answer_message(data: dict[str, int | dict[str, int | str]]) -> str:
+async def gen_answer_message(
+        data: dict[str, int | dict[str, int | str]]
+) -> str:
     """
-    The function generates a message when a new income is successfully generated.
+    The function generates a message when a new income is
+    successfully generated.
     :param data: A dictionary with data for forming a message.
     :return str: A message for the user.
     """

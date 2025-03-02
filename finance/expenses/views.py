@@ -3,7 +3,7 @@ from datetime import datetime as dt, UTC
 
 from django.db.models import QuerySet, Count
 from django_filters.rest_framework.backends import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema, OpenApiParameter, extend_schema_view
+from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.authentication import (
     SessionAuthentication,
@@ -15,8 +15,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from accounts.models import Account
-from accounts.serializers.serializers_transfer import NotFoundError, IsNotAuthentication
-from incomes.serializers import CategoryIncomeStatisticsSerializer
 from .filter import ExpenseFilter, get_category_expense_statistics
 from .models import Expense, Category
 from .serializers import (
@@ -24,13 +22,14 @@ from .serializers import (
     CategorySerializerExpenses,
     ExpenseSerializersAdd,
     ExpenseSerializersPatch,
-    ExpenseSerializersPut, StatisticsResponseSerializer,
+    ExpenseSerializersPut,
+    StatisticsResponseSerializer,
 )
 from .views_schemas import (
     RetrieveUpdateDeleteCategoryExpenseSchema,
     ExpenseViewSchema,
     RetrieveUpdateDeleteExpenseSchema,
-    ListCategoryExpenseSchema,
+    ListCategoryExpenseSchema, expense_statistic_schema,
 )
 
 
@@ -88,8 +87,8 @@ class ExpenseView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer) -> None:
         """
-        Переопределяем метод, чтобы при добавлении расхода минусовать сумму расхода
-        с выбранного счета.
+        Переопределяем метод, чтобы при добавлении расхода минусовать
+        сумму расхода с выбранного счета.
         :param serializer: Сериализатор.
         """
         expense: Expense = serializer.save(user=self.request.user)
@@ -110,14 +109,17 @@ class ExpenseView(generics.ListCreateAPIView):
         # Используем другой сериализатор для возврата созданного объекта
         response_serializer = ExpenseSerializer(serializer.instance)
 
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(
+            response_serializer.data, status=status.HTTP_201_CREATED
+        )
 
 
 @extend_schema(tags=["Expenses"])
 @RetrieveUpdateDeleteExpenseSchema
 class RetrieveUpdateDeleteExpense(generics.RetrieveUpdateDestroyAPIView):
     """
-    Класс для редактирования, удаления и получения детальной информации о расходе.
+    Класс для редактирования, удаления и получения
+    детальной информации о расходе.
     """
 
     serializer_class = ExpenseSerializersAdd
@@ -157,33 +159,34 @@ class RetrieveUpdateDeleteExpense(generics.RetrieveUpdateDestroyAPIView):
         """
         account: Account = (
             instance.account
-        )  # Получаем счет, с которого был списан расход
-        amount: decimal = instance.amount  # Сохраняем сумму расхода
+        )
+        amount: decimal = instance.amount
 
-        # Обновляем баланс счета, добавляя обратно сумму расхода
         account.balance += amount
         account.save()
         instance.delete()
 
     def perform_update(self, serializer: ExpenseSerializer) -> None:
         """
-        Переопределяем метод для обновления дохода и корректировки баланса счета.
+        Переопределяем метод для обновления дохода и корректировки
+        баланса счета.
         :param serializer: Сериализатор с новыми данными.
         """
         instance: Expense = self.get_object()
 
-        # Получаем старый и новый счет
         old_account: Account = instance.account
-        new_account: Account = serializer.validated_data.get("account", old_account)
+        new_account: Account = serializer.validated_data.get(
+            "account", old_account
+        )
 
         # Получаем старую и новую сумму
         old_amount: decimal = instance.amount
-        new_amount: decimal = serializer.validated_data.get("amount", old_amount)
+        new_amount: decimal = serializer.validated_data.get(
+            "amount", old_amount
+        )
 
-        # Сохраняем изменения в объекте дохода
         serializer.save()
 
-        # Корректировка баланса старого счета, если он изменился
         if new_account != old_account:
             old_account.balance += old_amount
             old_account.save()
@@ -191,13 +194,13 @@ class RetrieveUpdateDeleteExpense(generics.RetrieveUpdateDestroyAPIView):
             new_account.balance -= new_amount
             new_account.save()
         else:
-            # Если счет не изменился, просто корректируем баланс на одном счете
-            old_account.balance += new_amount - old_amount
+            old_account.balance += old_amount - new_amount
             old_account.save()
 
     def perform_create(self, serializer: ExpenseSerializer) -> None:
         """
-        Переопределяем метод для создания нового расхода и корректировки баланса счета.
+        Переопределяем метод для создания нового расхода и
+        корректировки баланса счета.
         :param serializer: Сериализатор с новыми данными.
         """
         expense: Expense = serializer.save(user=self.request.user)
@@ -228,14 +231,14 @@ class ListCategoryExpense(generics.ListCreateAPIView):
 
     def get_queryset(self) -> QuerySet:
         """
-        Переопределили метод, чтобы возвращать категории по частоте использования.
-        Чтобы приходили первыми наиболее часто используемые.
+        Переопределили метод, чтобы возвращать категории по частоте
+        использования. Чтобы приходили первыми наиболее часто используемые.
         :return QuerySet:  Возвращает список категорий расходов.
         """
         return (
             Category.objects.filter(user=self.request.user)
             .annotate(usage_count=Count("expenses"))
-            .order_by("-usage_count")
+            .order_by("-usage_count").order_by("name")
         )
 
     def perform_create(self, serializer) -> None:
@@ -247,7 +250,8 @@ class ListCategoryExpense(generics.ListCreateAPIView):
 @RetrieveUpdateDeleteCategoryExpenseSchema
 class RetrieveUpdateDeleteCategoryExpense(generics.RetrieveUpdateDestroyAPIView):
     """
-    Класс для редактирования, удаления и получения детальной информации о категории.
+    Класс для редактирования, удаления и получения детальной информации
+    о категории.
     """
 
     serializer_class = CategorySerializerExpenses
@@ -261,31 +265,14 @@ class RetrieveUpdateDeleteCategoryExpense(generics.RetrieveUpdateDestroyAPIView)
 
     def get_queryset(self) -> QuerySet:
         """
-        Переопределяем метод, чтобы возвращать категории по конкретному пользователю.
+        Переопределяем метод, чтобы возвращать категории по конкретному
+        пользователю.
         :return Queryset:
         """
         return Category.objects.filter(user=self.request.user)
 
 
-@extend_schema_view(
-    get=extend_schema(
-        tags=["Expenses"],
-        parameters=[
-            OpenApiParameter(
-                "year", int, description="Год для статистики", required=True
-            ),
-            OpenApiParameter(
-                "month", int, description="Месяц для статистики", required=True
-            ),
-        ],
-        description="Получение статистики расходов за переданный месяц и год.",
-        responses={
-            200: CategoryIncomeStatisticsSerializer,
-            401: IsNotAuthentication,
-            404: NotFoundError,
-        },
-    )
-)
+@expense_statistic_schema
 class CategoryExpenseStatisticsView(generics.GenericAPIView):
     """
     Класс для получения статистики по переданному году и месяцу.
@@ -307,10 +294,13 @@ class CategoryExpenseStatisticsView(generics.GenericAPIView):
         year: int = request.query_params.get("year", dt.now(UTC).year)
         month: int = request.query_params.get("month", dt.now(UTC).month)
         if not year or not month:
-            return Response({"error": "Year and month are required."}, status=400)
+            return Response(
+                {"error": "Year and month are required."},
+                status=400
+            )
 
         statistics = get_category_expense_statistics(request.user, year, month)
-        total_amount = sum(float(item['total_amount']) for item in statistics)  # Подсчет общей суммы
+        total_amount = sum(float(item['total_amount']) for item in statistics)
 
         response_data = {
             "statistics": statistics,

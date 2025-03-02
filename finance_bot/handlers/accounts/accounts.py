@@ -1,5 +1,3 @@
-from typing import Dict, List
-
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup
@@ -30,9 +28,7 @@ async def start_account(callback: CallbackQuery, state: FSMContext):
     page: int = data.get("page", 1)
     url: str = await account_url(page, PAGE_SIZE)
 
-    result: Dict[
-        str, str | List[Dict[str, float | List[Dict[str, int | float | str]]]]
-    ] = await get_all_objects(url, callback.from_user.id)
+    result: dict = await get_all_objects(url, callback.from_user.id)
 
     await state.update_data(page=page)
     total_balance: float = result.get("results")[0].get("total_balance", 0)
@@ -49,14 +45,14 @@ async def start_account(callback: CallbackQuery, state: FSMContext):
 
 @account.callback_query(F.data == "next_acc")
 @decorator_errors
-async def next_output_list_habits(call: CallbackQuery, state: FSMContext) -> None:
+async def next_output_list_habits(
+        call: CallbackQuery, state: FSMContext
+) -> None:
     """Show more invoices if any."""
     page: int = (await state.get_data()).get("page")
     url: str = await account_url(page + 1, PAGE_SIZE)
 
-    result: Dict[
-        str, str | List[Dict[str, float | List[Dict[str, int | float | str]]]]
-    ] = await get_all_objects(url, call.from_user.id)
+    result: dict = await get_all_objects(url, call.from_user.id)
 
     keyword: InlineKeyboardMarkup = await create_list_account(result)
     await state.update_data(page=page + 1)
@@ -66,14 +62,14 @@ async def next_output_list_habits(call: CallbackQuery, state: FSMContext) -> Non
 
 @account.callback_query(F.data == "prev_acc")
 @decorator_errors
-async def prev_output_list_habits(call: CallbackQuery, state: FSMContext) -> None:
+async def prev_output_list_habits(
+        call: CallbackQuery, state: FSMContext
+) -> None:
     """Show the previous page."""
     page: int = (await state.get_data()).get("page")
     url: str = await account_url(page - 1, PAGE_SIZE)
 
-    result: Dict[
-        str, str | List[Dict[str, float | List[Dict[str, int | float | str]]]]
-    ] = await get_all_objects(url, call.from_user.id)
+    result: dict = await get_all_objects(url, call.from_user.id)
 
     keyword: InlineKeyboardMarkup = await create_list_account(result)
     await state.update_data(page=page - 1)
@@ -92,14 +88,18 @@ async def change_toggle(callback: CallbackQuery, state: FSMContext) -> None:
 
     # Toggle the activity status
     new_active_status: bool = not current_active
-    await change_toggle_active(account_id, callback.from_user.id, new_active_status)
+    await change_toggle_active(
+        account_id, callback.from_user.id, new_active_status
+    )
 
     # Fetch updated account info
     response: dict = await get_full_info(url, callback.from_user.id)
     await update_account_state(state, response)
 
     # Update reply markup based on new active status
-    keyword: InlineKeyboardMarkup = await get_action_accounts(response.get("is_active"))
+    keyword: InlineKeyboardMarkup = await get_action_accounts(
+        response.get("is_active")
+    )
     await callback.message.edit_reply_markup(reply_markup=keyword)
 
 
@@ -135,7 +135,9 @@ async def remove_confirm(callback: CallbackQuery, state: FSMContext) -> None:
 
 @account.callback_query(AccountsState.remove, F.data == "continue")
 @decorator_errors
-async def remove_account_by_id(callback: CallbackQuery, state: FSMContext) -> None:
+async def remove_account_by_id(
+        callback: CallbackQuery, state: FSMContext
+) -> None:
     """The final account deletion handler."""
     data: dict = await state.get_data()
     account_id: int = data.get("account_id")

@@ -44,7 +44,9 @@ async def start_transfer(callback: CallbackQuery, state: FSMContext) -> None:
 
 @transfer.callback_query(F.data.in_(["next_tr", "prev_tr"]))
 @decorator_errors
-async def next_prev_output_list_habits(call: CallbackQuery, state: FSMContext) -> None:
+async def next_prev_output_list_habits(
+        call: CallbackQuery, state: FSMContext
+) -> None:
     """Show more invoices if any."""
     page: int = (await state.get_data()).get("page")
     account_id = (await state.get_data()).get("account_id")
@@ -56,9 +58,7 @@ async def next_prev_output_list_habits(call: CallbackQuery, state: FSMContext) -
 
     url: str = await account_url(page, page_size=PAGE_SIZE)
 
-    result: Dict[
-        str, str | List[Dict[str, float | List[Dict[str, int | float | str]]]]
-    ] = await get_all_objects(url, call.from_user.id)
+    result: dict = await get_all_objects(url, call.from_user.id)
 
     keyword: InlineKeyboardMarkup = await create_list_transfer_accounts(
         result, int(account_id), transfer=True
@@ -69,7 +69,9 @@ async def next_prev_output_list_habits(call: CallbackQuery, state: FSMContext) -
 
 
 @transfer.callback_query(TransferStates.action)
-async def get_account_transfer_out(callback: CallbackQuery, state: FSMContext) -> None:
+async def get_account_transfer_out(
+        callback: CallbackQuery, state: FSMContext
+) -> None:
     """We save the account and request the balance."""
     await state.update_data(transfer_out=callback.data.split("_")[0])
     await state.update_data(account_out=callback.data.split("_")[1])
@@ -92,11 +94,14 @@ async def get_amount_transfer(message: Message, state: FSMContext) -> None:
 
     if not is_valid_balance(message.text):
         await message.answer(
-            "Invalid balance format. Please enter a valid number.", reply_markup=cancel_
+            "Invalid balance format. Please enter a valid number.",
+            reply_markup=cancel_
         )
         return
 
-    await create_transfer(transfer_in, transfer_out, usr_id, float(message.text))
+    await create_transfer(
+        transfer_in, transfer_out, usr_id, float(message.text)
+    )
     await state.clear()
     await message.answer(
         text=hbold(f"Перевод с {name} 👉🏻 {name_out} на сумму {amount}₽."),

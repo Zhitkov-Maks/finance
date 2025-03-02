@@ -52,9 +52,11 @@ async def edit_expense_request(message: Message, state: FSMContext) -> None:
     expense_id, usr_id = data["expense_id"], message.from_user.id
     method: str = data.get("method", "PUT")
     url: str = await expense_url_by_id(expense_id)
+
     if not is_valid_balance(message.text):
         await message.answer(
-            "Неверный формат ввода, попробуйте еще раз.", reply_markup=cancel_
+            "Неверный формат ввода, попробуйте еще раз.",
+            reply_markup=cancel_
         )
         return
 
@@ -62,14 +64,12 @@ async def edit_expense_request(message: Message, state: FSMContext) -> None:
         edit_data: dict = {"amount": float(message.text)}
 
     else:
-        edit_data: dict[str, str | float | int] = await create_new_expenses_data(
+        edit_data: dict = await create_new_expenses_data(
             data, float(message.text)
         )
 
     await edit_object(url, usr_id, edit_data, method)
-    response: dict[str, int | str | dict[str, int | str]] = await get_full_info(
-        url, usr_id
-    )
+    response: dict = await get_full_info(url, usr_id)
 
     text: str = await generate_message_expense_info(response)
     await state.set_state(ExpensesState.action)
