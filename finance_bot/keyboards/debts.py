@@ -86,7 +86,7 @@ debts_buttons: List[List[InlineKeyboardButton]] = [
         ),
         InlineKeyboardButton(
             text="Меню",
-            callback_data="mail"
+            callback_data="main"
         ),
         InlineKeyboardButton(
             text="Дать взаймы",
