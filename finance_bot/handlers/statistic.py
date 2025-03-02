@@ -24,9 +24,13 @@ from utils.statistic import (
 statistic_route: Router = Router()
 
 
-@statistic_route.callback_query(F.data.in_(["statistic_expenses", "statistic_incomes"]))
+@statistic_route.callback_query(
+    F.data.in_(["statistic_expenses", "statistic_incomes"])
+)
 @decorator_errors
-async def get_expenses_for_month(call: CallbackQuery, state: FSMContext) -> None:
+async def get_expenses_for_month(
+        call: CallbackQuery, state: FSMContext
+) -> None:
     """A handler for displaying the amount of income or expense."""
     data: dict = await state.get_data()
     month, year = data["month"], data["year"]
@@ -34,19 +38,25 @@ async def get_expenses_for_month(call: CallbackQuery, state: FSMContext) -> None
 
     amount: float = await get_statistic_current_month(url, call.from_user.id)
     answer, sign = (
-        ("расходы", "-") if call.data == "statistic_expenses" else ("доходы", "+")
+        ("расходы", "-")
+        if call.data == "statistic_expenses" else ("доходы", "+")
     )
     await call.answer(
-        text=f"{MONTH_DATA[month]}, {answer}: {sign}{amount}₽.", show_alert=True
+        text=f"{MONTH_DATA[month]}, {answer}: {sign}{amount}₽.",
+        show_alert=True
     )
 
 
 @statistic_route.callback_query(F.data == "accounts_data")
 @decorator_errors
-async def get_expenses_for_month(call: CallbackQuery, state: FSMContext) -> None:
+async def get_expenses_for_month(
+        call: CallbackQuery, state: FSMContext
+) -> None:
     """Handler for displaying the balance of all accounts."""
     url: str = accounts_url + "?page=1&page_size=1"
-    amount: float = await get_statistic_current_month(url, call.from_user.id, True)
+    amount: float = await get_statistic_current_month(
+        url, call.from_user.id, True
+    )
     answer: str = f"На ваших счетах {amount:,.2f}₽"
     await call.answer(answer, show_alert=True)
 
@@ -57,7 +67,6 @@ async def incomes_to_expenses(call: CallbackQuery, state: FSMContext) -> None:
     """A handler for showing the ratio of income to expenses."""
     month, year = datetime.now().month, datetime.now().year
 
-    # Запускаем оба запроса одновременно
     amount_expenses, amount_incomes = await asyncio.gather(
         get_statistic_current_month(
             statistic_url["statistic_expenses"].format(month=month, year=year),
@@ -76,7 +85,9 @@ async def incomes_to_expenses(call: CallbackQuery, state: FSMContext) -> None:
 
 @statistic_route.callback_query(F.data.in_(["statistic_exp", "statistic_inc"]))
 @decorator_errors
-async def get_statistic_for_month(callback: CallbackQuery, state: FSMContext) -> None:
+async def get_statistic_for_month(
+        callback: CallbackQuery, state: FSMContext
+) -> None:
     """
     A handler for displaying statistics for the month
     by category in descending order of the amount.
@@ -97,7 +108,9 @@ async def get_statistic_for_month(callback: CallbackQuery, state: FSMContext) ->
 
 @statistic_route.callback_query(F.data.in_(["next_month", "prev_month"]))
 @decorator_errors
-async def next_and_prev_month(callback: CallbackQuery, state: FSMContext) -> None:
+async def next_and_prev_month(
+        callback: CallbackQuery, state: FSMContext
+) -> None:
     """A handler for displaying statistics for the next or previous month."""
     data: Dict[str, str | int] = await state.get_data()
     action: str = "prev" if callback.data == "prev_month" else "next"
