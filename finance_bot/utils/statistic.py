@@ -4,7 +4,9 @@ from loader import category_statistic_text
 from utils.create_calendar import MONTH_DATA
 
 
-async def get_url_and_type_message(data: str, year: int, month: int) -> tuple[str, str]:
+async def get_url_and_type_message(
+        data: str, year: int, month: int
+) -> tuple[str, str]:
     """
     Generates the url for the request and the type of message for the response.
     :param data: The string for determining the url.
@@ -21,13 +23,16 @@ async def get_url_and_type_message(data: str, year: int, month: int) -> tuple[st
     return url.format(year=year, month=month), message
 
 
-async def get_statistic_current_month(url: str, user_id: int, accounts=False) -> float:
+async def get_statistic_current_month(
+        url: str, user_id: int, accounts=False
+) -> float:
     """
     Returns monthly statistics on income and expenses,
     or the sum of all accounts at the moment.
     :param url: Url for the request
     :param user_id: The telegram chat ID.
-    :param accounts: A Boolean value for selecting an option to receive the amount.
+    :param accounts: A Boolean value for selecting an option
+                        to receive the amount.
     :return: The amount received.
     """
     result: dict = await get_full_info(url, user_id)
@@ -51,7 +56,8 @@ async def gen_message_statistics(data: dict) -> str:
         percent: float = category_amount / total_amount * 100
 
         # Используем вертикальные линии как разделители
-        message += f"{category_name} ... {category_amount:,.2f}₽ ... {percent:.02f}%\n{55 * '-'}\n"
+        message += (f"{category_name} ... {category_amount:,.2f}₽ ... "
+                    f"{percent:.02f}%\n{55 * '-'}\n")
 
     if len(message) == 0:
         message = "За данный месяц нет данных."
