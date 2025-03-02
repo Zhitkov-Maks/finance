@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict
 
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
@@ -27,7 +27,9 @@ from utils.expenses import (
 create_exp_router: Router = Router()
 
 
-@create_exp_router.callback_query(F.data.in_(["expense_add", "edit_expense_full"]))
+@create_exp_router.callback_query(
+    F.data.in_(["expense_add", "edit_expense_full"])
+)
 async def create_expense_choice_date(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
@@ -51,9 +53,14 @@ async def create_expense_choice_date(
     )
 
 
-@create_exp_router.callback_query(F.data.in_(["next_cal_exp", "prev_cal_exp"]))
+@create_exp_router.callback_query(
+    F.data.in_(["next_cal_exp", "prev_cal_exp"])
+)
 @decorator_errors
-async def next_and_prev_month(callback: CallbackQuery, state: FSMContext) -> None:
+async def next_and_prev_month(
+    callback: CallbackQuery,
+    state: FSMContext
+) -> None:
     """
     Processes commands for the previous or next month.
     Generates calendars depending on the month.
@@ -65,7 +72,9 @@ async def next_and_prev_month(callback: CallbackQuery, state: FSMContext) -> Non
     await state.update_data(year=year, month=month)
     await state.set_state(CreateExpenseState.date)
     await callback.message.edit_reply_markup(
-        reply_markup=await create_calendar(year, month, "prev_cal_exp", "next_cal_exp")
+        reply_markup=await create_calendar(
+            year, month, "prev_cal_exp", "next_cal_exp"
+        )
     )
 
 
@@ -78,13 +87,11 @@ async def create_expense_choice_account(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
     """A handler for selecting an account to add/change expense to."""
-    data: dict[str, str | int] = await state.get_data()
+    data: dict = await state.get_data()
     page: int = data.get("page", 1)
     url: str = await account_url(page, PAGE_SIZE)
 
-    result: Dict[
-        str, str | List[Dict[str, float | List[Dict[str, int | float | str]]]]
-    ] = await get_all_objects(url, callback.from_user.id)
+    result: dict = await get_all_objects(url, callback.from_user.id)
 
     await state.update_data(page=page, date=callback.data)
     keyword: InlineKeyboardMarkup = await create_list_account(
@@ -134,9 +141,7 @@ async def create_income_choice_category(
     await state.set_state(CreateExpenseState.expense_category)
 
     url: str = await get_expenses_category_url(page=page, page_size=PAGE_SIZE)
-    result: dict[str, int | list[dict[str, int | str]]] = await get_all_objects(
-        url, callback.from_user.id
-    )
+    result: dict = await get_all_objects(url, callback.from_user.id)
     keyboard: InlineKeyboardMarkup = await create_list_category(
         result, "prev_cat_exp", "next_cat_exp"
     )
@@ -172,9 +177,12 @@ async def next_prev_output_list_category(
     await call.message.edit_reply_markup(reply_markup=keyword)
 
 
-@create_exp_router.callback_query(CreateExpenseState.expense_category, F.data.isdigit())
+@create_exp_router.callback_query(
+    CreateExpenseState.expense_category, F.data.isdigit()
+)
 async def create_expense_input_amount(
-    callback: CallbackQuery, state: FSMContext
+    callback: CallbackQuery,
+    state: FSMContext
 ) -> None:
     """The handler for requesting the amount of expense from the user."""
     await state.update_data(expense_category=callback.data)
@@ -186,7 +194,9 @@ async def create_expense_input_amount(
         await state.set_state(EditExpenseState.amount)
 
     await callback.message.edit_text(
-        text=hbold("Введите сумму расхода: "), reply_markup=cancel_, parse_mode="HTML"
+        text=hbold("Введите сумму расхода: "),
+        reply_markup=cancel_,
+        parse_mode="HTML"
     )
 
 
@@ -198,11 +208,12 @@ async def create_expense_final(message: Message, state: FSMContext) -> None:
     usr_id: int = message.from_user.id
     if not is_valid_balance(message.text):
         await message.answer(
-            "Invalid balance format. Please enter a valid number.", reply_markup=cancel_
+            "Invalid balance format. Please enter a valid number.",
+            reply_markup=cancel_
         )
         return
 
-    dict_for_request: dict[str, str | float | int] = await create_new_expenses_data(
+    dict_for_request: dict = await create_new_expenses_data(
         data, float(message.text)
     )
     response: dict[str, int | dict[str, int | str]] = await create_new_object(
