@@ -21,5 +21,9 @@ urlpatterns = [
         RetrieveUpdateDeleteCategoryExpense.as_view(),
         name="retrieve-update-delete-category-expense",
     ),
-    path("statistics/", CategoryExpenseStatisticsView.as_view(), name="statistics"),
+    path(
+        "statistics/",
+        CategoryExpenseStatisticsView.as_view(),
+        name="statistics"
+    ),
 ]

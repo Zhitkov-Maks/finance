@@ -13,7 +13,10 @@ class Category(models.Model):
     """
     name = models.CharField(max_length=100, verbose_name="Название расхода")
     user = models.ForeignKey(
-        CustomUser, on_delete=models.CASCADE, related_name="classes", db_index=True
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name="classes",
+        db_index=True
     )
 
     def __str__(self):

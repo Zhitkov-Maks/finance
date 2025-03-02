@@ -6,9 +6,15 @@ from .models import Expense
 
 class ExpenseFilter(django_filters.FilterSet):
     create_at = django_filters.DateFromToRangeFilter()
-    account_name = django_filters.CharFilter(field_name='account__name', lookup_expr='icontains')
-    category_name = django_filters.CharFilter(field_name='category__name', lookup_expr='icontains')
-    amount_gte = django_filters.NumberFilter(field_name='amount', lookup_expr='gte')
+    account_name = django_filters.CharFilter(
+        field_name='account__name', lookup_expr='icontains'
+    )
+    category_name = django_filters.CharFilter(
+        field_name='category__name', lookup_expr='icontains'
+    )
+    amount_gte = django_filters.NumberFilter(
+        field_name='amount', lookup_expr='gte'
+    )
 
     class Meta:
         model = Expense
