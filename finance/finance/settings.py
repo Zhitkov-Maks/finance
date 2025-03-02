@@ -193,9 +193,9 @@ SPECTACULAR_SETTINGS = {
 }
 
 EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False
+EMAIL_PORT = 465
+EMAIL_USE_TLS = False
+EMAIL_USE_SSL = True
 
 EMAIL_HOST_USER = 'seva00mir@gmail.com'
 EMAIL_HOST_PASSWORD = 'xvlt ohqh lhwz qqiz'
