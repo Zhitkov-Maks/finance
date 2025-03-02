@@ -5,7 +5,9 @@ from config import register_url, login_url
 from utils.login import update_token
 
 
-async def request_for_reset_password(url: str, data: dict[str, str]) -> int | None:
+async def request_for_reset_password(
+        url: str, data: dict[str, str]
+) -> int | None:
     """
     Request for user reset password.
     :param url: URL for request.
