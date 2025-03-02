@@ -2,7 +2,7 @@ from typing import List, Dict
 
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-Removed the duplicate codefrom utils.common import create_pagination_buttons
+from utils.common import create_pagination_buttons
 
 
 async def create_list_account(
