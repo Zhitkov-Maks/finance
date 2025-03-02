@@ -5,7 +5,13 @@ from .models import Income, Category
 
 @admin.register(Income)
 class IncomeAdmin(admin.ModelAdmin):
-    list_display: tuple = "id", "amount", "user__email", "category__name", "account__name"
+    list_display: tuple = (
+        "id",
+        "amount",
+        "user__email",
+        "category__name",
+        "account__name",
+    )
     list_filter: tuple = "user__email",
     list_display_links: tuple = "category__name",
 
