@@ -96,11 +96,17 @@ async def change_toggle(callback: CallbackQuery, state: FSMContext) -> None:
     response: dict = await get_full_info(url, callback.from_user.id)
     await update_account_state(state, response)
 
+
     # Update reply markup based on new active status
+    text: str = await generate_message_answer(response)
     keyword: InlineKeyboardMarkup = await get_action_accounts(
         response.get("is_active")
     )
-    await callback.message.edit_reply_markup(reply_markup=keyword)
+    await callback.message.edit_text(
+        text=hbold(text),
+        reply_markup=keyword,
+        parse_mode="HTML",
+    )
 
 
 @account.callback_query(AccountsState.show, F.data.isdigit())
@@ -118,7 +124,7 @@ async def detail_account(call: CallbackQuery, state: FSMContext) -> None:
     text: str = await generate_message_answer(response)
     await state.set_state(AccountsState.action)
     await call.message.edit_text(
-        text=text,
+        text=hbold(text),
         parse_mode="HTML",
         reply_markup=await get_action_accounts(response.get("is_active")),
     )

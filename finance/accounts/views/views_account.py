@@ -18,7 +18,6 @@ from accounts.schemas import (
 )
 from accounts.serializers.serializers_account import (
     AccountSerializer,
-    AccountSerializerDetail,
     AccountToggleStatusSerializer,
     AccountGetSerializer,
 )
@@ -120,20 +119,13 @@ class RetrieveUpdateDeleteAccount(generics.RetrieveUpdateDestroyAPIView):
     Класс для редактирования, удаления и просмотра конкретного счета.
     """
 
+    serializer_class = AccountSerializer
     permission_classes = (IsAuthenticated,)
     authentication_classes = (
         TokenAuthentication,
         BasicAuthentication,
         SessionAuthentication,
     )
-
-    def get_serializer_class(self):
-        """
-        Переопределен метод для выбора сериализатора в зависимости от запроса.
-        """
-        if self.request.method == "GET":
-            return AccountSerializerDetail
-        return AccountSerializer
 
     def get_queryset(self) -> QuerySet:
         """

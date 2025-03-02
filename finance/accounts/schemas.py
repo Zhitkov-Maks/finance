@@ -5,7 +5,6 @@ from drf_spectacular.utils import (
 )
 from accounts.serializers.serializers_account import (
     AccountSerializer,
-    AccountSerializerDetail,
     AccountPutSerializer,
     AccountPatchSerializer,
     AccountListResponseSerializer,
@@ -54,7 +53,7 @@ RetrieveUpdateDeleteAccountSchema = extend_schema_view(
                     "информация о последних доходах и расходах за "
                     "последние 30 дней.",
         responses={
-            200: AccountSerializerDetail(many=True),
+            200: AccountSerializer(many=True),
             404: NotFoundError,
             401: IsNotAuthentication,
         },
