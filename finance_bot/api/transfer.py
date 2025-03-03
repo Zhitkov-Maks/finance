@@ -3,7 +3,7 @@ from http.client import HTTPException
 
 from api.accounts import create_client
 from api.client import Client
-from config import accounts_url
+from config import BASE_URL
 
 
 async def create_transfer(
@@ -12,7 +12,7 @@ async def create_transfer(
     user_id: int,
     amount: float
 ) -> None:
-    url: str = accounts_url + "transfer/"
+    url: str = BASE_URL + "transfer/"
     transfer_data = {
         "source_account": account_in,
         "destination_account": account_out,

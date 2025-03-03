@@ -49,15 +49,15 @@ reset_password_confirm_url = BASE_URL + "auth/users/reset_password_confirm/"
 
 
 # -------------------DEBT-----------------------------------------------------
-debts_url: str = (BASE_URL + "accounts/debts/"
+debts_url: str = (BASE_URL + "debts/"
                              "?type={type}"
                              "&page={page}"
                              "&page_size={page_size}"
                   )
 
-debts_url_by_id: str = (BASE_URL + "accounts/debts/{debt_id}/")
-debts_repay_url: str = (BASE_URL + "accounts/debts/repay-debt/")
-debt_create_url: str = (BASE_URL + "accounts/debts/create-debt/")
+debts_url_by_id: str = (BASE_URL + "debts/{debt_id}/")
+debts_repay_url: str = (BASE_URL + "debts/repay-debt/")
+debt_create_url: str = (BASE_URL + "debts/create-debt/")
 debt_create_accounts_url: str = (
-        BASE_URL + "accounts/debts/create-debt-accounts/"
+        BASE_URL + "debts/create-debt-accounts/"
 )
