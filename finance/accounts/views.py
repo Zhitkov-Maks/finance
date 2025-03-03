@@ -16,7 +16,7 @@ from accounts.schemas import (
     listAccountSchema,
     RetrieveUpdateDeleteAccountSchema
 )
-from accounts.serializers.serializers_account import (
+from accounts.serializers import (
     AccountSerializer,
     AccountToggleStatusSerializer,
     AccountGetSerializer,
@@ -158,7 +158,9 @@ class ToggleAccountActiveStatusView(generics.UpdateAPIView):
         """
         account = super().get_object()
         if account.user != self.request.user:
-            raise PermissionDenied("You do not have permission to modify this account.")
+            raise PermissionDenied(
+                "You do not have permission to modify this account."
+            )
         return account
 
     def patch(self, request, *args, **kwargs):
@@ -170,5 +172,6 @@ class ToggleAccountActiveStatusView(generics.UpdateAPIView):
         account.save()
 
         return Response(
-            AccountToggleStatusSerializer(account).data, status=status.HTTP_200_OK
+            AccountToggleStatusSerializer(account).data,
+            status=status.HTTP_200_OK
         )

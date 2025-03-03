@@ -1,24 +1,13 @@
-from drf_spectacular.utils import (
-    extend_schema_view,
-    extend_schema,
-    OpenApiParameter
-)
-from accounts.serializers.serializers_account import (
+from drf_spectacular.utils import extend_schema_view, extend_schema
+from accounts.serializers import (
     AccountSerializer,
     AccountPutSerializer,
     AccountPatchSerializer,
     AccountListResponseSerializer,
 )
-from accounts.serializers.serializers_debt import (
-    DebtDetailSerializer,
-    DebtListSerializer,
-    SuccessSerializer
-)
-from accounts.serializers.serializers_transfer import (
-    TransferSerializer,
+from transfer.serializers import (
     IsNotAuthentication,
-    ValidationError,
-    NotFoundError,
+    ValidationError, NotFoundError
 )
 
 
@@ -86,130 +75,4 @@ RetrieveUpdateDeleteAccountSchema = extend_schema_view(
             404: NotFoundError,
         },
     ),
-)
-
-
-# Схема для создания перевода
-TransferSchema = extend_schema_view(
-    post=extend_schema(
-        description="Метод для перевода денег между своими счетами",
-        request=TransferSerializer,
-        responses={
-            201: TransferSerializer,
-            400: ValidationError,
-            401: IsNotAuthentication,
-        },
-    )
-)
-
-
-# Схема для получения списка переводов
-TransferHistoryViewSchema = extend_schema_view(
-    get=extend_schema(
-        description="Получить историю переводов для текущего пользователя.",
-        responses={
-            200: TransferSerializer(many=True),
-            401: IsNotAuthentication,
-        },
-    )
-)
-
-
-# Схемы для просмотра, удаления и редактирования конкретного перевода.
-TransferRetrieveViewSchema = extend_schema_view(
-    get=extend_schema(
-        description="Получить детали перевода по ID.",
-        responses={
-            201: AccountSerializer,
-            401: IsNotAuthentication,
-            404: NotFoundError,
-        },
-    ),
-    put=extend_schema(
-        description="Обновить детали перевода по ID.",
-        request=TransferSerializer,
-        responses={
-            200: TransferSerializer,
-            400: ValidationError,
-            401: IsNotAuthentication,
-            404: NotFoundError,
-        },
-    ),
-    delete=extend_schema(
-        description="Удалить перевод по ID.",
-        responses={
-            204: None,
-            400: ValidationError,
-            401: IsNotAuthentication,
-            404: NotFoundError,
-        },
-    ),
-)
-
-
-DebtListSchema = extend_schema_view(
-    get=extend_schema(
-        tags=["Debt"],
-        parameters=[
-            OpenApiParameter(
-                "type", str, description="debt или lend", required=True
-            ),
-        ],
-        description="Получение списка ваших долгов или ваших должников.",
-        responses={
-            200: DebtListSerializer,
-            401: IsNotAuthentication,
-            404: NotFoundError,
-        },
-    )
-)
-
-
-DebtDetailSchema = extend_schema_view(
-    get=extend_schema(
-        tags=["Debt"],
-        description="Получение информации о конкретном долге.",
-        responses={
-            200: DebtDetailSerializer,
-            401: IsNotAuthentication,
-            404: NotFoundError,
-        },
-    )
-)
-
-
-DebtRepaySchema = extend_schema_view(
-    post=extend_schema(
-        tags=["Debt"],
-        description="Работа с погашением долгов. В полу type должно быть "
-                    "указано либо debt либо lend.",
-        responses={
-            201: SuccessSerializer,
-            401: IsNotAuthentication,
-            404: NotFoundError,
-        }
-    )
-)
-
-
-DebtCreateSchema = extend_schema_view(
-    post=extend_schema(
-        tags=["Debt"],
-        description="Работа с добавлением долга.",
-        responses={
-            201: SuccessSerializer,
-            401: IsNotAuthentication,
-            404: NotFoundError,
-        }
-    )
-)
-
-DebtCreateAccountsSchema = extend_schema_view(
-    post=extend_schema(
-        tags=["Debt"],
-        description="Создание счетов: взять в долг, дать в долг.",
-        responses={
-            201: SuccessSerializer,
-        }
-    )
 )
