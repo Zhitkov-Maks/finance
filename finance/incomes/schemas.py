@@ -1,14 +1,23 @@
-from drf_spectacular.utils import extend_schema, extend_schema_view, \
+from drf_spectacular.utils import (
+    extend_schema,
+    extend_schema_view,
     OpenApiParameter
+)
 
-from accounts.serializers.serializers_transfer import (
+from transfer.serializers import (
     ValidationError,
     IsNotAuthentication,
     NotFoundError,
 )
-from .serializers import CategorySerializer, IncomeSerializer, \
-    IncomeSerializersAdd, IncomeSerializerGet, \
-    IncomeSerializersPatch, CategoryIncomeStatisticsSerializer
+from .serializers import (
+    CategorySerializer,
+    IncomeSerializer,
+    IncomeSerializersAdd,
+    IncomeSerializerGet,
+    IncomeSerializersPatch,
+    CategoryIncomeStatisticsSerializer
+)
+
 
 IncomesViewSchema = extend_schema_view(
     get=extend_schema(

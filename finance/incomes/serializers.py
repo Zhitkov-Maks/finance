@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from .models import Income, Category
-from accounts.serializers.serializers_account import AccountSerializer
+from accounts.serializers import AccountSerializer
 
 
 class CategorySerializer(serializers.ModelSerializer):

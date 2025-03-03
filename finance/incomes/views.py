@@ -21,7 +21,8 @@ from .schemas import (
     IncomesViewSchema,
     RetrieveUpdateDeleteIncomeSchema,
     ListCategoryIncomeSchema,
-    RetrieveUpdateDeleteCategoryIncomeSchema, incomes_statistic_schema,
+    RetrieveUpdateDeleteCategoryIncomeSchema,
+    incomes_statistic_schema,
 )
 from .serializers import (
     IncomeSerializer,
@@ -93,14 +94,17 @@ class IncomeView(generics.ListCreateAPIView):
         # Используем другой сериализатор для возврата созданного объекта
         response_serializer = IncomeSerializer(serializer.instance)
 
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(
+            response_serializer.data, status=status.HTTP_201_CREATED
+        )
 
 
 @extend_schema(tags=["Incomes"])
 @RetrieveUpdateDeleteIncomeSchema
 class RetrieveUpdateDeleteIncome(generics.RetrieveUpdateDestroyAPIView):
     """
-    Класс для редактирования, удаления и получения детальной информации о доходе.
+    Класс для редактирования, удаления и получения детальной
+    информации о доходе.
     """
 
     serializer_class = IncomeSerializer
