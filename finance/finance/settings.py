@@ -51,6 +51,8 @@ INSTALLED_APPS = [
     'accounts.apps.AccountsConfig',
     'expenses.apps.ExpensesConfig',
     'incomes.apps.IncomesConfig',
+    'debt.apps.DebtConfig',
+    'transfer.apps.TransferConfig',
     'django_filters',
     'drf_spectacular',
     'corsheaders',
