@@ -3,8 +3,10 @@ from datetime import datetime
 from django.utils import timezone
 from django.db import transaction
 
-from accounts.models import Account, Transfer, Debt
+from accounts.models import Account
 from app_user.models import CustomUser
+from debt.models import Debt
+from transfer.models import Transfer
 
 
 def create_debt_accounts(user: CustomUser) -> tuple:

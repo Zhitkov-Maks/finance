@@ -10,26 +10,26 @@ from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.models import Debt
-from accounts.schemas import (
+from .models import Debt
+from debt.schemas import (
     DebtListSchema,
     DebtDetailSchema,
     DebtRepaySchema,
     DebtCreateSchema,
     DebtCreateAccountsSchema
 )
-from accounts.serializers.serializers_debt import (
+from .serializers import (
     DebtCreateSerializer,
     DebtRepaymentSerializer,
     DebtDetailSerializer,
     DebtListSerializer
 )
-from accounts.views.util import (
+from debt.util import (
     create_debt_accounts,
     create_debt_or_lend_transfer,
     repay_debt
 )
-from accounts.views.views_account import AccountPagination
+from accounts.views import AccountPagination
 from app_user.models import CustomUser
 
 

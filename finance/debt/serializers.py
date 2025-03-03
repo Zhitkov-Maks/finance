@@ -1,6 +1,8 @@
 from rest_framework import serializers
 
-from accounts.models import Debt, Transfer, Account
+from accounts.models import Account
+from transfer.models import Transfer
+from .models import Debt
 
 
 class DebtCreateSerializer(serializers.Serializer):
@@ -30,6 +32,7 @@ class TransferSerializer(serializers.ModelSerializer):
             'amount',
             'timestamp'
         ]
+
 
 class DebtListSerializer(serializers.ModelSerializer):
     """Нужен для получения списка долгов."""
