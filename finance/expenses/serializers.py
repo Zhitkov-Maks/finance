@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from accounts.serializers.serializers_account import AccountSerializer
+from accounts.serializers import AccountSerializer
 from .models import Expense, Category
 
 

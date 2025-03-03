@@ -25,11 +25,12 @@ from .serializers import (
     ExpenseSerializersPut,
     StatisticsResponseSerializer,
 )
-from .views_schemas import (
+from .schemas import (
     RetrieveUpdateDeleteCategoryExpenseSchema,
     ExpenseViewSchema,
     RetrieveUpdateDeleteExpenseSchema,
-    ListCategoryExpenseSchema, expense_statistic_schema,
+    ListCategoryExpenseSchema,
+    expense_statistic_schema,
 )
 
 

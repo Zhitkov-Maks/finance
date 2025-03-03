@@ -4,12 +4,12 @@ from drf_spectacular.utils import (
     OpenApiParameter
 )
 
-from accounts.serializers.serializers_transfer import (
+from incomes.serializers import CategoryIncomeStatisticsSerializer
+from transfer.serializers import (
     IsNotAuthentication,
     ValidationError,
-    NotFoundError,
+    NotFoundError
 )
-from incomes.serializers import CategoryIncomeStatisticsSerializer
 from .serializers import (
     CategorySerializerExpenses,
     ExpenseSerializer,
