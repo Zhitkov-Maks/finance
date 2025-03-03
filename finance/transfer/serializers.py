@@ -2,7 +2,8 @@ import decimal
 
 from rest_framework import serializers
 
-from accounts.models import Transfer, Account
+from accounts.models import Account
+from .models import Transfer
 
 
 class TransferSerializer(serializers.ModelSerializer):

@@ -12,13 +12,14 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from accounts.models import Account, Transfer
-from accounts.schemas import (
+from accounts.models import Account
+from .schemas import (
     TransferSchema,
     TransferHistoryViewSchema,
     TransferRetrieveViewSchema,
 )
-from accounts.serializers.serializers_transfer import TransferSerializer
+from .models import Transfer
+from .serializers import TransferSerializer
 from app_user.models import CustomUser
 
 
