@@ -16,6 +16,10 @@ state_dict = {
         "Введите сумму, выше которой вас интересуют расходы.",
         SearchState.action
     ),
+    "amount_lte": (
+        "Введите сумму, до которой вас интересуют расходы.",
+        SearchState.action
+    ),
     "create_at_before": (
         "Введите дату меньше которой вас интересуют расходы",
         SearchState.action,
@@ -38,7 +42,7 @@ async def validate_data_search(action: str, text: str) -> bool:
     if action in ["create_at_after", "create_at_before"]:
         return bool(re.match(pattern, text))
 
-    elif action == "amount_gte":
+    elif action in ["amount_gte", "amount_lte"]:
         return bool(re.match(number_pattern, text))
 
     elif action in ["account_name", "category_name"]:
@@ -70,5 +74,8 @@ async def generate_url(data: dict, page) -> str:
 
     if data.get("amount_gte"):
         base_url += f"&amount_gte={data['amount_gte']}"
+
+    if data.get("amount_lte"):
+        base_url += f"&amount_lte={data['amount_lte']}"
 
     return base_url

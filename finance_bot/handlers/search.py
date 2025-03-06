@@ -20,7 +20,7 @@ search: Router = Router()
 async def command_start(call: CallbackQuery, state: FSMContext):
     await state.clear()
     user_choices[call.from_user.id].clear()
-    type_: str = call.data.split("_")[1]
+    type_: str = call.data
     await state.update_data(type=type_)
     await call.message.edit_text(
         text=search_text,
@@ -115,7 +115,11 @@ async def save_account_name(mess: Message, state: FSMContext) -> None:
     result: dict = await get_full_info(url, mess.from_user.id)
     type_operation = "расходов" if data["type"] == "sh_expenses" else "доходов"
     keyword = await create_list_incomes_expenses(
-        result, "prev_search", "next_search", type_operation
+        result,
+        type_operation,
+        data["type"],
+        "prev_search",
+        "next_search"
     )
 
     await mess.answer(
@@ -140,10 +144,13 @@ async def next_prev_output_list_expenses(
 
     url: str = await generate_url(data, page)
     result: dict = await get_full_info(url, call.from_user.id)
-
     type_operation = "расходов" if data["type"] == "sh_expenses" else "доходов"
     keyword = await create_list_incomes_expenses(
-        result, "prev_search", "next_search", type_operation
+        result,
+        type_operation,
+        data["type"],
+        "prev_search",
+        "next_search"
     )
 
     await state.set_state(SearchState.show)

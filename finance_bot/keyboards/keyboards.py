@@ -7,14 +7,17 @@ from utils.common import create_pagination_buttons
 
 async def create_list_incomes_expenses(
     data: dict[str, list],
+    action: str,
+    call_data: str,
     prev: str = "prev_inc",
-    next_d: str = "next_inc"
+    next_d: str = "next_inc",
 ) -> InlineKeyboardMarkup:
     """
     Generate expenses or income in the form of an online keyboard.
     :param data: A data dictionary that contains a list of expenses or income.
     :param prev: The name for the prev button.
     :param next_d: The name for the next button.
+    :param action: The action to perform.
     :return: An inline keyboard with expenses or income.
     """
     inline_buttons: List[List[InlineKeyboardButton]] = []
@@ -33,6 +36,14 @@ async def create_list_incomes_expenses(
         previous, next_, prev, next_d
     )
     inline_buttons.append(lst_menu)
+    inline_buttons.append(
+        [
+            InlineKeyboardButton(
+                text=f"Поиск {action}",
+                callback_data=call_data,
+            )
+        ]
+    )
     return InlineKeyboardMarkup(inline_keyboard=inline_buttons)
 
 

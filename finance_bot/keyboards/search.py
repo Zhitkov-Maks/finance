@@ -6,6 +6,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 ACTIONS: Dict[str, str] = {
     "account_name": "Имя счета",
     "amount_gte": "Сумма от",
+    "amount_lte": "Сумма до",
     "category_name": "Имя категории",
     "create_at_after": "Дата больше",
     "create_at_before": "Дата меньше"
