@@ -15,10 +15,18 @@ class ExpenseFilter(django_filters.FilterSet):
     amount_gte = django_filters.NumberFilter(
         field_name='amount', lookup_expr='gte'
     )
-
+    amount_lte = django_filters.NumberFilter(
+        field_name='amount', lookup_expr='lte'
+    )
     class Meta:
         model = Expense
-        fields = ['create_at', 'account_name', "category_name", "amount_gte"]
+        fields = [
+            'create_at',
+            'account_name',
+            "category_name",
+            "amount_gte",
+            "amount_lte"
+        ]
 
 
 def get_category_expense_statistics(user, year, month) -> QuerySet:
