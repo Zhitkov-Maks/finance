@@ -29,7 +29,7 @@ async def get_action() -> InlineKeyboardMarkup:
                     text="Назад",
                     callback_data="expenses_history",
                 )
-            ]
+            ],
         ]
     )
 

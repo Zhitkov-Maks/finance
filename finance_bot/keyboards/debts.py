@@ -61,6 +61,9 @@ async def debts_keyboard_generate(
     lst_menu: list = await create_pagination_buttons(
         previous, next_, prev, next_d
     )
+    lst_menu.insert(1, InlineKeyboardButton(
+        text="🔙", callback_data="debt_and_lends")
+    )
     keyboards.append(lst_menu)
     return InlineKeyboardMarkup(inline_keyboard=keyboards)
 
@@ -69,19 +72,17 @@ async def debts_keyboard_generate(
 debts_buttons: List[List[InlineKeyboardButton]] = [
     [
         InlineKeyboardButton(
-            text="Показать список должников",
+            text="Должники",
             callback_data="show_lends"
-        )
-    ],
-    [
+        ),
         InlineKeyboardButton(
-            text="Показать кому вы должны",
+            text="Кредиторы",
             callback_data="show_debts"
         )
     ],
     [
         InlineKeyboardButton(
-            text="Взять в долг",
+            text="Занять",
             callback_data="to_borrow"
         ),
         InlineKeyboardButton(
@@ -89,7 +90,7 @@ debts_buttons: List[List[InlineKeyboardButton]] = [
             callback_data="main"
         ),
         InlineKeyboardButton(
-            text="Дать взаймы",
+            text="Одолжить",
             callback_data="to_lend"
         )
     ]

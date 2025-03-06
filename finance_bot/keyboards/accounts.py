@@ -45,7 +45,7 @@ async def get_action_accounts(is_active: bool) -> InlineKeyboardMarkup:
     according to a specific account.
     :return InlineKeyboardMarkup: Use the keyboard to select actions.
     """
-    toggle =  "✅" if is_active else"❌"
+    toggle =  "✔️" if is_active else"✘"
     inline_actions = [
         [
             InlineKeyboardButton(

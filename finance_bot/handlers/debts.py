@@ -63,6 +63,8 @@ async def debts_list(callback: CallbackQuery, state: FSMContext) -> None:
     await state.update_data(page=page, type_=type_, text=text)
 
     result: dict = await get_all_objects(debt_url, callback.from_user.id)
+    if len(result.get("results")) == 0:
+        text = "Записей не найдено. 🤷"
 
     await state.set_state(DebtsStates.detail)
     await callback.message.edit_text(
