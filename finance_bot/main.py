@@ -19,6 +19,7 @@ from handlers.login import auth
 from handlers.registration import register_route
 from handlers.accounts import account, edit_acc_router, create_acc_route
 from handlers.reset_password import reset_router
+from handlers.search import search
 from handlers.transfer import transfer
 from keyboards.keyboards import main_menu
 from loader import greeting, main_menu_text
@@ -44,6 +45,7 @@ routes: list[Router] = [
     statistic_route,
     reset_router,
     debt_router,
+    search,
     invalid_router,
 ]
 

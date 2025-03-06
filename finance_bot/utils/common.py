@@ -58,13 +58,13 @@ async def create_pagination_buttons(
     next_data, text_next = "None next", "-"
 
     if previous is not None:
-        prev_data, text_prev = prev, "<<"
+        prev_data, text_prev = prev, "◄"
 
     if next_ is not None:
-        next_data, text_next = next_d, ">>"
+        next_data, text_next = next_d, "►"
 
     return [
         InlineKeyboardButton(text=text_prev, callback_data=prev_data),
-        InlineKeyboardButton(text="Меню", callback_data="main"),
+        InlineKeyboardButton(text="⸬", callback_data="main"),
         InlineKeyboardButton(text=text_next, callback_data=next_data),
     ]
