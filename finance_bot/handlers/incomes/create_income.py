@@ -136,7 +136,7 @@ async def create_income_choice_category(
 ) -> None:
     """A handler for selecting an income category to add an edit to."""
     data: dict[str, str | int] = await state.get_data()
-    page: int = data.get("page", 1)
+    page: int = 1
 
     await state.update_data(account_id=callback.data)
     await state.set_state(CreateIncomes.income_category)

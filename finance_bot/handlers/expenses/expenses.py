@@ -34,7 +34,11 @@ async def expenses_get_history(
 
     await state.update_data(page=page)
     keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(
-        result, "prev_exp", "next_exp"
+        result,
+        "расходов",
+        "sh_expenses",
+        "prev_exp",
+        "next_exp"
     )
 
     await state.set_state(ExpensesState.show)
@@ -60,7 +64,11 @@ async def next_prev_output_list_expenses(
     url: str = await get_expense_url(page, page_size=PAGE_SIZE)
     result: Dict[str, list] = await get_all_objects(url, call.from_user.id)
     keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(
-        result, "prev_exp", "next_exp"
+        result,
+        "расходов",
+        "sh_expenses",
+        "prev_exp",
+        "next_exp"
     )
 
     await state.set_state(ExpensesState.show)

@@ -32,7 +32,9 @@ async def incomes_get_history(
     result: dict = await get_all_objects(url, callback.from_user.id)
 
     await state.update_data(page=page)
-    keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(result)
+    keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(
+        result, " доходов", "sh_incomes"
+    )
 
     await state.set_state(IncomesState.show)
     text = "Ваши доходы."
@@ -58,7 +60,9 @@ async def next_prev_output_list_incomes(
 
     url: str = await get_incomes_url(page, page_size=PAGE_SIZE)
     result: Dict[str, list] = await get_all_objects(url, call.from_user.id)
-    keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(result)
+    keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(
+        result, " доходов", "sh_incomes"
+    )
 
     await state.set_state(IncomesState.show)
     await state.update_data(page=page)
