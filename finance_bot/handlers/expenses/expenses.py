@@ -32,7 +32,7 @@ async def expenses_get_history(
 
     result: dict = await get_all_objects(url, callback.from_user.id)
 
-    await state.update_data(page=page)
+    await state.update_data(page=page, show=callback.data)
     keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(
         result,
         "расходов",
@@ -81,6 +81,7 @@ async def next_prev_output_list_expenses(
 async def detail_incomes(call: CallbackQuery, state: FSMContext) -> None:
     """Show detailed expense information."""
     expense_id: int = int(call.data)
+    show: str = (await state.get_data())["show"]
     url: str = await expense_url_by_id(expense_id)
 
     response: dict = await get_full_info(url, call.from_user.id)
@@ -91,7 +92,7 @@ async def detail_incomes(call: CallbackQuery, state: FSMContext) -> None:
     await call.message.edit_text(
         text=hbold(text),
         parse_mode="HTML",
-        reply_markup=await get_action(),
+        reply_markup=await get_action(show),
     )
 
 

@@ -3,7 +3,7 @@ from typing import List
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 
-async def get_action() -> InlineKeyboardMarkup:
+async def get_action(show: str) -> InlineKeyboardMarkup:
     """
     An inline keyboard with options for actions for a specific expense.
     :return: The inline keyboard.
@@ -27,7 +27,7 @@ async def get_action() -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton(
                     text="Назад",
-                    callback_data="expenses_history",
+                    callback_data=show,
                 )
             ],
         ]

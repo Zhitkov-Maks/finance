@@ -1,12 +1,10 @@
-from typing import List
-
 from aiogram.utils.markdown import hbold
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
-from api.common import get_full_info
 from handlers.decorator_handler import decorator_errors
+from handlers.utils import _generate_results, _handle_response
 from keyboards.keyboards import main_menu, cancel_, create_list_incomes_expenses
 from keyboards.search import get_action_options, user_choices, ACTIONS
 from loader import search_text
@@ -65,7 +63,7 @@ async def finish_selection(
     пользователем данных.
     """
     options = list(user_choices[call.from_user.id].keys())
-    await state.update_data(options=options)
+    await state.update_data(options=options, show="search")
     if len(options) == 0:
         await call.answer(
             text=f"Вы ничего не выбрали",
@@ -84,11 +82,11 @@ async def finish_selection(
 
 @search.message(SearchState.action)
 async def save_account_name(mess: Message, state: FSMContext) -> None:
-    data: dict = await state.get_data()
-    options: List[str] = data["options"]
-    action: str = data["action"]
-    is_valid : bool = await validate_data_search(action, mess.text)
-    if not is_valid:
+    data = await state.get_data()
+    options = data["options"]
+    action = data["action"]
+
+    if not await validate_data_search(action, mess.text):
         await mess.answer(
             hbold("Неверный формат ввода, попробуйте еще раз."),
             reply_markup=cancel_,
@@ -98,63 +96,41 @@ async def save_account_name(mess: Message, state: FSMContext) -> None:
 
     await state.update_data({action: mess.text})
 
-    if len(options) != 0:
+    if options:
         action = options.pop()
         await state.set_state(state_dict[action][1])
         await state.update_data(action=action)
-        await mess.answer(
-            text=state_dict[action][0],
-            reply_markup=cancel_
-        )
+        await mess.answer(text=state_dict[action][0], reply_markup=cancel_)
         return
 
-    data: dict = await state.get_data()
-    page: int = data.get("page", 1)
-    url: str = await generate_url(data, page)
-    await state.update_data(page=page, url=url)
-    result: dict = await get_full_info(url, mess.from_user.id)
-    type_operation = "расходов" if data["type"] == "sh_expenses" else "доходов"
-    keyword = await create_list_incomes_expenses(
-        result,
-        type_operation,
-        data["type"],
-        "prev_search",
-        "next_search"
+    page = data.get("page", 1)
+    text, keyboard, operation_type = await _generate_results(
+        state, mess.from_user.id, page
     )
-    text: str = "Вот что я нашел!" if result.get("results") \
-        else "Записей не найдено. 😔"
+    await state.update_data(page=page)
+    await _handle_response(mess, state, text, keyboard, operation_type)
 
-    await mess.answer(
-        text=hbold(text),
-        reply_markup=keyword,
-        parse_mode="HTML"
+
+@search.callback_query(F.data == "search")
+async def show_search(call: CallbackQuery, state: FSMContext) -> None:
+    data = await state.get_data()
+    page = data.get("page", 1)
+    text, keyboard, operation_type = await _generate_results(
+        state, call.from_user.id, page
     )
+    await _handle_response(call, state, text, keyboard, operation_type)
 
 
 @search.callback_query(F.data.in_(["prev_search", "next_search"]))
 @decorator_errors
 async def next_prev_output_list_expenses(
-    call: CallbackQuery, state: FSMContext
+        call: CallbackQuery, state: FSMContext
 ) -> None:
-    data: dict = await state.get_data()
-    page = data.get("page")
-
-    if call.data == "next_search":
-        page += 1
-    else:
-        page -= 1
-
-    url: str = await generate_url(data, page)
-    result: dict = await get_full_info(url, call.from_user.id)
-    type_operation = "расходов" if data["type"] == "sh_expenses" else "доходов"
-    keyword = await create_list_incomes_expenses(
-        result,
-        type_operation,
-        data["type"],
-        "prev_search",
-        "next_search"
+    data = await state.get_data()
+    page = data.get("page", 1)
+    page = page + 1 if call.data == "next_search" else page - 1
+    text, keyboard, operation_type = await _generate_results(
+        state, call.from_user.id, page
     )
-
-    await state.set_state(SearchState.show)
     await state.update_data(page=page)
-    await call.message.edit_reply_markup(reply_markup=keyword)
+    await call.message.edit_reply_markup(reply_markup=keyboard)
