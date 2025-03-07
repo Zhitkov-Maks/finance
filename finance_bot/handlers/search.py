@@ -121,9 +121,11 @@ async def save_account_name(mess: Message, state: FSMContext) -> None:
         "prev_search",
         "next_search"
     )
+    text: str = "Вот что я нашел!" if result.get("results") \
+        else "Записей не найдено. 😔"
 
     await mess.answer(
-        text=hbold("Вот что я нашел!"),
+        text=hbold(text),
         reply_markup=keyword,
         parse_mode="HTML"
     )

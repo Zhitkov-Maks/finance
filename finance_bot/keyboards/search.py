@@ -25,7 +25,7 @@ async def get_action_options(user_id: int) -> InlineKeyboardMarkup:
     for action in ACTIONS:
         # Добавляем кнопку с состоянием
         button_text = f"{ACTIONS[action]}    [✘] " if action not in user_choices[user_id] \
-            else f"{action}    [✔️]"
+            else f"{ACTIONS[action]}    [✔️]"
         keyboard.append(
             [
                 InlineKeyboardButton(
