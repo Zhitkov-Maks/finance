@@ -50,19 +50,20 @@ async def generate_message_income_info(
 
 
 async def create_new_incomes_data(
-    data: dict, amount: float
+    data: dict, comment: str
 ) -> dict[str, float | str | int]:
     """
     A function for generating a dictionary to create a new income record.
     :param data: A dictionary with data.
-    :param amount: The amount of income.
+    :param comment: The comment.
     :return dict: Dictionary.
     """
     return {
-        "amount": amount,
+        "amount": data.get("amount"),
         "create_at": data.get("date"),
         "category": data.get("income_category"),
         "account": data.get("account_id"),
+        "comment": comment,
     }
 
 
@@ -75,9 +76,16 @@ async def gen_answer_message(
     :param data: A dictionary with data for forming a message.
     :return str: A message for the user.
     """
+    if data.get("comment"):
+        comment = f"Комментарий: {data.get("comment")}."
+
+    else:
+        comment = ""
+
     return (
         f"Доход на {data.get('amount')}₽ 💷,\n"
         f"В категории {data.get('category').get('name')},\n"
         f"На счет {data.get('account').get('name')}.\n"
         f"Денег 💰💰💰 на счете: {data.get('account').get('balance')}\n"
+        f"{comment}"
     )

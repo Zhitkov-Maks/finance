@@ -16,9 +16,11 @@ class CreateExpenseState(StatesGroup):
     account: State = State()
     expense_category: State = State()
     amount: State = State()
+    comment: State = State()
 
 
 class EditExpenseState(StatesGroup):
     """The class of states to work with edition Expenses."""
 
     amount: State = State()
+    comment: State = State()

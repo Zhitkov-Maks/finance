@@ -42,7 +42,7 @@ async def create_income_choice_date(
 
     year: int = datetime.now().year
     month: int = datetime.now().month
-    keyboard: InlineKeyboardMarkup = await create_calendar(
+    keypad: InlineKeyboardMarkup = await create_calendar(
         year, month, "prev_cal_inc", "next_cal_inc"
     )
 
@@ -51,12 +51,14 @@ async def create_income_choice_date(
 
     await callback.message.edit_text(
         text=hbold(text),
-        reply_markup=keyboard,
+        reply_markup=keypad,
         parse_mode="HTML",
     )
 
 
-@create_inc_router.callback_query(F.data.in_(["next_cal_inc", "prev_cal_inc"]))
+@create_inc_router.callback_query(
+    F.data.in_(["next_cal_inc", "prev_cal_inc"])
+)
 @decorator_errors
 async def next_and_prev_month(
         callback: CallbackQuery, state: FSMContext
@@ -86,21 +88,20 @@ async def create_income_choice_account(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
     """A handler for selecting an account to add/change income to."""
-    data: dict = await state.get_data()
-    page: int = data.get("page", 1)
+    page: int = 1
     url: str = await account_url(page, PAGE_SIZE)
 
     result: dict = await get_all_objects(url, callback.from_user.id)
 
     await state.update_data(page=page, date=callback.data)
-    keyword: InlineKeyboardMarkup = await create_list_account(
+    keypad: InlineKeyboardMarkup = await create_list_account(
         result, "prev_ci", "next_ci"
     )
 
     await state.set_state(CreateIncomes.account)
     await callback.message.edit_text(
         text=hbold("Выберите счет: "),
-        reply_markup=keyword,
+        reply_markup=keypad,
         parse_mode="HTML",
     )
 
@@ -120,13 +121,13 @@ async def next_prev_output_list_incomes(
 
     url: str = await account_url(page, PAGE_SIZE)
     result: Dict[str, list] = await get_all_objects(url, call.from_user.id)
-    keyword: InlineKeyboardMarkup = await create_list_account(
+    keypad: InlineKeyboardMarkup = await create_list_account(
         result, "prev_ci", "next_ci"
     )
 
     await state.set_state(CreateIncomes.account)
     await state.update_data(page=page)
-    await call.message.edit_reply_markup(reply_markup=keyword)
+    await call.message.edit_reply_markup(reply_markup=keypad)
 
 
 @create_inc_router.callback_query(CreateIncomes.account, F.data.isdigit())
@@ -135,7 +136,6 @@ async def create_income_choice_category(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
     """A handler for selecting an income category to add an edit to."""
-    data: dict[str, str | int] = await state.get_data()
     page: int = 1
 
     await state.update_data(account_id=callback.data)
@@ -143,11 +143,11 @@ async def create_income_choice_category(
 
     url: str = await get_incomes_category_url(page=page, page_size=PAGE_SIZE)
     result: dict = await get_all_objects(url, callback.from_user.id)
-    keyboard: InlineKeyboardMarkup = await create_list_category(result)
+    keypad: InlineKeyboardMarkup = await create_list_category(result)
 
     await callback.message.edit_text(
         text=hbold("Выберите категорию дохода: "),
-        reply_markup=keyboard,
+        reply_markup=keypad,
         parse_mode="HTML",
     )
 
@@ -199,22 +199,35 @@ async def create_income_input_amount(
 
 
 @create_inc_router.message(CreateIncomes.amount)
-@decorator_errors
-async def create_income_final(message: Message, state: FSMContext) -> None:
-    """The final handler for the request to create a new income."""
-    data: dict[str, str | int] = await state.get_data()
-    usr_id: int = message.from_user.id
-
+async def ask_add_comment(message: Message, state: FSMContext) -> None:
     if not is_valid_balance(message.text):
         await message.answer(
-            "Invalid balance format. Please enter a valid number.",
+            hbold("Неверный ввод. Нужно ввести целое число "
+                  "или число через точку"),
             reply_markup=cancel_
         )
         return
-
-    dict_for_request: dict = await create_new_incomes_data(
-        data, float(message.text)
+    await state.update_data(amount=message.text)
+    await state.set_state(CreateIncomes.comment)
+    await message.answer(
+        text=hbold("Введите комментарий. Если комментарий не нужен, "
+                   "то, отправьте один любой символ."),
+        reply_markup=cancel_,
+        parse_mode="HTML"
     )
+
+
+@create_inc_router.message(CreateIncomes.comment)
+@decorator_errors
+async def create_income_final(message: Message, state: FSMContext) -> None:
+    """The final handler for the request to create a new income."""
+    data: dict = await state.get_data()
+    usr_id: int = message.from_user.id
+    comment: str = message.text
+    if comment in ["no comment", "no", "нет"] or len(comment) < 3:
+        comment = ""
+
+    dict_for_request: dict = await create_new_incomes_data(data, comment)
     response: dict = await create_new_object(
         usr_id, incomes_url, dict_for_request
     )
@@ -222,5 +235,7 @@ async def create_income_final(message: Message, state: FSMContext) -> None:
 
     await state.clear()
     await message.answer(
-        text=hbold(answer_message), parse_mode="HTML", reply_markup=main_menu
+        text=hbold(answer_message),
+        parse_mode="HTML",
+        reply_markup=main_menu
     )

@@ -24,7 +24,7 @@ class IncomeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Income
-        fields = ["id", "amount", "create_at", "category", "account"]
+        fields = ["id", "amount", "create_at", "category", "account", "comment"]
 
 
 class IncomeSerializersAdd(serializers.ModelSerializer):
@@ -33,7 +33,7 @@ class IncomeSerializersAdd(serializers.ModelSerializer):
     """
     class Meta:
         model = Income
-        fields = ["id", "amount", "create_at", "category", "account"]
+        fields = ["id", "amount", "create_at", "category", "account", "comment"]
 
 
 class IncomeSerializerGet(serializers.ModelSerializer):
@@ -41,7 +41,7 @@ class IncomeSerializerGet(serializers.ModelSerializer):
     account = AccountSerializer(read_only=True)
     class Meta:
         model = Income
-        fields = ["id", "amount", "create_at", "category", "account"]
+        fields = ["id", "amount", "create_at", "category", "account", "comment"]
 
 
 class IncomeSerializersPatch(serializers.ModelSerializer):

@@ -64,6 +64,13 @@ class Income(models.Model):
         verbose_name="Счет",
     )
     create_at = models.DateTimeField(verbose_name="Дата операции")
+    comment = models.TextField(
+        max_length=200,
+        verbose_name="Комментарий",
+        default="",
+        null=True,
+        blank=True,
+    )
 
     def __str__(self):
         return f"{self.amount} {self.category.name} {self.user.email}"

@@ -1,6 +1,11 @@
 from typing import List
 
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup
+)
 
 from utils.common import create_pagination_buttons
 
@@ -18,6 +23,7 @@ async def create_list_incomes_expenses(
     :param prev: The name for the prev button.
     :param next_d: The name for the next button.
     :param action: The action to perform.
+    :param call_data: The data to send to the call.
     :return: An inline keyboard with expenses or income.
     """
     inline_buttons: List[List[InlineKeyboardButton]] = []

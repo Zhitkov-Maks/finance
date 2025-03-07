@@ -1,6 +1,6 @@
 from aiogram.utils.markdown import hbold
 
-enter_email: str = hbold("Введите ваш email.")
+enter_email: str = hbold("Введите ваш email. ✉️")
 
 password: str = (
     hbold("Введите пароль. \nПароль должен быть не менее 5 символов,\n"
@@ -56,3 +56,6 @@ is_not_active_balance = ("Баланс данного счета не показ
 
 is_active_balance = ("Чтобы баланс данного счета не отображался в общей"
                      " сумме счетов нажмите на галочку.")
+
+search_text = ("Отметьте все пункты для поиска которые вас интересуют. "
+               "Можно отметить все, или какой нибудь один.")

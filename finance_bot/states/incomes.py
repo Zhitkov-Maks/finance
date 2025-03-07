@@ -16,9 +16,11 @@ class CreateIncomes(StatesGroup):
     account: State = State()
     income_category: State = State()
     amount: State = State()
+    comment: State = State()
 
 
 class EditIncomesState(StatesGroup):
     """The class of states to work with edition of Incomes."""
 
     amount: State = State()
+    comment: State = State()

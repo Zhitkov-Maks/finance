@@ -24,7 +24,7 @@ class ExpenseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Expense
-        fields = ["id", "amount", "create_at", "category", "account"]
+        fields = ["id", "amount", "create_at", "category", "account", "comment"]
 
 
 class BaseSerializerExpenses(serializers.ModelSerializer):
@@ -34,7 +34,7 @@ class BaseSerializerExpenses(serializers.ModelSerializer):
 
     class Meta:
         model = Expense
-        fields = ["id", "amount", "create_at", "category", "account"]
+        fields = ["id", "amount", "create_at", "category", "account", "comment"]
 
 
 class ExpenseSerializersAdd(BaseSerializerExpenses):
@@ -42,8 +42,9 @@ class ExpenseSerializersAdd(BaseSerializerExpenses):
     Нужен для получения данных при создании расхода.
     """
 
-    class Meta(BaseSerializerExpenses.Meta):
-        fields = BaseSerializerExpenses.Meta.fields
+    class Meta:
+        model = Expense
+        fields = ["id", "amount", "create_at", "category", "account", "comment"]
 
 
 class ExpenseSerializersPut(BaseSerializerExpenses):
@@ -52,7 +53,7 @@ class ExpenseSerializersPut(BaseSerializerExpenses):
     """
 
     class Meta(BaseSerializerExpenses.Meta):
-        fields = ["amount", "category", "account", "create_at"]
+        fields = ["amount", "category", "account", "create_at", "comment"]
 
 
 class ExpenseSerializersPatch(BaseSerializerExpenses):

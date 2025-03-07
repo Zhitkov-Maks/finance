@@ -31,19 +31,20 @@ async def expense_url_by_id(expense_id: int) -> str:
 
 
 async def create_new_expenses_data(
-    data: dict, amount: float
+    data: dict, comment: str
 ) -> dict[str, float | str | int]:
     """
     A function for generating a message for detailed expense information.
     :param data: A dictionary with data for forming a message.
-    :param amount: The amount of money to be paid.
+    :param comment: The comment to send.
     :return str: A message for the user.
     """
     return {
-        "amount": amount,
+        "amount": data.get("amount"),
         "create_at": data.get("date"),
         "category": data.get("expense_category"),
         "account": data.get("account_id"),
+        "comment": comment,
     }
 
 
@@ -55,10 +56,16 @@ async def gen_answer_message_expense(
     :param data: The result of the request to the server.
     :return: A message about the created expense.
     """
+    if data.get("comment"):
+        comment = f"Комментарий: {data.get("comment")}."
+    else:
+        comment = ""
+
     return (
         f"Расход на {data.get('amount')}₽ 💷,\n"
         f"В категории {data.get('category').get('name')},\n"
         f"Со счета {data.get('account').get('name')}.\n"
+        f"{comment}."
     )
 
 
@@ -70,9 +77,15 @@ async def generate_message_expense_info(
     :param data: The result of the request to the server.
     :return: Expense notification.
     """
+    if data.get("comment"):
+        comment = f"Комментарий: {data.get("comment")}."
+    else:
+        comment = ""
+
     return (
         f"Дата операции 📆: {data['create_at'][8:10]}-{data['create_at'][5:7]}.\n"
         f"Сумма расхода 💰: {float(data.get('amount')):,}₽. \n"
         f"Счет: {data.get('account').get('name')}.\n"
         f"Категория расхода: {data.get('category').get('name')}.\n"
+        f"{comment}"
     )
