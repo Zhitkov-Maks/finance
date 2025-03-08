@@ -2,6 +2,7 @@ import decimal
 from datetime import datetime as dt, UTC
 
 from django.db.models import QuerySet, Count
+from rest_framework import serializers
 from django_filters.rest_framework.backends import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
@@ -15,6 +16,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from accounts.models import Account
+from app_user.models import CustomUser
 from .filter import IncomeFilter, get_category_income_statistics
 from .models import Income, Category
 from .schemas import (
@@ -208,9 +210,23 @@ class ListCategory(generics.ListCreateAPIView):
             .order_by("-usage_count", "name")
         )
 
-    def perform_create(self, serializer) -> None:
-        """Связываем категорию и пользователя."""
-        serializer.save(user=self.request.user)
+    def perform_create(self, serializer):
+        """
+        Связываем категорию и пользователя.
+        Проверяем на существование.
+        """
+        user: CustomUser = self.request.user
+        category_name: str = serializer.validated_data['name']
+        existing_category = Category.objects.filter(
+            user=user, name=category_name
+        ).first()
+
+        if existing_category:
+            raise serializers.ValidationError(
+                {"detail": "Категория с таким именем уже существует."}
+            )
+        else:
+            serializer.save(user=user)
 
 
 @extend_schema(tags=["Incomes_category"])
