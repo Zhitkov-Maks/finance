@@ -38,6 +38,11 @@ async def generate_message_income_info(
     :param data: A dictionary with data for forming a message.
     :return str: A message for the user.
     """
+    if data.get("comment"):
+        comment = f"Комментарий: {data.get("comment")}."
+
+    else:
+        comment = ""
     return (
         f"Дата операции 📆: "
             f"{data['create_at'][8:10]}-{data['create_at'][5:7]}.\n"
@@ -46,6 +51,7 @@ async def generate_message_income_info(
         f"Текущий баланс счета 💵: "
             f"{float(data.get('account').get('balance')):,}₽.\n"
         f"Категория дохода: {data.get('category').get('name')}.\n"
+        f"{comment}"
     )
 
 

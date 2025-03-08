@@ -65,7 +65,7 @@ async def gen_answer_message_expense(
         f"Расход на {data.get('amount')}₽ 💷,\n"
         f"В категории {data.get('category').get('name')},\n"
         f"Со счета {data.get('account').get('name')}.\n"
-        f"{comment}."
+        f"{comment}"
     )
 
 
