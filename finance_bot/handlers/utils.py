@@ -20,12 +20,10 @@ async def _generate_results(
     url = await generate_url(data, page)
     result = await get_full_info(url, user_id)
 
-    type_operation = "расходов" if data["type"] == "sh_expenses" else "доходов"
     operation_type = data["type"]
 
     keyboard = await create_list_incomes_expenses(
         result,
-        type_operation,
         operation_type,
         prev_action,
         next_action

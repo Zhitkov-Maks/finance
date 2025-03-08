@@ -5,9 +5,9 @@ from aiogram.utils.markdown import hbold
 
 from api.common import edit_object, get_full_info
 from handlers.decorator_handler import decorator_errors
-from keyboards.expenses import choice_expense_edit
+from keyboards.expenses import choice_edit
 from keyboards.incomes import get_action
-from keyboards.keyboards import cancel_
+from keyboards.keyboards import cancel_action
 from states.expenses import EditExpenseState, ExpensesState
 from utils.accounts import is_valid_balance
 from utils.expenses import (
@@ -20,11 +20,14 @@ exp_edit_router: Router = Router()
 
 
 @exp_edit_router.callback_query(F.data == "edit_expense")
-async def edit_expense_choice(callback: CallbackQuery) -> None:
+async def edit_expense_choice(
+        callback: CallbackQuery, state: FSMContext
+) -> None:
     """A handler for selecting an expense editing option."""
+    show: str = (await state.get_data())["show"]
     await callback.message.edit_text(
         text=hbold("Выберите вариант редактирования."),
-        reply_markup=choice_expense_edit,
+        reply_markup=await choice_edit(show),
         parse_mode="HTML",
     )
 
@@ -36,20 +39,22 @@ async def edit_balance(callback: CallbackQuery, state: FSMContext) -> None:
     the balance.
     """
     await state.set_state(EditExpenseState.comment)
+    show: str = (await state.get_data())["show"]
     await state.update_data(method="PATCH")
     await callback.message.edit_text(
         text=hbold("Введите новую сумму расхода."),
-        reply_markup=cancel_,
+        reply_markup=await cancel_action(show),
         parse_mode="HTML",
     )
 
 
 @exp_edit_router.message(EditExpenseState.amount)
 async def ask_add_comment(message: Message, state: FSMContext) -> None:
+    show: str = (await state.get_data())["show"]
     if not is_valid_balance(message.text):
         await message.answer(
             "Ошибка ввода, попробуйте еще раз.",
-            reply_markup=cancel_
+            reply_markup=await cancel_action(show)
         )
         return
 
@@ -58,7 +63,7 @@ async def ask_add_comment(message: Message, state: FSMContext) -> None:
     await message.answer(
         text=hbold("Введите комментарий. Если комментарий не нужен, "
                    "то, отправьте один любой символ."),
-        reply_markup=cancel_,
+        reply_markup=await cancel_action(show),
         parse_mode="HTML"
     )
 
@@ -69,6 +74,7 @@ async def edit_expense_request(message: Message, state: FSMContext) -> None:
     """The final handler for editing."""
     data: dict[str, str | int] = await state.get_data()
     expense_id, usr_id = data["expense_id"], message.from_user.id
+    show: str = data["show"]
     url: str = await expense_url_by_id(expense_id)
     method: str = ""
 
@@ -77,7 +83,7 @@ async def edit_expense_request(message: Message, state: FSMContext) -> None:
         if not is_valid_balance(message.text):
             await message.answer(
                 "Invalid balance format. Please enter a valid number.",
-                reply_markup=cancel_
+                reply_markup=await cancel_action(show)
             )
             return
         edit_data: dict = {"amount": float(message.text)}
@@ -96,5 +102,5 @@ async def edit_expense_request(message: Message, state: FSMContext) -> None:
     await message.answer(
         text=hbold(text),
         parse_mode="HTML",
-        reply_markup=await get_action(),
+        reply_markup=await get_action(show),
     )

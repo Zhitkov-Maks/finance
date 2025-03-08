@@ -8,7 +8,7 @@ from api.common import get_all_objects, get_full_info, delete_object_by_id
 from config import PAGE_SIZE
 from handlers.decorator_handler import decorator_errors
 from keyboards.accounts import create_list_account, get_action_accounts
-from keyboards.keyboards import confirm_menu, main_menu
+from keyboards.keyboards import main_menu, confirmation
 from states.accounts import AccountsState
 from utils.accounts import (
     generate_message_answer,
@@ -135,7 +135,9 @@ async def remove_confirm(callback: CallbackQuery, state: FSMContext) -> None:
     """Confirmation of deletion."""
     await state.set_state(AccountsState.remove)
     await callback.message.edit_text(
-        text=hbold("Вы уверены?"), reply_markup=confirm_menu, parse_mode="HTML"
+        text=hbold("Вы уверены?"),
+        reply_markup=await confirmation("accounts"),
+        parse_mode="HTML"
     )
 
 

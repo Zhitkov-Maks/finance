@@ -61,7 +61,7 @@ async def change_only_balance(call: CallbackQuery, state: FSMContext) -> None:
     await call.message.edit_text(
         text=hbold(new_balance),
         reply_markup=cancel_,
-        parse_mode=ParseMode.MARKDOWN,
+        parse_mode="HTML",
     )
 
 

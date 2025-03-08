@@ -5,11 +5,11 @@ from aiogram.fsm.context import FSMContext
 
 from handlers.decorator_handler import decorator_errors
 from handlers.utils import _generate_results, _handle_response
-from keyboards.keyboards import main_menu, cancel_, create_list_incomes_expenses
+from keyboards.keyboards import main_menu, cancel_
 from keyboards.search import get_action_options, user_choices, ACTIONS
 from loader import search_text
 from states.search import SearchState
-from utils.search import state_dict, validate_data_search, generate_url
+from utils.search import state_dict, validate_data_search
 
 search: Router = Router()
 

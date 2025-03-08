@@ -1,6 +1,11 @@
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup
+from aiogram.types import (
+    CallbackQuery,
+    Message,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton
+)
 from aiogram.utils.markdown import hbold
 
 from api.common import (
@@ -17,7 +22,7 @@ from keyboards.category import (
     create_list_category,
     get_categories_action,
 )
-from keyboards.keyboards import cancel_, confirm_menu
+from keyboards.keyboards import cancel_, confirmation, cancel_action
 from loader import categories_message
 from states.category import CategoryState
 from utils.category import get_url
@@ -116,7 +121,20 @@ async def choice_category(callback: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(CategoryState.type_category)
     await callback.message.edit_text(
         text=hbold("Введите название категории"),
-        reply_markup=cancel_,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=
+            [
+                [
+                    InlineKeyboardButton(
+                        text="㊂",
+                        callback_data="main"
+                    ),
+                    InlineKeyboardButton(
+                        text="▲",
+                        callback_data="categories"
+                    )
+                ]
+            ]
+        ),
         parse_mode="HTML"
     )
 
@@ -145,9 +163,10 @@ async def create_category(message: Message, state: FSMContext) -> None:
 async def remove_confirm(callback: CallbackQuery, state: FSMContext) -> None:
     """Confirmation of deletion."""
     await state.set_state(CategoryState.remove)
+    category: str = (await state.get_data())["category"]
     await callback.message.edit_text(
         text=hbold("Вы уверены?"),
-        reply_markup=confirm_menu,
+        reply_markup=await confirmation(category),
         parse_mode="HTML"
     )
 
@@ -189,9 +208,10 @@ async def remove_category_by_id(
 async def edit_route_name(callback: CallbackQuery, state: FSMContext) -> None:
     """Handler for editing categories."""
     await state.set_state(CategoryState.edit)
+    show: str = (await state.get_data())["category"]
     await callback.message.edit_text(
         text=hbold("Введите название категории: "),
-        reply_markup=cancel_,
+        reply_markup=await cancel_action(show),
         parse_mode="HTML"
     )
 

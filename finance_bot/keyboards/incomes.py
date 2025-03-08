@@ -12,42 +12,47 @@ async def get_action(show) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="Удалить",
+                    text="✗",
                     callback_data="remove_income",
                 ),
                 InlineKeyboardButton(
-                    text="Меню",
+                    text="㊂",
                     callback_data="main",
                 ),
                 InlineKeyboardButton(
-                    text="Ред-ть",
+                    text="✍️",
                     callback_data="edit_income",
                 ),
-            ],
-            [
                 InlineKeyboardButton(
-                    text="Назад",
+                    text="⏎",
                     callback_data=show,
                 )
-            ]
+            ],
         ]
     )
 
 
-choice_edit_buttons: List[List[InlineKeyboardButton]] = [
-    [
-        InlineKeyboardButton(
-            text="Полностью",
-            callback_data="edit_income_full",
-        ),
-        InlineKeyboardButton(
-            text="Сумму",
-            callback_data="edit_income_balance",
-        )
+async def choice_edit(action: str) -> InlineKeyboardMarkup:
+    choice_list: List[List[InlineKeyboardButton]] = [
+        [
+            InlineKeyboardButton(
+                text="✎",
+                callback_data="edit_income_full",
+            ),
+            InlineKeyboardButton(
+                text="△",
+                callback_data=action,
+            ),
+            InlineKeyboardButton(
+                text="㊂",
+                callback_data="main",
+            ),
+            InlineKeyboardButton(
+                text="₱",
+                callback_data="edit_income_balance",
+            ),
+        ]
     ]
-]
-
-# Keyboard for editing selection.
-choice_edit: InlineKeyboardMarkup = InlineKeyboardMarkup(
-    inline_keyboard=choice_edit_buttons
-)
+    return InlineKeyboardMarkup(
+        inline_keyboard=choice_list
+    )

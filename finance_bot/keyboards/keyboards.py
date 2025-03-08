@@ -12,7 +12,6 @@ from utils.common import create_pagination_buttons
 
 async def create_list_incomes_expenses(
     data: dict[str, list],
-    action: str,
     call_data: str,
     prev: str = "prev_inc",
     next_d: str = "next_inc",
@@ -22,7 +21,6 @@ async def create_list_incomes_expenses(
     :param data: A data dictionary that contains a list of expenses or income.
     :param prev: The name for the prev button.
     :param next_d: The name for the next button.
-    :param action: The action to perform.
     :param call_data: The data to send to the call.
     :return: An inline keyboard with expenses or income.
     """
@@ -41,15 +39,10 @@ async def create_list_incomes_expenses(
     lst_menu: list = await create_pagination_buttons(
         previous, next_, prev, next_d
     )
-    inline_buttons.append(lst_menu)
-    inline_buttons.append(
-        [
-            InlineKeyboardButton(
-                text=f"Поиск {action}",
-                callback_data=call_data,
-            )
-        ]
+    lst_menu.insert(
+        1, InlineKeyboardButton(text="🔎", callback_data=call_data)
     )
+    inline_buttons.append(lst_menu)
     return InlineKeyboardMarkup(inline_keyboard=inline_buttons)
 
 
@@ -57,33 +50,33 @@ async def create_list_incomes_expenses(
 menu_bot: List[List[InlineKeyboardButton]] = [
         [
             InlineKeyboardButton(
-                text="📉",
+                text="⬊",
                 callback_data="statistic_exp"
             ),
             InlineKeyboardButton(
-                text="💰",
+                text="₱",
                 callback_data="accounts_data"
             ),
             InlineKeyboardButton(
-                text="💲",
+                text="⇅",
                 callback_data="expenses_by_incomes"
             ),
             InlineKeyboardButton(
-                text="📈",
+                text="⬈",
                 callback_data="statistic_inc"
             ),
         ],
         [
             InlineKeyboardButton(
-                text="➕",
+                text="⤴",
                 callback_data="incomes_add"
             ),
             InlineKeyboardButton(
-                text="🏦",
+                text="‰",
                 callback_data="accounts_add"
             ),
             InlineKeyboardButton(
-                text="➖",
+                text="⤵",
                 callback_data="expense_add"
             ),
         ],
@@ -126,15 +119,31 @@ cancel_button: List[List[InlineKeyboardButton]] = [
 cancel_ = InlineKeyboardMarkup(inline_keyboard=cancel_button)
 
 
-# Action confirmation buttons
-confirm: List[List[InlineKeyboardButton]] = [
-    [
-        InlineKeyboardButton(text="Отмена", callback_data="main"),
-        InlineKeyboardButton(text="Продолжить", callback_data="continue"),
+async def confirmation(action: str) -> InlineKeyboardMarkup:
+    confirm: List[List[InlineKeyboardButton]] = [
+        [
+            InlineKeyboardButton(text="△", callback_data=action),
+            InlineKeyboardButton(text="㊂", callback_data="main"),
+            InlineKeyboardButton(text="➤", callback_data="continue"),
+        ]
     ]
-]
+    return InlineKeyboardMarkup(
+        inline_keyboard=confirm
+    )
 
-# Inline action confirmation buttons
-confirm_menu: InlineKeyboardMarkup = InlineKeyboardMarkup(
-    inline_keyboard=confirm
-)
+
+async def cancel_action(action: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="△",
+                    callback_data=action,
+                ),
+                InlineKeyboardButton(
+                    text="㊂",
+                    callback_data="main",
+                )
+            ]
+        ]
+    )

@@ -12,21 +12,19 @@ async def get_action(show: str) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="Удалить",
+                    text="✗",
                     callback_data="remove_expense",
                 ),
                 InlineKeyboardButton(
-                    text="Меню",
+                    text="㊂",
                     callback_data="main",
                 ),
                 InlineKeyboardButton(
-                    text="Ред-ть",
+                    text="✍️",
                     callback_data="edit_expense",
                 ),
-            ],
-            [
                 InlineKeyboardButton(
-                    text="Назад",
+                    text="⏎",
                     callback_data=show,
                 )
             ],
@@ -34,20 +32,27 @@ async def get_action(show: str) -> InlineKeyboardMarkup:
     )
 
 
-choice_edit_buttons_expense: List[List[InlineKeyboardButton]] = [
-    [
-        InlineKeyboardButton(
-            text="Все данные",
-            callback_data="edit_expense_full",
-        ),
-        InlineKeyboardButton(
-            text="Сумму расхода",
-            callback_data="edit_expense_balance",
-        ),
+async def choice_edit(action: str) -> InlineKeyboardMarkup:
+    choice_list: List[List[InlineKeyboardButton]] = [
+        [
+            InlineKeyboardButton(
+                text="✎",
+                callback_data="edit_expense_full",
+            ),
+            InlineKeyboardButton(
+                text="△",
+                callback_data=action,
+            ),
+            InlineKeyboardButton(
+                text="㊂",
+                callback_data="main",
+            ),
+            InlineKeyboardButton(
+                text="₱",
+                callback_data="edit_expense_balance",
+            ),
+        ]
     ]
-]
-
-# Keyboard for editing selection.
-choice_expense_edit: InlineKeyboardMarkup = InlineKeyboardMarkup(
-    inline_keyboard=choice_edit_buttons_expense
-)
+    return InlineKeyboardMarkup(
+        inline_keyboard=choice_list
+    )

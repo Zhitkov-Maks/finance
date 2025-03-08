@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List
 
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
@@ -49,21 +49,21 @@ async def get_action_accounts(is_active: bool) -> InlineKeyboardMarkup:
     inline_actions = [
         [
             InlineKeyboardButton(
-                text="Удалить",
+                text="✗",
                 callback_data="remove"
             ),
             InlineKeyboardButton(
-                text="Меню",
+                text="㊂",
                 callback_data="main"
             ),
             InlineKeyboardButton(
-                text="Счета",
+                text="↵",
                 callback_data="accounts"
             )
         ],
         [
             InlineKeyboardButton(
-                text="Ред-ть",
+                text="✍️",
                 callback_data="edit"
             ),
             InlineKeyboardButton(
@@ -71,7 +71,7 @@ async def get_action_accounts(is_active: bool) -> InlineKeyboardMarkup:
                 callback_data="change-toggle"
             ),
             InlineKeyboardButton(
-                text="Перевести",
+                text="⤼",
                 callback_data="transfer"
             )
         ]
@@ -82,11 +82,15 @@ async def get_action_accounts(is_active: bool) -> InlineKeyboardMarkup:
 choice_edit_button: list[list[InlineKeyboardButton]] = [
     [
         InlineKeyboardButton(
-            text="Полное",
+            text="✎",
             callback_data="edit_full"
         ),
         InlineKeyboardButton(
-            text="Баланс",
+            text="㊂",
+            callback_data="main",
+        ),
+        InlineKeyboardButton(
+            text="₱",
             callback_data="edit_balance"
         )
     ]

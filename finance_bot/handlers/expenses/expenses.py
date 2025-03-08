@@ -9,7 +9,7 @@ from api.common import get_all_objects, get_full_info, delete_object_by_id
 from config import PAGE_SIZE
 from handlers.decorator_handler import decorator_errors
 from keyboards.expenses import get_action
-from keyboards.keyboards import confirm_menu, create_list_incomes_expenses
+from keyboards.keyboards import confirmation, create_list_incomes_expenses
 from states.expenses import ExpensesState
 from utils.expenses import (
     get_expense_url,
@@ -35,7 +35,6 @@ async def expenses_get_history(
     await state.update_data(page=page, show=callback.data)
     keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(
         result,
-        "расходов",
         "sh_expenses",
         "prev_exp",
         "next_exp"
@@ -65,7 +64,6 @@ async def next_prev_output_list_expenses(
     result: Dict[str, list] = await get_all_objects(url, call.from_user.id)
     keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(
         result,
-        "расходов",
         "sh_expenses",
         "prev_exp",
         "next_exp"
@@ -100,9 +98,10 @@ async def detail_incomes(call: CallbackQuery, state: FSMContext) -> None:
 async def remove_confirm(callback: CallbackQuery, state: FSMContext) -> None:
     """Confirmation of deletion."""
     await state.set_state(ExpensesState.remove)
+    show: str = (await state.get_data())["show"]
     await callback.message.edit_text(
         text=hbold("Вы уверены?"),
-        reply_markup=confirm_menu,
+        reply_markup=await confirmation(show),
         parse_mode="HTML",
     )
 
@@ -126,7 +125,10 @@ async def remove_expense_by_id(
 
     await state.update_data(page=page)
     keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(
-        result, "prev_exp", "next_exp"
+        result,
+        "sh_expenses",
+        "prev_exp",
+        "next_exp"
     )
 
     await state.set_state(ExpensesState.show)

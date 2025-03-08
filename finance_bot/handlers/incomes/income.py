@@ -9,7 +9,7 @@ from api.common import get_all_objects, get_full_info, delete_object_by_id
 from config import PAGE_SIZE
 from handlers.decorator_handler import decorator_errors
 from keyboards.incomes import get_action
-from keyboards.keyboards import confirm_menu, create_list_incomes_expenses
+from keyboards.keyboards import confirmation, create_list_incomes_expenses
 from states.incomes import IncomesState
 from utils.incomes import (
     get_incomes_url,
@@ -33,7 +33,7 @@ async def incomes_get_history(
 
     await state.update_data(page=page, show=callback.data)
     keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(
-        result, " доходов", "sh_incomes"
+        result, "sh_incomes"
     )
 
     await state.set_state(IncomesState.show)
@@ -61,7 +61,7 @@ async def next_prev_output_list_incomes(
     url: str = await get_incomes_url(page, page_size=PAGE_SIZE)
     result: Dict[str, list] = await get_all_objects(url, call.from_user.id)
     keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(
-        result, " доходов", "sh_incomes"
+        result,"sh_incomes"
     )
 
     await state.set_state(IncomesState.show)
@@ -93,9 +93,10 @@ async def detail_incomes(call: CallbackQuery, state: FSMContext) -> None:
 async def remove_confirm(callback: CallbackQuery, state: FSMContext) -> None:
     """Confirmation of deletion."""
     await state.set_state(IncomesState.remove)
+    show: str = (await state.get_data())["show"]
     await callback.message.edit_text(
         text=hbold("Вы уверены?"),
-        reply_markup=confirm_menu,
+        reply_markup=await confirmation(show),
         parse_mode="HTML"
     )
 
@@ -119,7 +120,10 @@ async def remove_income_by_id(
     result: dict = await get_all_objects(url, callback.from_user.id)
 
     await state.update_data(page=page)
-    keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(result)
+    keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(
+        result,
+        "sh_incomes",
+    )
 
     await state.set_state(IncomesState.show)
     await callback.message.edit_text(

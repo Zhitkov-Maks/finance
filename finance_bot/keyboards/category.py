@@ -61,16 +61,9 @@ async def create_list_category(
     inline_buttons.append(
         [
             InlineKeyboardButton(text=text_prev, callback_data=prev_data),
-            InlineKeyboardButton(text="Меню", callback_data="main"),
+            InlineKeyboardButton(text="︽", callback_data="categories"),
+            InlineKeyboardButton(text="⸬", callback_data="main"),
             InlineKeyboardButton(text=text_next, callback_data=next_data),
-        ]
-    )
-    inline_buttons.append(
-        [
-            InlineKeyboardButton(
-                text="Меню категорий",
-                callback_data="categories",
-            )
         ]
     )
     return InlineKeyboardMarkup(inline_keyboard=inline_buttons)
@@ -79,25 +72,25 @@ async def create_list_category(
 type_category_buttons: list[list[InlineKeyboardButton]] = [
     [
         InlineKeyboardButton(
-            text="Доходы ➕ кат.",
+            text="✎ ⬈",
             callback_data="add_income"
         ),
         InlineKeyboardButton(
-            text="Расходы ➕ кат.",
+            text="✎ ⬊",
             callback_data="add_expense"
         ),
     ],
     [
         InlineKeyboardButton(
-            text="Доходы",
+            text="↥",
             callback_data="list_incomes_category"
         ),
         InlineKeyboardButton(
-            text="В меню",
+            text="㊂",
             callback_data="main"
         ),
         InlineKeyboardButton(
-            text="Расходы",
+            text="↧",
             callback_data="list_expenses_category"
         ),
     ],
