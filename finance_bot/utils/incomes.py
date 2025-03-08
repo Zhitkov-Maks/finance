@@ -39,7 +39,7 @@ async def generate_message_income_info(
     :return str: A message for the user.
     """
     if data.get("comment"):
-        comment = f"Комментарий: {data.get("comment")}."
+        comment = f"Комментарий: {data.get("comment")}"
 
     else:
         comment = ""
@@ -83,7 +83,7 @@ async def gen_answer_message(
     :return str: A message for the user.
     """
     if data.get("comment"):
-        comment = f"Комментарий: {data.get("comment")}."
+        comment = f"Комментарий: {data.get("comment")}"
 
     else:
         comment = ""

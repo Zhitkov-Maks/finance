@@ -57,7 +57,7 @@ async def gen_answer_message_expense(
     :return: A message about the created expense.
     """
     if data.get("comment"):
-        comment = f"Комментарий: {data.get("comment")}."
+        comment = f"Комментарий: {data.get("comment")}"
     else:
         comment = ""
 
@@ -78,7 +78,7 @@ async def generate_message_expense_info(
     :return: Expense notification.
     """
     if data.get("comment"):
-        comment = f"Комментарий: {data.get("comment")}."
+        comment = f"Комментарий: {data.get("comment")}"
     else:
         comment = ""
 
