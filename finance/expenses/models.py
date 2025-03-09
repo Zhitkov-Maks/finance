@@ -76,5 +76,5 @@ class Expense(models.Model):
     class Meta:
         verbose_name = "расход"
         verbose_name_plural = "расходы"
-        ordering = ["-create_at"]
+        ordering = ["-create_at", "category__name"]
         db_table = "expenses"
