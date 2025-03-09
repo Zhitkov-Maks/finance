@@ -14,7 +14,9 @@ ACTIONS: Dict[str, str] = {
 user_choices: Dict[int, dict] = defaultdict(dict)
 
 
-async def get_action_options(user_id: int) -> InlineKeyboardMarkup:
+async def get_action_options(
+        user_id: int, action: str
+) -> InlineKeyboardMarkup:
     """
     Генерирует инлайн-клавиатуру для выбора дней недели и часов.
 
@@ -34,7 +36,7 @@ async def get_action_options(user_id: int) -> InlineKeyboardMarkup:
         )
 
     keyboard.append([
-        InlineKeyboardButton(text="Завершить выбор", callback_data="finish"),
-        InlineKeyboardButton(text="Меню", callback_data="main")
+        InlineKeyboardButton(text="🆗", callback_data="finish"),
+        InlineKeyboardButton(text="🔙", callback_data=action)
     ])
     return InlineKeyboardMarkup(inline_keyboard=keyboard)

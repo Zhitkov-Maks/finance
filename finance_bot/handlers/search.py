@@ -22,7 +22,7 @@ async def command_start(call: CallbackQuery, state: FSMContext):
     await state.update_data(type=type_)
     await call.message.edit_text(
         text=search_text,
-        reply_markup=await get_action_options(call.from_user.id)
+        reply_markup=await get_action_options(call.from_user.id, type_)
     )
 
 
@@ -37,18 +37,19 @@ async def toggle_action(
     """
     action: str = callback_query.data.split("-")[1]
     user_id: int = callback_query.from_user.id
+    show: str = (await state.get_data()).get("type")
     if action in user_choices[user_id]:
-        await callback_query.answer(f"Вы убрали: {action}")
+        await callback_query.answer(f"Вы убрали: {ACTIONS[action]}")
         user_choices[user_id].pop(action)
 
     else:
         user_choices[user_id].update({action: ACTIONS[action]})
         await callback_query.answer(
-            f"Вы выбрали: {action}"
+            f"Вы выбрали: {ACTIONS[action]}"
         )
 
     await callback_query.message.edit_reply_markup(
-        reply_markup=await get_action_options(user_id)
+        reply_markup=await get_action_options(user_id, show)
     )
 
 
