@@ -78,5 +78,5 @@ class Income(models.Model):
     class Meta:
         verbose_name = "доход"
         verbose_name_plural = "доходы"
-        ordering = ["-create_at", "category__name"]
+        ordering = ["-create_at", "amount", "category__name"]
         db_table = "incomes"
