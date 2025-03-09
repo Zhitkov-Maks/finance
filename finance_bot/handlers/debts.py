@@ -187,13 +187,13 @@ async def to_lend_or_borrow(call: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(DebtsStates.date)
 
     year, month = dt.now().year, dt.now().month
-    keyword: InlineKeyboardMarkup = await create_calendar(
+    keypad: InlineKeyboardMarkup = await create_calendar(
         year, month, "prev_cal_debt", "next_cal_debt"
     )
     await state.update_data(type=type_, year=year, month=month)
     await call.message.edit_text(
         text=hbold("Выберите дату дачи в долг."),
-        reply_markup=keyword,
+        reply_markup=keypad,
         parse_mode="HTML"
     )
 
@@ -231,14 +231,14 @@ async def select_account_to_debit(
 ) -> None:
     """The handler for selecting an account for debiting money."""
     data: dict[str, str | int] = await state.get_data()
-    page: int = data.get("page", 1)
+    page: int = 1
     url: str = await account_url(page, PAGE_SIZE)
 
     result: dict = await get_all_objects(url, callback.from_user.id)
 
     await state.update_data(page=page, date=callback.data)
     keyword: InlineKeyboardMarkup = await create_list_account(
-        result, "prev_debt", "next_debt"
+        result, "prev_debt_acc", "next_debt_acc"
     )
 
     await state.set_state(DebtsStates.account)
@@ -249,7 +249,7 @@ async def select_account_to_debit(
     )
 
 
-@debt_router.callback_query(F.data.in_(["next_debt", "prev_debt"]))
+@debt_router.callback_query(F.data.in_(["next_debt_acc", "prev_debt_acc"]))
 @decorator_errors
 async def next_or_prev_account_to_debt(
     call: CallbackQuery,
@@ -258,7 +258,7 @@ async def next_or_prev_account_to_debt(
     """Scrolling through the invoice pages."""
     page: int = (await state.get_data()).get("page")
 
-    if call.data == "next_ce":
+    if call.data == "next_debt_acc":
         page += 1
     else:
         page -= 1
@@ -266,7 +266,7 @@ async def next_or_prev_account_to_debt(
     url: str = await account_url(page, PAGE_SIZE)
     result: dict = await get_all_objects(url, call.from_user.id)
     keyword: InlineKeyboardMarkup = await create_list_account(
-        result, "prev_debt", "next_debt"
+        result, "prev_debt_acc", "next_debt_acc"
     )
 
     await state.set_state(DebtsStates.account)

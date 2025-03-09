@@ -16,15 +16,15 @@ async def generate_debts_actions(type_: str) -> InlineKeyboardMarkup:
         [
             [
                 InlineKeyboardButton(
-                    text="Погасить",
+                    text="❌",
                     callback_data="close_debt"
                 ),
                 InlineKeyboardButton(
-                    text="Меню",
+                    text="㊂",
                     callback_data="main",
                 ),
                 InlineKeyboardButton(
-                    text="Назад",
+                    text="🔙",
                     callback_data=call_data,
                 )
             ],
@@ -86,7 +86,7 @@ debts_buttons: List[List[InlineKeyboardButton]] = [
             callback_data="to_borrow"
         ),
         InlineKeyboardButton(
-            text="Меню",
+            text="㊂",
             callback_data="main"
         ),
         InlineKeyboardButton(
