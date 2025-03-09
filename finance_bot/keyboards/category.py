@@ -15,7 +15,7 @@ async def get_categories_action(back: str) -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="❌", callback_data="del_category"),
             InlineKeyboardButton(text="㊂", callback_data="main"),
             InlineKeyboardButton(text="✎", callback_data="edit_category"),
-            [InlineKeyboardButton(text="🔙", callback_data=f"{back}")],
+            InlineKeyboardButton(text="🔙", callback_data=f"{back}"),
         ]
     ]
 
