@@ -39,7 +39,6 @@ async def expenses_get_history(
         "prev_exp",
         "next_exp"
     )
-
     await state.set_state(ExpensesState.show)
     text = "Ваши последние расходы."
     await callback.message.edit_text(

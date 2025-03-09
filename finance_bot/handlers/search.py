@@ -16,11 +16,10 @@ search: Router = Router()
 
 @search.callback_query(F.data.in_(["sh_expenses", "sh_incomes"]))
 async def command_start(call: CallbackQuery, state: FSMContext):
-    await state.clear()
     user_choices[call.from_user.id].clear()
     type_: str = call.data
     await state.update_data(type=type_)
-    show: str = (await state.get_data()).get("show")
+    show: str = (await state.get_data())["show"]
     await call.message.edit_text(
         text=search_text,
         reply_markup=await get_action_options(call.from_user.id, show)
