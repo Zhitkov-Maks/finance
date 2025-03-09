@@ -112,6 +112,7 @@ async def remove_income_by_id(
     data: dict[str, str | int] = await state.get_data()
     income_id: int = data.get("income_id")
     url: str = await incomes_by_id(income_id)
+    show: str = data.get("show")
 
     await delete_object_by_id(url, callback.from_user.id)
 
@@ -122,7 +123,7 @@ async def remove_income_by_id(
     await state.update_data(page=page)
     keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(
         result,
-        "sh_incomes",
+        show,
     )
 
     await state.set_state(IncomesState.show)

@@ -115,6 +115,7 @@ async def remove_expense_by_id(
     The final income deletion handler.
     """
     data: dict[str, str | int] = await state.get_data()
+    show: str = data.get("show")
     expense_id: int = data.get("expense_id")
     url: str = await expense_url_by_id(expense_id)
     await delete_object_by_id(url, callback.from_user.id)
@@ -126,7 +127,7 @@ async def remove_expense_by_id(
     await state.update_data(page=page)
     keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(
         result,
-        "sh_expenses",
+        show,
         "prev_exp",
         "next_exp"
     )
