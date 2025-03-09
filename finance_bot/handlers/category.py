@@ -23,7 +23,7 @@ from keyboards.category import (
     get_categories_action,
 )
 from keyboards.keyboards import cancel_, confirmation, cancel_action
-from loader import categories_message
+from loader import categories_message, category_menu
 from states.category import CategoryState
 from utils.category import get_url
 
@@ -38,7 +38,7 @@ async def start_working_category(callback: CallbackQuery) -> None:
     the keyboard with possible actions.
     """
     await callback.message.edit_text(
-        text=hbold("Выберите действие."),
+        text=hbold(category_menu),
         reply_markup=inline_type_categories,
         parse_mode="HTML"
     )

@@ -64,7 +64,7 @@ async def finish_selection(
     пользователем данных.
     """
     options = list(user_choices[call.from_user.id].keys())
-    await state.update_data(options=options, show="search")
+    await state.update_data(options=options, show="search", page=1)
     if len(options) == 0:
         await call.answer(
             text=f"Вы ничего не выбрали",
