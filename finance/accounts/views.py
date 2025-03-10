@@ -82,7 +82,9 @@ class ListAccounts(generics.ListCreateAPIView):
         queryset = self.get_queryset()
 
         # Calculate total balance across all accounts once
-        total_balance = queryset.filter(is_active=True).aggregate(
+        total_balance = queryset.filter(
+            is_active=True, is_system_account=False
+        ).aggregate(
             total=Sum("balance")
         )["total"] or 0
 
