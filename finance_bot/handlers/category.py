@@ -33,7 +33,7 @@ category_route: Router = Router()
 
 @category_route.callback_query(F.data == "categories")
 @decorator_errors
-async def start_working_category(callback: CallbackQuery) -> None:
+async def start_working_category(callback: CallbackQuery, state: FSMContext) -> None:
     """
     The handler for getting started with categories shows
     the keyboard with possible actions.

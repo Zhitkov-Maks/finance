@@ -39,7 +39,7 @@ debt_router: Router = Router()
 
 @debt_router.callback_query(F.data == "debt_and_lends")
 @decorator_errors
-async def debts_menu(callback: CallbackQuery) -> None:
+async def debts_menu(callback: CallbackQuery, state: FSMContext) -> None:
     """The handler shows a menu with possible actions."""
     await callback.message.edit_text(
         text=hbold("Выберите действие."),
