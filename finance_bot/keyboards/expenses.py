@@ -33,6 +33,12 @@ async def get_action(show: str) -> InlineKeyboardMarkup:
 
 
 async def choice_edit(action: str) -> InlineKeyboardMarkup:
+    """
+    Creating a inline keyboard for editing expenses.
+
+    :param action: Commands for a button on the keyboard.
+    :return InlineKeyboardMarkup: The keyboard.
+    """
     choice_list: List[List[InlineKeyboardButton]] = [
         [
             InlineKeyboardButton(

@@ -17,7 +17,8 @@ async def create_list_with_calendar_days(
     cells before the first number, plus empty cells after the
     last day of the month.
 
-    :param day_week: The number of the day of the week is the first of the month.
+    :param day_week: The number of the day of the week is \
+                        the first of the month.
     :param days_in_month: There are only days in a month.
     :param days: The size of the calendar field.
     :return List: A list with a calendar field.
@@ -91,7 +92,7 @@ async def create_calendar(
 
     :return: Online keyboard with the days of the month.
     """
-    day_week: int = date(year, month,1).weekday()
+    day_week: int = date(year, month, 1).weekday()
     days_in_month: int = monthrange(year, month)[1]
 
     month_keyword: List[List[InlineKeyboardButton]] = []

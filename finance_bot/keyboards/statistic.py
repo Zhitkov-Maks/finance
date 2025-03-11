@@ -27,15 +27,15 @@ async def get_month(year: int, month: int, data: str) -> InlineKeyboardMarkup:
         [
             InlineKeyboardButton(
                 text="<<",
-                callback_data=f"prev_month"
+                callback_data="prev_month"
             ),
             InlineKeyboardButton(
                 text="меню",
-                callback_data=f"main"
+                callback_data="main"
             ),
             InlineKeyboardButton(
                 text=">>",
-                callback_data=f"next_month"
+                callback_data="next_month"
             )
         ]
     ]

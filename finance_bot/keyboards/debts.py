@@ -12,8 +12,7 @@ async def generate_debts_actions(type_: str) -> InlineKeyboardMarkup:
     :param type_: The type of the debt to show.
     """
     call_data = "show_debts" if type_ == "debt" else "show_lends"
-    return InlineKeyboardMarkup(inline_keyboard=
-        [
+    return InlineKeyboardMarkup(inline_keyboard=[
             [
                 InlineKeyboardButton(
                     text="❌",
@@ -46,6 +45,7 @@ async def debts_keyboard_generate(
     """Generating a keyboard for further debt management."""
     keyboards: List[List[InlineKeyboardButton]] = []
     previous, next_ = debt_data.get("previous"), debt_data.get("next")
+
     for item in debt_data.get("results"):
         message: str = f"{item.get("borrower_description")} 😒 / "
         message += f"{item.get("transfer").get("amount")}₽."

@@ -1,11 +1,6 @@
 from typing import List
 
-from aiogram.types import (
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    KeyboardButton,
-    ReplyKeyboardMarkup
-)
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from utils.common import create_pagination_buttons
 
@@ -26,6 +21,7 @@ async def create_list_incomes_expenses(
     """
     inline_buttons: List[List[InlineKeyboardButton]] = []
     previous, next_ = data.get("previous"), data.get("next")
+
     for item in data.get("results"):
         id_: int = item.get("id")
         dt: str = f"📆 {item['create_at'][8:10]}-{item['create_at'][5:7]}"

@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import List
 
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
@@ -22,6 +22,7 @@ async def create_list_transfer_accounts(
     """
     inline_buttons: List[List[InlineKeyboardButton]] = []
     previous, next_ = data.get("previous"), data.get("next")
+    
     for item in data.get("results")[0].get("accounts"):
         if item.get("id") != current_account:
             id_: int = str(item.get("id")) + f"_{item.get("name")}" \
