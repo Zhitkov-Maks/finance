@@ -7,7 +7,7 @@ from states.search import SearchState
 pattern = r'^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$'
 number_pattern = r'^-?\d+(\.\d+)?$'
 
-state_dict = {
+state_dict: dict[str, tuple] = {
     "account_name": (
         "Введите название счета по которому вас интересуют операции.",
         SearchState.action,
@@ -25,11 +25,13 @@ state_dict = {
         SearchState.action,
     ),
     "create_at_after": (
-        "Введите дату больше которой вас интересуют операции",
+        "Введите дату больше которой вас интересуют операции. Дата вводить в "
+        "формате гггг-мм-дд .",
         SearchState.action,),
 
     "category_name": (
-        "Введите имя категории, по которой вас интересуют операции",
+        "Введите имя категории, по которой вас интересуют операции. Дату "
+        "вводить в формате гггг-мм-дд .",
         SearchState.action,
     )
 }
@@ -38,6 +40,8 @@ state_dict = {
 async def validate_data_search(action: str, text: str) -> bool:
     """
     Checking the validity of some data.
+    :param action: Command.
+    :param text: The message that the user entered.
     """
     if action in ["create_at_after", "create_at_before"]:
         return bool(re.match(pattern, text))
@@ -53,6 +57,13 @@ async def validate_data_search(action: str, text: str) -> bool:
 
 
 async def generate_url(data: dict, page) -> str:
+    """
+    Forming the url for the request to the server, \
+    depending on the transmitted data.
+
+    :param data: Data collected from the user.
+    :param page: Number of page.
+    """
     type_ = data["type"]
     if type_ == "sh_expenses":
         url = expenses_url
