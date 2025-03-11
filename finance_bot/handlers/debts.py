@@ -38,6 +38,7 @@ debt_router: Router = Router()
 
 
 @debt_router.callback_query(F.data == "debt_and_lends")
+@decorator_errors
 async def debts_menu(callback: CallbackQuery) -> None:
     """The handler shows a menu with possible actions."""
     await callback.message.edit_text(
@@ -59,7 +60,9 @@ async def debts_list(callback: CallbackQuery, state: FSMContext) -> None:
         type_ = "debt"
         text = "Вот список ваших долгов."
 
-    debt_url: str = debts_url.format(type=type_, page=page, page_size=PAGE_SIZE)
+    debt_url: str = debts_url.format(
+        type=type_, page=page, page_size=PAGE_SIZE
+    )
     await state.update_data(page=page, type_=type_, text=text)
 
     result: dict = await get_all_objects(debt_url, callback.from_user.id)
@@ -82,7 +85,8 @@ async def next_prev_output_list_debts(
 ) -> None:
     """Show the following debt page."""
     data: dict = await state.get_data()
-    page, type_, text = data.get("page", 1), data.get("type_"), data.get("text")
+    page, type_, text = data.get("page", 1), data.get("type_"), \
+        data.get("text")
 
     if call.data == "next_debt":
         page += 1
@@ -139,6 +143,7 @@ async def close_debt_or_lend(call: CallbackQuery, state: FSMContext) -> None:
 
 
 @debt_router.callback_query(F.data == "repay_part")
+@decorator_errors
 async def repay_part_debt(call: CallbackQuery, state: FSMContext) -> None:
     """A handler for confirming partial repayment."""
     await state.set_state(DebtsStates.confirm)
@@ -150,6 +155,7 @@ async def repay_part_debt(call: CallbackQuery, state: FSMContext) -> None:
 
 
 @debt_router.message(DebtsStates.confirm)
+@decorator_errors
 async def confirm_repay(message: Message, state: FSMContext) -> None:
     """Confirmation of partial repayment of the debt."""
     if not is_valid_balance(message.text):
@@ -179,6 +185,7 @@ async def confirm_repay(message: Message, state: FSMContext) -> None:
 
 
 @debt_router.callback_query(F.data.in_(["to_lend", "to_borrow"]))
+@decorator_errors
 async def to_lend_or_borrow(call: CallbackQuery, state: FSMContext) -> None:
     """The handler will request a date to start creating the debt."""
     type_: str = "debt"
@@ -230,7 +237,6 @@ async def select_account_to_debit(
     state: FSMContext
 ) -> None:
     """The handler for selecting an account for debiting money."""
-    data: dict[str, str | int] = await state.get_data()
     page: int = 1
     url: str = await account_url(page, PAGE_SIZE)
 
@@ -275,6 +281,7 @@ async def next_or_prev_account_to_debt(
 
 
 @debt_router.callback_query(DebtsStates.account, F.data.isdigit)
+@decorator_errors
 async def save_account_input_amount(
     call: CallbackQuery,
     state: FSMContext
@@ -290,6 +297,7 @@ async def save_account_input_amount(
 
 
 @debt_router.message(DebtsStates.description)
+@decorator_errors
 async def save_amount_and_input_description(
     message: Message,
     state: FSMContext
@@ -304,6 +312,7 @@ async def save_amount_and_input_description(
             reply_markup=cancel_
         )
         return
+
     await state.update_data(amount=message.text)
     await state.set_state(DebtsStates.save)
     await message.answer(

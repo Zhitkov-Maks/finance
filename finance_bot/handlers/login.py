@@ -15,12 +15,14 @@ from loader import enter_email, password, success_auth
 from states.login import LoginState
 from utils.common import remove_message_after_delay
 from utils.register import is_valid_email, is_valid_password, create_data
+from handlers.decorator_handler import decorator_errors
 
 auth = Router()
 bot = Bot(token=BOT_TOKEN)
 
 
 @auth.message(F.text == "/login")
+@decorator_errors
 async def input_email(message: Message, state: FSMContext) -> None:
     """The handler for the email request."""
     await state.set_state(LoginState.email)
@@ -31,6 +33,7 @@ async def input_email(message: Message, state: FSMContext) -> None:
 
 
 @auth.message(LoginState.email)
+@decorator_errors
 async def input_password(mess: Message, state: FSMContext) -> None:
     """The handler for the password request."""
     valid: bool = is_valid_email(mess.text)
@@ -51,6 +54,7 @@ async def input_password(mess: Message, state: FSMContext) -> None:
 
 
 @auth.message(LoginState.password)
+@decorator_errors
 async def final_authentication(message: Message, state: FSMContext) -> None:
     """The handler authenticates the user."""
     valid: bool = is_valid_password(message.text)

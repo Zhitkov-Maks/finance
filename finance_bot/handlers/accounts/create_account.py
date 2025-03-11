@@ -14,6 +14,7 @@ create_acc_route: Router = Router()
 
 
 @create_acc_route.callback_query(F.data == "accounts_add")
+@decorator_errors
 async def account_input_name(
         callback: CallbackQuery, state: FSMContext
 ) -> None:
@@ -27,6 +28,7 @@ async def account_input_name(
 
 
 @create_acc_route.message(AccountsCreateState.name)
+@decorator_errors
 async def save_name_input_balance(message: Message, state: FSMContext) -> None:
     """
     The handler saves the account name and asks you to enter

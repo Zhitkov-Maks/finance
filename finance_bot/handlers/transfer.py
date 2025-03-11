@@ -87,7 +87,8 @@ async def get_account_transfer_out(
 async def get_amount_transfer(message: Message, state: FSMContext) -> None:
     """We are sending the data for the transfer."""
     data: dict = await state.get_data()
-    transfer_in, transfer_out = data.get("account_id"), data.get("transfer_out")
+    transfer_in, transfer_out = data.get("account_id"), \
+        data.get("transfer_out")
     usr_id: int = message.from_user.id
     amount: str = message.text
     name, name_out = data.get("account"), data.get("account_out")

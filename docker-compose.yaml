@@ -53,6 +53,8 @@ services:
       - django_app
     networks:
       - app_network
+    volumes:
+      - ./logs:/finance_bot/logs
 
 networks:
   app_network:

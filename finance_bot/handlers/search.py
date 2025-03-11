@@ -15,7 +15,11 @@ search: Router = Router()
 
 
 @search.callback_query(F.data.in_(["sh_expenses", "sh_incomes"]))
-async def command_start(call: CallbackQuery, state: FSMContext):
+@decorator_errors
+async def command_start(call: CallbackQuery, state: FSMContext) -> None:
+    """
+    The handler shows a menu with a selection of fields to search for.
+    """
     user_choices[call.from_user.id].clear()
     type_: str = call.data
     await state.update_data(type=type_)
@@ -33,7 +37,7 @@ async def toggle_action(
     state: FSMContext
 ) -> None:
     """
-    Обработчик выбора вариантов для поиска.
+    Processes and saves the selected fields to the dictionary.
     """
     action: str = callback_query.data.split("-")[1]
     user_id: int = callback_query.from_user.id
@@ -59,15 +63,13 @@ async def finish_selection(
         call: CallbackQuery, state: FSMContext
 ) -> None:
     """
-    Финальный обработчик прогнозирования пятидневки. Высчитывает прогнозируемый
-    заработок на основе введенных пользователем данных, и отмеченных
-    пользователем данных.
+    The beginning of processing the selected fields for the search.
     """
-    options = list(user_choices[call.from_user.id].keys())
+    options: list[str] = list(user_choices[call.from_user.id].keys())
     await state.update_data(options=options, show="search", page=1)
     if len(options) == 0:
         await call.answer(
-            text=f"Вы ничего не выбрали",
+            text="Вы ничего не выбрали",
             reply_markup=main_menu
         )
         return
@@ -82,10 +84,12 @@ async def finish_selection(
 
 
 @search.message(SearchState.action)
+@decorator_errors
 async def save_account_name(mess: Message, state: FSMContext) -> None:
-    data = await state.get_data()
-    options = data["options"]
-    action = data["action"]
+    """The handler is called while there are raw fields."""
+    data: dict = await state.get_data()
+    options: list = data["options"]
+    action: str = data["action"]
 
     if not await validate_data_search(action, mess.text):
         await mess.answer(
@@ -113,9 +117,14 @@ async def save_account_name(mess: Message, state: FSMContext) -> None:
 
 
 @search.callback_query(F.data == "search")
+@decorator_errors
 async def show_search(call: CallbackQuery, state: FSMContext) -> None:
-    data = await state.get_data()
-    page = data.get("page", 1)
+    """
+    The handler for the request and processing the response 
+    from the server based on the found result.
+    """
+    data: dict = await state.get_data()
+    page: int = data.get("page", 1)
     text, keyboard, operation_type = await _generate_results(
         state, call.from_user.id, page
     )
@@ -127,10 +136,11 @@ async def show_search(call: CallbackQuery, state: FSMContext) -> None:
 async def next_prev_output_list_expenses(
         call: CallbackQuery, state: FSMContext
 ) -> None:
-    data = await state.get_data()
-    page = data.get("page", 1)
-    page = page + 1 if call.data == "next_search" else page - 1
-    text, keyboard, operation_type = await _generate_results(
+    """The handler implements pagination when working with the search."""
+    data: dict = await state.get_data()
+    page: int = data.get("page", 1)
+    page: int = page + 1 if call.data == "next_search" else page - 1
+    text, keyboard, _ = await _generate_results(
         state, call.from_user.id, page
     )
     await state.update_data(page=page)

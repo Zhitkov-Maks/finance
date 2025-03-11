@@ -30,6 +30,7 @@ create_exp_router: Router = Router()
 @create_exp_router.callback_query(
     F.data.in_(["expense_add", "edit_expense_full"])
 )
+@decorator_errors
 async def create_expense_choice_date(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
@@ -178,6 +179,7 @@ async def next_prev_output_list_category(
 @create_exp_router.callback_query(
     CreateExpenseState.expense_category, F.data.isdigit()
 )
+@decorator_errors
 async def create_expense_input_amount(
     callback: CallbackQuery,
     state: FSMContext
@@ -199,7 +201,11 @@ async def create_expense_input_amount(
 
 
 @create_exp_router.message(CreateExpenseState.amount)
+@decorator_errors
 async def ask_add_comment(message: Message, state: FSMContext) -> None:
+    """
+    A handler for saving the amount and entering a comment on the expense.
+    """
     if not is_valid_balance(message.text):
         await message.answer(
             "Invalid balance format. Please enter a valid number.",

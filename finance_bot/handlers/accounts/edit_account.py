@@ -1,5 +1,4 @@
 from aiogram import Router, F
-from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
     CallbackQuery,
@@ -24,6 +23,7 @@ edit_acc_router: Router = Router()
 
 
 @edit_acc_router.callback_query(F.data == "edit")
+@decorator_errors
 async def choice_edit(callback: CallbackQuery):
     """A handler for selecting an account editing option."""
     await callback.message.edit_text(
@@ -34,6 +34,7 @@ async def choice_edit(callback: CallbackQuery):
 
 
 @edit_acc_router.callback_query(F.data == "edit_full")
+@decorator_errors
 async def full_edit(callback: CallbackQuery, state: FSMContext) -> None:
     """Handler for full account editing."""
     await state.set_state(AccountsEditState.name)
@@ -45,6 +46,7 @@ async def full_edit(callback: CallbackQuery, state: FSMContext) -> None:
 
 
 @edit_acc_router.message(AccountsEditState.name)
+@decorator_errors
 async def input_new_name(message: Message, state: FSMContext) -> None:
     """Handler for new account name."""
     await state.update_data(name=message.text)
@@ -55,6 +57,7 @@ async def input_new_name(message: Message, state: FSMContext) -> None:
 
 
 @edit_acc_router.callback_query(F.data == "edit_balance")
+@decorator_errors
 async def change_only_balance(call: CallbackQuery, state: FSMContext) -> None:
     """The handler for requesting the balance."""
     await state.set_state(AccountsEditState.balance)

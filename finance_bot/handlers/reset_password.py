@@ -12,11 +12,13 @@ from loader import enter_email, reset_password_confirm, success_reset
 from states.reset import ResetPassword
 from utils.common import remove_message_after_delay
 from utils.register import is_valid_email, is_valid_password
+from handlers.decorator_handler import decorator_errors
 
 reset_router: Router = Router()
 
 
 @reset_router.callback_query(F.data == "reset")
+@decorator_errors
 async def start_reset_password(
         callback: CallbackQuery, state: FSMContext
 ) -> None:
@@ -30,7 +32,10 @@ async def start_reset_password(
 
 
 @reset_router.message(F.text == "/reset")
-async def start_reset_password(message: Message, state: FSMContext) -> None:
+@decorator_errors
+async def start_reset_password_message(
+    message: Message, state: FSMContext
+) -> None:
     """Processing the password reset command, requests an email."""
     await state.set_state(ResetPassword.email)
     await message.answer(
@@ -41,6 +46,7 @@ async def start_reset_password(message: Message, state: FSMContext) -> None:
 
 
 @reset_router.message(ResetPassword.email)
+@decorator_errors
 async def processing_email(message: Message, state: FSMContext) -> None:
     """
     The handler sends a request to the server
@@ -77,6 +83,7 @@ async def processing_email(message: Message, state: FSMContext) -> None:
 
 
 @reset_router.message(ResetPassword.token)
+@decorator_errors
 async def confirm_reset_password(message: Message, state: FSMContext) -> None:
     """
     The handler checks the correctness of the input and
@@ -102,6 +109,7 @@ async def confirm_reset_password(message: Message, state: FSMContext) -> None:
 
 
 @reset_router.message(ResetPassword.password)
+@decorator_errors
 async def final_reset_password(message: Message, state: FSMContext) -> None:
     """The handler sends a request to save a new password."""
     valid: bool = is_valid_password(message.text)

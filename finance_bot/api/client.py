@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from typing import Tuple, Dict, List
+from typing import Tuple
 import aiohttp
+
 
 @dataclass
 class Client:

@@ -1,29 +1,32 @@
 import asyncio
 import logging
 
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot, Dispatcher, F, Router
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from aiogram.utils.markdown import hbold
-from aiogram import Router
-
 from config import BOT_TOKEN
+from handlers.accounts import account, create_acc_route, edit_acc_router
 from handlers.category import category_route
 from handlers.debts import debt_router
-from handlers.expenses import exp_edit_router, create_exp_router, expense_router
-from handlers.incomes import incomes, create_inc_router
+from handlers.decorator_handler import decorator_errors
+from handlers.expenses import (
+    create_exp_router,
+    exp_edit_router,
+    expense_router,
+)
+from handlers.incomes import create_inc_router, incomes
 from handlers.incomes.edit_income import inc_edit_router
 from handlers.invalid_handlers import invalid_router
 from handlers.login import auth
 from handlers.registration import register_route
-from handlers.accounts import account, edit_acc_router, create_acc_route
 from handlers.reset_password import reset_router
 from handlers.search import search
+from handlers.statistic import statistic_route
 from handlers.transfer import transfer
 from keyboards.keyboards import main_menu
 from loader import greeting, main_menu_text
-from handlers.statistic import statistic_route
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
@@ -54,12 +57,14 @@ for route in routes:
 
 
 @dp.message(CommandStart())
-async def greeting_handler(message: Message) -> None:
+@decorator_errors
+async def greeting_handler(message: Message, state: FSMContext) -> None:
     """Welcome Handler."""
     await message.answer(text=greeting, reply_markup=main_menu)
 
 
 @dp.callback_query(F.data == "main")
+@decorator_errors
 async def handler_main_callback(call: CallbackQuery, state: FSMContext) -> None:
     """Show base bot's menu."""
     await state.clear()
@@ -69,6 +74,7 @@ async def handler_main_callback(call: CallbackQuery, state: FSMContext) -> None:
 
 
 @dp.message(F.text == "/main")
+@decorator_errors
 async def handler_main_message(message: Message, state: FSMContext) -> None:
     """Show base bot's menu."""
     await state.clear()

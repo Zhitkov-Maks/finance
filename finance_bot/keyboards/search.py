@@ -18,15 +18,17 @@ async def get_action_options(
         user_id: int, show: str
 ) -> InlineKeyboardMarkup:
     """
-    Генерирует инлайн-клавиатуру для выбора дней недели и часов.
+    Generating a keyboard for searching for expenses or income.
 
-    :return: Объект InlineKeyboardMarkup, представляющий инлайн-клавиатуру с
-                кнопками.
+    :param user_id: The user's ID.
+    :param show: The command that should trigger a specific handler.
+    :return InlineKeyboardMarkup: The Inline keyboard.
     """
     keyboard: List[List[InlineKeyboardButton]] = [[]]
     for action in ACTIONS:
         # Добавляем кнопку с состоянием
-        button_text = f"{ACTIONS[action]}    [✘] " if action not in user_choices[user_id] \
+        button_text = f"{ACTIONS[action]}    [✘] " \
+            if action not in user_choices[user_id] \
             else f"{ACTIONS[action]}    [✔️]"
         keyboard.append(
             [

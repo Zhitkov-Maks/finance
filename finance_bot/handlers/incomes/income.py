@@ -90,6 +90,7 @@ async def detail_incomes(call: CallbackQuery, state: FSMContext) -> None:
 
 
 @incomes.callback_query(F.data == "remove_income", IncomesState.action)
+@decorator_errors
 async def remove_confirm(callback: CallbackQuery, state: FSMContext) -> None:
     """Confirmation of deletion."""
     await state.set_state(IncomesState.remove)
@@ -128,7 +129,7 @@ async def remove_income_by_id(
 
     await state.set_state(IncomesState.show)
     await callback.message.edit_text(
-        text=hbold(f"Запись была удалена."),
+        text=hbold("Запись была удалена."),
         reply_markup=keyword,
         parse_mode="HTML"
     )

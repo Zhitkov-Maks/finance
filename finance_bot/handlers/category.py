@@ -22,7 +22,7 @@ from keyboards.category import (
     create_list_category,
     get_categories_action,
 )
-from keyboards.keyboards import cancel_, confirmation, cancel_action
+from keyboards.keyboards import confirmation, cancel_action
 from loader import categories_message, category_menu
 from states.category import CategoryState
 from utils.category import get_url
@@ -32,6 +32,7 @@ category_route: Router = Router()
 
 
 @category_route.callback_query(F.data == "categories")
+@decorator_errors
 async def start_working_category(callback: CallbackQuery) -> None:
     """
     The handler for getting started with categories shows
@@ -115,14 +116,14 @@ async def detail_category(call: CallbackQuery, state: FSMContext) -> None:
 
 
 @category_route.callback_query(F.data.in_(["add_income", "add_expense"]))
+@decorator_errors
 async def choice_category(callback: CallbackQuery, state: FSMContext) -> None:
     """A handler for entering a new income or expense category."""
     await state.update_data(category=callback.data)
     await state.set_state(CategoryState.type_category)
     await callback.message.edit_text(
         text=hbold("Введите название категории"),
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=
-            [
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [
                     InlineKeyboardButton(
                         text="㊂",
@@ -160,6 +161,7 @@ async def create_category(message: Message, state: FSMContext) -> None:
 
 
 @category_route.callback_query(F.data == "del_category", CategoryState.action)
+@decorator_errors
 async def remove_confirm(callback: CallbackQuery, state: FSMContext) -> None:
     """Confirmation of deletion."""
     await state.set_state(CategoryState.remove)
@@ -205,6 +207,7 @@ async def remove_category_by_id(
 
 
 @category_route.callback_query(F.data == "edit_category")
+@decorator_errors
 async def edit_route_name(callback: CallbackQuery, state: FSMContext) -> None:
     """Handler for editing categories."""
     await state.set_state(CategoryState.edit)
@@ -217,6 +220,7 @@ async def edit_route_name(callback: CallbackQuery, state: FSMContext) -> None:
 
 
 @category_route.message(CategoryState.edit)
+@decorator_errors
 async def edit_category(message: Message, state: FSMContext) -> None:
     """Handler for the request to save category changes."""
     data: dict[str, str | int] = await state.get_data()

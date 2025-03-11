@@ -19,6 +19,7 @@ inc_edit_router: Router = Router()
 
 
 @inc_edit_router.callback_query(F.data == "edit_income")
+@decorator_errors
 async def edit_income_choice(
         callback: CallbackQuery, state: FSMContext
 ) -> None:
@@ -33,6 +34,7 @@ async def edit_income_choice(
 
 
 @inc_edit_router.callback_query(F.data == "edit_income_balance")
+@decorator_errors
 async def edit_balance(callback: CallbackQuery, state: FSMContext) -> None:
     """
     The handler for requesting the amount of income when editing only
@@ -49,7 +51,11 @@ async def edit_balance(callback: CallbackQuery, state: FSMContext) -> None:
 
 
 @inc_edit_router.message(EditIncomesState.amount)
+@decorator_errors
 async def ask_add_comment(message: Message, state: FSMContext) -> None:
+    """
+    A handler for saving the amount and entering a comment on the income.
+    """
     show: str = (await state.get_data())["show"]
     if not is_valid_balance(message.text):
         await message.answer(

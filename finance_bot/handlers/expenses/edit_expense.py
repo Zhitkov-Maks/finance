@@ -20,6 +20,7 @@ exp_edit_router: Router = Router()
 
 
 @exp_edit_router.callback_query(F.data == "edit_expense")
+@decorator_errors
 async def edit_expense_choice(
         callback: CallbackQuery, state: FSMContext
 ) -> None:
@@ -33,6 +34,7 @@ async def edit_expense_choice(
 
 
 @exp_edit_router.callback_query(F.data == "edit_expense_balance")
+@decorator_errors
 async def edit_balance(callback: CallbackQuery, state: FSMContext) -> None:
     """
     The handler for requesting the amount of expense when editing only
@@ -49,7 +51,9 @@ async def edit_balance(callback: CallbackQuery, state: FSMContext) -> None:
 
 
 @exp_edit_router.message(EditExpenseState.amount)
+@decorator_errors
 async def ask_add_comment(message: Message, state: FSMContext) -> None:
+    """Handler for the amount and input of the expense comment."""
     show: str = (await state.get_data())["show"]
     if not is_valid_balance(message.text):
         await message.answer(

@@ -22,7 +22,7 @@ account: Router = Router()
 
 @account.callback_query(F.data == "accounts")
 @decorator_errors
-async def start_account(callback: CallbackQuery, state: FSMContext):
+async def start_account(callback: CallbackQuery, state: FSMContext) -> None:
     """Show a list of accounts."""
     data: dict = await state.get_data()
     page: int = data.get("page", 1)
@@ -96,7 +96,6 @@ async def change_toggle(callback: CallbackQuery, state: FSMContext) -> None:
     response: dict = await get_full_info(url, callback.from_user.id)
     await update_account_state(state, response)
 
-
     # Update reply markup based on new active status
     text: str = await generate_message_answer(response)
     keyword: InlineKeyboardMarkup = await get_action_accounts(
@@ -131,6 +130,7 @@ async def detail_account(call: CallbackQuery, state: FSMContext) -> None:
 
 
 @account.callback_query(F.data == "remove", AccountsState.action)
+@decorator_errors
 async def remove_confirm(callback: CallbackQuery, state: FSMContext) -> None:
     """Confirmation of deletion."""
     await state.set_state(AccountsState.remove)

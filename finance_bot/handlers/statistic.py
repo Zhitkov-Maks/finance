@@ -49,7 +49,7 @@ async def get_expenses_for_month(
 
 @statistic_route.callback_query(F.data == "accounts_data")
 @decorator_errors
-async def get_expenses_for_month(
+async def get_balance_accounts(
         call: CallbackQuery, state: FSMContext
 ) -> None:
     """Handler for displaying the balance of all accounts."""

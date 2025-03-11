@@ -12,8 +12,15 @@ async def create_transfer(
     user_id: int,
     amount: float
 ) -> None:
+    """
+    The function sends a request to create a transfer between its accounts.
+    :param account_in: Which account to transfer from.
+    :param account_out: Which account to transfer to.
+    :param user_id: The user's ID.
+    :param amoount: The transfer amount.
+    """
     url: str = BASE_URL + "transfer/"
-    transfer_data = {
+    transfer_data: dict[str, int | float | str] = {
         "source_account": account_in,
         "destination_account": account_out,
         "amount": amount,
