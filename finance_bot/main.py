@@ -26,7 +26,7 @@ from handlers.search import search
 from handlers.statistic import statistic_route
 from handlers.transfer import transfer
 from keyboards.keyboards import main_menu
-from loader import greeting, main_menu_text
+from loader import greeting, main_menu_text, info_message
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
@@ -54,6 +54,18 @@ routes: list[Router] = [
 
 for route in routes:
     dp.include_router(route)
+
+
+@dp.message(F.text == "/info")
+async def info(message: Message):
+    """
+    The handler shows a message to the user about the basics of working
+    with the bot.
+    """
+    await message.answer(
+        text=info_message,
+        reply_markup=main_menu
+    )
 
 
 @dp.message(CommandStart())
