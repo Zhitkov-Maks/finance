@@ -21,7 +21,7 @@ async def invalid_message_text(message: Message, state: FSMContext) -> None:
 
 @invalid_router.callback_query(F.data)
 @decorator_errors
-async def invalid_callback(callback: CallbackQuery) -> None:
+async def invalid_callback(callback: CallbackQuery, state: FSMContext) -> None:
     """A handler for buttons that don't have any actions."""
     await callback.answer(
         text="Я не могу вам ничего показать, \
