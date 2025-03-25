@@ -4,7 +4,12 @@ from typing import Dict
 
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
+from aiogram.types import (
+    CallbackQuery,
+    InlineKeyboardMarkup,
+    Message,
+    InlineKeyboardButton
+)
 from aiogram.utils.markdown import hbold
 
 from api.common import get_all_objects, create_new_object
@@ -92,13 +97,20 @@ async def create_income_choice_account(
     """A handler for selecting an account to add/change income to."""
     page: int = 1
     url: str = await account_url(page, PAGE_SIZE)
-
+    type_: str = (await state.get_data())["type"]
     result: dict = await get_all_objects(url, callback.from_user.id)
 
     await state.update_data(page=page, date=callback.data)
     keypad: InlineKeyboardMarkup = await create_list_account(
         result, "prev_ci", "next_ci"
     )
+
+    keypad.inline_keyboard.append([
+        InlineKeyboardButton(
+            text="🔙",
+            callback_data=type_
+        )
+    ])
 
     await state.set_state(CreateIncomes.account)
     await callback.message.edit_text(
@@ -108,17 +120,21 @@ async def create_income_choice_account(
     )
 
 
-@create_inc_router.callback_query(F.data.in_(["next_ci", "prev_ci"]))
+@create_inc_router.callback_query(
+        F.data.in_(["next_ci", "prev_ci", "curr_ci"])
+)
 @decorator_errors
 async def next_prev_output_list_incomes(
         call: CallbackQuery, state: FSMContext
 ) -> None:
     """Show more accounts if any."""
-    page: int = (await state.get_data()).get("page")
+    data = await state.get_data()
+    page, type_ = data.get("page"), data.get("type")
 
     if call.data == "next_ci":
         page += 1
-    else:
+
+    elif call.data == "prev_ci":
         page -= 1
 
     url: str = await account_url(page, PAGE_SIZE)
@@ -127,9 +143,20 @@ async def next_prev_output_list_incomes(
         result, "prev_ci", "next_ci"
     )
 
+    keypad.inline_keyboard.append([
+        InlineKeyboardButton(
+            text="🔙",
+            callback_data=type_
+        )
+    ])
+
     await state.set_state(CreateIncomes.account)
     await state.update_data(page=page)
-    await call.message.edit_reply_markup(reply_markup=keypad)
+    await call.message.edit_text(
+        reply_markup=keypad,
+        parse_mode="HTML",
+        text=hbold("Выберите счет:")
+    )
 
 
 @create_inc_router.callback_query(CreateIncomes.account, F.data.isdigit())
@@ -147,6 +174,13 @@ async def create_income_choice_category(
     result: dict = await get_all_objects(url, callback.from_user.id)
     keypad: InlineKeyboardMarkup = await create_list_category(result)
 
+    keypad.inline_keyboard.append([
+        InlineKeyboardButton(
+            text="🔙",
+            callback_data="curr_ci",
+        )
+    ])
+
     await callback.message.edit_text(
         text=hbold("Выберите категорию дохода: "),
         reply_markup=keypad,
@@ -154,7 +188,9 @@ async def create_income_choice_category(
     )
 
 
-@create_inc_router.callback_query(F.data.in_(["next_cat_inc", "prev_cat_inc"]))
+@create_inc_router.callback_query(
+        F.data.in_(["next_cat_inc", "prev_cat_inc", "prev_curr_inc"])
+)
 @decorator_errors
 async def next_prev_output_list_category(
     call: CallbackQuery, state: FSMContext
@@ -164,18 +200,31 @@ async def next_prev_output_list_category(
 
     if call.data == "next_cat_inc":
         page += 1
-    else:
+
+    elif call.data == "prev_cat_inc":
         page -= 1
 
     url: str = await get_incomes_category_url(page=page, page_size=PAGE_SIZE)
     result: Dict[str, list] = await get_all_objects(url, call.from_user.id)
 
-    keyword: InlineKeyboardMarkup = await create_list_category(
+    keypad: InlineKeyboardMarkup = await create_list_category(
         result, "prev_cat_inc", "next_cat_inc"
     )
+
+    keypad.inline_keyboard.append([
+        InlineKeyboardButton(
+            text="🔙",
+            callback_data="curr_ci",
+        )
+    ])
+
     await state.set_state(CreateIncomes.income_category)
     await state.update_data(page=page)
-    await call.message.edit_reply_markup(reply_markup=keyword)
+    await call.message.edit_text(
+        reply_markup=keypad,
+        parse_mode="HTML",
+        text=hbold("Выберите категорию дохода: ")
+    )
 
 
 @create_inc_router.callback_query(
@@ -196,8 +245,19 @@ async def create_income_input_amount(
 
     await callback.message.edit_text(
         text=hbold("Введите сумму дохода: "),
-        reply_markup=cancel_,
-        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Меню",
+                    callback_data="main"
+                ),
+                InlineKeyboardButton(
+                    text="🔙",
+                    callback_data="prev_curr_inc"
+                )
+            ]
+        ]),
+        parse_mode="HTML"
     )
 
 

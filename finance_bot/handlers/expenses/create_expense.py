@@ -4,7 +4,12 @@ from typing import Dict
 
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
+from aiogram.types import (
+    CallbackQuery,
+    InlineKeyboardMarkup,
+    Message,
+    InlineKeyboardButton
+)
 from aiogram.utils.markdown import hbold
 
 from api.common import get_all_objects, create_new_object
@@ -90,7 +95,7 @@ async def create_expense_choice_account(
     """A handler for selecting an account to add/change expense to."""
     page: int = 1
     url: str = await account_url(page, PAGE_SIZE)
-
+    type_: str = (await state.get_data())["type"]
     result: dict = await get_all_objects(url, callback.from_user.id)
 
     await state.update_data(page=page, date=callback.data)
@@ -98,6 +103,12 @@ async def create_expense_choice_account(
         result, "prev_ce", "next_ce"
     )
 
+    keypad.inline_keyboard.append([
+        InlineKeyboardButton(
+            text="🔙",
+            callback_data=type_
+        )
+    ])
     await state.set_state(CreateExpenseState.account)
     await callback.message.edit_text(
         text=hbold("Выберите счет: "),
@@ -106,15 +117,19 @@ async def create_expense_choice_account(
     )
 
 
-@create_exp_router.callback_query(F.data.in_(["next_ce", "prev_ce"]))
+@create_exp_router.callback_query(
+        F.data.in_(["next_ce", "curr_ce",  "prev_ce"])
+)
 @decorator_errors
 async def next_prev_account(call: CallbackQuery, state: FSMContext) -> None:
     """Show more accounts if any."""
-    page: int = (await state.get_data()).get("page")
+    data = await state.get_data()
+    page, type_ = data.get("page"), data.get("type")
 
     if call.data == "next_ce":
         page += 1
-    else:
+
+    elif call.data == "prev_ce":
         page -= 1
 
     url: str = await account_url(page, PAGE_SIZE)
@@ -123,9 +138,20 @@ async def next_prev_account(call: CallbackQuery, state: FSMContext) -> None:
         result, "prev_ce", "next_ce"
     )
 
+    keypad.inline_keyboard.append([
+        InlineKeyboardButton(
+            text="🔙",
+            callback_data=type_
+        )
+    ])
+
     await state.set_state(CreateExpenseState.account)
     await state.update_data(page=page)
-    await call.message.edit_reply_markup(reply_markup=keypad)
+    await call.message.edit_text(
+        text=hbold("Выберите счет:"),
+        reply_markup=keypad,
+        parse_mode="HTML"
+    )
 
 
 @create_exp_router.callback_query(CreateExpenseState.account, F.data.isdigit())
@@ -144,6 +170,15 @@ async def create_income_choice_category(
     keypad: InlineKeyboardMarkup = await create_list_category(
         result, "prev_cat_exp", "next_cat_exp"
     )
+
+    keypad.inline_keyboard.append([
+        InlineKeyboardButton(
+            text="🔙",
+            callback_data="curr_ce",
+
+        )
+    ])
+
     await callback.message.edit_text(
         text=hbold("Выберите категорию расхода: "),
         reply_markup=keypad,
@@ -151,7 +186,9 @@ async def create_income_choice_category(
     )
 
 
-@create_exp_router.callback_query(F.data.in_(["next_cat_exp", "prev_cat_exp"]))
+@create_exp_router.callback_query(
+        F.data.in_(["next_cat_exp", "prev_cat_exp", "prev_curr_exc"])
+)
 @decorator_errors
 async def next_prev_output_list_category(
     call: CallbackQuery, state: FSMContext
@@ -161,7 +198,8 @@ async def next_prev_output_list_category(
 
     if call.data == "next_cat_exp":
         page += 1
-    else:
+
+    elif call.data == "prev_cat_exp":
         page -= 1
 
     url: str = await get_expenses_category_url(page, PAGE_SIZE)
@@ -171,9 +209,21 @@ async def next_prev_output_list_category(
         result, "prev_cat_exp", "next_cat_exp"
     )
 
+    keypad.inline_keyboard.append([
+        InlineKeyboardButton(
+            text="🔙",
+            callback_data="curr_ce",
+
+        )
+    ])
+
     await state.set_state(CreateExpenseState.expense_category)
     await state.update_data(page=page)
-    await call.message.edit_reply_markup(reply_markup=keypad)
+    await call.message.edit_text(
+        text=hbold("Выберите категорию расхода: "),
+        reply_markup=keypad,
+        parse_mode="HTML"
+    )
 
 
 @create_exp_router.callback_query(
@@ -195,7 +245,18 @@ async def create_expense_input_amount(
 
     await callback.message.edit_text(
         text=hbold("Введите сумму расхода: "),
-        reply_markup=cancel_,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Меню",
+                    callback_data="main"
+                ),
+                InlineKeyboardButton(
+                    text="🔙",
+                    callback_data="prev_curr_exc"
+                )
+            ]
+        ]),
         parse_mode="HTML"
     )
 

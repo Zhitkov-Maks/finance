@@ -24,12 +24,20 @@ async def edit_income_choice(
         callback: CallbackQuery, state: FSMContext
 ) -> None:
     """A handler for selecting an income editing option."""
-    text = "Выберите вариант редактирования."
-    show: str = (await state.get_data())["show"]
+    data: dict = await state.get_data()
+    income_id = data.get("income_id")
+    await state.set_state(IncomesState.show)
+
     await callback.message.edit_text(
-        text=hbold(text),
-        reply_markup=await choice_edit(show),
-        parse_mode="HTML"
+        text=hbold(
+            "Выберите вариант редактирования.\n"
+            "✎ - Польностью.\n"
+            "₱ - Баланс.\n"
+            "㊂ - Меню.\n"
+            "🔙 - Назад.\n"
+        ),
+        reply_markup=await choice_edit(income_id),
+        parse_mode="HTML",
     )
 
 

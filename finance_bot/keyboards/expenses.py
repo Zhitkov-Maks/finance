@@ -24,7 +24,7 @@ async def get_action(show: str) -> InlineKeyboardMarkup:
                     callback_data="edit_expense",
                 ),
                 InlineKeyboardButton(
-                    text="⏎",
+                    text="🔙",
                     callback_data=show,
                 )
             ],
@@ -32,7 +32,7 @@ async def get_action(show: str) -> InlineKeyboardMarkup:
     )
 
 
-async def choice_edit(action: str) -> InlineKeyboardMarkup:
+async def choice_edit(expense_id) -> InlineKeyboardMarkup:
     """
     Creating a inline keyboard for editing expenses.
 
@@ -46,8 +46,8 @@ async def choice_edit(action: str) -> InlineKeyboardMarkup:
                 callback_data="edit_expense_full",
             ),
             InlineKeyboardButton(
-                text="△",
-                callback_data=action,
+                text="🔙",
+                callback_data=f"{expense_id}",
             ),
             InlineKeyboardButton(
                 text="㊂",
