@@ -103,19 +103,36 @@ async def next_prev_output_list_debts(
         reply_markup=await debts_keyboard_generate(result),
         parse_mode="HTML"
     )
-
+    
 
 @debt_router.callback_query(DebtsStates.detail, F.data.isdigit())
 @decorator_errors
 async def detail_debt_by_id(call: CallbackQuery, state: FSMContext) -> None:
     """A handler for displaying complete information about the debt."""
-    data: dict = await state.get_data()
-    type_: str = data.get("type_")
+    type_ = (await state.get_data())["type_"]
     url: str = debts_url_by_id.format(debt_id=call.data)
     result: dict = await get_full_info(url, call.from_user.id)
     amount: str = result.get("transfer").get("amount")
 
-    await state.update_data(amount=amount, id_=call.data)
+    await state.update_data(amount=amount, id_=call.data, result=result)
+    await call.message.edit_text(
+        text=hbold(await generate_debts_message(result)),
+        parse_mode="HTML",
+        reply_markup=await generate_debts_actions(type_)
+    )
+
+
+@debt_router.callback_query(F.data == "current_debt")
+async def current_debts_lends(
+        call: CallbackQuery, state: FSMContext
+    ) -> None:
+    """
+    A handler for displaying the latest information 
+    about a specific debt.
+    """
+    data = await state.get_data()
+    type_ = data.get("type_")
+    result = data.get("result")
     await call.message.edit_text(
         text=hbold(await generate_debts_message(result)),
         parse_mode="HTML",
@@ -147,9 +164,29 @@ async def close_debt_or_lend(call: CallbackQuery, state: FSMContext) -> None:
 async def repay_part_debt(call: CallbackQuery, state: FSMContext) -> None:
     """A handler for confirming partial repayment."""
     await state.set_state(DebtsStates.confirm)
+    type_ = (await state.get_data())["type_"]
+    action = "show_debts" if type_ == "debt" else "show_lends"
+    text = "долгов." if type_ == "debt" else "должников." 
     await call.message.edit_text(
         text=hbold("Введите сумму для погашения."),
-        reply_markup=cancel_,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🔙",
+                    callback_data="current_debt"
+            ),
+                InlineKeyboardButton(
+                    text="㊂",
+                    callback_data="main"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text=f"К списку {text}",
+                    callback_data=action
+                )
+            ]
+        ]),
         parse_mode="HTML"
     )
 

@@ -5,13 +5,13 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from utils.common import create_pagination_buttons
 
 
-async def generate_debts_actions(type_: str) -> InlineKeyboardMarkup:
+async def generate_debts_actions(action: str) -> InlineKeyboardMarkup:
     """
     The keyboard for working with a specific debt shows
     options for possible actions with this account.
     :param type_: The type of the debt to show.
     """
-    call_data = "show_debts" if type_ == "debt" else "show_lends"
+    action = "show_debts" if action == "debt" else "show_lends"
     return InlineKeyboardMarkup(inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -24,7 +24,7 @@ async def generate_debts_actions(type_: str) -> InlineKeyboardMarkup:
                 ),
                 InlineKeyboardButton(
                     text="🔙",
-                    callback_data=call_data,
+                    callback_data=action,
                 )
             ],
             [

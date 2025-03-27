@@ -75,24 +75,27 @@ type_category_buttons: list[list[InlineKeyboardButton]] = [
             callback_data="add_income"
         ),
         InlineKeyboardButton(
+            text="㊂",
+            callback_data="main"
+        ),
+        InlineKeyboardButton(
             text="✎ ⬊",
             callback_data="add_expense"
         ),
     ],
     [
         InlineKeyboardButton(
-            text="↥",
+            text="Список категорий доходов.",
             callback_data="list_incomes_category"
         ),
+    ],
+    [
+
         InlineKeyboardButton(
-            text="㊂",
-            callback_data="main"
-        ),
-        InlineKeyboardButton(
-            text="↧",
+            text="Список категорий расходов.",
             callback_data="list_expenses_category"
         ),
-    ],
+    ]
 ]
 
 # The keyboard is used to select an action when clicking

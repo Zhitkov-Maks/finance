@@ -128,13 +128,13 @@ async def confirmation(action: str) -> InlineKeyboardMarkup:
     )
 
 
-async def cancel_action(action: str) -> InlineKeyboardMarkup:
+async def cancel_action() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="△",
-                    callback_data=action,
+                    text="🔙",
+                    callback_data="current_category",
                 ),
                 InlineKeyboardButton(
                     text="㊂",

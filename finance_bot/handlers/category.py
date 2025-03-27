@@ -96,6 +96,26 @@ async def next_and_prev_category(
     await callback.message.edit_reply_markup(reply_markup=keyword)
 
 
+@category_route.callback_query(F.data == "current_category")
+@decorator_errors
+async def current_category(
+        call: CallbackQuery, state: FSMContext
+    ) -> None:
+    """
+    Handler for displaying the current category after clicking the back button when editing a category.
+    """
+    data: dict = await state.get_data()
+    result: dict = data.get("result")
+    text: str = result.get("name")
+    await state.set_state(CategoryState.action)
+
+    await call.message.edit_text(
+        text=hbold("Категория: <" + text + ">. Выберите действие."),
+        parse_mode="HTML",
+        reply_markup=await get_categories_action(data["category"]),
+    )
+
+
 @category_route.callback_query(CategoryState.show, F.data.isdigit())
 @decorator_errors
 async def detail_category(call: CallbackQuery, state: FSMContext) -> None:
@@ -103,11 +123,12 @@ async def detail_category(call: CallbackQuery, state: FSMContext) -> None:
     await state.update_data(category_id=int(call.data))
     data: dict = await state.get_data()
 
-    url, category = await get_url(data)
+    url, _ = await get_url(data)
     response: dict = await get_full_info(url, call.from_user.id)
     text: str = response.get("name")
 
     await state.set_state(CategoryState.action)
+    await state.update_data(result=response)
     await call.message.edit_text(
         text=hbold("Категория: <" + text + ">. Выберите действие."),
         parse_mode="HTML",
@@ -211,10 +232,9 @@ async def remove_category_by_id(
 async def edit_route_name(callback: CallbackQuery, state: FSMContext) -> None:
     """Handler for editing categories."""
     await state.set_state(CategoryState.edit)
-    show: str = (await state.get_data())["category"]
     await callback.message.edit_text(
         text=hbold("Введите название категории: "),
-        reply_markup=await cancel_action(show),
+        reply_markup=await cancel_action(),
         parse_mode="HTML"
     )
 
@@ -224,7 +244,7 @@ async def edit_route_name(callback: CallbackQuery, state: FSMContext) -> None:
 async def edit_category(message: Message, state: FSMContext) -> None:
     """Handler for the request to save category changes."""
     data: dict[str, str | int] = await state.get_data()
-    url, category = await get_url(data)
+    url, _ = await get_url(data)
 
     response: dict = await edit_object(
         url, message.from_user.id, {"name": message.text}, "PUT"
