@@ -49,11 +49,10 @@ async def edit_balance(callback: CallbackQuery, state: FSMContext) -> None:
     the balance.
     """
     await state.set_state(EditExpenseState.comment)
-    show: str = (await state.get_data())["show"]
     await state.update_data(method="PATCH")
     await callback.message.edit_text(
         text=hbold("Введите новую сумму расхода."),
-        reply_markup=await cancel_action(show),
+        reply_markup=await cancel_action(),
         parse_mode="HTML",
     )
 
