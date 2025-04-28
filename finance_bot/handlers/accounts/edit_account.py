@@ -24,7 +24,7 @@ edit_acc_router: Router = Router()
 
 @edit_acc_router.callback_query(F.data == "edit")
 @decorator_errors
-async def choice_edit(callback: CallbackQuery):
+async def choice_edit(callback: CallbackQuery, state: FSMContext) -> None:
     """A handler for selecting an account editing option."""
     await callback.message.edit_text(
         text=hbold("Выберите вариант редактирования."),
