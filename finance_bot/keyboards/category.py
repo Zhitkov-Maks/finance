@@ -43,7 +43,7 @@ async def create_list_category(
             [
                 InlineKeyboardButton(
                     text=f"{item.get("name")}",
-                    callback_data=str(item.get("id"))
+                    callback_data=f"{item.get("id")}_{item.get("name")}"
                 )
             ]
         )

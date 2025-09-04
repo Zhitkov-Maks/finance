@@ -4,8 +4,7 @@ from aiogram.utils.markdown import hbold
 
 from api.common import get_full_info
 from keyboards.keyboards import create_list_incomes_expenses
-from states.expenses import ExpensesState
-from states.incomes import IncomesState
+from states.transaction import TransactionState
 from utils.search import generate_url
 
 
@@ -41,7 +40,8 @@ async def _generate_results(
     )
 
     text = "Вот что я нашел!" if result.get(
-        "results") else "Записей не найдено. 😔"
+        "results"
+    ) else "Записей не найдено. 😔"
     return text, keyboard, operation_type
 
 
@@ -62,9 +62,7 @@ async def _handle_response(
     :param keyboard: Inline keyboard.
     :param operation_type: The type of operation (income or expenses).
     """
-    state_class = ExpensesState if operation_type == "sh_expenses" \
-        else IncomesState
-    await state.set_state(state_class.show)
+    await state.set_state(TransactionState.show)
 
     if isinstance(context, CallbackQuery):
         await context.message.edit_text(

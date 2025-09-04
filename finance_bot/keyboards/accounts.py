@@ -28,7 +28,7 @@ async def create_list_account(
                     InlineKeyboardButton(
                         text=f"{item.get("name")} /"
                              f" {float(item.get('balance')):_}₽",
-                        callback_data=str(id_)
+                        callback_data=f"{id_}_{item.get("name")}"
                     )
                 ])
 

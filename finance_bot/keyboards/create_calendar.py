@@ -78,8 +78,8 @@ async def generate_base_calendar(
 async def create_calendar(
     year: int,
     month: int,
-    prev: str = "prev_cal_inc",
-    next_d: str = "next_cal_inc"
+    prev: str = "prev_cal_tr",
+    next_d: str = "next_cal_tr"
 ) -> InlineKeyboardMarkup:
     """
     Генерирует календарь за указанный месяц.
