@@ -62,3 +62,20 @@ async def choice_edit(expense_id) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=choice_list
     )
+
+
+async def cancel_action() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🔙",
+                    callback_data="edit_transaction",
+                ),
+                InlineKeyboardButton(
+                    text="㊂",
+                    callback_data="main",
+                )
+            ]
+        ]
+    )

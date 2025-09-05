@@ -7,7 +7,7 @@ from api.common import edit_object, get_full_info
 from config import BASE_URL
 from handlers.decorator_handler import decorator_errors
 from keyboards.transaction import get_action, choice_edit
-from keyboards.keyboards import cancel_action
+from keyboards.transaction import cancel_action
 from states.transaction import TransactionState, EditTransactionState
 from utils.accounts import is_valid_balance
 from utils.transaction import (
