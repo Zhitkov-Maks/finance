@@ -1,7 +1,6 @@
 from rest_framework import serializers
 
-from expenses.models import Expense
-from incomes.models import Income
+from transactions.models import Transaction
 from accounts.models import Account
 
 
@@ -16,27 +15,15 @@ class BaseAccountSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "balance"]
 
 
-class AccountIncomeSerializer(serializers.ModelSerializer):
+class AccountTransactionSerializer(serializers.ModelSerializer):
     """
     Нужен для отображения доходов при получении детальной
     информации о конкретном счете.
     """
 
     class Meta:
-        model = Income
+        model = Transaction
         fields = ["id", "amount", "create_at"]
-
-
-class AccountExpenseSerializer(serializers.ModelSerializer):
-    """
-    Нужен для отображения расходов при получении детальной
-    информации о конкретном счете.
-    """
-
-    class Meta:
-        model = Expense
-        fields = ["id", "amount", "create_at"]
-
 
 
 class AccountSerializer(serializers.ModelSerializer):
