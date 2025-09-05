@@ -6,7 +6,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from aiogram.utils.markdown import hbold
 
 from api.common import get_all_objects, get_full_info, delete_object_by_id
-from config import PAGE_SIZE
+from config import PAGE_SIZE, BASE_URL
 from handlers.decorator_handler import decorator_errors
 from keyboards.transaction import get_action
 from keyboards.keyboards import confirmation, create_list_incomes_expenses
@@ -29,7 +29,7 @@ async def expenses_get_history(
     page: int = data.get("page", 1)
 
     url: str = choice_url_transaction(callback.data)
-    full_url: str = url + f"?page={page}&page_size={PAGE_SIZE}"
+    full_url: str = url.format(p=page, ps=PAGE_SIZE)
     result: dict = await get_all_objects(full_url, callback.from_user.id)
 
     await state.update_data(page=page, show=callback.data)
@@ -63,7 +63,7 @@ async def next_prev_output_list_expenses(
         page -= 1
 
     url: str = choice_url_transaction(type_tr)
-    full_url: str = url + f"?page={page}&page_size={PAGE_SIZE}"
+    full_url: str = url.format(p=page, ps=PAGE_SIZE)
     result: Dict[str, list] = await get_all_objects(
         full_url, call.from_user.id
     )
@@ -79,16 +79,17 @@ async def next_prev_output_list_expenses(
     await call.message.edit_reply_markup(reply_markup=keyword)
 
 
-@transaction_show_router.callback_query(TransactionState.show, F.data.isdigit())
+@transaction_show_router.callback_query(
+    TransactionState.show, F.data.isdigit()
+)
 @decorator_errors
 async def detail_incomes(call: CallbackQuery, state: FSMContext) -> None:
     """Show detailed expense information."""
     transaction_id: int = int(call.data)
     show: str = (await state.get_data())["show"]
 
-    url: str = choice_url_transaction(show)
-    full_url = url + f"{transaction_id}/"
-    response: dict = await get_full_info(full_url, call.from_user.id)
+    url = BASE_URL + f"transaction/{transaction_id}/"
+    response: dict = await get_full_info(url, call.from_user.id)
     await state.update_data(transaction_id=transaction_id)
     text: str = await generate_message_transaction_info(response)
 
@@ -129,12 +130,12 @@ async def remove_expense_by_id(
     data: dict[str, str | int] = await state.get_data()
     show: str = data.get("show")
     transaction_id: int = data.get("transaction_id")
-    url: str = choice_url_transaction(show)
-    delete_url = url + f"{transaction_id}/"
-    await delete_object_by_id(delete_url, callback.from_user.id)
+    url = BASE_URL + f"transaction/{transaction_id}/"
+    await delete_object_by_id(url, callback.from_user.id)
 
     page: int = data.get("page", 1)
-    full_url: str = url + f"?page={page}&page_size={PAGE_SIZE}"
+    url: str = choice_url_transaction(show)
+    full_url: str = url.format(p=page, ps=PAGE_SIZE)
     result: dict = await get_all_objects(full_url, callback.from_user.id)
 
     await state.update_data(page=page)

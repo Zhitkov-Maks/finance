@@ -4,6 +4,7 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.utils.markdown import hbold
 
 from api.common import edit_object, get_full_info
+from config import BASE_URL
 from handlers.decorator_handler import decorator_errors
 from keyboards.transaction import get_action, choice_edit
 from keyboards.keyboards import cancel_action
@@ -11,7 +12,6 @@ from states.transaction import TransactionState, EditTransactionState
 from utils.accounts import is_valid_balance
 from utils.transaction import (
     create_new_data,
-    choice_url_transaction,
     generate_message_transaction_info
 )
 
@@ -86,7 +86,7 @@ async def edit_expense_request(message: Message, state: FSMContext) -> None:
     data: dict[str, str | int] = await state.get_data()
     transaction_id, usr_id = data["transaction_id"], message.from_user.id
     show: str = data["show"]
-    url: str = choice_url_transaction(show) + f"{transaction_id}/"
+    url = BASE_URL + f"transaction/{transaction_id}/"
     method: str = ""
 
     if data.get("method"):

@@ -1,6 +1,6 @@
 import re
 
-from config import expenses_url, PAGE_SIZE, incomes_url
+from config import PAGE_SIZE, transaction_url
 from states.search import SearchState
 
 
@@ -66,10 +66,11 @@ async def generate_url(data: dict, page) -> str:
     """
     type_ = data["type"]
     if type_ == "sh_expenses":
-        url = expenses_url
+        add_type = "expense"
     else:
-        url = incomes_url
-    base_url = f"{url}?page={page}&page_size={PAGE_SIZE}"
+        add_type = "income"
+
+    base_url = f"{transaction_url}?page={page}&page_size={PAGE_SIZE}"
 
     if data.get("account_name"):
         base_url += f"&account_name={data['account_name']}"
@@ -88,5 +89,4 @@ async def generate_url(data: dict, page) -> str:
 
     if data.get("amount_lte"):
         base_url += f"&amount_lte={data['amount_lte']}"
-
-    return base_url
+    return base_url + f"&type={add_type}"

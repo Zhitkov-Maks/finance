@@ -1,4 +1,4 @@
-from config import expenses_url, incomes_url
+from config import expenses_url, incomes_url, transaction_url
 
 
 def choice_type_transaction(name: str) -> str:
@@ -9,10 +9,7 @@ def choice_type_transaction(name: str) -> str:
 
 
 def choice_url_transaction(name: str) -> str:
-    if "exp" in name:
-        return expenses_url
-    else:
-        return incomes_url
+    return expenses_url if "exp" in name else incomes_url
 
 
 async def get_category_url(
@@ -26,10 +23,9 @@ async def get_category_url(
     :param page_size: Page size for the request.
     :return str: The url string.
     """
-    base_url = expenses_url
-    if "inc" in type_transaction:
-        base_url = incomes_url
-    return base_url + f"category/?page={page}&page_size={page_size}"
+    base_url = "income" if "inc" in type_transaction else "expense"
+    return (transaction_url + f"category/?page={page}"
+            f"&page_size={page_size}&type={base_url}")
 
 
 async def create_transaction_data(

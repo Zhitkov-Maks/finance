@@ -33,7 +33,9 @@ category_route: Router = Router()
 
 @category_route.callback_query(F.data == "categories")
 @decorator_errors
-async def start_working_category(callback: CallbackQuery, state: FSMContext) -> None:
+async def start_working_category(
+    callback: CallbackQuery, state: FSMContext
+) -> None:
     """
     The handler for getting started with categories shows
     the keyboard with possible actions.
@@ -102,7 +104,8 @@ async def current_category(
         call: CallbackQuery, state: FSMContext
     ) -> None:
     """
-    Handler for displaying the current category after clicking the back button when editing a category.
+    Handler for displaying the current category after
+    clicking the back button when editing a category.
     """
     data: dict = await state.get_data()
     result: dict = data.get("result")
@@ -116,11 +119,13 @@ async def current_category(
     )
 
 
-@category_route.callback_query(CategoryState.show, F.data.isdigit())
+@category_route.callback_query(
+    CategoryState.show, F.data.split("_")[0].isdigit()
+)
 @decorator_errors
 async def detail_category(call: CallbackQuery, state: FSMContext) -> None:
     """Show detailed category information."""
-    await state.update_data(category_id=int(call.data))
+    await state.update_data(category_id=int(call.data.split("_")[0]))
     data: dict = await state.get_data()
 
     url, _ = await get_url(data)
