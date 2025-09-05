@@ -36,6 +36,7 @@ async def expenses_get_history(
     keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(
         result,
         "sh_expenses" if callback.data.startswith("exp") else "sh_incomes",
+        "exp" if callback.data.startswith("exp") else "inc",
         "prev_transaction",
         "next_transaction"
     )
@@ -70,6 +71,7 @@ async def next_prev_output_list_expenses(
     keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(
         result,
         "sh_expenses" if type_tr.startswith("exp") else "sh_incomes",
+        "exp" if type_tr.startswith("exp") else "inc",
         "prev_transaction",
         "next_transaction"
     )
@@ -142,6 +144,7 @@ async def remove_expense_by_id(
     keyword: InlineKeyboardMarkup = await create_list_incomes_expenses(
         result,
         "sh_expenses" if callback.data.startswith("exp") else "sh_incomes",
+        "exp" if show.startswith("exp") else "inc",
         "prev_transaction",
         "next_transaction"
     )

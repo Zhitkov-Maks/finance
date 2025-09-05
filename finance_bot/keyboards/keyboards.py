@@ -8,6 +8,7 @@ from utils.common import create_pagination_buttons
 async def create_list_incomes_expenses(
     data: dict[str, list],
     call_data: str,
+    type_transaction: str,
     prev: str = "prev_inc",
     next_d: str = "next_inc",
 ) -> InlineKeyboardMarkup:
@@ -21,11 +22,11 @@ async def create_list_incomes_expenses(
     """
     inline_buttons: List[List[InlineKeyboardButton]] = []
     previous, next_ = data.get("previous"), data.get("next")
-
+    mark: str = "-" if type_transaction == "exp" else "+"
     for item in data.get("results"):
         id_: int = item.get("id")
         dt: str = f"📆 {item['create_at'][8:10]}-{item['create_at'][5:7]}"
-        text: str = (f"{dt}  💰{item.get("amount")}₽  "
+        text: str = (f"{dt}  💰 {mark}{item.get("amount")}₽  "
                      f"{item.get('category').get('name')}")
 
         inline_buttons.append(
