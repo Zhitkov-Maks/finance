@@ -43,36 +43,23 @@ async def start_account(callback: CallbackQuery, state: FSMContext) -> None:
     )
 
 
-@account.callback_query(F.data == "next_acc")
+@account.callback_query(F.data.in_(["next_acc", "prev_acc"]))
 @decorator_errors
 async def next_output_list_habits(
         call: CallbackQuery, state: FSMContext
 ) -> None:
     """Show more invoices if any."""
     page: int = (await state.get_data()).get("page")
-    url: str = await account_url(page + 1, PAGE_SIZE)
+    if "next" in call.data:
+        page += 1
+    else:
+        page -= 1
+    url: str = await account_url(page, PAGE_SIZE)
 
     result: dict = await get_all_objects(url, call.from_user.id)
 
     keyword: InlineKeyboardMarkup = await create_list_account(result)
-    await state.update_data(page=page + 1)
-    await state.set_state(AccountsState.show)
-    await call.message.edit_reply_markup(reply_markup=keyword)
-
-
-@account.callback_query(F.data == "prev_acc")
-@decorator_errors
-async def prev_output_list_habits(
-        call: CallbackQuery, state: FSMContext
-) -> None:
-    """Show the previous page."""
-    page: int = (await state.get_data()).get("page")
-    url: str = await account_url(page - 1, PAGE_SIZE)
-
-    result: dict = await get_all_objects(url, call.from_user.id)
-
-    keyword: InlineKeyboardMarkup = await create_list_account(result)
-    await state.update_data(page=page - 1)
+    await state.update_data(page=page)
     await state.set_state(AccountsState.show)
     await call.message.edit_reply_markup(reply_markup=keyword)
 
@@ -108,11 +95,11 @@ async def change_toggle(callback: CallbackQuery, state: FSMContext) -> None:
     )
 
 
-@account.callback_query(AccountsState.show, F.data.isdigit())
+@account.callback_query(AccountsState.show, F.data.split("_")[0].isdigit())
 @decorator_errors
 async def detail_account(call: CallbackQuery, state: FSMContext) -> None:
     """Show detailed account information."""
-    account_id: int = int(call.data)
+    account_id: int = int(call.data.split("_")[0])
     url: str = await account_by_id(account_id)
 
     # Fetch account info
