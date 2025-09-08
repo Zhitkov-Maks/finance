@@ -51,7 +51,15 @@ async def create_expense_choice_date(
     It is needed when creating and editing expense.
     A handler for showing the user a calendar for selecting a date.
     """
-    await state.update_data(type=callback.data)
+    call_data: str = callback.data
+    if "ixp" in call_data or "inc" in call_data:
+        type_transaction = call_data
+    else:
+        # Then we take the data from what was opened. 
+        # History of expenses or income.
+        type_transaction: str = (await state.get_data())["show"]
+
+    await state.update_data(type=type_transaction)
     await state.set_state(CreateTransactionState.date)
 
     year: int = datetime.now().year

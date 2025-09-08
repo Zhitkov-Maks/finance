@@ -61,11 +61,10 @@ async def edit_balance(callback: CallbackQuery, state: FSMContext) -> None:
 @decorator_errors
 async def ask_add_comment(message: Message, state: FSMContext) -> None:
     """Handler for the amount and input of the expense comment."""
-    show: str = (await state.get_data())["show"]
     if not is_valid_balance(message.text):
         await message.answer(
             "Ошибка ввода, попробуйте еще раз.",
-            reply_markup=await cancel_action(show)
+            reply_markup=await cancel_action()
         )
         return
 
@@ -74,7 +73,7 @@ async def ask_add_comment(message: Message, state: FSMContext) -> None:
     await message.answer(
         text=hbold("Введите комментарий. Если комментарий не нужен, "
                    "то, отправьте один любой символ."),
-        reply_markup=await cancel_action(show),
+        reply_markup=await cancel_action(),
         parse_mode="HTML"
     )
 
@@ -94,7 +93,7 @@ async def edit_expense_request(message: Message, state: FSMContext) -> None:
         if not is_valid_balance(message.text):
             await message.answer(
                 "Invalid balance format. Please enter a valid number.",
-                reply_markup=await cancel_action(show)
+                reply_markup=await cancel_action()
             )
             return
         edit_data: dict = {"amount": float(message.text)}
