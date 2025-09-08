@@ -317,14 +317,16 @@ async def next_or_prev_account_to_debt(
     await call.message.edit_reply_markup(reply_markup=keyword)
 
 
-@debt_router.callback_query(DebtsStates.account, F.data.isdigit)
+@debt_router.callback_query(
+    DebtsStates.account, F.data.split("_")[0].isdigit()
+)
 @decorator_errors
 async def save_account_input_amount(
     call: CallbackQuery,
     state: FSMContext
 ) -> None:
     """A handler for saving the account ID and requesting the loan amount."""
-    await state.update_data(account_id=call.data)
+    await state.update_data(account_id=call.data.split("_")[0])
     await state.set_state(DebtsStates.description)
     await call.message.edit_text(
         text=hbold("Введите сумму заема."),
