@@ -83,9 +83,14 @@ class TransactionView(generics.ListCreateAPIView):
         """
         Добавление баланса в выбранный счет.
         """
+        type_transaction = self.request.query_params.get('type')
         transaction: Transaction = serializer.save(user=self.request.user)
         account: Account = transaction.account
-        account.balance += transaction.amount
+
+        if type_transaction.startswith("inc"):
+            account.balance += transaction.amount
+        else:
+            account.balance -= transaction.amount
         account.save()
 
     def create(self, request, *args, **kwargs):
@@ -151,7 +156,10 @@ class RetrieveUpdateDeleteTransaction(generics.RetrieveUpdateDestroyAPIView):
         account: Account = instance.account  # Получаем счет
         amount: decimal = instance.amount  # Сохраняем сумму дохода
 
-        account.balance -= amount
+        if instance.category.type_transaction == "income":
+            account.balance -= amount
+        else:
+            account.balance += amount
         account.save()
         instance.delete()
 
@@ -162,7 +170,7 @@ class RetrieveUpdateDeleteTransaction(generics.RetrieveUpdateDestroyAPIView):
         :param serializer: Сериализатор с новыми данными.
         """
         instance: Transaction = self.get_object()
-
+        type_transaction = instance.category.type_transaction
         old_account: Account = instance.account
         new_account: Account = serializer.validated_data.get(
             "account", old_account
@@ -176,13 +184,20 @@ class RetrieveUpdateDeleteTransaction(generics.RetrieveUpdateDestroyAPIView):
         serializer.save()
 
         if new_account != old_account:
-            old_account.balance -= old_amount
-            old_account.save()
-
-            new_account.balance += new_amount
-            new_account.save()
+            if type_transaction.startswith("exp"):
+                old_account.balance += old_amount
+                new_account.balance -= new_amount
+            else:
+                old_account.balance -= old_amount
+                new_account.balance += new_amount
+            Account.objects.bulk_update(
+                (new_account, old_account), ["balance"]
+            )
         else:
-            old_account.balance += old_amount - new_amount
+            if type_transaction.startswith("inc"):
+                old_account.balance += new_amount - old_amount
+            else:
+                old_account.balance += old_amount - new_amount
             old_account.save()
 
 
@@ -227,7 +242,7 @@ class ListCategory(generics.ListCreateAPIView):
         type_transaction = self.request.query_params.get('type')
         category_name: str = serializer.validated_data['name']
         existing_category = Category.objects.filter(
-            user=user, name=category_name
+            user=user, name=category_name, type_transaction=type_transaction
         ).first()
 
         if existing_category:
