@@ -52,7 +52,7 @@ async def create_expense_choice_date(
     A handler for showing the user a calendar for selecting a date.
     """
     call_data: str = callback.data
-    if "ixp" in call_data or "inc" in call_data:
+    if "exp" in call_data or "inc" in call_data:
         type_transaction = call_data
     else:
         # Then we take the data from what was opened. 
