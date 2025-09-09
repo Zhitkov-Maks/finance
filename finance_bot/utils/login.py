@@ -8,7 +8,8 @@ async def update_token(
     user_id: int
 ) -> None:
     """
-    Adds a token to the transferred user.
+    Add a token to the transferred user.
+
     :param data: Dict with jwt
     :param user_id: ID user.
     :return None:

@@ -22,8 +22,7 @@ DAYS_LIST: tuple = ("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")
 
 async def get_date(data: Dict[str, str], action: str) -> Tuple[int, int]:
     """
-    The function gets the current transmitted date, and depending
-    on the selected one actions either add or subtract a month.
+    Return the date depending on the transmitted command.
 
     :param data: Dictionary with year and month.
     :param action: The selected action is prev next.

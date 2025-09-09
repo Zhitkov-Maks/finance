@@ -13,6 +13,7 @@ async def create_header(user_id: int) -> str:
     """
     Forming a header to send it in a request for
     user authentication on the backend side.
+
     :param user_id: ID user.
     :return str: Returns a token for working with requests.
     """
@@ -48,7 +49,8 @@ async def create_pagination_buttons(
     next_d: str
 ) -> List[InlineKeyboardButton]:
     """
-    A function for forming buttons for adding pagination.
+    Create buttons for adding pagination.
+
     :param previous: Previous button.
     :param next_: Next button.
     :param prev: Name the previous button.

@@ -8,7 +8,9 @@ async def get_url_and_type_message(
         data: str, year: int, month: int
 ) -> tuple[str, str]:
     """
-    Generates the url for the request and the type of message for the response.
+    Generates the url for the request
+    and the type of message for the response.
+
     :param data: The string for determining the url.
     :param year: The year for the request.
     :param month: The month for the request.
@@ -27,8 +29,9 @@ async def get_statistic_current_month(
         url: str, user_id: int, accounts=False
 ) -> float:
     """
-    Returns monthly statistics on income and expenses,
+    Return monthly statistics on income and expenses,
     or the sum of all accounts at the moment.
+
     :param url: Url for the request
     :param user_id: The telegram chat ID.
     :param accounts: A Boolean value for selecting an option
@@ -43,7 +46,8 @@ async def get_statistic_current_month(
 
 async def gen_message_statistics(data: dict) -> str:
     """
-    The function generates a message for expenses and incomes by category.
+    Generate a message for expenses and incomes by category.
+
     :param data: The result of the request to the server.
     :return: A message in the form of a string.
     """
@@ -69,7 +73,8 @@ async def get_message_incomes_by_expenses(
     amount_inc: float, amount_exp: float, year: int, month: int
 ) -> str:
     """
-    Generating a graphic image of the income-to-expense ratio.
+    Generate message of the income-to-expense ratio.
+
     :param month: Month to display the date.
     :param year: Year to display the date.
     :param amount_inc: The amount of incomes.

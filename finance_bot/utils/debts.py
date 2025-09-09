@@ -1,6 +1,6 @@
 async def generate_debts_message(data: dict) -> str:
     """
-    We are generating a message to show detailed information about the debt.
+    Generate a message to show detailed information about the debt.
     :param data: A dict with debt data.
     """
     amount: str = data.get("transfer").get("amount")
@@ -24,7 +24,8 @@ async def generate_debts_message(data: dict) -> str:
 
 async def create_debt_data_for_request(data: dict) -> dict:
     """
-    A function for generating a dictionary to save debt.
+    Create a dictionary to save debt.
+
     :param data: A dict with debt data.
     """
     return {

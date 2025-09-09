@@ -3,7 +3,7 @@ import re
 
 async def create_data(email, password) -> dict:
     """
-    Generates a dictionary with user data to save to the database.
+    Generate a dictionary with user data to save to the database.
 
     :param email: User's email
     :param password: User's password
@@ -18,7 +18,7 @@ async def create_data(email, password) -> dict:
 
 def is_valid_password(password: str) -> bool:
     """
-    A function to check the password strength.
+    Check the password strength.
 
     :param password: Password for checking.
     :return bool: Does it match or not
@@ -29,7 +29,7 @@ def is_valid_password(password: str) -> bool:
 
 def is_valid_email(email: str) -> bool:
     """
-    A function to check the email.
+    Check the email.
 
     :param email: Email for checking.
     :return bool: Does it match or not.

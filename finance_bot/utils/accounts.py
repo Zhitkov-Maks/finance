@@ -11,6 +11,7 @@ balance_pattern: re.Pattern = re.compile(r"^-?\d+(\.\d+)?$")
 def is_valid_balance(balance: str) -> bool:
     """
     Check if the provided balance is a valid integer or float.
+
     :param balance: The passed string for verification.
     :return: Boolean value.
     """
@@ -19,7 +20,8 @@ def is_valid_balance(balance: str) -> bool:
 
 async def account_url(page: int, page_size: int = 10) -> str:
     """
-    Generates a url for receiving user invoices.
+    Generate a url for receiving user invoices.
+
     :param page: The page for the request.
     :param page_size: Page size for the request.
     :return str: URL.
@@ -28,6 +30,7 @@ async def account_url(page: int, page_size: int = 10) -> str:
 
 
 async def account_by_id(account_id: int) -> str:
+    """Return the url for working with a specific account."""
     return accounts_url + f"{account_id}/"
 
 
@@ -35,7 +38,8 @@ async def generate_message_answer(
     data: dict[str, list[dict[str, int]] | dict[str, str] | float]
 ) -> str:
     """
-    A function for generating a message for the user.
+    Generate a message for the user.
+
     :param data: Necessary data to generate a message.
     :return str:A message to show to the user
     """
@@ -53,7 +57,8 @@ async def update_account_state(
     state: FSMContext, response: dict[str, str | int | bool]
 ) -> None:
     """
-    Helper function to update the state with account information.
+    Update the state with account information.
+
     :param state: FSMContext for updating data.
     :param response: The result of the request.
     :return: None.

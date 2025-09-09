@@ -3,7 +3,7 @@ from config import expenses_url, incomes_url, transaction_url
 
 def choice_type_transaction(name: str) -> str:
     """
-    Returns the desired message depending on 
+    Return the desired message depending on
     the type of transaction.
 
     :param name: The type of transaction.
@@ -16,7 +16,7 @@ def choice_type_transaction(name: str) -> str:
 
 def choice_url_transaction(name: str) -> str:
     """
-    Returns the required url depending on the type of transaction.
+    Return the required url depending on the type of transaction.
 
     :param name: The type of transaction.
     """
@@ -29,7 +29,7 @@ async def get_category_url(
     page_size: int = 10
 ) -> str:
     """
-    Generating URLs for working with transaction categories lists.
+    Generate URLs for working with transaction categories lists.
 
     :param page: The page for the request.
     :param page_size: Page size for the request.
@@ -44,7 +44,7 @@ async def create_transaction_data(
     data: dict, comment: str
 ) -> dict[str, float | str | int]:
     """
-    A function for generating a message for
+    Generate a message for
     detailed transaction information.
 
     :param data: A dictionary with data for forming a message.
@@ -112,7 +112,7 @@ async def create_new_data(
     data: dict, comment: str
 ) -> dict[str, float | str | int]:
     """
-    A function for generating a message for
+    Generate a message for
     detailed transaction information.
 
     :param data: A dictionary with data for forming a message.

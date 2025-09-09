@@ -39,7 +39,8 @@ state_dict: dict[str, tuple] = {
 
 async def validate_data_search(action: str, text: str) -> bool:
     """
-    Checking the validity of some data.
+    Check the validity of some data.
+
     :param action: Command.
     :param text: The message that the user entered.
     """
