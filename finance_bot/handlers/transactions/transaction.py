@@ -24,7 +24,7 @@ transaction_show_router: Router = Router()
 async def expenses_get_history(
         callback: CallbackQuery, state: FSMContext
 ) -> None:
-    """A handler for displaying the latest expenses."""
+    """A handler for displaying the latest transaction."""
     data: dict[str, str | int] = await state.get_data()
     page: int = data.get("page", 1)
 
@@ -54,7 +54,7 @@ async def expenses_get_history(
 async def next_prev_output_list_expenses(
     call: CallbackQuery, state: FSMContext
 ) -> None:
-    """Show more expenses if any."""
+    """Show more transaction if any."""
     data: dict = await state.get_data()
     page, type_tr = data.get("page"), data.get("show")
 
@@ -86,7 +86,7 @@ async def next_prev_output_list_expenses(
 )
 @decorator_errors
 async def detail_incomes(call: CallbackQuery, state: FSMContext) -> None:
-    """Show detailed expense information."""
+    """Show detailed transaction information."""
     transaction_id: int = int(call.data)
     show: str = (await state.get_data())["show"]
 
@@ -127,7 +127,7 @@ async def remove_expense_by_id(
         callback: CallbackQuery, state: FSMContext
 ) -> None:
     """
-    The final income deletion handler.
+    The final transaction deletion handler.
     """
     data: dict[str, str | int] = await state.get_data()
     show: str = data.get("show")

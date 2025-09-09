@@ -48,7 +48,7 @@ async def create_expense_choice_date(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
     """
-    It is needed when creating and editing expense.
+    It is needed when creating and editing transaction.
     A handler for showing the user a calendar for selecting a date.
     """
     call_data: str = callback.data
@@ -106,7 +106,7 @@ async def next_and_prev_month(
 async def create_expense_choice_account(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
-    """A handler for selecting an account to add/change expense to."""
+    """A handler for selecting an account to add/change transaction to."""
     page: int = 1
     date: str = callback.data
     url: str = await account_url(page, PAGE_SIZE)
@@ -176,7 +176,7 @@ async def next_prev_account(call: CallbackQuery, state: FSMContext) -> None:
 async def create_income_choice_category(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
-    """A handler for selecting an expense category to add an edit to."""
+    """A handler for selecting an transaction category to add an edit to."""
     page: int = 1
     account_name = callback.data.split("_")[1]
     await state.update_data(
@@ -263,7 +263,7 @@ async def create_expense_input_amount(
     callback: CallbackQuery,
     state: FSMContext
 ) -> None:
-    """The handler for requesting the amount of expense from the user."""
+    """The handler for requesting the amount of transaction from the user."""
     await state.update_data(category=callback.data.split("_")[0])
     type_: str = (await state.get_data()).get("type")
 
@@ -297,7 +297,8 @@ async def create_expense_input_amount(
 @decorator_errors
 async def ask_add_comment(message: Message, state: FSMContext) -> None:
     """
-    A handler for saving the amount and entering a comment on the expense.
+    A handler for saving the amount and entering
+    a comment on the transaction.
     """
     if not is_valid_balance(message.text):
         await message.answer(
@@ -318,7 +319,7 @@ async def ask_add_comment(message: Message, state: FSMContext) -> None:
 @transaction_router.message(CreateTransactionState.comment)
 @decorator_errors
 async def create_expense_final(message: Message, state: FSMContext) -> None:
-    """The final handler for the request to create a new expense."""
+    """The final handler for the request to create a new transaction."""
     data: dict[str, str | int] = await state.get_data()
     type_transaction = data["type"]
     usr_id: int = message.from_user.id

@@ -23,7 +23,7 @@ edit_transaction: Router = Router()
 async def edit_expense_choice(
         callback: CallbackQuery, state: FSMContext
 ) -> None:
-    """A handler for selecting an expense editing option."""
+    """A handler for selecting an transaction editing option."""
     data: dict = await state.get_data()
     expense_id = data.get("transaction_id")
     await state.set_state(TransactionState.show)
@@ -45,7 +45,7 @@ async def edit_expense_choice(
 @decorator_errors
 async def edit_balance(callback: CallbackQuery, state: FSMContext) -> None:
     """
-    The handler for requesting the amount of expense when editing only
+    The handler for requesting the amount of transaction when editing only
     the balance.
     """
     await state.set_state(EditTransactionState.comment)
@@ -60,7 +60,7 @@ async def edit_balance(callback: CallbackQuery, state: FSMContext) -> None:
 @edit_transaction.message(EditTransactionState.amount)
 @decorator_errors
 async def ask_add_comment(message: Message, state: FSMContext) -> None:
-    """Handler for the amount and input of the expense comment."""
+    """Handler for the amount and input of the transaction comment."""
     if not is_valid_balance(message.text):
         await message.answer(
             "Ошибка ввода, попробуйте еще раз.",
