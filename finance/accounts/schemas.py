@@ -14,6 +14,7 @@ from transfer.serializers import (
 # Assuming AccountSerializer is defined correctly elsewhere
 listAccountSchema = extend_schema_view(
     get=extend_schema(
+        operation_id="get_all_accounts",
         description="Получить список всех счетов текущего пользователя. "
                     "Каждый аккаунт связан с пользователем и содержит "
                     "информацию о балансе.",
@@ -23,6 +24,7 @@ listAccountSchema = extend_schema_view(
         },
     ),
     post=extend_schema(
+        operation_id="create_new_account",
         description="Создать новый счет для текущего пользователя. "
                     "Укажите название счета и начальный баланс.",
         request=AccountPutSerializer,
@@ -38,6 +40,7 @@ listAccountSchema = extend_schema_view(
 # Схемы для просмотра, удаления и редактирования конкретного счета.
 RetrieveUpdateDeleteAccountSchema = extend_schema_view(
     get=extend_schema(
+        operation_id="get_account_by_id",
         description="Получить детальную информацию о счете. В счет добавляется "
                     "информация о последних доходах и расходах за "
                     "последние 30 дней.",
@@ -48,6 +51,7 @@ RetrieveUpdateDeleteAccountSchema = extend_schema_view(
         },
     ),
     put=extend_schema(
+        operation_id="update_account_all_data",
         description="Обновить все данные о счете(название и баланс)",
         request=AccountPutSerializer,
         responses={
@@ -58,6 +62,7 @@ RetrieveUpdateDeleteAccountSchema = extend_schema_view(
         },
     ),
     patch=extend_schema(
+        operation_id="update_account_balance",
         description="Изменить баланс счета.",
         request=AccountPatchSerializer,
         responses={

@@ -23,7 +23,7 @@ class DebtRepaymentSerializer(serializers.Serializer):
     type = serializers.CharField(max_length=10)
 
 
-class TransferSerializer(serializers.ModelSerializer):
+class TransferDebtSerializer(serializers.ModelSerializer):
     """Нужен при работе со списком долгов."""
 
     class Meta:
@@ -36,14 +36,14 @@ class TransferSerializer(serializers.ModelSerializer):
 
 class DebtListSerializer(serializers.ModelSerializer):
     """Нужен для получения списка долгов."""
+    transfer = TransferDebtSerializer()
 
-    transfer = TransferSerializer()
     class Meta:
         model = Debt
         fields = ['id', 'transfer', 'borrower_description']
 
 
-class AccountSerializer(serializers.ModelSerializer):
+class AccountDebtSerializer(serializers.ModelSerializer):
     """
     Нужен для показа полной информации о счетах при работе с
     конкретным долгом.
@@ -60,8 +60,8 @@ class TransferDetailSerializer(serializers.ModelSerializer):
     сериализаторе получения полной информации о долге.
     """
 
-    source_account = AccountSerializer()
-    destination_account = AccountSerializer()
+    source_account = AccountDebtSerializer()
+    destination_account = AccountDebtSerializer()
 
     class Meta:
         model = Transfer
@@ -73,10 +73,11 @@ class TransferDetailSerializer(serializers.ModelSerializer):
             'timestamp'
         ]
 
+
 class DebtDetailSerializer(serializers.ModelSerializer):
     """Показ полной информации о конкретном долге."""
-
     transfer = TransferDetailSerializer()
+
     class Meta:
         model = Debt
         fields = ['id', 'transfer', 'borrower_description']

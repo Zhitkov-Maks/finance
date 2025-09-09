@@ -48,7 +48,7 @@ class TransactionView(generics.ListCreateAPIView):
     """
     Класс для получения списка транзакций и создания новой транзакции.
     """
-
+    queryset = Transaction.objects.none()
     pagination_class = Pagination
     serializer_class = TransactionSerializer
     permission_classes = (IsAuthenticated,)
@@ -118,7 +118,7 @@ class RetrieveUpdateDeleteTransaction(generics.RetrieveUpdateDestroyAPIView):
     Класс для редактирования, удаления и получения детальной
     информации о транзакции.
     """
-
+    queryset = Transaction.objects.none()
     serializer_class = TransactionSerializer
     permission_classes = (IsAuthenticated,)
     authentication_classes = (
@@ -170,7 +170,7 @@ class RetrieveUpdateDeleteTransaction(generics.RetrieveUpdateDestroyAPIView):
         :param serializer: Сериализатор с новыми данными.
         """
         instance: Transaction = self.get_object()
-        type_transaction = instance.category.type_transaction
+        type_transaction: str = instance.category.type_transaction
         old_account: Account = instance.account
         new_account: Account = serializer.validated_data.get(
             "account", old_account
@@ -307,14 +307,18 @@ class CategoryTransactionStatisticsView(generics.GenericAPIView):
                 status=400
             )
 
-        statistics = get_category_statistics(
+        statistics: QuerySet = get_category_statistics(
             request.user, year, month, type_tr=type_tr
         )
-        total_amount = sum(float(item['total_amount']) for item in statistics)
+        total_amount: float = sum(
+            float(item['total_amount']) for item in statistics
+        )
 
-        response_data = {
+        response_data: dict[str, QuerySet | float] = {
             "statistics": statistics,
             "total_amount": total_amount,
         }
-        serializer = self.get_serializer(response_data)
+        serializer: StatisticsResponseSerializer = self.get_serializer(
+            response_data
+        )
         return Response(serializer.data)

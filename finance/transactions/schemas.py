@@ -1,10 +1,14 @@
-from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    extend_schema,
+    extend_schema_view
+)
+
 from transfer.serializers import (
     IsNotAuthentication,
     NotFoundError,
     ValidationError,
 )
-
 from .serializers import (
     CategorySerializer,
     CategoryTransactionStatisticsSerializer,
@@ -14,8 +18,10 @@ from .serializers import (
     TransactionSerializersPatch,
 )
 
+
 TtransactionViewSchema = extend_schema_view(
     get=extend_schema(
+        operation_id="get_all_transactions",
         parameters=[
             OpenApiParameter(
                 "type", str,
@@ -29,6 +35,7 @@ TtransactionViewSchema = extend_schema_view(
         },
     ),
     post=extend_schema(
+        operation_id="create_new_transaction",
         description="Создать новую транзакцию.",
         request=TransactionSerializersAdd,
         responses={
@@ -42,6 +49,7 @@ TtransactionViewSchema = extend_schema_view(
 
 RetrieveUpdateDeleteTransactionSchema = extend_schema_view(
     get=extend_schema(
+        operation_id="get_transaction_by_id",
         description="Получение подробной информации о транзакции.",
         responses={
             200: TransactionSerializerGet(many=True),
@@ -50,6 +58,7 @@ RetrieveUpdateDeleteTransactionSchema = extend_schema_view(
         },
     ),
     put=extend_schema(
+        operation_id="update_transaction_all_data",
         description="Обновить все данные о доходе.",
         request=TransactionSerializersAdd,
         responses={
@@ -60,6 +69,7 @@ RetrieveUpdateDeleteTransactionSchema = extend_schema_view(
         },
     ),
     patch=extend_schema(
+        operation_id="update_transaction_balance",
         description="Изменить сумму транзакции",
         request=TransactionSerializersPatch,
         responses={
@@ -70,6 +80,7 @@ RetrieveUpdateDeleteTransactionSchema = extend_schema_view(
         },
     ),
     delete=extend_schema(
+        operation_id="remove_transaction_by_id",
         description="Удалить транзакцию.",
         responses={
             204: None,
@@ -82,6 +93,7 @@ RetrieveUpdateDeleteTransactionSchema = extend_schema_view(
 
 ListCategoryTransactionSchema = extend_schema_view(
     get=extend_schema(
+        operation_id="get_all_category_transactions",
         parameters=[
             OpenApiParameter(
                 "type", str,
@@ -95,6 +107,7 @@ ListCategoryTransactionSchema = extend_schema_view(
         },
     ),
     post=extend_schema(
+        operation_id="craete_new_category",
         parameters=[
             OpenApiParameter(
                 "type", str,
@@ -114,6 +127,7 @@ ListCategoryTransactionSchema = extend_schema_view(
 
 RetrieveUpdateDeleteCategoryTransactionSchema = extend_schema_view(
     get=extend_schema(
+        operation_id="get_category_by_id",
         description="Получение подробной информации о категории.",
         responses={
             200: CategorySerializer,
@@ -122,6 +136,7 @@ RetrieveUpdateDeleteCategoryTransactionSchema = extend_schema_view(
         },
     ),
     put=extend_schema(
+        operation_id="update_category_transaction",
         description="Обновить данные о категории",
         request=CategorySerializer,
         responses={
@@ -132,6 +147,7 @@ RetrieveUpdateDeleteCategoryTransactionSchema = extend_schema_view(
         },
     ),
     delete=extend_schema(
+        operation_id="remove_category_transaction",
         description="Удалить категорию.",
         responses={
             204: None,
@@ -144,6 +160,7 @@ RetrieveUpdateDeleteCategoryTransactionSchema = extend_schema_view(
 
 transaction_statistic_schema = extend_schema_view(
     get=extend_schema(
+        operation_id="get_statistics_transactions",
         tags=["TransactionStatistic"],
         parameters=[
             OpenApiParameter(

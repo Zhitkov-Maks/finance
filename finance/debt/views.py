@@ -6,7 +6,7 @@ from rest_framework.authentication import (
     SessionAuthentication,
 )
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, GenericAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -22,7 +22,8 @@ from .serializers import (
     DebtCreateSerializer,
     DebtRepaymentSerializer,
     DebtDetailSerializer,
-    DebtListSerializer
+    DebtListSerializer,
+    AccountDebtSerializer
 )
 from debt.util import (
     create_debt_accounts,
@@ -36,13 +37,15 @@ from app_user.models import CustomUser
 @DebtCreateAccountsSchema
 class CreateDebtAccountsView(APIView):
     """Класс для создания двух счетов для работы с долгами."""
-
     permission_classes = [IsAuthenticated]
     authentication_classes = (
         TokenAuthentication,
         BasicAuthentication,
         SessionAuthentication,
     )
+    
+    def get_serializer_class(self):
+        return AccountDebtSerializer
 
     def post(self, request) -> Response:
         """Метод для создания счетов для работы с долгами."""

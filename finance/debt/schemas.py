@@ -14,6 +14,7 @@ from transfer.serializers import IsNotAuthentication, NotFoundError
 
 DebtListSchema = extend_schema_view(
     get=extend_schema(
+        operation_id="get_all_debts",
         tags=["Debt"],
         parameters=[
             OpenApiParameter(
@@ -32,6 +33,7 @@ DebtListSchema = extend_schema_view(
 
 DebtDetailSchema = extend_schema_view(
     get=extend_schema(
+        operation_id="get_debt_by_id",
         tags=["Debt"],
         description="Получение информации о конкретном долге.",
         responses={
@@ -45,6 +47,7 @@ DebtDetailSchema = extend_schema_view(
 
 DebtRepaySchema = extend_schema_view(
     post=extend_schema(
+        operation_id="remove_debt",
         tags=["Debt"],
         description="Работа с погашением долгов. В полу type должно быть "
                     "указано либо debt либо lend.",
@@ -59,6 +62,7 @@ DebtRepaySchema = extend_schema_view(
 
 DebtCreateSchema = extend_schema_view(
     post=extend_schema(
+        operation_id="create_debt",
         tags=["Debt"],
         description="Работа с добавлением долга.",
         responses={
@@ -72,6 +76,7 @@ DebtCreateSchema = extend_schema_view(
 
 DebtCreateAccountsSchema = extend_schema_view(
     post=extend_schema(
+        operation_id="create_account_debt",
         tags=["Debt"],
         description="Создание счетов: взять в долг, дать в долг.",
         responses={

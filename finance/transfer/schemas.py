@@ -13,6 +13,7 @@ from .serializers import (
 # Схемы для просмотра, удаления и редактирования конкретного перевода.
 TransferRetrieveViewSchema = extend_schema_view(
     get=extend_schema(
+        operation_id="get_transfer_by_id",
         description="Получить детали перевода по ID.",
         responses={
             201: AccountSerializer,
@@ -21,6 +22,7 @@ TransferRetrieveViewSchema = extend_schema_view(
         },
     ),
     put=extend_schema(
+        operation_id="update_transfer_all_data",
         description="Обновить детали перевода по ID.",
         request=TransferSerializer,
         responses={
@@ -31,6 +33,7 @@ TransferRetrieveViewSchema = extend_schema_view(
         },
     ),
     delete=extend_schema(
+        operation_id="remove_transfer",
         description="Удалить перевод по ID.",
         responses={
             204: None,
@@ -45,6 +48,7 @@ TransferRetrieveViewSchema = extend_schema_view(
 # Схема для создания перевода
 TransferSchema = extend_schema_view(
     post=extend_schema(
+        operation_id="create_new_transfer",
         description="Метод для перевода денег между своими счетами",
         request=TransferSerializer,
         responses={
@@ -59,6 +63,7 @@ TransferSchema = extend_schema_view(
 # Схема для получения списка переводов
 TransferHistoryViewSchema = extend_schema_view(
     get=extend_schema(
+        operation_id="get_history_transfer",
         description="Получить историю переводов для текущего пользователя.",
         responses={
             200: TransferSerializer(many=True),
