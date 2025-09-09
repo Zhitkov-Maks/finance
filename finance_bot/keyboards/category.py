@@ -5,7 +5,8 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 async def get_categories_action(back: str) -> InlineKeyboardMarkup:
     """
-    The function generates a keyboard for working with categories.
+    Create a keyboard for working with categories.
+
     :param back: A string that will indicate which action
                     to assign to the back button.
     :return: A keyboard for working with categories.
@@ -28,11 +29,12 @@ async def create_list_category(
     next_cat: str = "next_cat_inc",
 ) -> InlineKeyboardMarkup:
     """
-    Creates an inline keyboard.
+    Create a keyboard for working with a list of categories.
+
     :param next_cat: The name for the callback_data when
-                        forming the keyboard.
+        forming the keyboard.
     :param prev: The name for the callback_data when
-                    forming the keyboard.
+        forming the keyboard.
     :param data: Dictionary with query data.
     :return: The inline keyboard.
     """

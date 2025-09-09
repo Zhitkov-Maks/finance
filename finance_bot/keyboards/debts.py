@@ -7,8 +7,8 @@ from utils.common import create_pagination_buttons
 
 async def generate_debts_actions(action: str) -> InlineKeyboardMarkup:
     """
-    The keyboard for working with a specific debt shows
-    options for possible actions with this account.
+    Create buttons to select actions with debt.
+
     :param type_: The type of the debt to show.
     """
     action = "show_debts" if action == "debt" else "show_lends"
@@ -42,7 +42,13 @@ async def debts_keyboard_generate(
     prev: str = "prev_debt",
     next_d: str = "next_debt"
 ) -> InlineKeyboardMarkup:
-    """Generating a keyboard for further debt management."""
+    """
+    Create buttons to work with the list of debts.
+    
+    :param debt_data: A dictionary containing a list of debts.
+    :param prev: The name for the callback_data for the prev button.
+    :param next_d: The name for the callback_data for the next button.
+    """
     keyboards: List[List[InlineKeyboardButton]] = []
     previous, next_ = debt_data.get("previous"), debt_data.get("next")
 

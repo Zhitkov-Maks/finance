@@ -13,7 +13,8 @@ async def create_list_incomes_expenses(
     next_d: str = "next_inc",
 ) -> InlineKeyboardMarkup:
     """
-    Generate expenses or income in the form of an online keyboard.
+    Create buttons from the list of transactions.
+
     :param data: A data dictionary that contains a list of expenses or income.
     :param prev: The name for the prev button.
     :param next_d: The name for the next button.
@@ -41,6 +42,38 @@ async def create_list_incomes_expenses(
     )
     inline_buttons.append(lst_menu)
     return InlineKeyboardMarkup(inline_keyboard=inline_buttons)
+
+
+async def confirmation(action: str) -> InlineKeyboardMarkup:
+    """Create confirmation buttons."""
+    confirm: List[List[InlineKeyboardButton]] = [
+        [
+            InlineKeyboardButton(text="△", callback_data=action),
+            InlineKeyboardButton(text="㊂", callback_data="main"),
+            InlineKeyboardButton(text="➤", callback_data="continue"),
+        ]
+    ]
+    return InlineKeyboardMarkup(
+        inline_keyboard=confirm
+    )
+
+
+async def cancel_action() -> InlineKeyboardMarkup:
+    """Create cancellation buttons when working with transactions."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🔙",
+                    callback_data="current_category",
+                ),
+                InlineKeyboardButton(
+                    text="㊂",
+                    callback_data="main",
+                )
+            ]
+        ]
+    )
 
 
 # The main menu of the bot.
@@ -114,33 +147,3 @@ cancel_button: List[List[InlineKeyboardButton]] = [
 
 # Inline undo button
 cancel_ = InlineKeyboardMarkup(inline_keyboard=cancel_button)
-
-
-async def confirmation(action: str) -> InlineKeyboardMarkup:
-    confirm: List[List[InlineKeyboardButton]] = [
-        [
-            InlineKeyboardButton(text="△", callback_data=action),
-            InlineKeyboardButton(text="㊂", callback_data="main"),
-            InlineKeyboardButton(text="➤", callback_data="continue"),
-        ]
-    ]
-    return InlineKeyboardMarkup(
-        inline_keyboard=confirm
-    )
-
-
-async def cancel_action() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="🔙",
-                    callback_data="current_category",
-                ),
-                InlineKeyboardButton(
-                    text="㊂",
-                    callback_data="main",
-                )
-            ]
-        ]
-    )

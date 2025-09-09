@@ -5,7 +5,11 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 async def get_action(show: str) -> InlineKeyboardMarkup:
     """
-    An inline keyboard with options for actions for a specific expense.
+    An inline keyboard with options for actions 
+    for a specific expense.
+
+    :param show: The command for the desired action
+        when the button is clicked.
     :return: The inline keyboard.
     """
     return InlineKeyboardMarkup(
@@ -65,6 +69,7 @@ async def choice_edit(expense_id) -> InlineKeyboardMarkup:
 
 
 async def cancel_action() -> InlineKeyboardMarkup:
+    """Create cancellation buttons when working with transactions."""
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [

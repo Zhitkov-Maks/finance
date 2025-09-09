@@ -12,12 +12,13 @@ async def create_list_transfer_accounts(
     transfer: bool = False,
 ) -> InlineKeyboardMarkup:
     """
-    Creates an inline keyboard.
+    Create an inline keyboard.
+
     :param transfer: If parameter is true,
-                    then you need a name to show to the user,
-                    not just an id.
+        then you need a name to show to the user,
+        not just an id.
     :param current_account: We do not show the current account
-                            during the transfer
+        during the transfer.
     :param data: Dictionary with query data.
     :return: The inline keyboard.
     """
@@ -47,6 +48,12 @@ async def create_list_transfer_accounts(
 async def generate_keyboard(
     is_next_page: bool, is_prev_page: bool
 ) -> InlineKeyboardMarkup:
+    """
+    Create a keyboard for working with the transaction history.
+
+    :param is_next_page: Are there any more recordings.
+    :param is_prev_page:   Is there a previous page.
+    """
     inline_buttons: List[List[InlineKeyboardButton]] = [
         [
             InlineKeyboardButton(

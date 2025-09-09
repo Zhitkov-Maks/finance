@@ -5,7 +5,8 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 async def generate_inline_keyboard_reset() -> InlineKeyboardMarkup:
     """
-    Generates a keyboard to show possible actions.
+    Create password reset buttons.
+
     :return InlineKeyboardMarkup: An inline keyboard with options.
     """
     inline_reset: List[List[InlineKeyboardButton]] = [

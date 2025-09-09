@@ -8,6 +8,7 @@ from utils.create_calendar import MONTH_DATA
 async def get_month(year: int, month: int, data: str) -> InlineKeyboardMarkup:
     """
     A keyboard so that statistics can be scrolled by month.
+
     :param year: Transferred year.
     :param month: Transferred month.
     :param data: Transferred data.
