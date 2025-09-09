@@ -11,7 +11,8 @@ async def create_list_account(
     next_d: str = "next_acc"
 ) -> InlineKeyboardMarkup:
     """
-    Creates an inline keyboard.
+    Create an inline keyboard for the list of accounts.
+
     :param next_d: The name for the callback_data when
                         forming the keyboard.
     :param prev: The name for the callback_data when
@@ -26,8 +27,10 @@ async def create_list_account(
         keyboards.append(
             [
                 InlineKeyboardButton(
-                    text=f"{item.get("name")} /"
-                            f" {float(item.get('balance')):_}₽",
+                    text=(
+                        f"{item.get("name")} / "
+                        f"{float(item.get('balance')):_}₽"
+                    ),
                     callback_data=f"{id_}_{item.get("name")}"
                 )
             ])
@@ -49,8 +52,9 @@ async def create_list_account(
 
 async def get_action_accounts(is_active: bool) -> InlineKeyboardMarkup:
     """
-    The function generates a keyboard for the action
-    according to a specific account.
+    Create a keyboard to select an action from the account.
+
+    :param is_active: If true, then we show a check mark, otherwise a cross.
     :return InlineKeyboardMarkup: Use the keyboard to select actions.
     """
     toggle = "✔️" if is_active else "✘"

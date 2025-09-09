@@ -4,9 +4,9 @@ from djoser.email import PasswordResetEmail
 
 class CustomPasswordResetEmail(PasswordResetEmail):
     """
-    A class for adding the necessary context and replacing the standard message.
+    A class for adding the necessary context
+    and replacing the standard message.
     """
-
     def get_context_data(self) -> dict:
         """Adding the necessary data to the context."""
         context = super().get_context_data()

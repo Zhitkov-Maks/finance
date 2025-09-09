@@ -3,8 +3,8 @@ from config import categories_urls
 
 async def get_url(data: dict) -> tuple[str, str]:
     """
-    Gets the desired url depending on the action (show expense or income).
-    
+    Get the desired url depending on the action (show expense or income).
+
     :param data: A dictionary with the necessary data to work with.
     :return: Returns the url and the type of action.
     """

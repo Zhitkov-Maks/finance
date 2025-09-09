@@ -90,8 +90,14 @@ async def handler_main_message(message: Message, state: FSMContext) -> None:
 
 
 async def main() -> None:
-    """
-    The function launches the bot.
+    """Start the bot and begin processing incoming messages.
+
+    This function initializes logging at DEBUG level and starts
+    long-polling to receive and process updates from the Telegram API.
+
+    The function runs indefinitely until manually interrupted.
+
+    return None: The function does not return any value and runs until stopped.
     """
     logging.basicConfig(level=logging.DEBUG)
     await dp.start_polling(bot)
