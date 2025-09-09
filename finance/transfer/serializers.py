@@ -11,15 +11,27 @@ class TransferSerializer(serializers.ModelSerializer):
     Нужен для сериализации и валидации данных для работы с переводами
     между своими счетами.
     """
+    source_account_name = serializers.CharField(
+        source='source_account.name', read_only=True
+    )
+    destination_account_name = serializers.CharField(
+        source='destination_account.name', read_only=True
+    )
 
     class Meta:
         model = Transfer
         fields = [
             "source_account",
-            "destination_account",
+            "source_account_name",
+            "destination_account", 
+            "destination_account_name",
             "amount",
             "timestamp"
         ]
+        extra_kwargs = {
+            'source_account': {'write_only': True},
+            'destination_account': {'write_only': True}
+        }
 
     def validate(self, attrs):
         """

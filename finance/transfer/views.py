@@ -1,6 +1,6 @@
 import decimal
 
-from django.db.models import QuerySet
+from django.db.models import QuerySet, Q
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.authentication import (
@@ -100,11 +100,11 @@ class TransferHistoryView(generics.ListAPIView):
         Переопределяем, чтобы вернуть данные по конкретному пользователю.
         """
         user: CustomUser = self.request.user
-        return (
-            Transfer.objects.filter(source_account__user=user)
-            .union(Transfer.objects.filter(destination_account__user=user))
-            .order_by("-timestamp")
-        )
+        return Transfer.objects.filter(
+            Q(source_account__user=user) | Q(destination_account__user=user),
+            source_account__is_system_account=False,
+            destination_account__is_system_account=False
+        ).order_by("-timestamp")
 
 
 @extend_schema(tags=["Transfer"])
