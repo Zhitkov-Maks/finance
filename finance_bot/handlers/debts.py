@@ -103,7 +103,7 @@ async def next_prev_output_list_debts(
         reply_markup=await debts_keyboard_generate(result),
         parse_mode="HTML"
     )
-    
+
 
 @debt_router.callback_query(DebtsStates.detail, F.data.isdigit())
 @decorator_errors
@@ -125,9 +125,9 @@ async def detail_debt_by_id(call: CallbackQuery, state: FSMContext) -> None:
 @debt_router.callback_query(F.data == "current_debt")
 async def current_debts_lends(
         call: CallbackQuery, state: FSMContext
-    ) -> None:
+) -> None:
     """
-    A handler for displaying the latest information 
+    A handler for displaying the latest information
     about a specific debt.
     """
     data = await state.get_data()
@@ -166,7 +166,7 @@ async def repay_part_debt(call: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(DebtsStates.confirm)
     type_ = (await state.get_data())["type_"]
     action = "show_debts" if type_ == "debt" else "show_lends"
-    text = "долгов." if type_ == "debt" else "должников." 
+    text = "долгов." if type_ == "debt" else "должников."
     await call.message.edit_text(
         text=hbold("Введите сумму для погашения."),
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
@@ -174,7 +174,7 @@ async def repay_part_debt(call: CallbackQuery, state: FSMContext) -> None:
                 InlineKeyboardButton(
                     text="🔙",
                     callback_data="current_debt"
-            ),
+                ),
                 InlineKeyboardButton(
                     text="㊂",
                     callback_data="main"
