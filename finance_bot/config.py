@@ -66,3 +66,8 @@ debt_create_url: str = (BASE_URL + "debts/create-debt/")
 debt_create_accounts_url: str = (
         BASE_URL + "debts/create-debt-accounts/"
 )
+
+# ---------------------------TRANSFER------------------------------------------
+transfer_history_url = (
+    BASE_URL + "transfer/history/?page={page}&page_size={page_size}"
+)

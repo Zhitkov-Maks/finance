@@ -22,18 +22,26 @@ async def create_list_account(
     keyboards: List[List[InlineKeyboardButton]] = []
     previous, next_ = data.get("previous"), data.get("next")
     for item in data.get("results")[0].get("accounts"):
-            id_: int = item.get("id")
-            keyboards.append(
-                [
-                    InlineKeyboardButton(
-                        text=f"{item.get("name")} /"
-                             f" {float(item.get('balance')):_}₽",
-                        callback_data=f"{id_}_{item.get("name")}"
-                    )
-                ])
+        id_: int = item.get("id")
+        keyboards.append(
+            [
+                InlineKeyboardButton(
+                    text=f"{item.get("name")} /"
+                            f" {float(item.get('balance')):_}₽",
+                    callback_data=f"{id_}_{item.get("name")}"
+                )
+            ])
 
     lst_menu: list = await create_pagination_buttons(
         previous, next_, prev, next_d
+    )
+    keyboards.append(
+        [
+            InlineKeyboardButton(
+                text="< История переводов >",
+                callback_data="transfer_history"
+            )
+        ]
     )
     keyboards.append(lst_menu)
     return InlineKeyboardMarkup(inline_keyboard=keyboards)

@@ -7,12 +7,13 @@ from aiogram.utils.markdown import hbold
 
 from api.common import get_all_objects
 from api.transfer import create_transfer
-from config import PAGE_SIZE
+from config import PAGE_SIZE, transfer_history_url
 from handlers.decorator_handler import decorator_errors
 from keyboards.keyboards import cancel_, main_menu
-from keyboards.transfer import create_list_transfer_accounts
+from keyboards.transfer import create_list_transfer_accounts, generate_keyboard
 from states.accounts import TransferStates
 from utils.accounts import is_valid_balance, account_url
+from utils.transfer import generate_message_answer
 
 transfer: Router = Router()
 
@@ -108,4 +109,48 @@ async def get_amount_transfer(message: Message, state: FSMContext) -> None:
         text=hbold(f"Перевод с {name} 👉🏻 {name_out} на сумму {amount}₽."),
         reply_markup=main_menu,
         parse_mode="HTML",
+    )
+
+
+@transfer.callback_query(F.data == "transfer_history")
+async def get_transfer_history(
+    callback: CallbackQuery, state: FSMContext
+) -> None:
+    url = transfer_history_url.format(page=1, page_size=PAGE_SIZE)
+    result: dict = await get_all_objects(url, callback.from_user.id)
+    await state.update_data(page=1)
+    answer = await generate_message_answer(result)
+    keyboard: InlineKeyboardMarkup = await generate_keyboard(
+        bool(result.get("next")), bool(result.get("previous"))
+    )
+    await callback.message.answer(
+        text=hbold(answer),
+        reply_markup=keyboard,
+        parse_mode="HTML"
+    )
+
+
+@transfer.callback_query(
+    F.data.in_(["next_page_transfer", "prev_page_transfer"])
+)
+async def get_page_transfer_history(
+    callback: CallbackQuery, state: FSMContext
+) -> None:
+    page = (await state.get_data())["page"]
+    if callback.data == "next_page_transfer":
+        page += 1
+    else:
+        page -= 1
+
+    url = transfer_history_url.format(page=page, page_size=PAGE_SIZE)
+    result: dict = await get_all_objects(url, callback.from_user.id)
+    await state.update_data(page=page)
+    answer = await generate_message_answer(result)
+    keyboard: InlineKeyboardMarkup = await generate_keyboard(
+        bool(result.get("next")), bool(result.get("previous"))
+    )
+    await callback.message.edit_text(
+        text=hbold(answer),
+        reply_markup=keyboard,
+        parse_mode="HTML"
     )

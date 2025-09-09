@@ -1,7 +1,8 @@
 from typing import List
 
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
+from config import PAGE_SIZE
 from utils.common import create_pagination_buttons
 
 
@@ -22,7 +23,7 @@ async def create_list_transfer_accounts(
     """
     inline_buttons: List[List[InlineKeyboardButton]] = []
     previous, next_ = data.get("previous"), data.get("next")
-    
+
     for item in data.get("results")[0].get("accounts"):
         if item.get("id") != current_account:
             id_: int = str(item.get("id")) + f"_{item.get("name")}" \
@@ -36,9 +37,40 @@ async def create_list_transfer_accounts(
                         callback_data=str(id_)
                     )
                 ])
-
     lst_menu: list = await create_pagination_buttons(
         previous, next_, "prev_tr", "next_tr"
     )
     inline_buttons.append(lst_menu)
+    return InlineKeyboardMarkup(inline_keyboard=inline_buttons)
+
+
+async def generate_keyboard(
+    is_next_page: bool, is_prev_page: bool
+) -> InlineKeyboardMarkup:
+    inline_buttons: List[List[InlineKeyboardButton]] = [
+        [
+            InlineKeyboardButton(
+                text="🔙",
+                callback_data="accounts"
+            ),
+            InlineKeyboardButton(
+                text="Меню",
+                callback_data="main"
+            )
+        ]
+    ]
+    if is_next_page:
+        inline_buttons.insert(0, [
+            InlineKeyboardButton(
+                text=f"Показать еще {PAGE_SIZE}",
+                callback_data="next_page_transfer"
+            )
+        ])
+    if is_prev_page:
+        inline_buttons.insert(0, [
+            InlineKeyboardButton(
+                text=f"Показать предидущие {PAGE_SIZE}",
+                callback_data="prev_page_transfer"
+            )
+        ])
     return InlineKeyboardMarkup(inline_keyboard=inline_buttons)
