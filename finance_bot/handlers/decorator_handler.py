@@ -6,6 +6,7 @@ from typing import TypeVar, ParamSpec, Callable
 from http.client import HTTPException
 
 from aiogram import Bot
+from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.markdown import hbold
 
@@ -42,7 +43,9 @@ def decorator_errors(func: Callable[P, T]) -> Callable[P, T]:
     """
 
     @wraps(func)
-    async def wrapper(arg: P, state: FSMContext) -> None:
+    async def wrapper(
+        arg: CallbackQuery | Message, state: FSMContext
+    ) -> None:
         """
         Wrapper for error handling when executing a function
         """
