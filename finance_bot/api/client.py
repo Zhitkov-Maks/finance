@@ -5,9 +5,15 @@ import aiohttp
 
 @dataclass
 class Client:
-    """
-    A class for server requests, implemented to reduce the amount
-    of repetitive code.
+    """A class for server requests to reduce repetitive code.
+
+    This class provides asynchronous HTTP methods for making requests
+    to a server with standardized timeout and headers configuration.
+
+    :param url: The URL endpoint for the HTTP requests
+    :type url: str
+    :param data: Optional data payload for POST, PATCH, and PUT requests
+    :type data: dict | None
     """
 
     url: str
@@ -15,7 +21,12 @@ class Client:
     header = {"Content-Type": "application/json"}
 
     async def post(self) -> Tuple[int, dict]:
-        """A method for implementing post requests."""
+        """Make an asynchronous POST request to the server.
+
+        :return: Tuple containing HTTP status code and response data
+        :rtype: Tuple[int, dict]
+        :raises: aiohttp.ClientError if the request fails
+        """
         async with aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(60)
         ) as client:
@@ -29,7 +40,12 @@ class Client:
                 return response.status, data
 
     async def get(self) -> Tuple[int, dict]:
-        """A method for implementing get requests."""
+        """Make an asynchronous GET request to the server.
+
+        :return: Tuple containing HTTP status code and response data
+        :rtype: Tuple[int, dict]
+        :raises: aiohttp.ClientError if the request fails
+        """
         async with aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(60)
         ) as client:
@@ -40,7 +56,12 @@ class Client:
                 return response.status, data
 
     async def delete(self) -> Tuple[int, dict]:
-        """A method for implementing delete requests."""
+        """Make an asynchronous DELETE request to the server.
+
+        :return: Tuple containing HTTP status code and response data
+        :rtype: Tuple[int, dict]
+        :raises: aiohttp.ClientError if the request fails
+        """
         async with aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(60)
         ) as client:
@@ -52,7 +73,12 @@ class Client:
                 return response.status, {"result": True}
 
     async def patch(self) -> Tuple[int, dict]:
-        """A method for implementing patch requests."""
+        """Make an asynchronous PATCH request to the server.
+
+        :return: Tuple containing HTTP status code and response data
+        :rtype: Tuple[int, dict]
+        :raises: aiohttp.ClientError if the request fails
+        """
         async with aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(60)
         ) as client:
@@ -63,7 +89,12 @@ class Client:
                 return response.status, data
 
     async def put(self) -> Tuple[int, dict]:
-        """A method for implementing put requests."""
+        """Make an asynchronous PUT request to the server.
+
+        :return: Tuple containing HTTP status code and response data
+        :rtype: Tuple[int, dict]
+        :raises: aiohttp.ClientError if the request fails
+        """
         async with aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(60)
         ) as client:

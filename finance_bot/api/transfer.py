@@ -13,7 +13,8 @@ async def create_transfer(
     amount: float
 ) -> None:
     """
-    The function sends a request to create a transfer between its accounts.
+    Create a transfer between accounts.
+
     :param account_in: Which account to transfer from.
     :param account_out: Which account to transfer to.
     :param user_id: The user's ID.

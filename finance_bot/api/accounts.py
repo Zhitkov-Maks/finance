@@ -11,7 +11,8 @@ async def change_toggle_active(
     is_active: bool
 ) -> None:
     """
-    Request to change account status.
+    Change the account status(Display/Do not display).
+
     :param account_id: Account ID.
     :param user_id: User ID.
     :param is_active: Whether the account is displayed in the balance or not.

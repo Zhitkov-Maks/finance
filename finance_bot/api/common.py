@@ -6,7 +6,8 @@ from utils.common import create_header
 
 async def create_client(user_id: int, url: str, data=None) -> Client:
     """
-    A function for configuring the client.
+    Configure the Client to work.
+
     :param user_id: The user ID.
     :param url: The URL.
     :param data: The data.
@@ -18,7 +19,8 @@ async def create_client(user_id: int, url: str, data=None) -> Client:
 
 async def create_new_object(user_id, url: str, data: dict = None) -> dict:
     """
-    A function for creating a new object.
+    Create a new object.
+
     :param user_id: The user ID.
     :param url: The URL.
     :param data: The data.
@@ -32,7 +34,8 @@ async def create_new_object(user_id, url: str, data: dict = None) -> dict:
 
 async def get_all_objects(url: str, user_id: int) -> dict:
     """
-    Making a request to receive user accounts
+    Get a list of objects.
+
     :param url: Url.
     :param user_id: ID user.
     :return str: If the request was not successful, then we return an
@@ -51,7 +54,8 @@ async def get_full_info(
     url: str, user_id: int
 ) -> dict[str, list[dict[str, int]] | dict[str, str] | float | bool]:
     """
-    Request for detailed account information.
+    Get full information about the object.
+
     :param url: URL.
     :param user_id: ID user.
     :return dict: Detailed information about the account.
@@ -67,7 +71,8 @@ async def get_full_info(
 
 async def delete_object_by_id(url: str, user_id: int) -> None:
     """
-    Request to delete an account.
+    Delete the object.
+
     :param url: URL.
     :param user_id: ID user.
     """
@@ -79,8 +84,9 @@ async def delete_object_by_id(url: str, user_id: int) -> None:
 
 async def edit_object(url: str, user_id: int, data: dict, method: str) -> dict:
     """
-    Request for account change.
-    :param method:
+    Change the object.
+
+    :param method: A method for selecting the type of request.
     :param data: Dictionary with data for editing.
     :param url: URL.
     :param user_id: ID user.
