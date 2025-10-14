@@ -158,7 +158,9 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.BasicAuthentication',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'EXCEPTION_HANDLER': 'transfer.exceptions.custom_exception_handler'
 }
+
 
 DJOSER = {
     'USER_CREATE_PASSWORD_RETYPE': True,

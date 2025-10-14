@@ -52,7 +52,7 @@ class TransferSerializer(serializers.ModelSerializer):
         # Validate that the source account has sufficient balance
         if amount and source_account.balance < amount:
             raise serializers.ValidationError(
-                "Insufficient balance in the source account."
+                "Недостаточно средств на счете."
             )
 
         return attrs
