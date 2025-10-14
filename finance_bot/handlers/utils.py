@@ -8,7 +8,7 @@ from states.transaction import TransactionState
 from utils.search import generate_url
 
 
-async def _generate_results(
+async def generate_results(
         state: FSMContext,
         user_id: int,
         page: int,
@@ -29,11 +29,12 @@ async def _generate_results(
     data: dict = await state.get_data()
     url: str = await generate_url(data, page)
     result: dict = await get_full_info(url, user_id)
-
+    print(result)
     operation_type: str = data["type"]
-
+    call_data = "sh_expenses" if "exp" in operation_type else "sh_incomes"
     keyboard: InlineKeyboardMarkup = await create_list_incomes_expenses(
         result,
+        call_data,
         operation_type,
         prev_action,
         next_action
@@ -45,7 +46,7 @@ async def _generate_results(
     return text, keyboard, operation_type
 
 
-async def _handle_response(
+async def handle_response(
         context: Message | CallbackQuery,
         state: FSMContext,
         text: str,

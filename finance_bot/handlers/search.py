@@ -4,7 +4,7 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
 from handlers.decorator_handler import decorator_errors
-from handlers.utils import _generate_results, _handle_response
+from handlers.utils import generate_results, handle_response
 from keyboards.keyboards import main_menu, cancel_
 from keyboards.search import get_action_options, user_choices, ACTIONS
 from loader import search_text
@@ -109,30 +109,30 @@ async def save_account_name(mess: Message, state: FSMContext) -> None:
         return
 
     page = data.get("page", 1)
-    text, keyboard, operation_type = await _generate_results(
+    text, keyboard, operation_type = await generate_results(
         state, mess.from_user.id, page
     )
     await state.update_data(page=page)
-    await _handle_response(mess, state, text, keyboard, operation_type)
+    await handle_response(mess, state, text, keyboard, operation_type)
 
 
 @search.callback_query(F.data == "search")
-@decorator_errors
+# @decorator_errors
 async def show_search(call: CallbackQuery, state: FSMContext) -> None:
     """
-    The handler for the request and processing the response 
+    The handler for the request and processing the response
     from the server based on the found result.
     """
     data: dict = await state.get_data()
     page: int = data.get("page", 1)
-    text, keyboard, operation_type = await _generate_results(
-        state, call.from_user.id, page
+    text, keyboard, operation_type = await generate_results(
+        state, call.from_user.id, page, type
     )
-    await _handle_response(call, state, text, keyboard, operation_type)
+    await handle_response(call, state, text, keyboard, operation_type)
 
 
 @search.callback_query(F.data.in_(["prev_search", "next_search"]))
-@decorator_errors
+# @decorator_errors
 async def next_prev_output_list_expenses(
         call: CallbackQuery, state: FSMContext
 ) -> None:
@@ -140,7 +140,7 @@ async def next_prev_output_list_expenses(
     data: dict = await state.get_data()
     page: int = data.get("page", 1)
     page: int = page + 1 if call.data == "next_search" else page - 1
-    text, keyboard, _ = await _generate_results(
+    text, keyboard, _ = await generate_results(
         state, call.from_user.id, page
     )
     await state.update_data(page=page)
