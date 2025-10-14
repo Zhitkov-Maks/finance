@@ -47,6 +47,7 @@ async def get_all_objects(url: str, user_id: int) -> dict:
     if status_code == 200:
         return response
     else:
+        print(response)
         raise HTTPException(response.get("detail"))
 
 

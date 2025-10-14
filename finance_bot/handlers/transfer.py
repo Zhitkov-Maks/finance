@@ -25,7 +25,7 @@ async def start_transfer(callback: CallbackQuery, state: FSMContext) -> None:
     The handler for selecting the account to transfer.
     """
     page: int = 1
-    account_id: int = (await state.get_data()).get("account_id")
+    account_id: int = (await state.get_data()).get("account_id", 0)
     url: str = await account_url(page, page_size=PAGE_SIZE)
     result: Dict[
         str, str | List[Dict[str, float | List[Dict[str, int | float | str]]]]
@@ -49,8 +49,8 @@ async def next_prev_output_list_habits(
         call: CallbackQuery, state: FSMContext
 ) -> None:
     """Show more invoices if any."""
-    page: int = (await state.get_data()).get("page")
-    account_id = (await state.get_data()).get("account_id")
+    page: int = (await state.get_data()).get("page", 0)
+    account_id: int = (await state.get_data()).get("account_id", 0)
 
     if call.data == "next_tr":
         page += 1
@@ -85,6 +85,7 @@ async def get_account_transfer_out(
 
 
 @transfer.message(TransferStates.amount)
+@decorator_errors
 async def get_amount_transfer(message: Message, state: FSMContext) -> None:
     """We are sending the data for the transfer."""
     data: dict = await state.get_data()
@@ -113,12 +114,13 @@ async def get_amount_transfer(message: Message, state: FSMContext) -> None:
 
 
 @transfer.callback_query(F.data == "transfer_history")
+@decorator_errors
 async def get_transfer_history(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
     url = transfer_history_url.format(page=1, page_size=PAGE_SIZE)
     result: dict = await get_all_objects(url, callback.from_user.id)
-    await state.update_data(page=1)
+    await state.update_data(page_tr=1)
     answer = await generate_message_answer(result)
     keyboard: InlineKeyboardMarkup = await generate_keyboard(
         bool(result.get("next")), bool(result.get("previous"))
@@ -133,10 +135,11 @@ async def get_transfer_history(
 @transfer.callback_query(
     F.data.in_(["next_page_transfer", "prev_page_transfer"])
 )
+@decorator_errors
 async def get_page_transfer_history(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
-    page = (await state.get_data())["page"]
+    page = (await state.get_data())["page_tr"]
     if callback.data == "next_page_transfer":
         page += 1
     else:
@@ -144,7 +147,7 @@ async def get_page_transfer_history(
 
     url = transfer_history_url.format(page=page, page_size=PAGE_SIZE)
     result: dict = await get_all_objects(url, callback.from_user.id)
-    await state.update_data(page=page)
+    await state.update_data(page_tr=page)
     answer = await generate_message_answer(result)
     keyboard: InlineKeyboardMarkup = await generate_keyboard(
         bool(result.get("next")), bool(result.get("previous"))
