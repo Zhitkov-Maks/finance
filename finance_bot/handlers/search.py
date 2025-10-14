@@ -117,7 +117,7 @@ async def save_account_name(mess: Message, state: FSMContext) -> None:
 
 
 @search.callback_query(F.data == "search")
-# @decorator_errors
+@decorator_errors
 async def show_search(call: CallbackQuery, state: FSMContext) -> None:
     """
     The handler for the request and processing the response
@@ -132,7 +132,7 @@ async def show_search(call: CallbackQuery, state: FSMContext) -> None:
 
 
 @search.callback_query(F.data.in_(["prev_search", "next_search"]))
-# @decorator_errors
+@decorator_errors
 async def next_prev_output_list_expenses(
         call: CallbackQuery, state: FSMContext
 ) -> None:
@@ -140,7 +140,7 @@ async def next_prev_output_list_expenses(
     data: dict = await state.get_data()
     page: int = data.get("page", 1)
     page: int = page + 1 if call.data == "next_search" else page - 1
-    text, keyboard, _ = await generate_results(
+    _, keyboard, _ = await generate_results(
         state, call.from_user.id, page
     )
     await state.update_data(page=page)

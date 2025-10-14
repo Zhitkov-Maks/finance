@@ -50,8 +50,7 @@ async def handle_response(
         context: Message | CallbackQuery,
         state: FSMContext,
         text: str,
-        keyboard: InlineKeyboardMarkup,
-        operation_type: str
+        keyboard: InlineKeyboardMarkup
 ) -> None:
     """
     A function for responding to the user, since the same actions 
@@ -61,7 +60,6 @@ async def handle_response(
     :param state: FSMContext.
     :param text: Message for user.
     :param keyboard: Inline keyboard.
-    :param operation_type: The type of operation (income or expenses).
     """
     await state.set_state(TransactionState.show)
 
