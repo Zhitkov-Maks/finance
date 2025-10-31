@@ -109,11 +109,11 @@ async def save_account_name(mess: Message, state: FSMContext) -> None:
         return
 
     page = data.get("page", 1)
-    text, keyboard, operation_type = await generate_results(
+    text, keyboard, _ = await generate_results(
         state, mess.from_user.id, page
     )
     await state.update_data(page=page)
-    await handle_response(mess, state, text, keyboard, operation_type)
+    await handle_response(mess, state, text, keyboard)
 
 
 @search.callback_query(F.data == "search")
@@ -125,10 +125,10 @@ async def show_search(call: CallbackQuery, state: FSMContext) -> None:
     """
     data: dict = await state.get_data()
     page: int = data.get("page", 1)
-    text, keyboard, operation_type = await generate_results(
+    text, keyboard, _ = await generate_results(
         state, call.from_user.id, page, type
     )
-    await handle_response(call, state, text, keyboard, operation_type)
+    await handle_response(call, state, text, keyboard)
 
 
 @search.callback_query(F.data.in_(["prev_search", "next_search"]))

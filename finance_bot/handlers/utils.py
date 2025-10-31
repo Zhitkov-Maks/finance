@@ -21,7 +21,7 @@ async def generate_results(
 
     :param state: FSMContext.
     :param user_id: The user's ID.
-    :param page: The page for paginatuion.
+    :param page: The page for pagination.
     :param prev_action: The command for the previous page button to work.
     :param next_action: The command for the next page button to work.
     :return tuple: A tuple of a message, a keyboard, and the type of operation.
@@ -29,7 +29,7 @@ async def generate_results(
     data: dict = await state.get_data()
     url: str = await generate_url(data, page)
     result: dict = await get_full_info(url, user_id)
-    print(result)
+
     operation_type: str = data["type"]
     call_data = "sh_expenses" if "exp" in operation_type else "sh_incomes"
     keyboard: InlineKeyboardMarkup = await create_list_incomes_expenses(
