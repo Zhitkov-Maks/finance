@@ -23,7 +23,7 @@ async def create_list_incomes_expenses(
     """
     inline_buttons: List[List[InlineKeyboardButton]] = []
     previous, next_ = data.get("previous"), data.get("next")
-    mark: str = "-" if type_transaction == "exp" else "+"
+    mark: str = "-" if "exp" in type_transaction else "+"
     for item in data.get("results"):
         id_: int = item.get("id")
         dt: str = f"📆 {item['create_at'][8:10]}-{item['create_at'][5:7]}"

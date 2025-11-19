@@ -126,22 +126,23 @@ async def show_search(call: CallbackQuery, state: FSMContext) -> None:
     data: dict = await state.get_data()
     page: int = data.get("page", 1)
     text, keyboard, _ = await generate_results(
-        state, call.from_user.id, page, type
+        state, call.from_user.id, page
     )
+    await state.update_data(page=page)
     await handle_response(call, state, text, keyboard)
 
 
 @search.callback_query(F.data.in_(["prev_search", "next_search"]))
 @decorator_errors
 async def next_prev_output_list_expenses(
-        call: CallbackQuery, state: FSMContext
+    call: CallbackQuery, state: FSMContext
 ) -> None:
     """The handler implements pagination when working with the search."""
     data: dict = await state.get_data()
     page: int = data.get("page", 1)
     page: int = page + 1 if call.data == "next_search" else page - 1
-    _, keyboard, _ = await generate_results(
+    text, keyboard, _ = await generate_results(
         state, call.from_user.id, page
     )
     await state.update_data(page=page)
-    await call.message.edit_reply_markup(reply_markup=keyboard)
+    await handle_response(call, state, text, keyboard)

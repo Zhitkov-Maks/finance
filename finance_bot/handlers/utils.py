@@ -9,11 +9,11 @@ from utils.search import generate_url
 
 
 async def generate_results(
-        state: FSMContext,
-        user_id: int,
-        page: int,
-        prev_action: str = "prev_search",
-        next_action: str = "next_search"
+    state: FSMContext,
+    user_id: int,
+    page: int,
+    prev_action: str = "prev_search",
+    next_action: str = "next_search"
 ) -> tuple:
     """
     The function processes the previously entered data, makes a request 
@@ -33,11 +33,11 @@ async def generate_results(
     operation_type: str = data["type"]
     call_data = "sh_expenses" if "exp" in operation_type else "sh_incomes"
     keyboard: InlineKeyboardMarkup = await create_list_incomes_expenses(
-        result,
-        call_data,
-        operation_type,
-        prev_action,
-        next_action
+        data=result,
+        call_data=call_data,
+        type_transaction=operation_type,
+        prev=prev_action,
+        next_d=next_action
     )
 
     text = "Вот что я нашел!" if result.get(

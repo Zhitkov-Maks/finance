@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from typing import Dict, List
 
 from aiogram.types import Message, InlineKeyboardButton
@@ -56,13 +57,13 @@ async def create_pagination_buttons(
     :param prev: Name the previous button.
     :param next_d: Name the next button.
     """
-    prev_data, text_prev = "None prev", "-"
-    next_data, text_next = "None next", "-"
-
-    if previous is not None:
+    prev_data, text_prev = "None-prev", "-"
+    next_data, text_next = "None-next", "-"
+    
+    if previous:
         prev_data, text_prev = prev, "◄"
 
-    if next_ is not None:
+    if next_:
         next_data, text_next = next_d, "►"
 
     return [
