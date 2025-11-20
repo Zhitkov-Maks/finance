@@ -22,6 +22,7 @@ from handlers.transfer import transfer
 from handlers.transactions.create_transaction import transaction_router
 from handlers.transactions.edit import edit_transaction
 from handlers.transactions.transaction import transaction_show_router
+from handlers.analytics import analytics_router
 from keyboards.keyboards import main_menu
 from loader import greeting, main_menu_text, info_message
 
@@ -43,7 +44,8 @@ routes: list[Router] = [
     transaction_router,
     edit_transaction,
     transaction_show_router,
-    invalid_router,
+    analytics_router,
+    invalid_router
 ]
 
 for route in routes:

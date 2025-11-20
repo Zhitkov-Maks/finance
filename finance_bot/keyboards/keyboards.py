@@ -102,6 +102,10 @@ menu_bot: List[List[InlineKeyboardButton]] = [
                 callback_data="incomes_add"
             ),
             InlineKeyboardButton(
+                text="↯",
+                callback_data="analytics"
+            ),
+            InlineKeyboardButton(
                 text="‰",
                 callback_data="accounts_add"
             ),

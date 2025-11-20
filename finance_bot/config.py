@@ -76,3 +76,7 @@ debt_create_accounts_url: str = (
 transfer_history_url = (
     BASE_URL + "transfer/history/?page={page}&page_size={page_size}"
 )
+
+#---------------------------ANALYTICS -----------------------------------------
+
+analytics_url = BASE_URL + "analitycs/month/?type={type}&year={year}"

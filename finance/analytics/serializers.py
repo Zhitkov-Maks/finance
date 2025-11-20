@@ -15,12 +15,13 @@ class FormattedMonthlyAnalyticsSerializer(serializers.Serializer):
     # Comparative metrics
     first_month_amount = serializers.DecimalField(
         max_digits=15,
-        decimal_places=2
+        decimal_places=2,
+        default=0
     )
     prev_month_amount = serializers.DecimalField(
         max_digits=15, 
-        decimal_places=2, 
-        allow_null=True
+        decimal_places=2,
+        default=0
     )
 
     # Percentage changes
@@ -49,11 +50,11 @@ class FormattedMonthlyAnalyticsSerializer(serializers.Serializer):
 
     def get_change_vs_first_percent(self, obj):
         percent = obj.get('change_vs_first_percent', 0)
-        return round(percent, 2) if percent is not None else None
+        return round(percent, 2) if percent is not None else 0
 
     def get_change_vs_prev_percent(self, obj):
         percent = obj.get('change_vs_prev_percent')
-        return round(percent, 2) if percent is not None else None
+        return round(percent, 2) if percent is not None else 0
 
     def get_absolute_change_vs_first(self, obj):
         return round(obj['total_amount'] - obj['first_month_amount'], 2)
@@ -62,7 +63,7 @@ class FormattedMonthlyAnalyticsSerializer(serializers.Serializer):
         prev_amount = obj.get('prev_month_amount')
         if prev_amount is not None:
             return round(obj['total_amount'] - prev_amount, 2)
-        return None
+        return 0
 
     def get_trend_vs_first(self, obj):
         change = obj.get('change_vs_first_percent', 0)
@@ -79,14 +80,14 @@ class FormattedMonthlyAnalyticsSerializer(serializers.Serializer):
 
     def _get_trend_description(self, change_percent):
         if change_percent is None:
-            return 'no_data'
+            return '⇝'
         elif change_percent > 10:
-            return 'Сильный рост.'
+            return '⇈'
         elif change_percent > 0:
-            return 'Рост.'
+            return '⇑'
         elif change_percent == 0:
-            return 'Стабилность.'
+            return '⇝'
         elif change_percent > -10:
-            return 'Снижение.'
+            return '⇓'
         else:
-            return 'Падение.'
+            return '⇊'
