@@ -30,6 +30,7 @@ urlpatterns = [
     re_path("auth/", include("djoser.urls.authtoken")),
     path("api/v1/accounts/", include("accounts.urls")),
     path("api/v1/transaction/", include("transactions.urls")),
+    path('api/v1/analitycs/', include('analytics.urls')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
