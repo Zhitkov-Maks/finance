@@ -73,7 +73,7 @@ class FormattedMonthlyAnalyticsSerializer(serializers.Serializer):
         change = obj.get('change_vs_prev_percent')
         if change is not None:
             return self._get_trend_description(change)
-        return 'no_data'
+        return '⇝'
 
     def get_is_first_month(self, obj):
         return obj.get('prev_month_amount') is None

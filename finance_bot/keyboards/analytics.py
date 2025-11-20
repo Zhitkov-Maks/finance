@@ -27,15 +27,12 @@ async def generate_keyboard_analytics(
     """
     keyboard = []
     for i, item in enumerate(data):
-        change_prev = item.get("change_vs_prev_percent")
         keyboard.append(
             [
                 InlineKeyboardButton(
                     text=(
-                        f"{item['month_name']} | " 
-                        f"{float(item['total_amount']):,.0f}₱ | "
-                        f"{change_prev if change_prev else 0:.0f}% | "
-                        f"{item["change_vs_first_percent"]:.0f}%"
+                        f"{item['month_name']} => " 
+                        f"{float(item['total_amount']):,.0f}₱"
                     ),
                     callback_data=f"analytics_{i}"
                 )
