@@ -4,14 +4,30 @@ from .models import Transaction, Category
 from accounts.serializers import AccountSerializer
 
 
+class ParentSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ["id", "name"]
+
+
 class CategorySerializer(serializers.ModelSerializer):
+    """
+    Нужен для сериализации категорий доходов.
+    """
+    parent = ParentSerializers()
+    class Meta:
+        model = Category
+        fields = ["id", "name", "parent"]
+
+
+class CategoryCreateSerializer(serializers.ModelSerializer):
     """
     Нужен для сериализации категорий доходов.
     """
 
     class Meta:
         model = Category
-        fields = ["id", "name"]
+        fields = ["id", "name", "parent"]
 
 
 class TransactionSerializer(serializers.ModelSerializer):

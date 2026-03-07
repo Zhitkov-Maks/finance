@@ -33,6 +33,7 @@ from .serializers import (
     TransactionSerializerGet,
     TransactionSerializersPatch,
     StatisticsResponseSerializer,
+    CategoryCreateSerializer
 )
 
 
@@ -218,6 +219,13 @@ class ListCategory(generics.ListCreateAPIView):
         SessionAuthentication,
     )
 
+    def get_serializer_class(self):
+        """Выбираем сериализатор."""
+        if self.request.method == "POST":
+            return CategoryCreateSerializer
+
+        return super().get_serializer_class()
+
     def get_queryset(self) -> QuerySet:
         """
         Переопределен метод для возврата доходов только
@@ -241,6 +249,7 @@ class ListCategory(generics.ListCreateAPIView):
         user: CustomUser = self.request.user
         type_transaction = self.request.query_params.get('type')
         category_name: str = serializer.validated_data['name']
+        parent: str = serializer.validated_data.get("parent", None)
         existing_category = Category.objects.filter(
             user=user, name=category_name, type_transaction=type_transaction
         ).first()
@@ -250,7 +259,9 @@ class ListCategory(generics.ListCreateAPIView):
                 {"detail": "Категория с таким именем уже существует."}
             )
         else:
-            serializer.save(user=user, type_transaction=type_transaction)
+            serializer.save(
+                user=user, type_transaction=type_transaction, parent=parent
+            )
 
 
 @extend_schema(tags=["TransactionCategory"])
@@ -269,6 +280,13 @@ class RetrieveUpdateDeleteCategory(generics.RetrieveUpdateDestroyAPIView):
         SessionAuthentication,
     )
     http_method_names = ["get", "put", "delete"]
+
+    def get_serializer_class(self):
+        """Выбираем сериализатор."""
+        if self.request.method == "PUT":
+            return CategoryCreateSerializer
+
+        return super().get_serializer_class()
 
     def get_queryset(self) -> QuerySet:
         """

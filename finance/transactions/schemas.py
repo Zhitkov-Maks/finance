@@ -11,6 +11,7 @@ from transfer.serializers import (
 )
 from .serializers import (
     CategorySerializer,
+    CategoryCreateSerializer,
     CategoryTransactionStatisticsSerializer,
     TransactionSerializer,
     TransactionSerializerGet,
@@ -113,9 +114,10 @@ ListCategoryTransactionSchema = extend_schema_view(
                 "type", str,
                 description="Тип транзакции(income, expence)",
                 required=True
-            )],
+            )
+        ],
         description="Создать новую категорию.",
-        request=CategorySerializer,
+        request=CategoryCreateSerializer,
         responses={
             201: CategorySerializer,
             400: ValidationError,
@@ -138,7 +140,7 @@ RetrieveUpdateDeleteCategoryTransactionSchema = extend_schema_view(
     put=extend_schema(
         operation_id="update_category_transaction",
         description="Обновить данные о категории",
-        request=CategorySerializer,
+        request=CategoryCreateSerializer,
         responses={
             200: CategorySerializer,
             400: ValidationError,
