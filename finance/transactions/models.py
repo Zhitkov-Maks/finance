@@ -10,7 +10,7 @@ from accounts.models import Account
 class Category(models.Model):
     """
     Модель для представления категорий транзакций пользователя.
-    Поддерживает вложенность через self-referential ForeignKey.
+    Оптимизирована для навигации по дереву.
     """
     name = models.CharField(max_length=100, verbose_name="Название категории")
     user = models.ForeignKey(
@@ -45,8 +45,6 @@ class Category(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        if self.parent:
-            return f"{self.parent} → {self.name}"
         return self.name
 
     def get_full_path(self):
@@ -55,12 +53,21 @@ class Category(models.Model):
             return f"{self.parent.get_full_path()} → {self.name}"
         return self.name
     
-    def get_all_children(self):
-        """Рекурсивно получает все дочерние категории"""
-        children = list(self.children.all())
-        for child in children:
-            children.extend(child.get_all_children())
-        return children
+    @property
+    def is_root(self):
+        """Проверяет, является ли категория корневой"""
+        return self.parent is None
+    
+    @property
+    def has_children(self):
+        """Проверяет, есть ли дочерние категории"""
+        return self.children.exists()
+
+    def get_children_direct(self):
+        """
+        Получает прямых потомков (один запрос к БД)
+        """
+        return self.children.all()
 
     class Meta:
         constraints = [
@@ -71,7 +78,8 @@ class Category(models.Model):
         ]
         indexes = [
             models.Index(fields=['user', 'parent']),
-            models.Index(fields=['level']),
+            models.Index(fields=['user', 'level']),
+            models.Index(fields=['user', 'parent', 'level']),
         ]
         verbose_name = "категория транзакции"
         verbose_name_plural = "категории транзакций"

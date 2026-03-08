@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.db import models
 
 from .models import Transaction, Category
 from accounts.serializers import AccountSerializer
@@ -14,10 +15,18 @@ class CategorySerializer(serializers.ModelSerializer):
     """
     Нужен для сериализации категорий доходов.
     """
-    parent = ParentSerializers()
+    has_children = serializers.BooleanField(read_only=True)
     class Meta:
         model = Category
-        fields = ["id", "name", "parent"]
+        fields = ["id", "name", "has_children"]
+
+
+class CategoryIDSerializers(serializers.ModelSerializer):
+    children = ParentSerializers(many=True, source='get_children_direct')
+
+    class Meta:
+        model = Category
+        fields = ["id", "name", "children"]
 
 
 class CategoryCreateSerializer(serializers.ModelSerializer):

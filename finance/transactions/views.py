@@ -29,6 +29,7 @@ from .schemas import (
 from .serializers import (
     TransactionSerializer,
     CategorySerializer,
+    CategoryIDSerializers,
     TransactionSerializersAdd,
     TransactionSerializerGet,
     TransactionSerializersPatch,
@@ -232,11 +233,22 @@ class ListCategory(generics.ListCreateAPIView):
         конкретного пользователя и сортировке сетов по частоте использования.
         :return QuerySet: Список категорий транзакций.
         """
-        queryset = (
-            Category.objects.filter(user=self.request.user)
-            .annotate(usage_count=Count("transactions"))
-            .order_by("-usage_count", "name")
-        )
+        parent = self.request.query_params.get("parent")
+        isnull_parent = True if parent == "true" else False
+        if isnull_parent:
+            queryset = (
+                Category.objects.filter(
+                    user=self.request.user, parent__isnull=isnull_parent
+                )
+                .annotate(usage_count=Count("transactions"))
+                .order_by("-usage_count", "name")
+            )
+        else:
+            queryset = (
+                Category.objects.filter(user=self.request.user)
+                .annotate(usage_count=Count("transactions"))
+                .order_by("-usage_count", "name")
+            )
         if transaction_type := self.request.query_params.get('type'):
             queryset = queryset.filter(type_transaction=transaction_type)
         return queryset
@@ -272,7 +284,7 @@ class RetrieveUpdateDeleteCategory(generics.RetrieveUpdateDestroyAPIView):
     подробной информации.
     """
 
-    serializer_class = CategorySerializer
+    serializer_class = CategoryIDSerializers
     permission_classes = (IsAuthenticated,)
     authentication_classes = (
         TokenAuthentication,

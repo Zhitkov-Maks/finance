@@ -100,7 +100,13 @@ ListCategoryTransactionSchema = extend_schema_view(
                 "type", str,
                 description="Тип транзакции(income, expence)",
                 required=True
-            )],
+            ),
+            OpenApiParameter(
+                "parent", bool,
+                description="Только parent(значение True) или все.",
+                required=False
+            ),
+        ],
         description="Получить список категорий.",
         responses={
             200: CategorySerializer,
