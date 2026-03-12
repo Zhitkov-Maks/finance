@@ -44,6 +44,26 @@ async def get_statistic_current_month(
     return float(result.get("results")[0].get("total_balance"))
 
 
+async def add_subcategory(
+    total_amount,
+    message: str, 
+    children: list[dict]
+) -> str:
+    for child in children:
+        category_name: str = child.get("name")
+        category_amount: float = float(child["total"])
+        percent: float = category_amount / total_amount * 100
+        message += (f"      {category_name} ... {category_amount:,.2f}₽ ... "
+                    f"{percent:.02f}%\n{55 * '-'}\n")
+
+        if len(child.get("children")) > 0:
+            message = await add_subcategory(
+                total_amount, message, child.get("children")
+            )
+    
+    return message
+
+
 async def gen_message_statistics(data: dict) -> str:
     """
     Generate a message for expenses and incomes by category.
@@ -53,15 +73,19 @@ async def gen_message_statistics(data: dict) -> str:
     """
     message: str = ""
     total_amount: float = float(data["total_amount"])
-
+    print(data)
     for item in data["statistics"]:
-        category_name: str = item.get("category_name")
-        category_amount: float = float(item["total_amount"])
+        category_name: str = item.get("name")
+        category_amount: float = float(item["total"])
         percent: float = category_amount / total_amount * 100
 
-        # Используем вертикальные линии как разделители
         message += (f"{category_name} ... {category_amount:,.2f}₽ ... "
                     f"{percent:.02f}%\n{55 * '-'}\n")
+        
+        if len(item.get("children")) > 0:
+            message = await add_subcategory(
+                total_amount, message, item.get("children")
+            )
 
     if len(message) == 0:
         message = "За данный месяц нет данных."
