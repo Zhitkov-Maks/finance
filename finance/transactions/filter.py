@@ -39,17 +39,26 @@ def get_category_statistics(
 ) -> List[Dict[str, Any]]:
     """
     Главная функция: получает статистику по категориям в виде дерева.
+    Суммы родительских категорий включают все дочерние транзакции.
     """
     # Шаг 1: Получаем сырые данные транзакций
     transactions_data = fetch_transactions_with_categories(
         user, year, month, type_tr
     )
     
-    # Шаг 2: Агрегируем суммы по категориям
+    # Шаг 2: Агрегируем суммы по категориям (только прямые транзакции)
     categories_aggregated = aggregate_category_totals(transactions_data)
     
-    # Шаг 3: Строим иерархическое дерево
-    return build_category_tree(categories_aggregated)
+    # Шаг 3: Добавляем структуру children (пока без пересчета сумм)
+    categories_with_structure = link_children_to_parents(categories_aggregated)
+    
+    # Шаг 4: ПЕРЕСЧИТЫВАЕМ суммы с учетом иерархии (сумма = своя + всех детей)
+    categories_with_totals = calculate_hierarchical_totals(
+        categories_with_structure
+    )
+    
+    # Шаг 5: Строим иерархическое дерево с правильными суммами
+    return build_tree_from_roots(categories_with_totals)
 
 
 def fetch_transactions_with_categories(
@@ -59,8 +68,8 @@ def fetch_transactions_with_categories(
     type_tr: str
 ) -> QuerySet:
     """
-    Получает все транзакции пользователя за 
-    указанный месяц с информацией о категориях.
+    Получает все транзакции пользователя за указанный 
+    месяц с информацией о категориях.
     """
     return (Transaction.objects
         .filter(
@@ -84,7 +93,7 @@ def aggregate_category_totals(
     transactions: QuerySet
 ) -> Dict[int, Dict[str, Any]]:
     """
-    Агрегирует суммы транзакций по категориям.
+    Агрегирует суммы транзакций по категориям (только прямые транзакции).
     Возвращает словарь {category_id: category_data}
     """
     categories = {}
@@ -96,38 +105,24 @@ def aggregate_category_totals(
             categories[cat_id] = create_category_base_data(transaction)
         
         # Добавляем сумму транзакции к общему итогу категории
-        categories[cat_id]['total'] += float(transaction['amount'] or 0)
+        categories[cat_id]['total_direct'] += float(transaction['amount'] or 0)
     
     return categories
 
 
 def create_category_base_data(transaction: Dict) -> Dict[str, Any]:
     """
-    Создает базовую структуру данных для 
-    категории на основе одной транзакции.
+    Создает базовую структуру данных для категории на основе одной транзакции.
     """
     return {
         'id': transaction['category_id'],
         'name': transaction['category__name'],
         'parent_id': transaction['category__parent_id'],
         'parent_name': transaction['category__parent__name'],
-        'total': 0,
+        'total_direct': 0,  # Сумма только прямых транзакций этой категории
+        'total_with_children': 0,  # Сумма с учетом всех детей (будет вычислена позже)
         'children': []
     }
-
-
-def build_category_tree(
-    categories: Dict[int, Dict[str, Any]]
-) -> List[Dict[str, Any]]:
-    """
-    Строит иерархическое дерево категорий из плоского словаря.
-    Возвращает список корневых категорий с вложенными детьми.
-    """
-    # Сначала добавляем детей к родителям
-    categories_with_children = link_children_to_parents(categories)
-    
-    # Затем собираем дерево, начиная с корневых категорий (parent_id = None)
-    return build_tree_from_roots(categories_with_children)
 
 
 def link_children_to_parents(
@@ -145,15 +140,44 @@ def link_children_to_parents(
         if parent_id:
             children_by_parent[parent_id].append(cat_data)
     
-    # Добавляем детей к родителям
+    # Добавляем детей к родителям (без сортировки пока)
     for parent_id, children in children_by_parent.items():
         if parent_id in categories:
-            # Сортируем детей по сумме перед добавлением
-            categories[parent_id]['children'] = sorted(
-                children, 
-                key=lambda x: x['total'], 
-                reverse=True
-            )
+            categories[parent_id]['children'] = children
+    
+    return categories
+
+
+def calculate_hierarchical_totals(
+    categories: Dict[int, Dict[str, Any]]
+) -> Dict[int, Dict[str, Any]]:
+    """
+    Рекурсивно вычисляет суммы для каждой категории с учетом всех дочерних.
+    total_with_children = total_direct + сумма всех total_with_children детей
+    """
+    # Множество для отслеживания обработанных категорий
+    processed: Set[int] = set()
+    
+    def calculate_node_total(cat_id: int) -> float:
+        """Рекурсивно вычисляет сумму для узла и его детей."""
+        if cat_id in processed:
+            return categories[cat_id]['total_with_children']
+        
+        cat_data = categories[cat_id]
+        total = cat_data['total_direct']
+        
+        # Добавляем суммы всех детей
+        for child in cat_data['children']:
+            total += calculate_node_total(child['id'])
+        
+        cat_data['total_with_children'] = total
+        processed.add(cat_id)
+        return total
+    
+    # Запускаем вычисление для всех корневых категорий
+    for cat_id, cat_data in categories.items():
+        if cat_id not in processed:
+            calculate_node_total(cat_id)
     
     return categories
 
@@ -162,42 +186,42 @@ def build_tree_from_roots(
     categories: Dict[int, Dict[str, Any]]
 ) -> List[Dict[str, Any]]:
     """
-    Рекурсивно строит дерево, начиная с корневых категорий.
+    Рекурсивно строит дерево, используя вычисленные суммы с детьми.
     """
     def build_subtree(parent_id: Optional[int] = None) -> List[Dict[str, Any]]:
-        """
-        Внутренняя рекурсивная функция для построения поддерева.
-        """
+        """Внутренняя рекурсивная функция для построения поддерева."""
         subtree = []
         
         for cat_data in categories.values():
             if cat_data['parent_id'] == parent_id:
                 # Рекурсивно получаем детей для этой категории
                 children = build_subtree(cat_data['id'])
-                if children:
-                    cat_data['children'] = children
                 
                 # Создаем чистую структуру категории для вывода
-                clean_category = create_clean_category(cat_data)
+                clean_category = create_clean_category(cat_data, children)
                 subtree.append(clean_category)
         
-        # Сортируем поддерево по убыванию суммы
+        # Сортируем поддерево по убыванию суммы (с учетом детей)
         subtree.sort(key=lambda x: x['total'], reverse=True)
         return subtree
     
     return build_subtree()
 
 
-def create_clean_category(category_data: Dict[str, Any]) -> Dict[str, Any]:
+def create_clean_category(
+    category_data: Dict[str, Any], 
+    children: List[Dict[str, Any]]
+) -> Dict[str, Any]:
     """
     Создает чистую структуру категории для сериализации.
-    Убирает служебные поля и форматирует parent информацию.
+    Использует total_with_children как итоговую сумму.
     """
     clean_cat = {
         'id': category_data['id'],
         'name': category_data['name'],
-        'total': category_data['total'],
-        'children': category_data.get('children', [])
+        'total': category_data['total_with_children'],
+        'total_direct': category_data['total_direct'],
+        'children': children
     }
     
     # Добавляем информацию о родителе, если он есть
