@@ -3,7 +3,23 @@ from typing import List
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
-async def get_categories_action(back: str) -> InlineKeyboardMarkup:
+async def get_sublist_category(
+    children: list[dict], buttons: list[list[InlineKeyboardButton]]
+) -> list[InlineKeyboardButton]:
+    for item in children:
+        buttons.append(
+            [
+                InlineKeyboardButton(
+                    text=f"{item.get("name")}",
+                    callback_data=f"{item.get("id")}_{item.get("name")}"
+                )
+            ]
+        )
+
+
+async def get_categories_action(
+    back: str, children: None | list[dict] = None
+) -> InlineKeyboardMarkup:
     """
     Create a keyboard for working with categories.
 
@@ -11,15 +27,24 @@ async def get_categories_action(back: str) -> InlineKeyboardMarkup:
                     to assign to the back button.
     :return: A keyboard for working with categories.
     """
-    actions_buttons: list[list[InlineKeyboardButton]] = [
+    actions_buttons: list[list[InlineKeyboardButton]] = []
+    if children is not None:
+        await get_sublist_category(children, actions_buttons)
+    actions_buttons.append(
         [
             InlineKeyboardButton(text="❌", callback_data="del_category"),
             InlineKeyboardButton(text="㊂", callback_data="main"),
             InlineKeyboardButton(text="✎", callback_data="edit_category"),
             InlineKeyboardButton(text="🔙", callback_data=f"{back}"),
         ]
-    ]
-
+    )
+    actions_buttons.append(
+        [
+            InlineKeyboardButton(
+                text="Сделать дочерней категорией?", callback_data="be_child"
+            )
+        ]
+    )
     return InlineKeyboardMarkup(inline_keyboard=actions_buttons)
 
 

@@ -9,3 +9,4 @@ class CategoryState(StatesGroup):
     action: State = State()
     remove: State = State()
     edit: State = State()
+    child: State = State()

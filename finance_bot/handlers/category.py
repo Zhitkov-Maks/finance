@@ -25,10 +25,16 @@ from keyboards.category import (
 from keyboards.keyboards import confirmation, cancel_action
 from loader import categories_message, category_menu
 from states.category import CategoryState
-from utils.category import get_url
+from utils.category import get_url, get_categories, create_pagination
 
 
 category_route: Router = Router()
+pagination: list[str] = [
+    "next_category",
+    "prev_category",
+    "prev_category_child",
+    "next_category_child"
+]
 
 
 @category_route.callback_query(F.data == "categories")
@@ -55,11 +61,11 @@ async def show_categories(callback: CallbackQuery, state: FSMContext) -> None:
     """A handler for displaying income or expense categories."""
     data: dict = await state.get_data()
     page: int = data.get("page", 1)
-    url: str = categories_urls[callback.data].format(
-        page=page, page_size=PAGE_SIZE
+
+    result: dict = await get_categories(
+        page, callback.data, "true", callback.from_user.id
     )
 
-    result: dict = await get_all_objects(url, callback.from_user.id)
     await state.set_state(CategoryState.show)
     await state.update_data(page=page, category=callback.data)
 
@@ -73,7 +79,7 @@ async def show_categories(callback: CallbackQuery, state: FSMContext) -> None:
     )
 
 
-@category_route.callback_query(F.data.in_(["next_category", "prev_category"]))
+@category_route.callback_query(F.data.in_(pagination))
 @decorator_errors
 async def next_and_prev_category(
         callback: CallbackQuery, state: FSMContext
@@ -81,21 +87,10 @@ async def next_and_prev_category(
     """A function for getting the next or previous categories."""
     page: int = (await state.get_data()).get("page")
     category: str = (await state.get_data()).get("category")
-
-    if callback.data == "next_category":
-        page += 1
-    else:
-        page -= 1
-
-    url: str = categories_urls[category].format(page=page, page_size=PAGE_SIZE)
-    result: dict = await get_all_objects(url, callback.from_user.id)
-
-    keyword: InlineKeyboardMarkup = await create_list_category(
-        result, "prev_category", "next_category"
+    keyboard = await create_pagination(
+        state, callback, page, category, "true"
     )
-    await state.set_state(CategoryState.show)
-    await state.update_data(page=page)
-    await callback.message.edit_reply_markup(reply_markup=keyword)
+    await callback.message.edit_reply_markup(reply_markup=keyboard)
 
 
 @category_route.callback_query(F.data == "current_category")
@@ -110,12 +105,13 @@ async def current_category(
     data: dict = await state.get_data()
     result: dict = data.get("result")
     text: str = result.get("name")
-    await state.set_state(CategoryState.action)
 
     await call.message.edit_text(
         text=hbold("Категория: <" + text + ">. Выберите действие."),
         parse_mode="HTML",
-        reply_markup=await get_categories_action(data["category"]),
+        reply_markup=await get_categories_action(
+            data["category"], result.get("children")
+        ),
     )
 
 
@@ -131,13 +127,15 @@ async def detail_category(call: CallbackQuery, state: FSMContext) -> None:
     url, _ = await get_url(data)
     response: dict = await get_full_info(url, call.from_user.id)
     text: str = response.get("name")
-
-    await state.set_state(CategoryState.action)
     await state.update_data(result=response)
+    print(response)
     await call.message.edit_text(
         text=hbold("Категория: <" + text + ">. Выберите действие."),
         parse_mode="HTML",
-        reply_markup=await get_categories_action(data["category"]),
+        reply_markup=await get_categories_action(
+            data["category"], response.get("children")
+            
+        ),
     )
 
 
@@ -172,13 +170,13 @@ async def create_category(message: Message, state: FSMContext) -> None:
     """The handler sends a request to save the category."""
     data: dict[str, str] = await state.get_data()
     category: str = data["category"]
+
     result: dict = await create_new_object(
         message.from_user.id, categories_urls[category],
         {"name": message.text}
     )
     await state.update_data(category_id=result.get("id"))
 
-    await state.set_state(CategoryState.action)
     await message.answer(
         text=hbold(categories_message[category].format(message.text)),
         reply_markup=inline_type_categories,
@@ -186,7 +184,7 @@ async def create_category(message: Message, state: FSMContext) -> None:
     )
 
 
-@category_route.callback_query(F.data == "del_category", CategoryState.action)
+@category_route.callback_query(F.data == "del_category")
 @decorator_errors
 async def remove_confirm(callback: CallbackQuery, state: FSMContext) -> None:
     """Confirmation of deletion."""
@@ -255,10 +253,52 @@ async def edit_category(message: Message, state: FSMContext) -> None:
         url, message.from_user.id, {"name": message.text}, "PUT"
     )
     text: str = response.get("name")
-
-    await state.set_state(CategoryState.action)
     await message.answer(
         text=hbold("Категория: <" + text + ">. Выберите действие."),
         parse_mode="HTML",
         reply_markup=await get_categories_action(data["category"]),
+    )
+
+
+@category_route.callback_query(F.data == "be_child")
+@decorator_errors
+async def choice_parent_category(
+    callback: CallbackQuery,
+    state: FSMContext
+):
+    page: int = (await state.get_data()).get("page", 1)
+    category: str = (await state.get_data()).get("category")
+    result: dict = await get_categories(
+        page, category, "false", callback.from_user.id
+    )
+
+    keyword: InlineKeyboardMarkup = await create_list_category(
+        result, "prev_category_child", "next_category_child"
+    )
+    await state.set_state(CategoryState.child)
+    await state.update_data(page=page)
+    await callback.message.edit_reply_markup(reply_markup=keyword)
+
+
+@category_route.callback_query(
+    CategoryState.child, F.data.split("_")[0].isdigit()
+)
+async def create_parent_category(
+    callback: CallbackQuery, state: FSMContext
+):
+    state_data: dict = await state.get_data()
+    parent_category: int = int(callback.data.split("_")[0])
+    new_data = {
+        "name": state_data.get("result").get("name"),
+        "parent": parent_category
+        }
+    url, _ = await get_url(state_data)
+
+    response: dict = await edit_object(
+        url, callback.from_user.id, new_data, "PUT"
+    )
+    await callback.message.edit_text(
+        text=hbold("Успешно!"),
+        parse_mode="HTML",
+        reply_markup=await get_categories_action(state_data["category"])
     )
