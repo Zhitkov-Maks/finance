@@ -98,13 +98,23 @@ class TransactionSerializersPatch(serializers.ModelSerializer):
         fields = ["amount"]
 
 
-class CategoryTransactionStatisticsSerializer(serializers.Serializer):
-    """
-    Нужен для показа статистики доходов по месяцам.
-    """
+class ChildCategorySerializer(serializers.Serializer):
+    """Сериализатор для дочерней категории"""
+    name = serializers.CharField()
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2)
 
-    category_name = serializers.CharField(source="category__name")
-    total_amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+class CategoryTransactionStatisticsSerializer(serializers.Serializer):
+    """Сериализатор для статистики по категориям"""
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    total = serializers.DecimalField(max_digits=10, decimal_places=2)
+    children = serializers.ListField(
+        child=serializers.DictField(), 
+        required=False, 
+        default=list
+    )
+    parent = serializers.DictField(required=False, allow_null=True)
 
 
 class StatisticsResponseSerializer(serializers.Serializer):

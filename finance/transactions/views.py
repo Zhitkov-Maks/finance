@@ -297,7 +297,6 @@ class RetrieveUpdateDeleteCategory(generics.RetrieveUpdateDestroyAPIView):
         """Выбираем сериализатор."""
         if self.request.method == "PUT":
             return CategoryCreateSerializer
-
         return super().get_serializer_class()
 
     def get_queryset(self) -> QuerySet:
@@ -330,7 +329,7 @@ class CategoryTransactionStatisticsView(generics.GenericAPIView):
         """
         year: int = request.query_params.get("year", dt.now(UTC).year)
         month: int = request.query_params.get("month", dt.now(UTC).month)
-        type_tr: int = request.query_params.get("type", dt.now(UTC).month)
+        type_tr: int = request.query_params.get("type", "")
         if not year or not month or not type_tr:
             return Response(
                 {"error": "Year and month are required."},
@@ -341,7 +340,7 @@ class CategoryTransactionStatisticsView(generics.GenericAPIView):
             request.user, year, month, type_tr=type_tr
         )
         total_amount: float = sum(
-            float(item['total_amount']) for item in statistics
+            float(item['total']) for item in statistics
         )
 
         response_data: dict[str, QuerySet | float] = {
