@@ -4,7 +4,7 @@ from collections import defaultdict
 import django_filters
 from django.db.models import QuerySet
 
-from .models import Transaction
+from .models import Transaction, Category
 from app_user.models import CustomUser
 
 
@@ -97,16 +97,66 @@ def aggregate_category_totals(
     Возвращает словарь {category_id: category_data}
     """
     categories = {}
+    all_category_ids = set()  # Для отслеживания всех упомянутых категорий
+    parent_ids = set()  # Для отслеживания родительских ID
     
+    # Сначала собираем все ID категорий и родителей из транзакций
     for transaction in transactions:
         cat_id = transaction['category_id']
+        all_category_ids.add(cat_id)
         
-        if cat_id not in categories:
-            categories[cat_id] = create_category_base_data(transaction)
-        
-        # Добавляем сумму транзакции к общему итогу категории
-        categories[cat_id]['total_direct'] += float(transaction['amount'] or 0)
+        parent_id = transaction['category__parent_id']
+        if parent_id:
+            parent_ids.add(parent_id)
     
+    # Добавляем родительские категории, даже если у них нет своих транзакций
+    all_category_ids.update(parent_ids)
+    
+    # Получаем информацию о категориях из базы
+    categories_from_db = Category.objects.filter(
+        id__in=all_category_ids
+    ).select_related('parent')
+    category_db_info = {}
+    
+    for cat in categories_from_db:
+        category_db_info[cat.id] = {
+            'name': cat.name,
+            'parent_id': cat.parent_id if cat.parent else None,
+            'parent_name': cat.parent.name if cat.parent else None,
+        }
+    
+    # Инициализируем все категории
+    for cat_id in all_category_ids:
+        if cat_id in category_db_info:
+            info = category_db_info[cat_id]
+            categories[cat_id] = {
+                'id': cat_id,
+                'name': info['name'],
+                'parent_id': info['parent_id'],
+                'parent_name': info['parent_name'],
+                'total_direct': 0,
+                'total_with_children': 0,
+                'children': []
+            }
+        else:
+            # Если категория не найдена в БД, создаем заглушку
+            categories[cat_id] = {
+                'id': cat_id,
+                'name': f"Category {cat_id}",
+                'parent_id': None,
+                'parent_name': None,
+                'total_direct': 0,
+                'total_with_children': 0,
+                'children': []
+            }
+    
+    # Теперь добавляем суммы из транзакций
+    for transaction in transactions:
+        cat_id = transaction['category_id']
+        if cat_id in categories:
+            categories[cat_id]['total_direct'] += float(
+                transaction['amount'] or 0
+            )
     return categories
 
 
