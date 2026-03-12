@@ -1,11 +1,19 @@
-FROM python:3.13
+FROM python:3.13-alpine
 
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r ./requirements.txt
+RUN addgroup -S financegroup && \
+    adduser -S financeuser -G financegroup
 
-COPY . ./finance
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt \
+    && rm /tmp/requirements.txt
 
-WORKDIR ./finance
+WORKDIR /finance
+
+COPY --chown=financeuser:financegroup . .
+
+USER financeuser
