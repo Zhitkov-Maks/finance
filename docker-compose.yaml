@@ -7,7 +7,7 @@ services:
       - "POSTGRES_PASSWORD=${DB_PASS}"
       - "POSTGRES_DB=${DB_NAME}"
     ports:
-      - '5432:5432'
+      - '127.0.0.1:5432:5432'
     restart: always
     volumes:
       - ./finance-db/:/var/lib/postgresql/data
@@ -28,7 +28,7 @@ services:
     container_name: api
     restart: always
     ports:
-      - "8001:8001"
+      - "127.0.0.1:8001:8001"
     env_file:
       - .env
     depends_on:
@@ -47,7 +47,7 @@ services:
     env_file:
       - ./.env
     ports:
-      - "446:446"
+      - "127.0.0.1:446:446"
     restart: always
     depends_on:
       - django_app
