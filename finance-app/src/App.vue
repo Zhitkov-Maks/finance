@@ -30,6 +30,11 @@
           <i class="fas fa-exchange-alt"></i>
           <span>Транзакции</span>
         </router-link>
+
+        <router-link to="/transfers" class="nav-item" @click="closeMobileMenu">
+          <i class="fas fa-money-bill-transfer"></i>
+          <span>Переводы</span>
+        </router-link>
         
         <router-link to="/debts" class="nav-item" @click="closeMobileMenu">
           <i class="fas fa-hand-holding-usd"></i>
