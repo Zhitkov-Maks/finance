@@ -71,7 +71,6 @@ export default {
     
     const toggleMobileMenu = () => {
       mobileMenuOpen.value = !mobileMenuOpen.value
-      // Блокируем прокрутку body при открытом меню
       if (mobileMenuOpen.value) {
         document.body.style.overflow = 'hidden'
       } else {
@@ -93,10 +92,24 @@ export default {
     
     const logout = async () => {
       try {
+        // Очищаем все данные
         await apiService.logout()
-        router.push('/login')
+        
+        // Принудительно очищаем localStorage
+        localStorage.clear()
+        sessionStorage.clear()
+        
+        // Перенаправляем на страницу логина
+        await router.push('/login')
+        
+        // Перезагружаем страницу для полной очистки состояния
+        window.location.href = '/login'
       } catch (error) {
         console.error('Logout error:', error)
+        // Даже если ошибка, очищаем всё и перенаправляем
+        localStorage.clear()
+        sessionStorage.clear()
+        window.location.href = '/login'
       }
     }
     

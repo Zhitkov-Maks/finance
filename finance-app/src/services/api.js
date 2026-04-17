@@ -1,18 +1,24 @@
 import axios from 'axios'
 
-const API_BASE_URL = 'http://0.0.0.0:8001/api/v1'
-const AUTH_URL = 'http://0.0.0.0:8001'
+const API_BASE_URL = '/api/v1'
 
 class ApiService {
   constructor() {
     this.token = localStorage.getItem('auth_token')
+    this.client = axios.create({
+      baseURL: API_BASE_URL,
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
     this.setupInterceptors()
   }
 
   setupInterceptors() {
-    axios.interceptors.request.use(config => {
-      if (this.token && !config.url.includes('/auth/')) {
-        config.headers['Authorization'] = `Token ${this.token}`
+    this.client.interceptors.request.use(config => {
+      const token = localStorage.getItem('auth_token')
+      if (token && !config.url.includes('/auth/')) {
+        config.headers['Authorization'] = `Token ${token}`
       }
       return config
     })
@@ -28,9 +34,9 @@ class ApiService {
     localStorage.removeItem('auth_token')
   }
 
-  // Аутентификация
+  // Аутентификация - используем правильные URL
   async register(email, password, rePassword) {
-    const response = await axios.post(`${AUTH_URL}/api/v1/auth/users/`, {
+    const response = await this.client.post('/auth/users/', {
       email,
       password,
       re_password: rePassword
@@ -39,7 +45,7 @@ class ApiService {
   }
 
   async login(email, password) {
-    const response = await axios.post(`${AUTH_URL}/auth/token/login/`, {
+    const response = await this.client.post('/auth/token/login/', {
       email,
       password
     })
@@ -49,25 +55,30 @@ class ApiService {
   }
 
   async logout() {
-    await axios.post(`${AUTH_URL}/auth/token/logout/`)
-    this.clearToken()
+    try {
+      await this.client.post('/auth/token/logout/')
+    } catch (error) {
+      console.error('Logout API error:', error)
+    } finally {
+      this.clearAuth()
+    }
   }
 
   async getUserInfo() {
-    const response = await axios.get(`${API_BASE_URL}/auth/users/`)
+    const response = await this.client.get('/auth/users/')
     return response.data
   }
 
   // Счета
   async getAccounts(page = 1, pageSize = 10) {
-    const response = await axios.get(`${API_BASE_URL}/accounts/`, {
+    const response = await this.client.get('/accounts/', {
       params: { page, page_size: pageSize }
     })
     return response.data
   }
 
   async createAccount(name, balance) {
-    const response = await axios.post(`${API_BASE_URL}/accounts/`, {
+    const response = await this.client.post('/accounts/', {
       name,
       balance
     })
@@ -75,26 +86,26 @@ class ApiService {
   }
 
   async getAccount(id) {
-    const response = await axios.get(`${API_BASE_URL}/accounts/${id}/`)
+    const response = await this.client.get(`/accounts/${id}/`)
     return response.data
   }
 
   async updateAccount(id, data) {
-    const response = await axios.put(`${API_BASE_URL}/accounts/${id}/`, data)
+    const response = await this.client.put(`/accounts/${id}/`, data)
     return response.data
   }
 
   async patchAccount(id, data) {
-    const response = await axios.patch(`${API_BASE_URL}/accounts/${id}/`, data)
+    const response = await this.client.patch(`/accounts/${id}/`, data)
     return response.data
   }
 
   async deleteAccount(id) {
-    await axios.delete(`${API_BASE_URL}/accounts/${id}/`)
+    await this.client.delete(`/accounts/${id}/`)
   }
 
   async toggleAccountActive(id, isActive) {
-    const response = await axios.patch(`${API_BASE_URL}/accounts/${id}/toggle-active/`, {
+    const response = await this.client.patch(`/accounts/${id}/toggle-active/`, {
       is_active: isActive
     })
     return response.data
@@ -102,19 +113,19 @@ class ApiService {
 
   // Категории
   async getCategories(type, page = 1, pageSize = 10, parent = false) {
-    const response = await axios.get(`${API_BASE_URL}/transaction/category/`, {
+    const response = await this.client.get('/transaction/category/', {
       params: { type, page, page_size: pageSize, parent }
     })
     return response.data
   }
 
   async getCategory(id) {
-    const response = await axios.get(`${API_BASE_URL}/transaction/category/${id}/`)
+    const response = await this.client.get(`/transaction/category/${id}/`)
     return response.data
   }
 
   async createCategory(name, type, parent = null) {
-    const response = await axios.post(`${API_BASE_URL}/transaction/category/`, 
+    const response = await this.client.post('/transaction/category/', 
       { name, parent: parent || "" },
       { params: { type } }
     )
@@ -122,7 +133,7 @@ class ApiService {
   }
 
   async updateCategory(id, name, parent = null) {
-    const response = await axios.put(`${API_BASE_URL}/transaction/category/${id}/`, {
+    const response = await this.client.put(`/transaction/category/${id}/`, {
       name,
       parent: parent || ""
     })
@@ -130,43 +141,43 @@ class ApiService {
   }
 
   async deleteCategory(id) {
-    await axios.delete(`${API_BASE_URL}/transaction/category/${id}/`)
+    await this.client.delete(`/transaction/category/${id}/`)
   }
 
   // Транзакции
   async getTransactions(params) {
-    const response = await axios.get(`${API_BASE_URL}/transaction/`, { params })
+    const response = await this.client.get('/transaction/', { params })
     return response.data
   }
 
   async createTransaction(type, data) {
-    const response = await axios.post(`${API_BASE_URL}/transaction/`, data, {
+    const response = await this.client.post('/transaction/', data, {
       params: { type }
     })
     return response.data
   }
 
   async getTransaction(id) {
-    const response = await axios.get(`${API_BASE_URL}/transaction/${id}/`)
+    const response = await this.client.get(`/transaction/${id}/`)
     return response.data
   }
 
   async updateTransaction(id, data) {
-    const response = await axios.put(`${API_BASE_URL}/transaction/${id}/`, data)
+    const response = await this.client.put(`/transaction/${id}/`, data)
     return response.data
   }
 
   async patchTransaction(id, data) {
-    const response = await axios.patch(`${API_BASE_URL}/transaction/${id}/`, data)
+    const response = await this.client.patch(`/transaction/${id}/`, data)
     return response.data
   }
 
   async deleteTransaction(id) {
-    await axios.delete(`${API_BASE_URL}/transaction/${id}/`)
+    await this.client.delete(`/transaction/${id}/`)
   }
 
   async getStatistics(month, year, type) {
-    const response = await axios.get(`${API_BASE_URL}/transaction/statistics/`, {
+    const response = await this.client.get('/transaction/statistics/', {
       params: { month, year, type }
     })
     return response.data
@@ -174,7 +185,7 @@ class ApiService {
 
   // Переводы
   async createTransfer(sourceAccount, destinationAccount, amount, timestamp) {
-    const response = await axios.post(`${API_BASE_URL}/transfer/`, {
+    const response = await this.client.post('/transfer/', {
       source_account: sourceAccount,
       destination_account: destinationAccount,
       amount,
@@ -184,29 +195,29 @@ class ApiService {
   }
 
   async getTransferHistory(page = 1, pageSize = 10) {
-    const response = await axios.get(`${API_BASE_URL}/transfer/history/`, {
+    const response = await this.client.get('/transfer/history/', {
       params: { page, page_size: pageSize }
     })
     return response.data
   }
 
   async getTransfer(id) {
-    const response = await axios.get(`${API_BASE_URL}/transfer/${id}/`)
+    const response = await this.client.get(`/transfer/${id}/`)
     return response.data
   }
 
   async updateTransfer(id, data) {
-    const response = await axios.put(`${API_BASE_URL}/transfer/${id}/`, data)
+    const response = await this.client.put(`/transfer/${id}/`, data)
     return response.data
   }
 
   async deleteTransfer(id) {
-    await axios.delete(`${API_BASE_URL}/transfer/${id}/`)
+    await this.client.delete(`/transfer/${id}/`)
   }
 
   // Долги
   async createDebtAccounts(name, userId) {
-    const response = await axios.post(`${API_BASE_URL}/debts/create-debt-accounts/`, {
+    const response = await this.client.post('/debts/create-debt-accounts/', {
       name,
       balance: "0",
       user: userId
@@ -215,7 +226,7 @@ class ApiService {
   }
 
   async createDebt(accountId, type, amount, description, date) {
-    const response = await axios.post(`${API_BASE_URL}/debts/create-debt/`, {
+    const response = await this.client.post('/debts/create-debt/', {
       account_id: accountId,
       type,
       amount,
@@ -226,19 +237,19 @@ class ApiService {
   }
 
   async getDebt(id) {
-    const response = await axios.get(`${API_BASE_URL}/debts/${id}/`)
+    const response = await this.client.get(`/debts/${id}/`)
     return response.data
   }
 
   async getDebts(page = 1, pageSize = 10, type = null) {
     const params = { page, page_size: pageSize }
     if (type) params.type = type
-    const response = await axios.get(`${API_BASE_URL}/debts/`, { params })
+    const response = await this.client.get('/debts/', { params })
     return response.data
   }
 
   async repayDebt(debtId, amount, type) {
-    const response = await axios.post(`${API_BASE_URL}/debts/repay-debt/`, {
+    const response = await this.client.post('/debts/repay-debt/', {
       debt_id: debtId,
       amount,
       type
@@ -248,7 +259,7 @@ class ApiService {
 
   // Аналитика
   async getMonthlyAnalytics(year, type) {
-    const response = await axios.get(`${API_BASE_URL}/analitycs/month/`, {
+    const response = await this.client.get('/analitycs/month/', {
       params: { year, type }
     })
     return response.data
@@ -257,8 +268,7 @@ class ApiService {
   // Статистика по категориям за месяц
   async getMonthStatistics(month, year, type) {
     try {
-      // Используем правильный URL для статистики по категориям
-      const response = await axios.get(`${API_BASE_URL}/transaction/statistics/`, {
+      const response = await this.client.get('/transaction/statistics/', {
         params: {
           month: month,
           year: year,
@@ -271,6 +281,13 @@ class ApiService {
       throw error
     }
   }
+
+  clearAuth() {
+    this.clearToken()
+    delete this.client.defaults.headers.common['Authorization']
+    localStorage.removeItem('auth_token')
+    sessionStorage.clear()
+}
 }
 
 export default new ApiService()
