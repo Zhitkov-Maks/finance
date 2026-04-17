@@ -100,11 +100,10 @@ class ApiService {
     return response.data
   }
 
-  // Категории - ИСПРАВЛЕНО: используем 'expence' вместо 'expense'
+  // Категории
   async getCategories(type, page = 1, pageSize = 10, parent = false) {
-    // API использует 'expence' (с опечаткой) для расходов
     const response = await axios.get(`${API_BASE_URL}/transaction/category/`, {
-      params: { type: type, page, page_size: pageSize, parent }
+      params: { type, page, page_size: pageSize, parent }
     })
     return response.data
   }
@@ -115,11 +114,9 @@ class ApiService {
   }
 
   async createCategory(name, type, parent = null) {
-    // API использует 'expence' (с опечаткой) для расходов
-    const apiType = type === 'expense' ? 'expence' : type
     const response = await axios.post(`${API_BASE_URL}/transaction/category/`, 
       { name, parent: parent || "" },
-      { params: { type: apiType } }
+      { params: { type } }
     )
     return response.data
   }
@@ -255,6 +252,24 @@ class ApiService {
       params: { year, type }
     })
     return response.data
+  }
+
+  // Статистика по категориям за месяц
+  async getMonthStatistics(month, year, type) {
+    try {
+      // Используем правильный URL для статистики по категориям
+      const response = await axios.get(`${API_BASE_URL}/transaction/statistics/`, {
+        params: {
+          month: month,
+          year: year,
+          type: type
+        }
+      })
+      return response.data
+    } catch (error) {
+      console.error('Error loading month statistics:', error)
+      throw error
+    }
   }
 }
 
