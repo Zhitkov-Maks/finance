@@ -19,7 +19,7 @@ from accounts.schemas import (
 from accounts.serializers import (
     AccountSerializer,
     AccountToggleStatusSerializer,
-    AccountGetSerializer,
+    BaseAccountSerializer,
 )
 
 
@@ -47,7 +47,7 @@ class ListAccounts(generics.ListCreateAPIView):
 
     def get_serializer_class(self):
         if self.request.method == 'GET':
-            return AccountGetSerializer
+            return BaseAccountSerializer
         return super().get_serializer_class()
 
     def get_queryset(self) -> QuerySet:

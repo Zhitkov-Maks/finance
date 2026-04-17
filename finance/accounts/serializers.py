@@ -12,7 +12,7 @@ class BaseAccountSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Account
-        fields = ["id", "name", "balance"]
+        fields = ["id", "name", "balance", "is_active"]
 
 
 class AccountTransactionSerializer(serializers.ModelSerializer):
@@ -23,7 +23,7 @@ class AccountTransactionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Transaction
-        fields = ["id", "amount", "create_at"]
+        fields = ["id", "amount", "create_at", "is_active"]
 
 
 class AccountSerializer(serializers.ModelSerializer):
