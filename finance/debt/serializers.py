@@ -23,14 +23,21 @@ class DebtRepaymentSerializer(serializers.Serializer):
     type = serializers.CharField(max_length=10)
 
 
+class AccountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Account
+        fields = ['id', 'name']
+
+
 class TransferDebtSerializer(serializers.ModelSerializer):
-    """Нужен при работе со списком долгов."""
+    destination_account = AccountSerializer(read_only=True)
 
     class Meta:
         model = Transfer
         fields = [
             'amount',
-            'timestamp'
+            'timestamp',
+            'destination_account'
         ]
 
 

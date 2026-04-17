@@ -128,7 +128,6 @@ class TransferDetailView(generics.RetrieveUpdateDestroyAPIView):
         user: CustomUser = self.request.user
         return (
             Transfer.objects.filter(source_account__user=user)
-            .union(Transfer.objects.filter(destination_account__user=user))
             .order_by("-timestamp")
         )
 

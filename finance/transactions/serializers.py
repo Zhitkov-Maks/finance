@@ -16,9 +16,11 @@ class CategorySerializer(serializers.ModelSerializer):
     Нужен для сериализации категорий доходов.
     """
     has_children = serializers.BooleanField(read_only=True)
+    children = ParentSerializers(many=True, source='get_children_direct')
+
     class Meta:
         model = Category
-        fields = ["id", "name", "has_children"]
+        fields = ["id", "name", "children", "has_children", "type_transaction"]
 
 
 class CategoryIDSerializers(serializers.ModelSerializer):
@@ -110,8 +112,8 @@ class CategoryTransactionStatisticsSerializer(serializers.Serializer):
     name = serializers.CharField()
     total = serializers.DecimalField(max_digits=10, decimal_places=2)
     children = serializers.ListField(
-        child=serializers.DictField(), 
-        required=False, 
+        child=serializers.DictField(),
+        required=False,
         default=list
     )
     parent = serializers.DictField(required=False, allow_null=True)

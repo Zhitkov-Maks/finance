@@ -49,7 +49,7 @@ def update_amount_accounts(
     :param destination: Счет на который будем переводить.
     :param data: Словарь с данными.
     """
-    if data["type"] == "debt":
+    if data.get("type") == "debt":
         source.balance += data["amount"]
         destination.balance -= data["amount"]
 

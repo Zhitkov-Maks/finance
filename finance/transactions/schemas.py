@@ -37,6 +37,13 @@ TtransactionViewSchema = extend_schema_view(
     ),
     post=extend_schema(
         operation_id="create_new_transaction",
+        parameters=[
+            OpenApiParameter(
+                "type", str,
+                description="Тип транзакции(income, expense)",
+                required=True
+            ),
+        ],
         description="Создать новую транзакцию.",
         request=TransactionSerializersAdd,
         responses={

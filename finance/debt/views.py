@@ -43,7 +43,7 @@ class CreateDebtAccountsView(APIView):
         BasicAuthentication,
         SessionAuthentication,
     )
-    
+
     def get_serializer_class(self):
         return AccountDebtSerializer
 
