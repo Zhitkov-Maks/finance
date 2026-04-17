@@ -32,6 +32,7 @@ from debt.util import (
 )
 from accounts.views import AccountPagination
 from app_user.models import CustomUser
+from accounts.models import Account
 
 
 @DebtCreateAccountsSchema
@@ -65,7 +66,6 @@ class CreateDebtAccountsView(APIView):
             )
 
 
-@DebtCreateSchema
 class CreateDebtView(APIView):
     """Класс для создания долга."""
 
@@ -76,6 +76,22 @@ class CreateDebtView(APIView):
         BasicAuthentication,
         SessionAuthentication,
     )
+
+    def _ensure_debt_accounts_exist(self, user):
+        """
+        Проверяет и создает счета debt и lend если они не существуют.
+        Возвращает True если счета существуют или были созданы.
+        """
+        # Проверяем существуют ли счета
+        debt_exists = Account.objects.filter(user=user, name="debt").exists()
+        lend_exists = Account.objects.filter(user=user, name="lend").exists()
+
+        if not debt_exists or not lend_exists:
+            # Если счетов нет, создаем их
+            create_debt_accounts(user)
+            return True
+
+        return True
 
     def post(self, request) -> Response:
         """Метод для обработки данных для создания долга."""
@@ -91,6 +107,10 @@ class CreateDebtView(APIView):
             }
 
             with transaction.atomic():
+                # Проверяем и создаем счета для долгов если нужно
+                self._ensure_debt_accounts_exist(request.user)
+
+                # Создаем долг
                 answer, status_code = create_debt_or_lend_transfer(
                         request.user, data
                     )

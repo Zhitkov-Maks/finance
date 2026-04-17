@@ -72,10 +72,56 @@ MIDDLEWARE = [
 CORS_ALLOW_ALL_ORIGINS = False
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8001",
-    "http://0.0.0.0:8001",
-    "http://api:8001"
+    "http://localhost",
+    "http://localhost:80",
+    "http://127.0.0.1",
+    "http://0.0.0.0:80",
+    "http://vue_app",
+    "http://nginx_proxy",
+    "http://nginx-proxy",
 ]
+
+# Для разработки можно добавить все origins с localhost
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^http://localhost:\d+$",
+    r"^http://127\.0\.0\.1:\d+$",
+    r"^http://0\.0\.0\.0:\d+$",
+]
+
+# Настройки для работы с Docker
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost",
+    "http://localhost:80",
+    "http://127.0.0.1",
+    "http://vue_app",
+    "http://nginx_proxy",
+]
+
+# Разрешаем все методы
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# Разрешаем заголовки
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# Разрешаем куки
+CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = 'finance.urls'
 

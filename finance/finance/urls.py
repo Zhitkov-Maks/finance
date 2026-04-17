@@ -22,8 +22,11 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
     SpectacularRedocView,
 )
+from .views import health_check
+
 
 urlpatterns = [
+    path('health/', health_check, name='health'),
     path("admin/", admin.site.urls),
     path("api/vi/dfr_auth/", include("rest_framework.urls")),
     path("api/v1/auth/", include("djoser.urls")),

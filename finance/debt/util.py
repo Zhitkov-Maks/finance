@@ -73,7 +73,8 @@ def create_debt_or_lend_transfer(user: CustomUser, data: dict) -> tuple:
     except Account.DoesNotExist:
         return {"status": "error", "message": "Счет не найден"}, 404
 
-    dest_account: Account = Account.objects.get(user=user, name=data["type"])
+    account_name = "lend" if data["type"] == "borrow" else "debt"
+    dest_account: Account = Account.objects.get(user=user, name=account_name)
 
     datetime_obj = datetime.combine(data["date"], datetime.min.time())
     aware_datetime = timezone.make_aware(
