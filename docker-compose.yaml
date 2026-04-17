@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   finance_db:
     image: postgres:15-alpine
@@ -8,27 +10,29 @@ services:
       - "POSTGRES_DB=${DB_NAME}"
     ports:
       - '127.0.0.1:5432:5432'
-    restart: always
+    restart: unless-stopped
     volumes:
-      - ./finance-db/:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     env_file:
       - ./.env
     networks:
       - app_network
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 5
+      start_period: 10s
 
   django_app:
     build:
-      context: finance
-    stop_signal: SIGKILL
+      context: ./finance
     container_name: api
-    restart: always
+    restart: unless-stopped
+    expose:
+      - "8001"
     ports:
-      - "127.0.0.1:8001:8001"
+      - "8001:8001"
     env_file:
       - .env
     depends_on:
@@ -36,26 +40,54 @@ services:
         condition: service_healthy
     networks:
       - app_network
+    volumes:
+      - ./finance:/finance
     entrypoint: /finance/entrypoint.sh
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
-  finance_bot:
-    container_name: finance_bot
+  vue_app:
     build:
-      context: finance_bot
-    environment:
-      - "BOT_TOKEN=${TOKEN}"
-    env_file:
-      - ./.env
-    ports:
-      - "127.0.0.1:446:446"
-    restart: always
+      context: ./finance-app
+    container_name: vue-app
+    restart: unless-stopped
+    expose:
+      - "80"
     depends_on:
-      - django_app
+      django_app:
+        condition: service_started
     networks:
       - app_network
+
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: nginx-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
     volumes:
-      - ./logs:/finance_bot/logs
+      - ./nginx/conf.d:/etc/nginx/conf.d:rw
+    depends_on:
+      django_app:
+        condition: service_healthy
+      vue_app:
+        condition: service_started
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 networks:
   app_network:
     driver: bridge
+
+volumes:
+  postgres_data:
