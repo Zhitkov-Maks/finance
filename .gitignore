@@ -173,3 +173,5 @@ cython_debug/
 finance-db
 .idea/
 finance/Untitled.ipynb
+finance_bot
+node_modules
