@@ -331,7 +331,7 @@ export default {
     const loadCategories = async () => {
       try {
         // Загружаем категории доходов
-        const incomeData = await apiService.getCategories('income', 1, 100, false)
+        const incomeData = await apiService.getCategories('income', 1, 100, true)
         incomeCategories.value = await Promise.all(
           incomeData.results.map(async (cat) => {
             if (cat.has_children) {
@@ -342,7 +342,7 @@ export default {
         )
         
         // Загружаем категории расходов (используем 'expence' в API)
-        const expenseData = await apiService.getCategories('expense', 1, 100, false)
+        const expenseData = await apiService.getCategories('expense', 1, 100, true)
         expenseCategories.value = await Promise.all(
           expenseData.results.map(async (cat) => {
             if (cat.has_children) {

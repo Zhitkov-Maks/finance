@@ -1,6 +1,8 @@
 <template>
   <div>
-    <h1 style="margin-bottom: 2rem;">Переводы между счетами</h1>
+    <h1 style="margin-bottom: 2rem; font-size: clamp(1.5rem, 5vw, 2rem);">
+      Переводы между счетами
+    </h1>
 
     <div class="card">
       <div class="card-header">
@@ -51,7 +53,8 @@
         <h3 class="card-title">История переводов</h3>
       </div>
 
-      <div class="table">
+      <!-- Desktop Table -->
+      <div class="table desktop-table">
         <table>
           <thead>
             <tr>
@@ -64,17 +67,19 @@
           </thead>
           <tbody>
             <tr v-for="transfer in transfers" :key="transfer.id">
-              <td>{{ formatDate(transfer.timestamp) }}</td>
-              <td>{{ transfer.source_account_name }}</td>
-              <td>{{ transfer.destination_account_name }}</td>
-              <td class="text-warning">{{ formatCurrency(transfer.amount) }}</td>
-              <td>
-                <button @click="editTransfer(transfer)" class="btn btn-secondary btn-sm">
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button @click="confirmDelete(transfer)" class="btn btn-danger btn-sm">
-                  <i class="fas fa-trash"></i>
-                </button>
+              <td data-label="Дата">{{ formatDate(transfer.timestamp) }}</td>
+              <td data-label="Со счета">{{ transfer.source_account_name }}</td>
+              <td data-label="На счет">{{ transfer.destination_account_name }}</td>
+              <td data-label="Сумма" class="text-warning">{{ formatCurrency(transfer.amount) }}</td>
+              <td data-label="Действия">
+                <div class="action-buttons">
+                  <button @click="editTransfer(transfer)" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button @click="confirmDelete(transfer)" class="btn btn-danger btn-sm">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
               </td>
             </tr>
             <tr v-if="transfers.length === 0">
@@ -84,14 +89,48 @@
         </table>
       </div>
 
+      <!-- Mobile Cards -->
+      <div class="mobile-cards">
+        <div v-for="transfer in transfers" :key="transfer.id" class="transfer-card">
+          <div class="transfer-card-header">
+            <span class="transfer-amount">{{ formatCurrency(transfer.amount) }}</span>
+            <div class="transfer-actions">
+              <button @click="editTransfer(transfer)" class="btn btn-secondary btn-sm">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button @click="confirmDelete(transfer)" class="btn btn-danger btn-sm">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+          <div class="transfer-card-body">
+            <div class="transfer-info">
+              <span class="info-label">Дата:</span>
+              <span class="info-value">{{ formatDate(transfer.timestamp) }}</span>
+            </div>
+            <div class="transfer-info">
+              <span class="info-label">Со счета:</span>
+              <span class="info-value">{{ transfer.source_account_name }}</span>
+            </div>
+            <div class="transfer-info">
+              <span class="info-label">На счет:</span>
+              <span class="info-value">{{ transfer.destination_account_name }}</span>
+            </div>
+          </div>
+        </div>
+        <div v-if="transfers.length === 0" class="empty-state">
+          Нет переводов
+        </div>
+      </div>
+
       <!-- Pagination -->
       <div class="pagination">
         <button @click="prevPage" :disabled="currentPage === 1" class="btn btn-secondary">
-          <i class="fas fa-chevron-left"></i> Назад
+          <i class="fas fa-chevron-left"></i> <span class="btn-text">Назад</span>
         </button>
-        <span>Страница {{ currentPage }} из {{ totalPages }}</span>
+        <span class="page-info">Страница {{ currentPage }} из {{ totalPages }}</span>
         <button @click="nextPage" :disabled="currentPage === totalPages" class="btn btn-secondary">
-          Вперед <i class="fas fa-chevron-right"></i>
+          <span class="btn-text">Вперед</span> <i class="fas fa-chevron-right"></i>
         </button>
       </div>
     </div>
@@ -128,7 +167,7 @@
           <button class="modal-close" @click="showDeleteModal = false">&times;</button>
         </div>
         <p>Вы уверены, что хотите удалить этот перевод?</p>
-        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+        <div class="modal-buttons">
           <button @click="deleteTransfer" class="btn btn-danger">Да, удалить</button>
           <button @click="showDeleteModal = false" class="btn btn-secondary">Отмена</button>
         </div>
@@ -322,6 +361,7 @@ export default {
 </script>
 
 <style scoped>
+/* Адаптивные стили */
 .text-warning {
   color: var(--warning-color);
   font-weight: 600;
@@ -331,9 +371,239 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
   margin-top: 1.5rem;
   padding-top: 1rem;
   border-top: 1px solid var(--light-color);
+  flex-wrap: wrap;
+}
+
+/* Скрываем мобильные карточки на десктопе */
+.mobile-cards {
+  display: none;
+}
+
+/* Стили для мобильных устройств */
+@media (max-width: 768px) {
+  /* Скрываем таблицу на мобильных */
+  .desktop-table {
+    display: none;
+  }
+  
+  /* Показываем карточки */
+  .mobile-cards {
+    display: block;
+  }
+  
+  /* Стили для карточек переводов */
+  .transfer-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--light-color);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .transfer-card:active {
+    transform: scale(0.99);
+  }
+  
+  .transfer-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .transfer-amount {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--warning-color);
+  }
+  
+  .transfer-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .transfer-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .transfer-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+  
+  .info-label {
+    font-weight: 600;
+    color: #6b7280;
+    min-width: 70px;
+  }
+  
+  .info-value {
+    color: #1f2937;
+    text-align: right;
+    word-break: break-word;
+    flex: 1;
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #6b7280;
+    background: #f9fafb;
+    border-radius: 12px;
+  }
+  
+  /* Улучшаем отступы для формы */
+  .form-group {
+    margin-bottom: 1rem;
+  }
+  
+  .form-control {
+    font-size: 16px !important; /* Предотвращает зумирование на iOS */
+    padding: 12px;
+  }
+  
+  /* Увеличиваем кнопки для удобства нажатия */
+  .btn {
+    padding: 12px 16px;
+    font-size: 1rem;
+    min-height: 44px; /* Минимальный размер для touch-цели */
+  }
+  
+  .btn-sm {
+    padding: 8px 12px;
+    min-height: 36px;
+  }
+  
+  /* Улучшаем пагинацию */
+  .btn-text {
+    display: inline-block;
+  }
+  
+  .page-info {
+    font-size: 0.875rem;
+    padding: 0 0.5rem;
+  }
+  
+  /* Модальные окна на мобильных */
+  .modal-content {
+    width: 95%;
+    margin: 1rem;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  
+  .modal-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+  }
+  
+  .modal-buttons .btn {
+    flex: 1;
+    min-width: 120px;
+  }
+  
+  /* Улучшаем select на мобильных */
+  select.form-control {
+    background-size: 12px;
+    padding-right: 32px;
+  }
+}
+
+/* Планшеты */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .desktop-table {
+    overflow-x: auto;
+  }
+  
+  .desktop-table table {
+    min-width: 600px;
+  }
+  
+  .action-buttons {
+    display: flex;
+    gap: 0.5rem;
+  }
+}
+
+/* Очень маленькие экраны */
+@media (max-width: 480px) {
+  .pagination {
+    gap: 0.5rem;
+  }
+  
+  .btn-text {
+    display: none; /* Скрываем текст, оставляем только иконки на очень маленьких экранах */
+  }
+  
+  .pagination .btn {
+    padding: 10px 12px;
+  }
+  
+  .transfer-info {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  
+  .info-label {
+    min-width: auto;
+  }
+  
+  .info-value {
+    text-align: left;
+  }
+}
+
+/* Альбомная ориентация на мобильных */
+@media (max-width: 768px) and (orientation: landscape) {
+  .transfer-card {
+    padding: 0.75rem;
+  }
+  
+  .transfer-card-header {
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  
+  .transfer-info {
+    font-size: 0.8rem;
+  }
+}
+
+/* Стили для кнопок действий на десктопе */
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Улучшенные стили для полей ввода */
+.form-control {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Стили для disabled состояний */
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>
