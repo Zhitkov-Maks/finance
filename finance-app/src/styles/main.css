@@ -5,12 +5,12 @@
 }
 
 :root {
-  --primary-color: #6366f1;
-  --primary-dark: #4f46e5;
+  --primary-color: #000000;
+  --primary-dark: hwb(246 2% 27%);
   --secondary-color: #10b981;
   --danger-color: #ef4444;
   --warning-color: #f59e0b;
-  --dark-color: #1f2937;
+  --dark-color: #1e1c37;
   --light-color: #f3f4f6;
   --gray-color: #6b7280;
   --white: #ffffff;
@@ -21,7 +21,7 @@
 
 body {
   font-family: 'Inter', sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #faf5ff 0%, #b7b7b7 100%);
   color: var(--dark-color);
   line-height: 1.5;
 }

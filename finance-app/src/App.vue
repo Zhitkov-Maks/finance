@@ -94,7 +94,7 @@ export default {
         closeMobileMenu()
       }
     }
-    
+
     const logout = async () => {
       try {
         // Очищаем все данные
@@ -146,11 +146,11 @@ export default {
 }
 
 :root {
-  --primary-color: #4f46e5;
+  --primary-color: #101010;
   --secondary-color: #10b981;
   --danger-color: #ef4444;
   --warning-color: #f59e0b;
-  --dark-color: #1f2937;
+  --dark-color: #12135b;
   --gray-color: #6b7280;
   --light-color: #f3f4f6;
   --white: #ffffff;

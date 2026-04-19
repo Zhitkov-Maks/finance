@@ -267,9 +267,11 @@ export default {
     })
     
     const totalBalance = computed(() => {
-      return accounts.value.reduce((sum, acc) => sum + parseFloat(acc.balance), 0)
+      return accounts.value
+        .filter(acc => acc.is_active) // Добавляем фильтрацию только активных счетов
+        .reduce((sum, acc) => sum + parseFloat(acc.balance), 0)
     })
-    
+
     const activeAccounts = computed(() => {
       return accounts.value.filter(acc => acc.is_active)
     })
@@ -344,7 +346,7 @@ export default {
         expenseTransactions.value = expenseData.results || []
         
         // Загрузка категорий доходов
-        const incomeCatData = await apiService.getCategories('income', 1, 100, false)
+        const incomeCatData = await apiService.getCategories('income', 1, 100, true)
         incomeCategories.value = await Promise.all(
           incomeCatData.results.map(async (cat) => {
             if (cat.has_children) {
@@ -355,7 +357,7 @@ export default {
         )
         
         // Загрузка категорий расходов
-        const expenseCatData = await apiService.getCategories('expense', 1, 100, false)
+        const expenseCatData = await apiService.getCategories('expense', 1, 100, true)
         expenseCategories.value = await Promise.all(
           expenseCatData.results.map(async (cat) => {
             if (cat.has_children) {
@@ -588,8 +590,9 @@ export default {
   h1 {
     font-size: 1.5rem;
     margin-bottom: 1rem !important;
+    text-align: center;
   }
-  
+
   .stats-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
@@ -697,6 +700,7 @@ export default {
 @media (max-width: 480px) {
   h1 {
     font-size: 1.25rem;
+    text-align: center;
   }
   
   .stat-value {

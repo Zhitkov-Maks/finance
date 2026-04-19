@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="page-header">
-      <h1>Управление категориями</h1>
+      <h1>Категории</h1>
       <button @click="openCreateModal" class="btn btn-primary">
         <i class="fas fa-plus"></i> Создать категорию
       </button>

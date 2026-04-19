@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h1 style="margin-bottom: 2rem;">Статистика и аналитика</h1>
+    <h1 style="margin-bottom: 2rem;">Аналитика</h1>
 
     <div class="card">
       <div class="filters">
@@ -56,12 +56,14 @@
         </div>
       </div>
 
-      <div class="stat-card">
+      <!-- Показываем только при просмотре за год -->
+      <div class="stat-card" v-if="selectedPeriod === 'year'">
         <div class="stat-title">Количество транзакций</div>
         <div class="stat-value">{{ transactionCount }}</div>
       </div>
 
-      <div class="stat-card">
+      <!-- Показываем только при просмотре за год -->
+      <div class="stat-card" v-if="selectedPeriod === 'year'">
         <div class="stat-title">Средняя сумма</div>
         <div class="stat-value">{{ formatCurrency(averageAmount) }}</div>
       </div>
@@ -130,7 +132,7 @@
               <td>{{ item.month_name }} {{ item.year }}</td>
               <td :class="currentType === 'income' ? 'text-success' : 'text-danger'">
                 {{ formatCurrency(item.total_amount) }}
-              </td>
+               </td>
               <td>{{ item.transaction_count }}</td>
               <td>{{ formatCurrency(item.avg_amount) }}</td>
               <td>
@@ -138,8 +140,8 @@
                   {{ item.trend_vs_prev }} {{ Math.abs(item.change_vs_prev_percent).toFixed(1) }}%
                 </span>
                 <span v-else>—</span>
-               </td>
-             </tr>
+                </td>
+              </tr>
             <tr v-if="monthlyAnalytics.length === 0">
               <td colspan="5" style="text-align: center;">Нет данных</td>
             </tr>
@@ -244,7 +246,9 @@ export default {
 
     const getPercentage = (total) => {
       if (totalAmount.value === 0) return 0
-      return (parseFloat(total) / totalAmount.value) * 100
+      const percentage = (parseFloat(total) / totalAmount.value) * 100
+      // Округляем до одного знака после запятой
+      return percentage.toFixed(1)
     }
 
     const getTrendClass = (item) => {
@@ -298,7 +302,7 @@ export default {
         const y = height - padding - (i / 5) * chartHeight
         ctx.fillText(formatCurrency(value), 10, y + 4)
       }
-      
+        
       // Draw line chart
       const step = chartWidth / (monthlyAnalytics.value.length - 1)
       
@@ -514,13 +518,48 @@ export default {
   background: var(--light-color);
 }
 
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.stat-title {
+  font-size: 0.875rem;
+  color: var(--gray-color);
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
 @media (max-width: 768px) {
+  h1 {
+    text-align: center;
+  }
+
   .subcategories {
     padding-left: 1rem;
   }
   
   .filters {
     grid-template-columns: 1fr;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
   }
 }
 </style>

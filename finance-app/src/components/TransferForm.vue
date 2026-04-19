@@ -1,7 +1,7 @@
 <template>
   <div>
     <h1 style="margin-bottom: 2rem; font-size: clamp(1.5rem, 5vw, 2rem);">
-      Переводы между счетами
+      Переводы
     </h1>
 
     <div class="card">
@@ -360,6 +360,7 @@ export default {
 }
 </script>
 
+
 <style scoped>
 /* Адаптивные стили */
 .text-warning {
@@ -386,6 +387,10 @@ export default {
 /* Стили для мобильных устройств */
 @media (max-width: 768px) {
   /* Скрываем таблицу на мобильных */
+  h1 {
+    text-align: center;
+  }
+
   .desktop-table {
     display: none;
   }
