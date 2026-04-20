@@ -21,7 +21,7 @@
         <div class="stat-title">Баланс долгов</div>
         <div class="stat-value" :class="netDebt >= 0 ? 'text-success' : 'text-danger'">
           {{ formatCurrency(Math.abs(netDebt)) }}
-          <small>{{ netDebt >= 0 ? 'мне должны' : 'я должен' }}</small>
+          <small>{{ netDebt >= 0 ? '(✚)' : '(-)' }}</small>
         </div>
       </div>
     </div>
@@ -502,7 +502,7 @@ export default {
         await apiService.repayDebt(
           currentDebt.value.id,
           repayAmount.value,
-          repayAmount.value === fullAmount ? 'full' : 'partial'
+          getDebtType(currentDebt.value)
         )
         closeRepayModal()
         await loadDebts()

@@ -122,7 +122,7 @@ def repay_debt(user: CustomUser, data: dict) -> tuple:
     )
 
     update_amount_accounts(user_account, debt_account, {
-        "type": data["type"],
+        "type": "debt" if data["type"] == "borrow" else "lend",
         "amount": -data["amount"]
     })
 
