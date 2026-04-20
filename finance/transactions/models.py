@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.core.validators import MinValueValidator
 from django.db import models
+from rest_framework import serializers
 
 from app_user.models import CustomUser
 from accounts.models import Account
@@ -37,11 +38,35 @@ class Category(models.Model):
     )
 
     def save(self, *args, **kwargs):
-        """Автоматически устанавливаем уровень вложенности."""
+        """
+        Автоматически устанавливаем уровень вложенности 
+        и проверяем глубину.
+        """
+        # Проверяем уровень вложенности перед сохранением
         if self.parent:
+            # Если у родителя уровень 0 или выше, то у дочки будет уровень 1
+            # Запрещаем создание категорий с уровнем больше 1
+            if self.parent.level >= 1:
+                raise serializers.ValidationError(
+                    {
+                        "error": "Максимальная глубина вложенности категорий"
+                        " - 1 уровень. Нельзя создать подкатегорию для "
+                        "подкатегории."
+                    }
+                )
             self.level = self.parent.level + 1
         else:
             self.level = 0
+
+        # Дополнительная проверка для существующих категорий
+        if self.pk and self.level > 1:
+            raise serializers.ValidationError(
+                {
+                    "error": "Максимальная глубина вложенности категорий "
+                    "- 1 уровень."
+                }
+            )
+
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -52,20 +77,20 @@ class Category(models.Model):
         if self.parent:
             return f"{self.parent.get_full_path()} → {self.name}"
         return self.name
-    
+
     @property
     def is_root(self):
-        """Проверяет, является ли категория корневой"""
+        """Проверяет, является ли категория корневой."""
         return self.parent is None
-    
+
     @property
     def has_children(self):
-        """Проверяет, есть ли дочерние категории"""
+        """Проверяет, есть ли дочерние категории."""
         return self.children.exists()
 
     def get_children_direct(self):
         """
-        Получает прямых потомков (один запрос к БД)
+        Получает прямых потомков (один запрос к БД).
         """
         return self.children.all()
 

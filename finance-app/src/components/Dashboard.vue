@@ -21,14 +21,8 @@
     
     <!-- Быстрые действия -->
     <div class="quick-actions">
-      <button @click="showAddAccount = true" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Добавить счет
-      </button>
       <button @click="showAddTransaction = true" class="btn btn-success">
         <i class="fas fa-exchange-alt"></i> Добавить транзакцию
-      </button>
-      <button @click="showAddCategory = true" class="btn btn-info">
-        <i class="fas fa-tags"></i> Добавить категорию
       </button>
     </div>
     
@@ -38,7 +32,40 @@
         <router-link to="/transactions" class="btn btn-secondary">Все транзакции</router-link>
       </div>
       
-      <div class="table-responsive">
+      <!-- Для мобильных: карточки вместо таблицы -->
+      <div class="mobile-transactions">
+        <div v-for="transaction in recentTransactions" :key="transaction.id" class="transaction-card">
+          <div class="transaction-header">
+            <div class="transaction-date">{{ formatDate(transaction.create_at) }}</div>
+            <span class="badge" :class="transaction.transaction_type === 'income' ? 'badge-success' : 'badge-danger'">
+              {{ transaction.transaction_type === 'income' ? 'Доход' : 'Расход' }}
+            </span>
+          </div>
+          <div class="transaction-amount" :class="transaction.transaction_type === 'income' ? 'text-success' : 'text-danger'">
+            {{ formatCurrency(transaction.amount) }}
+          </div>
+          <div class="transaction-details">
+            <div class="detail-item">
+              <span class="detail-label">Категория:</span>
+              <span class="detail-value">{{ transaction.category?.name || '—' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Счет:</span>
+              <span class="detail-value">{{ transaction.account?.name || '—' }}</span>
+            </div>
+            <div v-if="transaction.comment" class="detail-item">
+              <span class="detail-label">Комментарий:</span>
+              <span class="detail-value">{{ transaction.comment }}</span>
+            </div>
+          </div>
+        </div>
+        <div v-if="recentTransactions.length === 0" class="empty-state">
+          Нет транзакций
+        </div>
+      </div>
+      
+      <!-- Для десктопа: таблица -->
+      <div class="desktop-table">
         <table class="table">
           <thead>
             <tr>
@@ -55,16 +82,16 @@
               <td>{{ formatDate(transaction.create_at) }}</td>
               <td :class="transaction.transaction_type === 'income' ? 'text-success' : 'text-danger'">
                 {{ formatCurrency(transaction.amount) }}
-               </td>
+                </td>
               <td>
                 <span class="badge" :class="transaction.transaction_type === 'income' ? 'badge-success' : 'badge-danger'">
                   {{ transaction.transaction_type === 'income' ? 'Доход' : 'Расход' }}
                 </span>
-               </td>
+                </td>
               <td>{{ transaction.category?.name || '—' }}</td>
-              <td>{{ transaction.account?.name || '—' }} </td>
-              <td>{{ transaction.comment || '—' }} </td>
-             </tr>
+              <td>{{ transaction.account?.name || '—' }}</td>
+              <td>{{ transaction.comment || '—' }}</td>
+            </tr>
             <tr v-if="recentTransactions.length === 0">
               <td colspan="6" class="text-center">Нет транзакций</td>
             </tr>
@@ -76,66 +103,55 @@
     <div class="card">
       <div class="card-header">
         <h3 class="card-title">Мои счета</h3>
-        <button @click="showAddAccount = true" class="btn btn-primary btn-sm">
-          <i class="fas fa-plus"></i> Добавить счет
-        </button>
       </div>
       
-      <div class="table-responsive">
+      <!-- Для мобильных: карточки счетов -->
+      <div class="mobile-accounts">
+        <div v-for="account in accounts" :key="account.id" class="account-card">
+          <div class="account-name">{{ account.name }}</div>
+          <div class="account-balance" :class="parseFloat(account.balance) >= 0 ? 'text-success' : 'text-danger'">
+            {{ formatCurrency(account.balance) }}
+          </div>
+          <div class="account-status">
+            <span class="badge" :class="account.is_active ? 'badge-success' : 'badge-danger'">
+              {{ account.is_active ? 'Активен' : 'Неактивен' }}
+            </span>
+          </div>
+        </div>
+        <div v-if="accounts.length === 0" class="empty-state">
+          Нет созданных счетов
+        </div>
+      </div>
+      
+      <!-- Для десктопа: таблица -->
+      <div class="desktop-table">
         <table class="table">
           <thead>
             <tr>
               <th>Название</th>
               <th>Баланс</th>
               <th>Статус</th>
-             </tr>
+            </tr>
           </thead>
           <tbody>
             <tr v-for="account in accounts" :key="account.id">
               <td>
                 <strong>{{ account.name }}</strong>
-               </td>
+                </td>
               <td :class="parseFloat(account.balance) >= 0 ? 'text-success' : 'text-danger'">
                 {{ formatCurrency(account.balance) }}
-               </td>
+                </td>
               <td>
                 <span class="badge" :class="account.is_active ? 'badge-success' : 'badge-danger'">
                   {{ account.is_active ? 'Активен' : 'Неактивен' }}
                 </span>
-               </td>
-             </tr>
+                </td>
+              </tr>
             <tr v-if="accounts.length === 0">
               <td colspan="3" class="text-center">Нет созданных счетов</td>
             </tr>
           </tbody>
         </table>
-      </div>
-    </div>
-    
-    <!-- Modal: Добавить счет -->
-    <div v-if="showAddAccount" class="modal" @click.self="showAddAccount = false">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Добавить счет</h3>
-          <button class="modal-close" @click="showAddAccount = false">&times;</button>
-        </div>
-        
-        <form @submit.prevent="createAccount">
-          <div class="form-group">
-            <label class="form-label">Название счета</label>
-            <input type="text" v-model="newAccount.name" class="form-control" required>
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">Начальный баланс</label>
-            <input type="number" v-model="newAccount.balance" class="form-control" step="0.01" required>
-          </div>
-          
-          <div class="modal-footer">
-            <button type="button" @click="showAddAccount = false" class="btn btn-secondary">Отмена</button>
-            <button type="submit" class="btn btn-primary">Создать счет</button>
-          </div>
-        </form>
       </div>
     </div>
     
@@ -193,46 +209,6 @@
         </form>
       </div>
     </div>
-    
-    <!-- Modal: Добавить категорию -->
-    <div v-if="showAddCategory" class="modal" @click.self="showAddCategory = false">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Добавить категорию</h3>
-          <button class="modal-close" @click="showAddCategory = false">&times;</button>
-        </div>
-        
-        <form @submit.prevent="createCategory">
-          <div class="form-group">
-            <label class="form-label">Тип категории</label>
-            <select v-model="newCategory.type" class="form-control" required>
-              <option value="income">Доход</option>
-              <option value="expense">Расход</option>
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">Название категории</label>
-            <input type="text" v-model="newCategory.name" class="form-control" required>
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">Родительская категория (опционально)</label>
-            <select v-model="newCategory.parent" class="form-control">
-              <option value="">Нет (корневая категория)</option>
-              <option v-for="cat in parentCategories" :key="cat.id" :value="cat.id">
-                {{ '—'.repeat(cat.level) }} {{ cat.name }}
-              </option>
-            </select>
-          </div>
-          
-          <div class="modal-footer">
-            <button type="button" @click="showAddCategory = false" class="btn btn-secondary">Отмена</button>
-            <button type="submit" class="btn btn-primary">Создать категорию</button>
-          </div>
-        </form>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -249,10 +225,7 @@ export default {
     const incomeCategories = ref([])
     const expenseCategories = ref([])
     const loading = ref(false)
-    const showAddAccount = ref(false)
     const showAddTransaction = ref(false)
-    const showAddCategory = ref(false)
-    const newAccount = ref({ name: '', balance: 0 })
     const newTransaction = ref({
       type: 'expense',
       amount: '',
@@ -260,15 +233,10 @@ export default {
       account: '',
       comment: ''
     })
-    const newCategory = ref({
-      type: 'expense',
-      name: '',
-      parent: ''
-    })
     
     const totalBalance = computed(() => {
       return accounts.value
-        .filter(acc => acc.is_active) // Добавляем фильтрацию только активных счетов
+        .filter(acc => acc.is_active)
         .reduce((sum, acc) => sum + parseFloat(acc.balance), 0)
     })
 
@@ -276,7 +244,6 @@ export default {
       return accounts.value.filter(acc => acc.is_active)
     })
     
-    // Все транзакции с явным указанием типа
     const allTransactions = computed(() => {
       const income = incomeTransactions.value.map(t => ({ ...t, transaction_type: 'income' }))
       const expense = expenseTransactions.value.map(t => ({ ...t, transaction_type: 'expense' }))
@@ -314,11 +281,6 @@ export default {
       return flattenCategories(categories)
     })
     
-    const parentCategories = computed(() => {
-      const categories = newCategory.value.type === 'income' ? incomeCategories.value : expenseCategories.value
-      return flattenCategories(categories)
-    })
-    
     const flattenCategories = (categories, level = 0) => {
       let result = []
       for (const cat of categories) {
@@ -333,55 +295,24 @@ export default {
     const loadData = async () => {
       loading.value = true
       try {
-        // Загрузка счетов
         const accountsData = await apiService.getAccounts(1, 100)
         accounts.value = accountsData.results[0]?.accounts || []
         
-        // Загрузка транзакций доходов
         const incomeData = await apiService.getTransactions({ page: 1, page_size: 100, type: 'income' })
         incomeTransactions.value = incomeData.results || []
         
-        // Загрузка транзакций расходов
         const expenseData = await apiService.getTransactions({ page: 1, page_size: 100, type: 'expense' })
         expenseTransactions.value = expenseData.results || []
         
-        // Загрузка категорий доходов
         const incomeCatData = await apiService.getCategories('income', 1, 100, true)
-        incomeCategories.value = await Promise.all(
-          incomeCatData.results.map(async (cat) => {
-            if (cat.has_children) {
-              return await apiService.getCategory(cat.id)
-            }
-            return cat
-          })
-        )
+        incomeCategories.value = incomeCatData.results || []
         
-        // Загрузка категорий расходов
         const expenseCatData = await apiService.getCategories('expense', 1, 100, true)
-        expenseCategories.value = await Promise.all(
-          expenseCatData.results.map(async (cat) => {
-            if (cat.has_children) {
-              return await apiService.getCategory(cat.id)
-            }
-            return cat
-          })
-        )
+        expenseCategories.value = expenseCatData.results || []
       } catch (error) {
         console.error('Error loading data:', error)
       } finally {
         loading.value = false
-      }
-    }
-    
-    const createAccount = async () => {
-      try {
-        await apiService.createAccount(newAccount.value.name, newAccount.value.balance)
-        showAddAccount.value = false
-        newAccount.value = { name: '', balance: 0 }
-        await loadData()
-      } catch (error) {
-        console.error('Error creating account:', error)
-        alert('Ошибка при создании счета')
       }
     }
     
@@ -414,26 +345,6 @@ export default {
       }
     }
     
-    const createCategory = async () => {
-      try {
-        await apiService.createCategory(
-          newCategory.value.name,
-          newCategory.value.type,
-          newCategory.value.parent || null
-        )
-        showAddCategory.value = false
-        newCategory.value = {
-          type: 'expense',
-          name: '',
-          parent: ''
-        }
-        await loadData()
-      } catch (error) {
-        console.error('Error creating category:', error)
-        alert('Ошибка при создании категории')
-      }
-    }
-    
     const formatCurrency = (value) => {
       if (!value) return '0 ₽'
       return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(value)
@@ -453,22 +364,15 @@ export default {
       incomeTransactions,
       expenseTransactions,
       loading,
-      showAddAccount,
       showAddTransaction,
-      showAddCategory,
-      newAccount,
       newTransaction,
-      newCategory,
       totalBalance,
       activeAccounts,
       monthlyIncome,
       monthlyExpense,
-      recentTransactions: recentTransactions,
+      recentTransactions,
       availableCategories,
-      parentCategories,
-      createAccount,
       addTransaction,
-      createCategory,
       formatCurrency,
       formatDate
     }
@@ -482,15 +386,6 @@ export default {
   gap: 1rem;
   margin-bottom: 2rem;
   flex-wrap: wrap;
-}
-
-.btn-info {
-  background: #3b82f6;
-  color: white;
-}
-
-.btn-info:hover {
-  background: #2563eb;
 }
 
 .modal-footer {
@@ -549,6 +444,7 @@ export default {
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 600;
+  display: inline-block;
 }
 
 .badge-success {
@@ -561,11 +457,6 @@ export default {
   color: #991b1b;
 }
 
-.badge-warning {
-  background: #fed7aa;
-  color: #92400e;
-}
-
 .card-header {
   display: flex;
   justify-content: space-between;
@@ -573,6 +464,8 @@ export default {
   margin-bottom: 1rem;
   padding-bottom: 1rem;
   border-bottom: 2px solid var(--light-color);
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .card-title {
@@ -580,12 +473,127 @@ export default {
   font-weight: 600;
 }
 
-.btn-sm {
-  padding: 0.25rem 0.75rem;
+/* Стили для карточек транзакций (мобильная версия) */
+.mobile-transactions {
+  display: none;
+}
+
+.transaction-card {
+  background: var(--white);
+  border: 1px solid var(--light-color);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.transaction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--light-color);
+}
+
+.transaction-date {
+  font-size: 0.75rem;
+  color: var(--gray-color);
+}
+
+.transaction-amount {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.transaction-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-size: 0.875rem;
 }
 
-/* Адаптивные стили для мобильных устройств */
+.detail-label {
+  color: var(--gray-color);
+  font-weight: 500;
+}
+
+.detail-value {
+  color: var(--dark-color);
+  text-align: right;
+  word-break: break-word;
+  max-width: 60%;
+}
+
+/* Стили для карточек счетов (мобильная версия) */
+.mobile-accounts {
+  display: none;
+}
+
+.account-card {
+  background: var(--white);
+  border: 1px solid var(--light-color);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.account-name {
+  font-weight: 600;
+  font-size: 1rem;
+  flex: 1;
+}
+
+.account-balance {
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+
+.account-status {
+  flex-shrink: 0;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--gray-color);
+}
+
+/* Десктопная таблица */
+.desktop-table {
+  display: block;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--light-color);
+}
+
+.table th {
+  font-weight: 600;
+  color: var(--gray-color);
+}
+
+/* Адаптивные стили */
 @media (max-width: 768px) {
   h1 {
     font-size: 1.5rem;
@@ -630,36 +638,31 @@ export default {
   
   .card-header {
     flex-direction: column;
-    gap: 0.75rem;
-    align-items: flex-start;
+    align-items: stretch;
   }
   
   .card-header .btn {
     width: 100%;
+    text-align: center;
   }
   
   .card-title {
     font-size: 1.1rem;
+    text-align: center;
   }
   
-  .table-responsive {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+  /* Скрываем таблицу на мобильных */
+  .desktop-table {
+    display: none;
   }
   
-  .table {
-    min-width: 500px;
+  /* Показываем карточки на мобильных */
+  .mobile-transactions {
+    display: block;
   }
   
-  .table th,
-  .table td {
-    padding: 0.5rem;
-    font-size: 0.8rem;
-  }
-  
-  .badge {
-    font-size: 0.7rem;
-    padding: 0.2rem 0.4rem;
+  .mobile-accounts {
+    display: block;
   }
   
   /* Модальные окна */
@@ -682,7 +685,7 @@ export default {
   }
   
   .form-control {
-    font-size: 16px; /* Предотвращает зумирование на iOS */
+    font-size: 16px;
     padding: 0.5rem;
   }
   
@@ -707,18 +710,24 @@ export default {
     font-size: 1.25rem;
   }
   
-  .table th,
-  .table td {
-    padding: 0.4rem;
-    font-size: 0.7rem;
+  .transaction-amount {
+    font-size: 1rem;
   }
   
-  .card-header {
+  .account-card {
     flex-direction: column;
+    text-align: center;
   }
   
-  .btn-sm {
-    width: 100%;
+  .detail-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  
+  .detail-value {
+    max-width: 100%;
+    text-align: left;
   }
 }
 

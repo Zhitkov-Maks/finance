@@ -75,15 +75,25 @@
         </div>
 
         <form @submit.prevent="saveCategory">
+          <!-- Отображение ошибки API -->
+          <div v-if="apiError" class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle"></i>
+            {{ apiError }}
+          </div>
+
           <div class="form-group">
             <label class="form-label required">Название категории</label>
             <input 
               type="text" 
               v-model="formData.name" 
               class="form-control" 
+              :class="{ 'is-invalid': fieldErrors.name }"
               required
               placeholder="Например: Еда, Транспорт, Зарплата"
             >
+            <div v-if="fieldErrors.name" class="invalid-feedback">
+              {{ fieldErrors.name }}
+            </div>
           </div>
 
           <div class="form-group">
@@ -98,7 +108,8 @@
 
           <div class="modal-footer">
             <button type="button" @click="closeModal" class="btn btn-secondary">Отмена</button>
-            <button type="submit" class="btn btn-primary">
+            <button type="submit" class="btn btn-primary" :disabled="saving">
+              <span v-if="saving" class="spinner-small"></span>
               {{ editingCategory ? 'Обновить' : 'Создать' }}
             </button>
           </div>
@@ -140,26 +151,48 @@ export default {
     const categories = ref([])
     const currentType = ref('income')
     const loading = ref(false)
+    const saving = ref(false)
     const showCategoryModal = ref(false)
     const showDeleteModal = ref(false)
     const editingCategory = ref(null)
     const categoryToDelete = ref(null)
+    const apiError = ref('')
+    const fieldErrors = ref({})
+    
     const formData = ref({
       name: '',
       parent: ''
     })
 
+    // Простая функция поиска категории
+    const findCategoryById = (items, id) => {
+      if (!items || !Array.isArray(items)) return null
+      for (const item of items) {
+        if (item.id === id) return item
+        if (item.children && Array.isArray(item.children) && item.children.length) {
+          const found = findCategoryById(item.children, id)
+          if (found) return found
+        }
+      }
+      return null
+    }
+
     // Преобразуем в плоский список с уровнем вложенности
     const categoriesList = computed(() => {
+      if (!categories.value || !Array.isArray(categories.value)) {
+        return []
+      }
+      
       const result = []
       
       const flatten = (items, level = 0) => {
+        if (!items || !Array.isArray(items)) return
         for (const item of items) {
           result.push({
             ...item,
             level: level
           })
-          if (item.children && item.children.length) {
+          if (item.children && Array.isArray(item.children) && item.children.length) {
             flatten(item.children, level + 1)
           }
         }
@@ -169,20 +202,29 @@ export default {
       return result
     })
 
-    // Доступные родительские категории
+    // Доступные родительские категории (упрощенная версия)
     const availableParents = computed(() => {
+      if (!categories.value || !Array.isArray(categories.value)) {
+        return []
+      }
+      
       const result = []
       
       const flatten = (items, prefix = '') => {
+        if (!items || !Array.isArray(items)) return
         for (const item of items) {
-          if (!editingCategory.value || item.id !== editingCategory.value.id) {
+          // Пропускаем текущую категорию при редактировании
+          if (editingCategory.value && item.id === editingCategory.value.id) {
+            continue
+          }
+          
+          // Добавляем только корневые категории (без родителей)
+          // так как максимальная вложенность - 1 уровень
+          if (!item.parent) {
             result.push({ 
               id: item.id, 
-              name: prefix + item.name 
+              name: prefix + item.name
             })
-          }
-          if (item.children && item.children.length) {
-            flatten(item.children, prefix + '— ')
           }
         }
       }
@@ -194,7 +236,6 @@ export default {
     const loadCategories = async () => {
       loading.value = true
       try {
-        // Добавляем параметр parent=true чтобы получить только корневые категории с их детьми
         const data = await apiService.getCategories(currentType.value, 1, 100, true)
         categories.value = data.results || []
         console.log('Загружено категорий:', categories.value)
@@ -208,6 +249,8 @@ export default {
 
     const openCreateModal = () => {
       editingCategory.value = null
+      apiError.value = ''
+      fieldErrors.value = {}
       formData.value = {
         name: '',
         parent: ''
@@ -216,7 +259,18 @@ export default {
     }
 
     const openCreateChildModal = (category) => {
+      // Проверка: можно ли создать подкатегорию
+      if (category.has_children) {
+        apiError.value = '❌ Нельзя создать подкатегорию для категории, у которой уже есть подкатегории. Максимальная глубина вложенности - 1 уровень.'
+        setTimeout(() => {
+          apiError.value = ''
+        }, 3000)
+        return
+      }
+      
       editingCategory.value = null
+      apiError.value = ''
+      fieldErrors.value = {}
       formData.value = {
         name: '',
         parent: category.id
@@ -226,6 +280,8 @@ export default {
 
     const editCategory = (category) => {
       editingCategory.value = category
+      apiError.value = ''
+      fieldErrors.value = {}
       formData.value = {
         name: category.name,
         parent: category.parent || ''
@@ -235,9 +291,13 @@ export default {
 
     const saveCategory = async () => {
       if (!formData.value.name.trim()) {
-        alert('Введите название категории')
+        fieldErrors.value.name = 'Введите название категории'
         return
       }
+      
+      saving.value = true
+      apiError.value = ''
+      fieldErrors.value = {}
       
       try {
         if (editingCategory.value) {
@@ -257,7 +317,33 @@ export default {
         await loadCategories()
       } catch (error) {
         console.error('Error saving category:', error)
-        alert('Ошибка при сохранении категории')
+        
+        // Обработка ошибки от API
+        if (error.response?.data?.detail) {
+          const detail = error.response.data.detail
+          
+          // Проверяем различные форматы ошибки
+          if (typeof detail === 'string') {
+            if (detail.includes('глубина вложенности') || detail.includes('подкатегорию для подкатегории')) {
+              apiError.value = '❌ Максимальная глубина вложенности категорий - 1 уровень. Нельзя создать подкатегорию для подкатегории.'
+            } else {
+              apiError.value = detail
+            }
+          } else if (detail.error) {
+            const errorMsg = detail.error
+            if (typeof errorMsg === 'string' && (errorMsg.includes('глубина вложенности') || errorMsg.includes('подкатегорию для подкатегории'))) {
+              apiError.value = '❌ Максимальная глубина вложенности категорий - 1 уровень. Нельзя создать подкатегорию для подкатегории.'
+            } else if (typeof errorMsg === 'object' && errorMsg.string) {
+              apiError.value = errorMsg.string
+            } else {
+              apiError.value = 'Ошибка при сохранении категории'
+            }
+          }
+        } else {
+          apiError.value = 'Ошибка при сохранении категории'
+        }
+      } finally {
+        saving.value = false
       }
     }
 
@@ -280,6 +366,8 @@ export default {
     const closeModal = () => {
       showCategoryModal.value = false
       editingCategory.value = null
+      apiError.value = ''
+      fieldErrors.value = {}
       formData.value = {
         name: '',
         parent: ''
@@ -298,6 +386,7 @@ export default {
       categories,
       currentType,
       loading,
+      saving,
       categoriesList,
       availableParents,
       showCategoryModal,
@@ -305,6 +394,8 @@ export default {
       editingCategory,
       categoryToDelete,
       formData,
+      apiError,
+      fieldErrors,
       openCreateModal,
       openCreateChildModal,
       editCategory,
@@ -316,7 +407,6 @@ export default {
   }
 }
 </script>
-
 
 <style scoped>
 .page-header {
@@ -407,7 +497,7 @@ export default {
   color: #1e40af;
 }
 
-.badge-child {
+.badge-regular {
   background: #f3e8ff;
   color: #6b21a5;
 }
@@ -450,6 +540,17 @@ export default {
   margin-bottom: 1rem;
 }
 
+.spinner-small {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--white);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-right: 0.5rem;
+}
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
@@ -471,6 +572,40 @@ export default {
 .btn-sm {
   padding: 0.25rem 0.5rem;
   font-size: 0.875rem;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.alert {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.alert-danger {
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+
+.alert-danger i {
+  color: #dc2626;
+}
+
+.is-invalid {
+  border-color: #dc2626 !important;
+}
+
+.invalid-feedback {
+  color: #dc2626;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
 }
 
 @media (max-width: 768px) {
