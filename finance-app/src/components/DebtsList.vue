@@ -33,19 +33,77 @@
         class="tab-btn" 
         :class="{ active: currentType === 'lend' }"
       >
-        <i class="fas fa-hand-holding-usd"></i> Мне должны
+        <i class="fas fa-hand-holding-usd"></i> <span class="tab-text">Мне должны</span>
       </button>
       <button 
         @click="currentType = 'borrow'" 
         class="tab-btn" 
         :class="{ active: currentType === 'borrow' }"
       >
-        <i class="fas fa-hand-holding-heart"></i> Я должен
+        <i class="fas fa-hand-holding-heart"></i> <span class="tab-text">Я должен</span>
       </button>
     </div>
 
     <div class="card">
-      <div class="table-responsive">
+      <!-- Для мобильных и планшетов: карточки долгов -->
+      <div class="mobile-debts">
+        <div v-for="debt in filteredDebts" :key="debt.id" class="debt-card">
+          <div class="debt-header">
+            <div class="debt-contractor">
+              <strong>{{ debt.borrower_description }}</strong>
+            </div>
+            <div class="debt-actions-mobile">
+              <button @click="viewDebt(debt)" class="btn-icon" title="Детали">
+                <i class="fas fa-eye"></i>
+              </button>
+              <button 
+                v-if="!debt.is_repaid" 
+                @click="openRepayModal(debt)" 
+                class="btn-icon btn-icon-success" 
+                title="Погасить"
+              >
+                <i class="fas fa-check"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="debt-amount" :class="getDebtAmountClass(debt)">
+            {{ formatCurrency(getDebtAmount(debt)) }}
+          </div>
+          
+          <div class="debt-details">
+            <div class="detail-item">
+              <span class="detail-label">
+                <i class="fas fa-calendar"></i> Дата:
+              </span>
+              <span class="detail-value">{{ formatDate(getDebtDate(debt)) }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">
+                <i class="fas fa-credit-card"></i> Счет:
+              </span>
+              <span class="detail-value">{{ getRealAccountName(debt) }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">
+                <i class="fas fa-flag-checkered"></i> Статус:
+              </span>
+              <span class="badge" :class="debt.is_repaid ? 'badge-success' : 'badge-warning'">
+                <i :class="debt.is_repaid ? 'fas fa-check-circle' : 'fas fa-clock'"></i>
+                {{ debt.is_repaid ? 'Погашен' : 'Активен' }}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div v-if="filteredDebts.length === 0" class="empty-state">
+          <i class="fas fa-hand-holding-usd"></i>
+          <p>Нет {{ currentType === 'lend' ? 'долгов перед вами' : 'ваших долгов' }}</p>
+          <button @click="openCreateModal" class="btn btn-primary">Создать долг</button>
+        </div>
+      </div>
+
+      <!-- Для десктопа: таблица -->
+      <div class="desktop-table">
         <table class="table">
           <thead>
             <tr>
@@ -70,7 +128,7 @@
               <td>{{ formatDate(getDebtDate(debt)) }}</td>
               <td>
                 <span class="badge badge-info">
-                  {{ getAccountName(debt) }}
+                  {{ getRealAccountName(debt) }}
                 </span>
                </td>
               <td>
@@ -94,7 +152,7 @@
                   </button>
                 </div>
                </td>
-             </tr>
+              </tr>
             <tr v-if="filteredDebts.length === 0">
               <td colspan="7" class="text-center">
                 <div class="empty-state">
@@ -111,11 +169,11 @@
       <!-- Pagination -->
       <div class="pagination" v-if="totalPages > 1">
         <button @click="prevPage" :disabled="currentPage === 1" class="btn btn-secondary">
-          <i class="fas fa-chevron-left"></i> Назад
+          <i class="fas fa-chevron-left"></i> <span class="pagination-text">Назад</span>
         </button>
-        <span>Страница {{ currentPage }} из {{ totalPages }}</span>
+        <span class="pagination-info">Страница {{ currentPage }} из {{ totalPages }}</span>
         <button @click="nextPage" :disabled="currentPage === totalPages" class="btn btn-secondary">
-          Вперед <i class="fas fa-chevron-right"></i>
+          <span class="pagination-text">Вперед</span> <i class="fas fa-chevron-right"></i>
         </button>
       </div>
     </div>
@@ -222,7 +280,7 @@
           </div>
           <div class="detail-row">
             <span class="detail-label">Счет:</span>
-            <span class="detail-value">{{ getAccountName(currentDebt) }}</span>
+            <span class="detail-value">{{ getRealAccountName(currentDebt) }}</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">Статус:</span>
@@ -305,7 +363,6 @@ export default {
 
     const totalPages = computed(() => Math.ceil(totalCount.value / pageSize.value))
     
-    // Функции для получения данных из структуры API
     const getDebtAmount = (debt) => {
       return debt.transfer?.amount || debt.amount || 0
     }
@@ -314,25 +371,48 @@ export default {
       return debt.transfer?.timestamp || debt.date || null
     }
     
-    // Определяем тип долга на основе destination_account
     const getDebtType = (debt) => {
-      // Если есть поле type в самом долге
       if (debt.type) return debt.type
       
-      // Определяем по имени счета назначения
       const destAccount = debt.transfer?.destination_account
       if (destAccount) {
-        // Если счет называется "debt" - это "я должен"
         if (destAccount.name === 'debt') return 'borrow'
-        // Если счет называется "lend" - это "мне должны"
         if (destAccount.name === 'lend') return 'lend'
       }
       
-      // По умолчанию считаем что это "мне должны"
       return 'lend'
     }
     
-    // Фильтруем долги по текущему типу
+    // Получаем реальный счет (source_account), а не служебный счет долга
+    const getRealAccountName = (debt) => {
+      // Сначала пробуем получить source_account из transfer
+      const sourceAccount = debt.transfer?.source_account
+      if (sourceAccount && sourceAccount.name !== 'debt' && sourceAccount.name !== 'lend') {
+        return sourceAccount.name
+      }
+      
+      // Если нет, пробуем получить account_id из самого долга
+      const accountId = debt.account || debt.account_id
+      if (accountId && accounts.value.length) {
+        const account = accounts.value.find(acc => acc.id === accountId)
+        if (account) {
+          return account.name
+        }
+      }
+      
+      // Если ничего не нашли, ищем по transfer_id
+      if (debt.transfer_id && accounts.value.length) {
+        // Пытаемся найти счет, который участвовал в трансфере
+        for (const acc of accounts.value) {
+          if (acc.id === debt.transfer_id) {
+            return acc.name
+          }
+        }
+      }
+      
+      return 'Не указан'
+    }
+    
     const filteredDebts = computed(() => {
       return debts.value.filter(debt => {
         const debtType = getDebtType(debt)
@@ -344,14 +424,12 @@ export default {
       })
     })
     
-    // Статистика: сумма где мне должны
     const totalLend = computed(() => {
       return debts.value
         .filter(debt => getDebtType(debt) === 'lend' && !debt.is_repaid)
         .reduce((sum, d) => sum + parseFloat(getDebtAmount(d)), 0)
     })
     
-    // Статистика: сумма где я должен
     const totalBorrow = computed(() => {
       return debts.value
         .filter(debt => getDebtType(debt) === 'borrow' && !debt.is_repaid)
@@ -360,7 +438,6 @@ export default {
     
     const netDebt = computed(() => totalLend.value - totalBorrow.value)
     
-    // Определяем класс для суммы в зависимости от типа
     const getDebtAmountClass = (debt) => {
       const debtType = getDebtType(debt)
       return debtType === 'lend' ? 'text-success' : 'text-danger'
@@ -368,11 +445,9 @@ export default {
 
     const loadDebts = async () => {
       try {
-        // Загружаем все долги без фильтрации по типу
         const data = await apiService.getDebts(currentPage.value, pageSize.value)
         debts.value = data.results || []
         totalCount.value = data.count || 0
-        console.log('Загружены все долги:', debts.value)
       } catch (error) {
         console.error('Error loading debts:', error)
         debts.value = []
@@ -383,27 +458,9 @@ export default {
       try {
         const data = await apiService.getAccounts(1, 100)
         accounts.value = data.results[0]?.accounts || []
-        console.log('Загружены счета:', accounts.value)
       } catch (error) {
         console.error('Error loading accounts:', error)
       }
-    }
-
-    const getAccountName = (debt) => {
-      // Показываем название счета назначения
-      const destAccount = debt.transfer?.destination_account
-      if (destAccount) {
-        return destAccount.name
-      }
-      
-      // Если нет информации, пытаемся найти по ID
-      const accountId = debt.account || debt.account_id
-      if (accountId && accounts.value.length) {
-        const account = accounts.value.find(acc => acc.id === accountId)
-        return account ? account.name : `Счет #${accountId}`
-      }
-      
-      return 'Не указан'
     }
 
     const getTypeDescription = (type) => {
@@ -444,7 +501,6 @@ export default {
       }
       
       try {
-        // Преобразуем тип для API: lend -> borrow, borrow -> debt
         const apiType = formData.value.type === 'lend' ? 'borrow' : 'debt'
         
         await apiService.createDebt(
@@ -569,7 +625,7 @@ export default {
       getDebtAmount,
       getDebtDate,
       getDebtAmountClass,
-      getAccountName,
+      getRealAccountName,
       getTypeDescription,
       openCreateModal,
       closeCreateModal,
@@ -588,11 +644,19 @@ export default {
 </script>
 
 <style scoped>
+/* Стили остаются без изменений */
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.page-header h1 {
+  font-size: 1.875rem;
+  color: var(--dark-color);
 }
 
 .type-tabs {
@@ -728,14 +792,286 @@ export default {
   border-top: 1px solid var(--light-color);
 }
 
+/* Стили для карточек долгов (мобильная и планшетная версия) */
+.mobile-debts {
+  display: none;
+}
+
+.debt-card {
+  background: var(--white);
+  border: 1px solid var(--light-color);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.debt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--light-color);
+}
+
+.debt-contractor {
+  font-size: 1rem;
+  flex: 1;
+}
+
+.debt-actions-mobile {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  color: var(--gray-color);
+  transition: color 0.3s;
+  font-size: 1rem;
+}
+
+.btn-icon:hover {
+  color: var(--primary-color);
+}
+
+.btn-icon-success:hover {
+  color: var(--secondary-color);
+}
+
+.debt-amount {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  text-align: center;
+  padding: 0.5rem;
+  background: var(--light-color);
+  border-radius: var(--radius);
+}
+
+.debt-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.detail-label {
+  color: var(--gray-color);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.detail-value {
+  color: var(--dark-color);
+  text-align: right;
+  word-break: break-word;
+  max-width: 60%;
+}
+
+/* Десктопная таблица */
+.desktop-table {
+  display: block;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--light-color);
+}
+
+.table th {
+  font-weight: 600;
+  color: var(--gray-color);
+}
+
+/* Адаптивные стили - для планшетов и мобильных */
+@media (max-width: 1024px) {
+  .desktop-table {
+    display: none;
+  }
+  
+  .mobile-debts {
+    display: block;
+  }
+  
+  .card {
+    padding: 1rem;
+  }
+  
+  .stats-grid {
+    gap: 1rem;
+  }
+  
+  .stat-value {
+    font-size: 1.5rem;
+  }
+}
+
+/* Для мобильных устройств (до 768px) */
 @media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .page-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .page-header .btn {
+    width: 100%;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stat-card {
+    padding: 1rem;
+  }
+  
+  .stat-title {
+    font-size: 0.75rem;
+  }
+  
+  .stat-value {
+    font-size: 1.25rem;
+  }
+  
+  .type-tabs {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .tab-text {
+    display: inline;
+  }
+  
+  .debt-amount {
+    font-size: 1rem;
+  }
+  
+  .modal-content {
+    width: 95%;
+    margin: 1rem;
+    max-height: 85vh;
+  }
+  
+  .modal-header h3 {
+    font-size: 1.1rem;
+  }
+  
+  .form-group {
+    margin-bottom: 0.75rem;
+  }
+  
+  .form-label {
+    font-size: 0.8rem;
+  }
+  
+  .form-control {
+    font-size: 16px;
+    padding: 0.5rem;
+  }
+  
+  .modal-footer {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .modal-footer .btn {
+    width: 100%;
+  }
+  
+  .pagination {
+    flex-wrap: wrap;
+  }
+  
+  .pagination-text {
+    display: inline;
+  }
+}
+
+/* Для очень маленьких экранов (до 480px) */
+@media (max-width: 480px) {
+  .debt-header {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .debt-actions-mobile {
+    align-self: flex-end;
+  }
+  
+  .detail-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  
+  .detail-value {
+    max-width: 100%;
+    text-align: left;
+  }
+  
+  .pagination-info {
+    font-size: 0.875rem;
+  }
+  
+  .pagination .btn {
+    padding: 0.5rem;
+  }
+  
+  .empty-state {
+    padding: 2rem;
+  }
+  
+  .empty-state i {
+    font-size: 2rem;
+  }
+}
+
+/* Для планшетов в горизонтальной ориентации (1025px-1280px) */
+@media (min-width: 1025px) and (max-width: 1280px) {
+  .desktop-table {
+    display: block;
+  }
+  
+  .mobile-debts {
+    display: none;
+  }
+  
+  .table th,
+  .table td {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+  }
+  
   .action-buttons {
     flex-direction: column;
   }
   
-  .detail-row {
-    flex-direction: column;
-    gap: 0.5rem;
+  .action-buttons .btn-sm {
+    width: 100%;
   }
 }
 </style>

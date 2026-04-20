@@ -32,7 +32,7 @@
         <router-link to="/transactions" class="btn btn-secondary">Все транзакции</router-link>
       </div>
       
-      <!-- Для мобильных: карточки вместо таблицы -->
+      <!-- Для мобильных и планшетов: карточки вместо таблицы -->
       <div class="mobile-transactions">
         <div v-for="transaction in recentTransactions" :key="transaction.id" class="transaction-card">
           <div class="transaction-header">
@@ -105,7 +105,7 @@
         <h3 class="card-title">Мои счета</h3>
       </div>
       
-      <!-- Для мобильных: карточки счетов -->
+      <!-- Для мобильных и планшетов: карточки счетов -->
       <div class="mobile-accounts">
         <div v-for="account in accounts" :key="account.id" class="account-card">
           <div class="account-name">{{ account.name }}</div>
@@ -397,10 +397,6 @@ export default {
   border-top: 1px solid var(--light-color);
 }
 
-.table-responsive {
-  overflow-x: auto;
-}
-
 .text-center {
   text-align: center;
 }
@@ -473,7 +469,7 @@ export default {
   font-weight: 600;
 }
 
-/* Стили для карточек транзакций (мобильная версия) */
+/* Стили для карточек транзакций (мобильная и планшетная версия) */
 .mobile-transactions {
   display: none;
 }
@@ -531,7 +527,7 @@ export default {
   max-width: 60%;
 }
 
-/* Стили для карточек счетов (мобильная версия) */
+/* Стили для карточек счетов (мобильная и планшетная версия) */
 .mobile-accounts {
   display: none;
 }
@@ -593,7 +589,48 @@ export default {
   color: var(--gray-color);
 }
 
-/* Адаптивные стили */
+/* Адаптивные стили - для планшетов и мобильных */
+@media (max-width: 1024px) {
+  .desktop-table {
+    display: none;
+  }
+  
+  .mobile-transactions {
+    display: block;
+  }
+  
+  .mobile-accounts {
+    display: block;
+  }
+  
+  .stats-grid {
+    gap: 1rem;
+  }
+  
+  .stat-value {
+    font-size: 1.5rem;
+  }
+  
+  .card {
+    padding: 1rem;
+  }
+  
+  .card-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .card-header .btn {
+    width: 100%;
+    text-align: center;
+  }
+  
+  .card-title {
+    text-align: center;
+  }
+}
+
+/* Для маленьких планшетов и больших телефонов (до 768px) */
 @media (max-width: 768px) {
   h1 {
     font-size: 1.5rem;
@@ -603,16 +640,10 @@ export default {
 
   .stats-grid {
     grid-template-columns: 1fr;
-    gap: 1rem;
-    margin-bottom: 1rem;
   }
   
   .stat-card {
     padding: 1rem;
-  }
-  
-  .stat-value {
-    font-size: 1.5rem;
   }
   
   .stat-title {
@@ -629,40 +660,6 @@ export default {
     width: 100%;
     justify-content: center;
     padding: 0.75rem;
-  }
-  
-  .card {
-    padding: 1rem;
-    margin-bottom: 1rem;
-  }
-  
-  .card-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .card-header .btn {
-    width: 100%;
-    text-align: center;
-  }
-  
-  .card-title {
-    font-size: 1.1rem;
-    text-align: center;
-  }
-  
-  /* Скрываем таблицу на мобильных */
-  .desktop-table {
-    display: none;
-  }
-  
-  /* Показываем карточки на мобильных */
-  .mobile-transactions {
-    display: block;
-  }
-  
-  .mobile-accounts {
-    display: block;
   }
   
   /* Модальные окна */
@@ -699,11 +696,10 @@ export default {
   }
 }
 
-/* Для очень маленьких экранов */
+/* Для очень маленьких экранов (до 480px) */
 @media (max-width: 480px) {
   h1 {
     font-size: 1.25rem;
-    text-align: center;
   }
   
   .stat-value {
@@ -731,23 +727,24 @@ export default {
   }
 }
 
-/* Для планшетов */
-@media (min-width: 769px) and (max-width: 1024px) {
-  .stats-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
+/* Для планшетов в горизонтальной ориентации (1024px-1280px) */
+@media (min-width: 1025px) and (max-width: 1280px) {
+  .desktop-table {
+    display: block;
   }
   
-  .stat-value {
-    font-size: 1.5rem;
+  .mobile-transactions {
+    display: none;
   }
   
-  .quick-actions {
-    flex-wrap: wrap;
+  .mobile-accounts {
+    display: none;
   }
   
-  .quick-actions .btn {
-    flex: 1;
+  .table th,
+  .table td {
+    padding: 0.5rem;
+    font-size: 0.875rem;
   }
 }
 </style>

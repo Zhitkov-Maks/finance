@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="card-header">
+    <div class="page-header">
       <h1>Транзакции</h1>
       <button @click="openAddModal" class="btn btn-primary">
         <i class="fas fa-plus"></i> Добавить транзакцию
@@ -9,7 +9,12 @@
 
     <!-- Filters -->
     <div class="card">
-      <div class="filters">
+      <div class="filters-header" @click="showFilters = !showFilters">
+        <h3>Фильтры</h3>
+        <i :class="showFilters ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
+      </div>
+      
+      <div class="filters" :class="{ 'filters-hidden': !showFilters }">
         <div class="filter-group">
           <label>Тип:</label>
           <select v-model="filters.type" class="form-control" @change="applyFilters">
@@ -21,32 +26,32 @@
 
         <div class="filter-group">
           <label>Счет:</label>
-          <input type="text" v-model="filters.account_name" placeholder="Название счета" class="form-control">
+          <input type="text" v-model="filters.account_name" placeholder="Название счета" class="form-control" @input="applyFiltersDebounced">
         </div>
 
         <div class="filter-group">
           <label>Категория:</label>
-          <input type="text" v-model="filters.category_name" placeholder="Категория" class="form-control">
+          <input type="text" v-model="filters.category_name" placeholder="Категория" class="form-control" @input="applyFiltersDebounced">
         </div>
 
         <div class="filter-group">
           <label>Сумма от:</label>
-          <input type="number" v-model="filters.amount_gte" placeholder="Мин" class="form-control">
+          <input type="number" v-model="filters.amount_gte" placeholder="Мин" class="form-control" @input="applyFiltersDebounced">
         </div>
 
         <div class="filter-group">
           <label>Сумма до:</label>
-          <input type="number" v-model="filters.amount_lte" placeholder="Макс" class="form-control">
+          <input type="number" v-model="filters.amount_lte" placeholder="Макс" class="form-control" @input="applyFiltersDebounced">
         </div>
 
         <div class="filter-group">
           <label>Дата с:</label>
-          <input type="date" v-model="filters.create_at_after" class="form-control">
+          <input type="date" v-model="filters.create_at_after" class="form-control" @change="applyFilters">
         </div>
 
         <div class="filter-group">
           <label>Дата по:</label>
-          <input type="date" v-model="filters.create_at_before" class="form-control">
+          <input type="date" v-model="filters.create_at_before" class="form-control" @change="applyFilters">
         </div>
 
         <div class="filter-actions">
@@ -56,9 +61,64 @@
       </div>
     </div>
 
-    <!-- Transactions Table -->
+    <!-- Transactions Table / Mobile Cards -->
     <div class="card">
-      <div class="table-responsive">
+      <!-- Для мобильных и планшетов: карточки транзакций -->
+      <div class="mobile-transactions">
+        <div v-for="transaction in paginatedTransactions" :key="transaction.id" class="transaction-card">
+          <div class="transaction-header">
+            <div class="transaction-date">{{ formatDate(transaction.create_at) }}</div>
+            <div class="transaction-actions-mobile">
+              <button @click="editTransaction(transaction)" class="btn-icon" title="Редактировать">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button @click="confirmDelete(transaction)" class="btn-icon btn-icon-danger" title="Удалить">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="transaction-amount" :class="transaction.transaction_type === 'income' ? 'text-success' : 'text-danger'">
+            {{ formatCurrency(transaction.amount) }}
+          </div>
+          
+          <div class="transaction-details">
+            <div class="detail-item">
+              <span class="detail-label">
+                <i class="fas fa-tag"></i> Тип:
+              </span>
+              <span class="badge" :class="transaction.transaction_type === 'income' ? 'badge-success' : 'badge-danger'">
+                {{ transaction.transaction_type === 'income' ? 'Доход' : 'Расход' }}
+              </span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">
+                <i class="fas fa-folder"></i> Категория:
+              </span>
+              <span class="detail-value">{{ transaction.category?.name || '—' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">
+                <i class="fas fa-credit-card"></i> Счет:
+              </span>
+              <span class="detail-value">{{ transaction.account?.name || '—' }}</span>
+            </div>
+            <div v-if="transaction.comment" class="detail-item">
+              <span class="detail-label">
+                <i class="fas fa-comment"></i> Комментарий:
+              </span>
+              <span class="detail-value">{{ transaction.comment }}</span>
+            </div>
+          </div>
+        </div>
+        <div v-if="filteredTransactions.length === 0" class="empty-state">
+          <i class="fas fa-receipt"></i>
+          <p>Нет транзакций</p>
+        </div>
+      </div>
+
+      <!-- Для десктопа: таблица -->
+      <div class="desktop-table">
         <table class="table">
           <thead>
             <tr>
@@ -106,11 +166,11 @@
       <!-- Pagination -->
       <div class="pagination" v-if="totalPages > 1">
         <button @click="prevPage" :disabled="currentPage === 1" class="btn btn-secondary">
-          <i class="fas fa-chevron-left"></i> Назад
+          <i class="fas fa-chevron-left"></i> <span class="pagination-text">Назад</span>
         </button>
-        <span>Страница {{ currentPage }} из {{ totalPages }}</span>
+        <span class="pagination-info">Страница {{ currentPage }} из {{ totalPages }}</span>
         <button @click="nextPage" :disabled="currentPage === totalPages" class="btn btn-secondary">
-          Вперед <i class="fas fa-chevron-right"></i>
+          <span class="pagination-text">Вперед</span> <i class="fas fa-chevron-right"></i>
         </button>
       </div>
     </div>
@@ -211,8 +271,11 @@ export default {
     const pageSize = ref(10)
     const showAddModal = ref(false)
     const showDeleteModal = ref(false)
+    const showFilters = ref(true)
     const editingTransaction = ref(null)
     const transactionToDelete = ref(null)
+    let debounceTimer = null
+    
     const filters = ref({
       type: '',
       account_name: '',
@@ -222,6 +285,7 @@ export default {
       create_at_after: '',
       create_at_before: ''
     })
+    
     const formData = ref({
       type: 'expense',
       amount: '',
@@ -330,34 +394,17 @@ export default {
 
     const loadCategories = async () => {
       try {
-        // Загружаем категории доходов
         const incomeData = await apiService.getCategories('income', 1, 100, true)
-        incomeCategories.value = await Promise.all(
-          incomeData.results.map(async (cat) => {
-            if (cat.has_children) {
-              return await apiService.getCategory(cat.id)
-            }
-            return cat
-          })
-        )
+        incomeCategories.value = incomeData.results || []
         
-        // Загружаем категории расходов (используем 'expence' в API)
         const expenseData = await apiService.getCategories('expense', 1, 100, true)
-        expenseCategories.value = await Promise.all(
-          expenseData.results.map(async (cat) => {
-            if (cat.has_children) {
-              return await apiService.getCategory(cat.id)
-            }
-            return cat
-          })
-        )
+        expenseCategories.value = expenseData.results || []
       } catch (error) {
         console.error('Error loading categories:', error)
       }
     }
 
     const onTypeChange = () => {
-      // Сбрасываем выбранную категорию при смене типа
       formData.value.category = ''
     }
 
@@ -435,6 +482,13 @@ export default {
       currentPage.value = 1
     }
 
+    const applyFiltersDebounced = () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        applyFilters()
+      }, 500)
+    }
+
     const resetFilters = () => {
       filters.value = {
         type: '',
@@ -487,6 +541,7 @@ export default {
       currentPage,
       totalPages,
       filters,
+      showFilters,
       showAddModal,
       showDeleteModal,
       editingTransaction,
@@ -499,6 +554,7 @@ export default {
       confirmDelete,
       deleteTransaction,
       applyFilters,
+      applyFiltersDebounced,
       resetFilters,
       closeModal,
       prevPage,
@@ -512,11 +568,42 @@ export default {
 </script>
 
 <style scoped>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.page-header h1 {
+  font-size: 1.875rem;
+  color: var(--dark-color);
+}
+
+.filters-header {
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 1rem;
+  background: var(--white);
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+}
+
+.filters-header h3 {
+  font-size: 1rem;
+  margin: 0;
+}
+
 .filters {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
   align-items: end;
+  padding: 1rem;
 }
 
 .filter-group {
@@ -551,6 +638,7 @@ export default {
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 600;
+  display: inline-block;
 }
 
 .badge-success {
@@ -612,5 +700,272 @@ export default {
 .required:after {
   content: " *";
   color: var(--danger-color);
+}
+
+/* Стили для карточек транзакций (мобильная и планшетная версия) */
+.mobile-transactions {
+  display: none;
+}
+
+.transaction-card {
+  background: var(--white);
+  border: 1px solid var(--light-color);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.transaction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--light-color);
+}
+
+.transaction-date {
+  font-size: 0.75rem;
+  color: var(--gray-color);
+}
+
+.transaction-actions-mobile {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  color: var(--gray-color);
+  transition: color 0.3s;
+}
+
+.btn-icon:hover {
+  color: var(--primary-color);
+}
+
+.btn-icon-danger:hover {
+  color: var(--danger-color);
+}
+
+.transaction-amount {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  text-align: center;
+  padding: 0.5rem;
+  background: var(--light-color);
+  border-radius: var(--radius);
+}
+
+.transaction-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.detail-label {
+  color: var(--gray-color);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.detail-value {
+  color: var(--dark-color);
+  text-align: right;
+  word-break: break-word;
+  max-width: 60%;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: var(--gray-color);
+}
+
+.empty-state i {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+/* Десктопная таблица */
+.desktop-table {
+  display: block;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--light-color);
+}
+
+.table th {
+  font-weight: 600;
+  color: var(--gray-color);
+}
+
+/* Адаптивные стили - для планшетов и мобильных */
+@media (max-width: 1024px) {
+  .desktop-table {
+    display: none;
+  }
+  
+  .mobile-transactions {
+    display: block;
+  }
+  
+  .filters-header {
+    display: flex;
+  }
+  
+  .filters {
+    display: grid;
+    padding: 1rem;
+  }
+  
+  .filters-hidden {
+    display: none;
+  }
+  
+  .card {
+    padding: 0;
+  }
+}
+
+/* Для мобильных устройств (до 768px) */
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .page-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .page-header .btn {
+    width: 100%;
+  }
+  
+  .filters {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .filter-actions {
+    flex-direction: column;
+  }
+  
+  .filter-actions .btn {
+    width: 100%;
+  }
+  
+  .pagination {
+    flex-wrap: wrap;
+  }
+  
+  .pagination-text {
+    display: inline;
+  }
+  
+  /* Модальные окна */
+  .modal-content {
+    width: 95%;
+    margin: 1rem;
+    max-height: 85vh;
+  }
+  
+  .modal-header h3 {
+    font-size: 1.1rem;
+  }
+  
+  .form-group {
+    margin-bottom: 0.75rem;
+  }
+  
+  .form-label {
+    font-size: 0.8rem;
+  }
+  
+  .form-control {
+    font-size: 16px;
+    padding: 0.5rem;
+  }
+  
+  .modal-footer {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .modal-footer .btn {
+    width: 100%;
+  }
+}
+
+/* Для очень маленьких экранов (до 480px) */
+@media (max-width: 480px) {
+  .transaction-amount {
+    font-size: 1rem;
+  }
+  
+  .detail-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  
+  .detail-value {
+    max-width: 100%;
+    text-align: left;
+  }
+  
+  .pagination-info {
+    font-size: 0.875rem;
+  }
+  
+  .pagination .btn {
+    padding: 0.5rem;
+  }
+}
+
+/* Для планшетов в горизонтальной ориентации (1025px-1280px) */
+@media (min-width: 1025px) and (max-width: 1280px) {
+  .desktop-table {
+    display: block;
+  }
+  
+  .mobile-transactions {
+    display: none;
+  }
+  
+  .table th,
+  .table td {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+  }
+  
+  .btn-sm {
+    padding: 0.2rem 0.4rem;
+  }
 }
 </style>
