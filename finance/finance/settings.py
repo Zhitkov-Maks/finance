@@ -20,20 +20,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 load_dotenv()
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY", "")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
+# Домены для продакшена
 ALLOWED_HOSTS = [
-    "0.0.0.0",
     "localhost",
-    "api",
     "127.0.0.1",
-    "94.241.143.71",
+    "api",
+    "109.248.203.36",
+    "m-zhitkov.ru",           # Ваш домен
+    "www.m-zhitkov.ru",       # С www
 ]
-
 
 # Application definition
 
@@ -69,35 +71,47 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = False
+# ========== НАСТРОЙКИ ДЛЯ РАБОТЫ ЗА REVERSE PROXY (Nginx) ==========
+# Django получает сигнал, что оригинальный запрос был по HTTPS от Nginx
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost",
-    "http://localhost:80",
-    "http://127.0.0.1",
-    "http://0.0.0.0:80",
-    "http://vue_app",
-    "http://nginx_proxy",
-    "http://nginx-proxy",
-]
+# ========== НАСТРОЙКИ CORS ДЛЯ ПРОДАКШЕНА ==========
 
-# Для разработки можно добавить все origins с localhost
-CORS_ALLOWED_ORIGIN_REGEXES = [
-    r"^http://localhost:\d+$",
-    r"^http://127\.0\.0\.1:\d+$",
-    r"^http://0\.0\.0\.0:\d+$",
-]
+# В зависимости от окружения
+if DEBUG:
+    # Режим разработки - широкие разрешения
+    CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost",
+        "http://localhost:80",
+        "http://localhost:8080",
+        "http://localhost:5173",
+        "http://127.0.0.1",
+        "http://127.0.0.1:8000",
+        "http://127.0.0.1:8080",
+        "http://0.0.0.0:80",
+        "http://vue_app",
+        "http://nginx_proxy",
+        "http://nginx-proxy",
+    ]
+    CORS_ALLOWED_ORIGIN_REGEXES = [
+        r"^http://localhost:\d+$",
+        r"^http://127\.0\.0\.1:\d+$",
+        r"^http://0\.0\.0\.0:\d+$",
+    ]
+else:
+    # Режим продакшена - строгие разрешения
+    CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOWED_ORIGINS = [
+        "https://m-zhitkov.ru",           # Ваш домен
+        "https://www.m-zhitkov.ru",       # С www
+        "https://109.248.203.36",          # IP адрес
+    ]
+    CORS_ALLOWED_ORIGIN_REGEXES = []  # Без regex в продакшене
 
-# Настройки для работы с Docker
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost",
-    "http://localhost:80",
-    "http://127.0.0.1",
-    "http://vue_app",
-    "http://nginx_proxy",
-]
-
-# Разрешаем все методы
+# Общие CORS настройки
 CORS_ALLOW_METHODS = [
     'DELETE',
     'GET',
@@ -107,7 +121,6 @@ CORS_ALLOW_METHODS = [
     'PUT',
 ]
 
-# Разрешаем заголовки
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
@@ -120,8 +133,41 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-# Разрешаем куки
 CORS_ALLOW_CREDENTIALS = True
+
+# CSRF настройки
+if DEBUG:
+    CSRF_TRUSTED_ORIGINS = [
+        "http://localhost",
+        "http://localhost:80",
+        "http://127.0.0.1",
+        "http://vue_app",
+        "http://nginx_proxy",
+    ]
+else:
+    CSRF_TRUSTED_ORIGINS = [
+        "https://m-zhitkov.ru",
+        "https://www.m-zhitkov.ru",
+        "https://109.248.203.36",
+    ]
+
+# ========== НАСТРОЙКИ БЕЗОПАСНОСТИ ДЛЯ ПРОДАКШЕНА ==========
+# Внимание: SESSION_COOKIE_SECURE и CSRF_COOKIE_SECURE должны быть False,
+# так как HTTPS заканчивается на Nginx, а внутри Docker сети используется HTTP
+
+if not DEBUG:
+    # Куки (оставляем False для работы через прокси)
+    SESSION_COOKIE_SECURE = False      # Изменено: HTTPS только на Nginx
+    CSRF_COOKIE_SECURE = False         # Изменено: HTTPS только на Nginx
+    SESSION_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_HTTPONLY = True
+    
+    # Другие security настройки
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    
+    # Clickjacking защита
+    X_FRAME_OPTIONS = 'DENY'
 
 ROOT_URLCONF = 'finance.urls'
 
@@ -143,7 +189,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'finance.wsgi.application'
 
-
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -155,10 +200,7 @@ DATABASES = {
     },
 }
 
-
 # Password validation
-# https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -174,41 +216,43 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
-# https://docs.djangoproject.com/en/5.1/topics/i18n/
-
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
-
+LANGUAGE_CODE = 'ru-ru'
+TIME_ZONE = 'Europe/Moscow'
 USE_I18N = True
-
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
-
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Media files
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
-# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
+# REST Framework настройки
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.BasicAuthentication',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    'EXCEPTION_HANDLER': 'transfer.exceptions.custom_exception_handler'
+    'EXCEPTION_HANDLER': 'transfer.exceptions.custom_exception_handler',
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/day',
+        'user': '1000/day',
+        'login': '5/minute',
+    },
 }
 
-
+# Djoser настройки
 DJOSER = {
     'USER_CREATE_PASSWORD_RETYPE': True,
     'SERIALIZERS': {
@@ -221,10 +265,10 @@ DJOSER = {
 
 AUTH_USER_MODEL = 'app_user.CustomUser'
 
-
+# Spectacular (API docs) настройки
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Личный учет финансов',  # Название вашего приложения
-    'DESCRIPTION': 'Это API для управления вашими доходами и расходами, позволяет отслеживать ваши финансы..',
+    'TITLE': 'Личный учет финансов',
+    'DESCRIPTION': 'Это API для управления вашими доходами и расходами, позволяет отслеживать ваши финансы.',
     'VERSION': '0.1.0',
     'CONTACT': {
         'name': 'Житков Максим',
@@ -236,12 +280,12 @@ SPECTACULAR_SETTINGS = {
     },
     'SERVERS': [
         {'url': 'http://localhost:8001', 'description': 'Локальная среда разработки'},
-        {'url': 'https://94.241.143.71:80', 'description': 'Продакшн'},
+        {'url': 'https://m-zhitkov.ru', 'description': 'Продакшн'},
     ],
-    # Дополнительные настройки
     'SCHEMA_PATH_PREFIX': '/api/',
 }
 
+# Email настройки
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 465
 EMAIL_USE_TLS = False
@@ -250,3 +294,33 @@ EMAIL_USE_SSL = True
 EMAIL_HOST_USER = os.getenv("MAIL")
 EMAIL_HOST_PASSWORD = os.getenv("MAIL_PASSWORD")
 DEFAULT_FROM_EMAIL = os.getenv("MAIL")
+
+# Логирование
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {
+            'format': '{levelname} {asctime} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        },
+    },
+}
+
