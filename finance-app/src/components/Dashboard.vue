@@ -137,16 +137,16 @@
             <tr v-for="account in accounts" :key="account.id">
               <td>
                 <strong>{{ account.name }}</strong>
-                </td>
+              </td>
               <td :class="parseFloat(account.balance) >= 0 ? 'text-success' : 'text-danger'">
                 {{ formatCurrency(account.balance) }}
-                </td>
+              </td>
               <td>
                 <span class="badge" :class="account.is_active ? 'badge-success' : 'badge-danger'">
                   {{ account.is_active ? 'Активен' : 'Неактивен' }}
                 </span>
-                </td>
-              </tr>
+              </td>
+            </tr>
             <tr v-if="accounts.length === 0">
               <td colspan="3" class="text-center">Нет созданных счетов</td>
             </tr>
@@ -220,8 +220,7 @@ export default {
   name: 'Dashboard',
   setup() {
     const accounts = ref([])
-    const incomeTransactions = ref([])
-    const expenseTransactions = ref([])
+    const allTransactionsList = ref([]) // Добавляем отдельный массив для всех транзакций
     const incomeCategories = ref([])
     const expenseCategories = ref([])
     const loading = ref(false)
@@ -244,16 +243,12 @@ export default {
       return accounts.value.filter(acc => acc.is_active)
     })
     
-    const allTransactions = computed(() => {
-      const income = incomeTransactions.value.map(t => ({ ...t, transaction_type: 'income' }))
-      const expense = expenseTransactions.value.map(t => ({ ...t, transaction_type: 'expense' }))
-      return [...income, ...expense].sort((a, b) => new Date(b.create_at) - new Date(a.create_at))
-    })
-    
+    // Доходы за месяц
     const monthlyIncome = computed(() => {
       const now = new Date()
-      return incomeTransactions.value
+      return allTransactionsList.value
         .filter(t => {
+          if (t.transaction_type !== 'income') return false
           const date = new Date(t.create_at)
           return date.getMonth() === now.getMonth() && 
                  date.getFullYear() === now.getFullYear()
@@ -261,10 +256,12 @@ export default {
         .reduce((sum, t) => sum + parseFloat(t.amount), 0)
     })
     
+    // Расходы за месяц
     const monthlyExpense = computed(() => {
       const now = new Date()
-      return expenseTransactions.value
+      return allTransactionsList.value
         .filter(t => {
+          if (t.transaction_type !== 'expense') return false
           const date = new Date(t.create_at)
           return date.getMonth() === now.getMonth() && 
                  date.getFullYear() === now.getFullYear()
@@ -272,8 +269,11 @@ export default {
         .reduce((sum, t) => sum + parseFloat(t.amount), 0)
     })
     
+    // Последние 5 транзакций
     const recentTransactions = computed(() => {
-      return allTransactions.value.slice(0, 10)
+      return [...allTransactionsList.value]
+        .sort((a, b) => new Date(b.create_at) - new Date(a.create_at))
+        .slice(0, 5)
     })
     
     const availableCategories = computed(() => {
@@ -295,20 +295,30 @@ export default {
     const loadData = async () => {
       loading.value = true
       try {
+        // Загрузка счетов
         const accountsData = await apiService.getAccounts(1, 100)
         accounts.value = accountsData.results[0]?.accounts || []
+
+        // Загрузка транзакций доходов (больше, чтобы получить достаточно для отображения)
+        const incomeData = await apiService.getTransactions({ page: 1, page_size: 10, type: 'income' })
+        const incomeTransactions = (incomeData.results || []).map(t => ({ ...t, transaction_type: 'income' }))
         
-        const incomeData = await apiService.getTransactions({ page: 1, page_size: 100, type: 'income' })
-        incomeTransactions.value = incomeData.results || []
+        // Загрузка транзакций расходов
+        const expenseData = await apiService.getTransactions({ page: 1, page_size: 10, type: 'expense' })
+        const expenseTransactions = (expenseData.results || []).map(t => ({ ...t, transaction_type: 'expense' }))
         
-        const expenseData = await apiService.getTransactions({ page: 1, page_size: 100, type: 'expense' })
-        expenseTransactions.value = expenseData.results || []
+        // Объединяем все транзакции
+        allTransactionsList.value = [...incomeTransactions, ...expenseTransactions]
         
+        // Загрузка категорий
         const incomeCatData = await apiService.getCategories('income', 1, 100, true)
         incomeCategories.value = incomeCatData.results || []
         
         const expenseCatData = await apiService.getCategories('expense', 1, 100, true)
         expenseCategories.value = expenseCatData.results || []
+        
+        console.log('Загружено транзакций:', allTransactionsList.value.length)
+        console.log('Последние 5:', recentTransactions.value.length)
       } catch (error) {
         console.error('Error loading data:', error)
       } finally {
@@ -361,8 +371,6 @@ export default {
     
     return {
       accounts,
-      incomeTransactions,
-      expenseTransactions,
       loading,
       showAddTransaction,
       newTransaction,
@@ -381,6 +389,7 @@ export default {
 </script>
 
 <style scoped>
+/* Стили остаются без изменений */
 .quick-actions {
   display: flex;
   gap: 1rem;
@@ -662,7 +671,6 @@ export default {
     padding: 0.75rem;
   }
   
-  /* Модальные окна */
   .modal-content {
     width: 95%;
     margin: 1rem;
