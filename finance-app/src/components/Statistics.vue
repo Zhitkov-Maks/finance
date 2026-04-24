@@ -78,44 +78,8 @@
         <h3 class="card-title">Разбивка по категориям</h3>
       </div>
 
-      <!-- Для мобильных и планшетов: карточки категорий -->
-      <div class="mobile-categories">
-        <div v-for="category in statistics" :key="category.id" class="category-card">
-          <div class="category-header">
-            <span class="category-name">
-              <i class="fas fa-folder"></i>
-              {{ category.name }}
-            </span>
-            <span class="category-total">{{ formatCurrency(category.total) }}</span>
-          </div>
-          
-          <div class="progress-bar">
-            <div 
-              class="progress-fill" 
-              :style="{ width: getPercentage(category.total) + '%' }"
-              :class="currentType === 'income' ? 'progress-income' : 'progress-expense'"
-            ></div>
-          </div>
-          
-          <div class="category-percentage">{{ getPercentage(category.total) }}%</div>
-
-          <!-- Subcategories -->
-          <div v-if="category.children && category.children.length" class="subcategories">
-            <div v-for="child in category.children" :key="child.id" class="subcategory">
-              <span class="subcategory-name">↳ {{ child.name }}</span>
-              <span class="subcategory-total">{{ formatCurrency(child.total) }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="statistics.length === 0" class="empty-state">
-          <i class="fas fa-chart-bar"></i>
-          <p>Нет данных за выбранный период</p>
-        </div>
-      </div>
-
-      <!-- Для десктопа: обычное отображение -->
-      <div class="desktop-categories">
+      <!-- Универсальное отображение категорий -->
+      <div class="categories-container">
         <div v-for="category in statistics" :key="category.id" class="category-stat">
           <div class="category-header">
             <span class="category-name">
@@ -130,22 +94,39 @@
               class="progress-fill" 
               :style="{ width: getPercentage(category.total) + '%' }"
               :class="currentType === 'income' ? 'progress-income' : 'progress-expense'"
-            ></div>
+            >
+              <span class="progress-text">{{ getPercentage(category.total) }}%</span>
+            </div>
           </div>
-          
-          <div class="category-percentage">{{ getPercentage(category.total) }}%</div>
 
-          <!-- Subcategories -->
+          <!-- Subcategories with their own progress bars (blue color) -->
           <div v-if="category.children && category.children.length" class="subcategories">
-            <div v-for="child in category.children" :key="child.id" class="subcategory">
-              <span class="subcategory-name">↳ {{ child.name }}</span>
-              <span class="subcategory-total">{{ formatCurrency(child.total) }}</span>
+            <div v-for="child in category.children" :key="child.id" class="subcategory-item">
+              <div class="subcategory-header">
+                <span class="subcategory-name">
+                  <i class="fas fa-level-down-alt"></i>
+                  {{ child.name }}
+                </span>
+                <span class="subcategory-total">{{ formatCurrency(child.total) }}</span>
+              </div>
+              <div class="progress-bar subcategory-progress">
+                <div 
+                  class="progress-fill progress-subcategory" 
+                  :style="{ width: getSubPercentage(category.total, child.total) + '%' }"
+                >
+                  <span class="progress-text-small">{{ getSubPercentage(category.total, child.total) }}%</span>
+                </div>
+              </div>
+              <div class="subcategory-percent-info">
+                {{ getSubPercentage(category.total, child.total) }}% от категории "{{ category.name }}"
+              </div>
             </div>
           </div>
         </div>
 
         <div v-if="statistics.length === 0" class="empty-state">
-          Нет данных за выбранный период
+          <i class="fas fa-chart-bar"></i>
+          <p>Нет данных за выбранный период</p>
         </div>
       </div>
     </div>
@@ -158,9 +139,12 @@
 
       <!-- Для мобильных и планшетов: карточки месяцев -->
       <div class="mobile-months">
-        <div v-for="item in monthlyAnalytics" :key="item.period" class="month-card">
+        <div v-for="item in monthlyAnalytics" :key="item.period" class="month-card" @click="toggleMonthDetails(item)">
           <div class="month-header">
-            <div class="month-name">{{ item.month_name }} {{ item.year }}</div>
+            <div class="month-name">
+              {{ item.month_name }} {{ item.year }}
+              <i :class="expandedMonths[item.period] ? 'fas fa-chevron-up' : 'fas fa-chevron-down'" class="expand-icon"></i>
+            </div>
             <div class="month-total" :class="currentType === 'income' ? 'text-success' : 'text-danger'">
               {{ formatCurrency(item.total_amount) }}
             </div>
@@ -189,6 +173,55 @@
               <span class="detail-value" v-else>—</span>
             </div>
           </div>
+
+          <!-- Разбивка по категориям для месяца -->
+          <div v-if="expandedMonths[item.period] && monthCategories[item.period]" class="month-categories">
+            <div class="month-categories-title">
+              <i class="fas fa-chart-pie"></i> Разбивка по категориям
+            </div>
+            <div v-for="cat in monthCategories[item.period]" :key="cat.id" class="month-category-item">
+              <div class="month-category-header">
+                <span class="month-category-name">{{ cat.name }}</span>
+                <span class="month-category-total">{{ formatCurrency(cat.total) }}</span>
+              </div>
+              <div class="progress-bar small">
+                <div 
+                  class="progress-fill" 
+                  :style="{ width: getMonthCategoryPercentage(item.total_amount, cat.total) + '%' }"
+                  :class="currentType === 'income' ? 'progress-income' : 'progress-expense'"
+                >
+                  <span class="progress-text-small">{{ getMonthCategoryPercentage(item.total_amount, cat.total) }}%</span>
+                </div>
+              </div>
+              
+              <!-- Дочерние категории (blue color) -->
+              <div v-if="cat.children && cat.children.length" class="month-subcategories">
+                <div v-for="child in cat.children" :key="child.id" class="month-subcategory">
+                  <div class="month-subcategory-header">
+                    <span class="month-subcategory-name">
+                      <i class="fas fa-level-down-alt"></i>
+                      {{ child.name }}
+                    </span>
+                    <span class="month-subcategory-total">{{ formatCurrency(child.total) }}</span>
+                  </div>
+                  <div class="progress-bar very-small">
+                    <div 
+                      class="progress-fill progress-subcategory" 
+                      :style="{ width: getMonthSubCategoryPercentage(cat.total, child.total) + '%' }"
+                    >
+                      <span class="progress-text-very-small">{{ getMonthSubCategoryPercentage(cat.total, child.total) }}%</span>
+                    </div>
+                  </div>
+                  <div class="month-subcategory-percentage">
+                    {{ getMonthSubCategoryPercentage(cat.total, child.total) }}% от категории "{{ cat.name }}"
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-if="!monthCategories[item.period] || monthCategories[item.period].length === 0" class="empty-state-small">
+              Нет данных по категориям
+            </div>
+          </div>
         </div>
         <div v-if="monthlyAnalytics.length === 0" class="empty-state">
           <i class="fas fa-chart-line"></i>
@@ -196,7 +229,7 @@
         </div>
       </div>
 
-      <!-- Для десктопа: таблица -->
+      <!-- Для десктопа: таблица с возможностью раскрытия -->
       <div class="desktop-table">
         <table class="table">
           <thead>
@@ -206,25 +239,87 @@
               <th>Кол-во транзакций</th>
               <th>Средняя сумма</th>
               <th>Изменение</th>
+              <th style="width: 50px"></th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="item in monthlyAnalytics" :key="item.period">
-              <td>{{ item.month_name }} {{ item.year }}</td>
-              <td :class="currentType === 'income' ? 'text-success' : 'text-danger'">
-                {{ formatCurrency(item.total_amount) }}
-               </td>
-              <td>{{ item.transaction_count }}</td>
-              <td>{{ formatCurrency(item.avg_amount) }}</td>
-              <td>
-                <span v-if="item.change_vs_prev_percent !== 0" :class="getTrendClass(item)">
-                  {{ item.trend_vs_prev }} {{ Math.abs(item.change_vs_prev_percent).toFixed(1) }}%
-                </span>
-                <span v-else>—</span>
+            <template v-for="item in monthlyAnalytics" :key="item.period">
+              <tr @click="toggleMonthDetails(item)" style="cursor: pointer;">
+                <td>
+                  <strong>{{ item.month_name }} {{ item.year }}</strong>
+                </td>
+                <td :class="currentType === 'income' ? 'text-success' : 'text-danger'">
+                  {{ formatCurrency(item.total_amount) }}
+                </td>
+                <td>{{ item.transaction_count }}</td>
+                <td>{{ formatCurrency(item.avg_amount) }}</td>
+                <td>
+                  <span v-if="item.change_vs_prev_percent !== 0" :class="getTrendClass(item)">
+                    {{ item.trend_vs_prev }} {{ Math.abs(item.change_vs_prev_percent).toFixed(1) }}%
+                  </span>
+                  <span v-else>—</span>
+                </td>
+                <td style="text-align: center;">
+                  <i :class="expandedMonths[item.period] ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
                 </td>
               </tr>
+              <tr v-if="expandedMonths[item.period]">
+                <td colspan="6" class="expanded-row">
+                  <div class="month-categories-table">
+                    <div class="expanded-title">
+                      <i class="fas fa-chart-pie"></i> Разбивка по категориям за {{ item.month_name }} {{ item.year }}
+                    </div>
+                    <div v-if="monthCategories[item.period] && monthCategories[item.period].length > 0">
+                      <div v-for="cat in monthCategories[item.period]" :key="cat.id" class="month-category-expanded">
+                        <div class="category-row">
+                          <span class="category-name-expanded">{{ cat.name }}</span>
+                          <span class="category-total-expanded">{{ formatCurrency(cat.total) }}</span>
+                          <span class="category-percentage-expanded">{{ getMonthCategoryPercentage(item.total_amount, cat.total) }}%</span>
+                        </div>
+                        <div class="progress-bar small">
+                          <div 
+                            class="progress-fill" 
+                            :style="{ width: getMonthCategoryPercentage(item.total_amount, cat.total) + '%' }"
+                            :class="currentType === 'income' ? 'progress-income' : 'progress-expense'"
+                          >
+                            <span class="progress-text-small">{{ getMonthCategoryPercentage(item.total_amount, cat.total) }}%</span>
+                          </div>
+                        </div>
+                        
+                        <!-- Дочерние категории (blue color) -->
+                        <div v-if="cat.children && cat.children.length" class="subcategories-expanded">
+                          <div v-for="child in cat.children" :key="child.id" class="subcategory-row">
+                            <div class="subcategory-info">
+                              <span class="subcategory-name-expanded">
+                                <i class="fas fa-level-down-alt"></i>
+                                {{ child.name }}
+                              </span>
+                              <span class="subcategory-total-expanded">{{ formatCurrency(child.total) }}</span>
+                            </div>
+                            <div class="progress-bar very-small">
+                              <div 
+                                class="progress-fill progress-subcategory" 
+                                :style="{ width: getMonthSubCategoryPercentage(cat.total, child.total) + '%' }"
+                              >
+                                <span class="progress-text-very-small">{{ getMonthSubCategoryPercentage(cat.total, child.total) }}%</span>
+                              </div>
+                            </div>
+                            <div class="subcategory-percentage-expanded">
+                              {{ getMonthSubCategoryPercentage(cat.total, child.total) }}% от категории "{{ cat.name }}"
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div v-else class="empty-state-small">
+                      Нет данных по категориям
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </template>
             <tr v-if="monthlyAnalytics.length === 0">
-              <td colspan="5" style="text-align: center;">Нет данных</td>
+              <td colspan="6" class="text-center">Нет данных</td>
             </tr>
           </tbody>
         </table>
@@ -264,6 +359,8 @@ export default {
     const selectedMonth = ref(new Date().getMonth() + 1)
     const showFilters = ref(true)
     const isMobile = ref(false)
+    const expandedMonths = ref({})
+    const monthCategories = ref({})
     
     const years = computed(() => {
       const currentYear = new Date().getFullYear()
@@ -282,6 +379,16 @@ export default {
 
     const checkMobile = () => {
       isMobile.value = window.innerWidth <= 768
+    }
+
+    const loadMonthCategories = async (year, month) => {
+      try {
+        const data = await apiService.getMonthStatistics(month, year, currentType.value)
+        return data.statistics || []
+      } catch (error) {
+        console.error(`Error loading categories for ${month}.${year}:`, error)
+        return []
+      }
     }
 
     const loadStatistics = async () => {
@@ -321,6 +428,10 @@ export default {
           
           statistics.value = []
           
+          // Очищаем кэш категорий при смене года или типа
+          monthCategories.value = {}
+          expandedMonths.value = {}
+          
           await nextTick()
           if (monthlyAnalytics.value.length > 0) {
             setTimeout(() => drawChart(), 100)
@@ -331,9 +442,43 @@ export default {
       }
     }
 
+    const toggleMonthDetails = async (item) => {
+      const period = item.period
+      
+      if (expandedMonths.value[period]) {
+        expandedMonths.value[period] = false
+      } else {
+        if (!monthCategories.value[period]) {
+          const [year, month] = period.split('-')
+          monthCategories.value[period] = await loadMonthCategories(parseInt(year), parseInt(month))
+        }
+        expandedMonths.value[period] = true
+      }
+      
+      expandedMonths.value = { ...expandedMonths.value }
+    }
+
     const getPercentage = (total) => {
       if (totalAmount.value === 0) return 0
       const percentage = (parseFloat(total) / totalAmount.value) * 100
+      return percentage.toFixed(1)
+    }
+
+    const getSubPercentage = (parentTotal, childTotal) => {
+      if (parseFloat(parentTotal) === 0) return 0
+      const percentage = (parseFloat(childTotal) / parseFloat(parentTotal)) * 100
+      return percentage.toFixed(1)
+    }
+
+    const getMonthCategoryPercentage = (monthTotal, categoryTotal) => {
+      if (parseFloat(monthTotal) === 0) return 0
+      const percentage = (parseFloat(categoryTotal) / parseFloat(monthTotal)) * 100
+      return percentage.toFixed(1)
+    }
+
+    const getMonthSubCategoryPercentage = (categoryTotal, subCategoryTotal) => {
+      if (parseFloat(categoryTotal) === 0) return 0
+      const percentage = (parseFloat(subCategoryTotal) / parseFloat(categoryTotal)) * 100
       return percentage.toFixed(1)
     }
 
@@ -423,7 +568,7 @@ export default {
     }
 
     const formatCurrency = (value) => {
-      if (!value) return '0 ₽'
+      if (!value && value !== 0) return '0 ₽'
       const numValue = parseFloat(value)
       if (isNaN(numValue)) return '0 ₽'
       return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(numValue)
@@ -460,8 +605,14 @@ export default {
       averageAmount,
       showFilters,
       isMobile,
+      expandedMonths,
+      monthCategories,
       loadStatistics,
+      toggleMonthDetails,
       getPercentage,
+      getSubPercentage,
+      getMonthCategoryPercentage,
+      getMonthSubCategoryPercentage,
       getTrendClass,
       formatCurrency
     }
@@ -511,8 +662,8 @@ export default {
   align-items: center;
 }
 
-/* Стили для категорий (десктоп) */
-.desktop-categories {
+/* Стили для категорий */
+.categories-container {
   display: block;
 }
 
@@ -528,6 +679,8 @@ export default {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .category-name {
@@ -542,73 +695,213 @@ export default {
 }
 
 .progress-bar {
-  height: 24px;
+  height: 32px;
   background: #e5e7eb;
   border-radius: var(--radius);
   overflow: hidden;
   margin: 0.5rem 0;
+  position: relative;
+}
+
+.progress-bar.small {
+  height: 28px;
+}
+
+.progress-bar.very-small {
+  height: 24px;
 }
 
 .progress-fill {
   height: 100%;
-  transition: width 0.3s;
+  transition: width 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   padding-right: 8px;
   color: white;
-  font-size: 12px;
   font-weight: 600;
+  position: relative;
+  overflow: hidden;
 }
 
+/* Стиль для дочерних категорий - СИНИЙ цвет */
+.progress-subcategory {
+  background: linear-gradient(90deg, #3b82f6, #60a5fa, #93c5fd);
+}
+
+.progress-text {
+  font-size: 12px;
+  text-shadow: 0 0 2px rgba(0,0,0,0.3);
+}
+
+.progress-text-small {
+  font-size: 11px;
+  text-shadow: 0 0 2px rgba(0,0,0,0.3);
+}
+
+.progress-text-very-small {
+  font-size: 10px;
+  text-shadow: 0 0 2px rgba(0,0,0,0.3);
+}
+
+/* Градиенты для доходов (основные категории) */
 .progress-income {
-  background: linear-gradient(90deg, #10b981, #34d399);
+  background: linear-gradient(90deg, #10b981, #34d399, #6ee7b7);
 }
 
+/* Градиенты для расходов (основные категории) */
 .progress-expense {
-  background: linear-gradient(90deg, #ef4444, #f87171);
-}
-
-.category-percentage {
-  text-align: right;
-  font-size: 0.875rem;
-  color: var(--gray-color);
+  background: linear-gradient(90deg, #ef4444, #f87171, #fca5a5);
 }
 
 .subcategories {
   margin-top: 1rem;
-  padding-left: 2rem;
+  padding-left: 1.5rem;
 }
 
-.subcategory {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.5rem;
-  border-left: 2px solid var(--primary-color);
-  margin-bottom: 0.5rem;
+.subcategory-item {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
   background: white;
   border-radius: var(--radius);
+  border-left: 3px solid #3b82f6;
+}
+
+.subcategory-item:last-child {
+  margin-bottom: 0;
+}
+
+.subcategory-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .subcategory-name {
   color: var(--gray-color);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.subcategory-name i {
+  font-size: 0.75rem;
 }
 
 .subcategory-total {
-  font-weight: 500;
+  font-weight: 600;
 }
 
-/* Стили для карточек категорий (мобильная версия) */
-.mobile-categories {
-  display: none;
+.subcategory-progress {
+  margin: 0.5rem 0;
 }
 
-.category-card {
-  background: var(--white);
-  border: 1px solid var(--light-color);
-  border-radius: var(--radius);
+.subcategory-percent-info {
+  font-size: 0.7rem;
+  color: var(--gray-color);
+  text-align: right;
+  margin-top: 0.25rem;
+}
+
+/* Стили для раскрывающихся категорий в годовой аналитике */
+.expanded-row {
+  background: #f9fafb;
   padding: 1rem;
+}
+
+.month-categories-table {
+  padding: 1rem;
+}
+
+.expanded-title {
+  font-weight: 600;
   margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--light-color);
+}
+
+.month-category-expanded {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: white;
+  border-radius: var(--radius);
+}
+
+.category-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.category-name-expanded {
+  font-weight: 600;
+  flex: 1;
+}
+
+.category-total-expanded {
+  font-weight: 500;
+  min-width: 100px;
+  text-align: right;
+}
+
+.category-percentage-expanded {
+  color: var(--gray-color);
+  font-size: 0.875rem;
+  min-width: 70px;
+  text-align: right;
+}
+
+.subcategories-expanded {
+  margin-top: 0.75rem;
+  padding-left: 1.5rem;
+}
+
+.subcategory-row {
+  padding: 0.75rem;
+  border-left: 3px solid #3b82f6;
+  margin-top: 0.5rem;
+  background: #f9fafb;
+  border-radius: var(--radius);
+}
+
+.subcategory-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.subcategory-name-expanded {
+  color: var(--gray-color);
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.subcategory-name-expanded i {
+  font-size: 0.75rem;
+}
+
+.subcategory-total-expanded {
+  font-weight: 500;
+  min-width: 100px;
+  text-align: right;
+}
+
+.subcategory-percentage-expanded {
+  font-size: 0.7rem;
+  color: var(--gray-color);
+  text-align: right;
+  margin-top: 0.25rem;
 }
 
 /* Стили для карточек месяцев (мобильная версия) */
@@ -622,6 +915,12 @@ export default {
   border-radius: var(--radius);
   padding: 1rem;
   margin-bottom: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.month-card:hover {
+  box-shadow: var(--shadow);
 }
 
 .month-header {
@@ -631,11 +930,21 @@ export default {
   margin-bottom: 0.75rem;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--light-color);
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .month-name {
   font-weight: 600;
   font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.expand-icon {
+  color: var(--gray-color);
+  font-size: 0.875rem;
 }
 
 .month-total {
@@ -649,24 +958,95 @@ export default {
   gap: 0.5rem;
 }
 
-.detail-item {
+.month-categories {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--light-color);
+}
+
+.month-categories-title {
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--primary-color);
+}
+
+.month-category-item {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: var(--light-color);
+  border-radius: var(--radius);
+}
+
+.month-category-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
-.detail-label {
-  color: var(--gray-color);
+.month-category-name {
   font-weight: 500;
+}
+
+.month-category-total {
+  font-weight: 500;
+}
+
+.month-category-percentage {
+  font-size: 0.75rem;
+  color: var(--gray-color);
+  text-align: right;
+  margin-top: 0.25rem;
+}
+
+.month-subcategories {
+  margin-top: 0.75rem;
+  padding-left: 1rem;
+}
+
+.month-subcategory {
+  padding: 0.5rem;
+  background: white;
+  border-radius: var(--radius);
+  margin-top: 0.5rem;
+  border-left: 3px solid #3b82f6;
+}
+
+.month-subcategory-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.month-subcategory-name {
+  font-size: 0.875rem;
+  color: var(--gray-color);
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.5rem;
 }
 
-.detail-value {
-  color: var(--dark-color);
+.month-subcategory-total {
+  font-size: 0.875rem;
   font-weight: 500;
+}
+
+.month-subcategory-percentage {
+  font-size: 0.7rem;
+  color: var(--gray-color);
+  text-align: right;
+  margin-top: 0.25rem;
+}
+
+.empty-state-small {
+  text-align: center;
+  padding: 1rem;
+  color: var(--gray-color);
+  font-size: 0.875rem;
 }
 
 /* Десктопная таблица */
@@ -768,16 +1148,8 @@ export default {
   font-weight: 600;
 }
 
-/* Адаптивные стили - для планшетов и мобильных */
+/* Адаптивные стили */
 @media (max-width: 1024px) {
-  .desktop-categories {
-    display: none;
-  }
-  
-  .mobile-categories {
-    display: block;
-  }
-  
   .filters-header {
     display: flex;
   }
@@ -803,7 +1175,6 @@ export default {
   }
 }
 
-/* Для мобильных устройств (до 768px) */
 @media (max-width: 768px) {
   h1 {
     text-align: center;
@@ -833,26 +1204,6 @@ export default {
   }
   
   .stat-title {
-    font-size: 0.75rem;
-  }
-  
-  .category-card {
-    padding: 0.75rem;
-  }
-  
-  .category-name {
-    font-size: 0.875rem;
-  }
-  
-  .category-total {
-    font-size: 0.875rem;
-  }
-  
-  .subcategories {
-    padding-left: 1rem;
-  }
-  
-  .subcategory {
     font-size: 0.75rem;
   }
   
@@ -887,9 +1238,26 @@ export default {
   .chart-container {
     padding: 0.5rem;
   }
+  
+  .progress-bar {
+    height: 28px;
+  }
+  
+  .progress-bar.small {
+    height: 24px;
+  }
+  
+  .progress-bar.very-small {
+    height: 20px;
+  }
+  
+  .progress-text,
+  .progress-text-small,
+  .progress-text-very-small {
+    font-size: 9px;
+  }
 }
 
-/* Для очень маленьких экранов (до 480px) */
 @media (max-width: 480px) {
   h1 {
     font-size: 1.25rem;
@@ -899,21 +1267,16 @@ export default {
     font-size: 1rem;
   }
   
-  .category-card {
+  .category-stat {
+    padding: 0.75rem;
+  }
+  
+  .subcategories {
+    padding-left: 0.75rem;
+  }
+  
+  .subcategory-item {
     padding: 0.5rem;
-  }
-  
-  .progress-bar {
-    height: 20px;
-  }
-  
-  .progress-fill {
-    font-size: 10px;
-  }
-  
-  .subcategory {
-    flex-direction: column;
-    gap: 0.25rem;
   }
   
   .month-card {
@@ -925,9 +1288,21 @@ export default {
     align-items: flex-start;
     gap: 0.25rem;
   }
+  
+  .category-row,
+  .subcategory-info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .category-total-expanded,
+  .category-percentage-expanded,
+  .subcategory-total-expanded,
+  .subcategory-percentage-expanded {
+    text-align: left;
+  }
 }
 
-/* Для планшетов в горизонтальной ориентации */
 @media (min-width: 769px) and (max-width: 1024px) {
   .stats-grid {
     grid-template-columns: repeat(3, 1fr);
@@ -944,7 +1319,7 @@ export default {
   .table th,
   .table td {
     padding: 0.5rem;
-    font-size: 0.875rem;
+    font-size: 1rem;
   }
 }
 </style>
