@@ -23,35 +23,41 @@
       </div>
     </div>
 
+    <!-- Активные счета -->
     <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-check-circle text-success"></i> Активные счета
+          <span class="badge badge-success">{{ activeAccounts.length }}</span>
+        </h3>
+      </div>
+
       <!-- Для мобильных и планшетов: карточки счетов -->
       <div class="mobile-accounts">
-        <div v-for="account in accounts" :key="account.id" class="account-card">
+        <div v-for="account in activeAccounts" :key="account.id" class="account-card">
           <div class="account-header">
             <div class="account-name">
               <strong>{{ account.name }}</strong>
               <span class="account-id">ID: {{ account.id }}</span>
             </div>
             <div class="account-status">
-              <span class="badge" :class="account.is_active ? 'badge-success' : 'badge-danger'">
-                <i :class="account.is_active ? 'fas fa-check-circle' : 'fas fa-times-circle'"></i>
-                {{ account.is_active ? 'Активен' : 'Неактивен' }}
+              <span class="badge badge-success">
+                <i class="fas fa-check-circle"></i> Активен
               </span>
             </div>
           </div>
           
-          <div class="account-balance" :class="parseFloat(account.balance) >= 0 ? 'text-success' : 'text-danger'">
-                <span class="balance-label">Баланс:</span>
-                <span class="balance-value">{{ formatCurrency(account.balance) }}</span>
-              </div>
+          <div class="account-balance text-success">
+            <span class="balance-label">Баланс:</span>
+            <span class="balance-value">{{ formatCurrency(account.balance) }}</span>
+          </div>
           
           <div class="account-actions">
             <button @click="editAccount(account)" class="btn btn-sm btn-info" title="Редактировать">
               <i class="fas fa-edit"></i> Редактировать
             </button>
-            <button @click="toggleVisibility(account)" class="btn btn-sm" :class="account.is_active ? 'btn-warning' : 'btn-success'" :title="account.is_active ? 'Скрыть счет' : 'Показать счет'">
-              <i :class="account.is_active ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
-              {{ account.is_active ? 'Скрыть' : 'Показать' }}
+            <button @click="toggleVisibility(account)" class="btn btn-sm btn-warning" title="Скрыть счет">
+              <i class="fas fa-eye-slash"></i> Скрыть
             </button>
             <button @click="openBalanceModal(account)" class="btn btn-sm btn-primary" title="Изменить баланс">
               <i class="fas fa-chart-line"></i> Баланс
@@ -61,8 +67,8 @@
             </button>
           </div>
         </div>
-        <div v-if="accounts.length === 0" class="empty-state">
-          Нет созданных счетов
+        <div v-if="activeAccounts.length === 0" class="empty-state">
+          Нет активных счетов
         </div>
       </div>
 
@@ -74,32 +80,25 @@
               <th>ID</th>
               <th>Название</th>
               <th>Баланс</th>
-              <th>Статус</th>
               <th>Действия</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="account in accounts" :key="account.id">
+            <tr v-for="account in activeAccounts" :key="account.id">
               <td>{{ account.id }}</td>
               <td>
                 <strong>{{ account.name }}</strong>
               </td>
-              <td :class="parseFloat(account.balance) >= 0 ? 'text-success' : 'text-danger'">
+              <td class="text-success">
                 <strong>{{ formatCurrency(account.balance) }}</strong>
-              </td>
-              <td>
-                <span class="badge" :class="account.is_active ? 'badge-success' : 'badge-danger'">
-                  <i :class="account.is_active ? 'fas fa-check-circle' : 'fas fa-times-circle'"></i>
-                  {{ account.is_active ? 'Активен' : 'Неактивен' }}
-                </span>
               </td>
               <td>
                 <div class="action-buttons">
                   <button @click="editAccount(account)" class="btn btn-sm btn-info" title="Редактировать">
                     <i class="fas fa-edit"></i>
                   </button>
-                  <button @click="toggleVisibility(account)" class="btn btn-sm" :class="account.is_active ? 'btn-warning' : 'btn-success'" :title="account.is_active ? 'Скрыть счет' : 'Показать счет'">
-                    <i :class="account.is_active ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                  <button @click="toggleVisibility(account)" class="btn btn-sm btn-warning" title="Скрыть счет">
+                    <i class="fas fa-eye-slash"></i>
                   </button>
                   <button @click="openBalanceModal(account)" class="btn btn-sm btn-primary" title="Изменить баланс">
                     <i class="fas fa-chart-line"></i>
@@ -110,8 +109,102 @@
                 </div>
               </td>
             </tr>
-            <tr v-if="accounts.length === 0">
-              <td colspan="5" class="text-center">Нет созданных счетов</td>
+            <tr v-if="activeAccounts.length === 0">
+              <td colspan="4" class="text-center">Нет активных счетов</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Неактивные счета -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-eye-slash text-muted"></i> Неактивные счета
+          <span class="badge badge-secondary">{{ inactiveAccounts.length }}</span>
+        </h3>
+      </div>
+
+      <!-- Для мобильных и планшетов: карточки счетов -->
+      <div class="mobile-accounts">
+        <div v-for="account in inactiveAccounts" :key="account.id" class="account-card inactive">
+          <div class="account-header">
+            <div class="account-name">
+              <strong>{{ account.name }}</strong>
+              <span class="account-id">ID: {{ account.id }}</span>
+            </div>
+            <div class="account-status">
+              <span class="badge badge-secondary">
+                <i class="fas fa-eye-slash"></i> Неактивен
+              </span>
+            </div>
+          </div>
+          
+          <div class="account-balance text-muted">
+            <span class="balance-label">Баланс:</span>
+            <span class="balance-value">{{ formatCurrency(account.balance) }}</span>
+          </div>
+          
+          <div class="account-actions">
+            <button @click="editAccount(account)" class="btn btn-sm btn-info" title="Редактировать">
+              <i class="fas fa-edit"></i> Редактировать
+            </button>
+            <button @click="toggleVisibility(account)" class="btn btn-sm btn-success" title="Показать счет">
+              <i class="fas fa-eye"></i> Показать
+            </button>
+            <button @click="openBalanceModal(account)" class="btn btn-sm btn-primary" title="Изменить баланс">
+              <i class="fas fa-chart-line"></i> Баланс
+            </button>
+            <button @click="confirmDelete(account)" class="btn btn-sm btn-danger" title="Удалить">
+              <i class="fas fa-trash"></i> Удалить
+            </button>
+          </div>
+        </div>
+        <div v-if="inactiveAccounts.length === 0" class="empty-state">
+          Нет неактивных счетов
+        </div>
+      </div>
+
+      <!-- Для десктопа: таблица -->
+      <div class="desktop-table">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Название</th>
+              <th>Баланс</th>
+              <th>Действия</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="account in inactiveAccounts" :key="account.id">
+              <td>{{ account.id }}</td>
+              <td>
+                <strong>{{ account.name }}</strong>
+              </td>
+              <td class="text-muted">
+                <strong>{{ formatCurrency(account.balance) }}</strong>
+              </td>
+              <td>
+                <div class="action-buttons">
+                  <button @click="editAccount(account)" class="btn btn-sm btn-info" title="Редактировать">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button @click="toggleVisibility(account)" class="btn btn-sm btn-success" title="Показать счет">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                  <button @click="openBalanceModal(account)" class="btn btn-sm btn-primary" title="Изменить баланс">
+                    <i class="fas fa-chart-line"></i>
+                  </button>
+                  <button @click="confirmDelete(account)" class="btn btn-sm btn-danger" title="Удалить">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="inactiveAccounts.length === 0">
+              <td colspan="4" class="text-center">Нет неактивных счетов</td>
             </tr>
           </tbody>
         </table>
@@ -148,13 +241,6 @@
               required
               :placeholder="editingAccount ? 'Новый баланс' : '0.00'"
             >
-          </div>
-
-          <div class="form-group" v-if="editingAccount">
-            <label class="form-label">
-              <input type="checkbox" v-model="formData.is_active">
-              Счет активен (отображается в списке и учитывается в общем балансе)
-            </label>
           </div>
 
           <div class="modal-footer">
@@ -258,25 +344,50 @@ export default {
       is_active: true
     })
 
+    // Активные счета
+    const activeAccounts = computed(() => {
+      return accounts.value.filter(acc => acc.is_active)
+    })
+
+    // Неактивные счета
+    const inactiveAccounts = computed(() => {
+      return accounts.value.filter(acc => !acc.is_active)
+    })
+
     // Общий баланс ТОЛЬКО активных счетов
     const totalBalance = computed(() => {
-      return accounts.value
-        .filter(acc => acc.is_active)
-        .reduce((sum, acc) => sum + parseFloat(acc.balance), 0)
+      return activeAccounts.value.reduce((sum, acc) => sum + parseFloat(acc.balance), 0)
     })
 
     // Количество активных счетов
     const activeAccountsCount = computed(() => {
-      return accounts.value.filter(acc => acc.is_active).length
+      return activeAccounts.value.length
     })
 
     const loadAccounts = async () => {
       loading.value = true
       try {
         const data = await apiService.getAccounts(1, 100)
-        accounts.value = data.results[0]?.accounts || []
+        // Обрабатываем разные форматы ответа
+        if (data.results && Array.isArray(data.results)) {
+          if (data.results.length > 0 && data.results[0].accounts) {
+            accounts.value = data.results[0].accounts
+          } else {
+            accounts.value = data.results
+          }
+        } else if (Array.isArray(data)) {
+          accounts.value = data
+        } else if (data.accounts) {
+          accounts.value = data.accounts
+        } else {
+          accounts.value = []
+        }
+        
+        console.log(`Загружено счетов: ${accounts.value.length} (активных: ${activeAccounts.value.length}, неактивных: ${inactiveAccounts.value.length})`)
       } catch (error) {
         console.error('Error loading accounts:', error)
+        alert('Ошибка при загрузке счетов')
+        accounts.value = []
       } finally {
         loading.value = false
       }
@@ -296,7 +407,7 @@ export default {
       editingAccount.value = account
       formData.value = {
         name: account.name,
-        balance: account.balance,
+        balance: parseFloat(account.balance),
         is_active: account.is_active
       }
       showAccountModal.value = true
@@ -377,7 +488,7 @@ export default {
     }
 
     const formatCurrency = (value) => {
-      if (!value) return '0 ₽'
+      if (!value && value !== 0) return '0 ₽'
       return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(value)
     }
 
@@ -387,6 +498,8 @@ export default {
 
     return {
       accounts,
+      activeAccounts,
+      inactiveAccounts,
       loading,
       showAccountModal,
       showBalanceModal,
@@ -454,6 +567,54 @@ export default {
   color: var(--dark-color);
 }
 
+.card {
+  margin-bottom: 1.5rem;
+}
+
+.card:last-child {
+  margin-bottom: 0;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--light-color);
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.card-title i {
+  font-size: 1.1rem;
+}
+
+.badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-block;
+  margin-left: 0.5rem;
+}
+
+.badge-success {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge-secondary {
+  background: #e5e7eb;
+  color: #4b5563;
+}
+
 .action-buttons {
   display: flex;
   gap: 0.5rem;
@@ -492,22 +653,12 @@ export default {
   background: #059669;
 }
 
-.badge-success {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.badge-danger {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
 .text-success {
   color: var(--secondary-color);
 }
 
-.text-danger {
-  color: var(--danger-color);
+.text-muted {
+  color: var(--gray-color);
 }
 
 .required:after {
@@ -530,10 +681,6 @@ export default {
   margin-top: 0.5rem;
 }
 
-.table-responsive {
-  overflow-x: auto;
-}
-
 .alert-info {
   background: #dbeafe;
   color: #1e40af;
@@ -541,6 +688,18 @@ export default {
   border-radius: var(--radius);
   margin-bottom: 1rem;
   font-size: 0.875rem;
+}
+
+.alert-danger {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 0.75rem;
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 /* Стили для карточек счетов (мобильная и планшетная версия) */
@@ -554,6 +713,11 @@ export default {
   border-radius: var(--radius);
   padding: 1rem;
   margin-bottom: 1rem;
+}
+
+.account-card.inactive {
+  opacity: 0.8;
+  background: #f9fafb;
 }
 
 .account-header {
@@ -637,7 +801,7 @@ export default {
   color: var(--gray-color);
 }
 
-/* Адаптивные стили - для планшетов и мобильных */
+/* Адаптивные стили */
 @media (max-width: 1024px) {
   .desktop-table {
     display: none;
@@ -660,7 +824,6 @@ export default {
   }
 }
 
-/* Для мобильных устройств (до 768px) */
 @media (max-width: 768px) {
   .page-header {
     flex-direction: column;
@@ -696,7 +859,6 @@ export default {
     padding: 0.5rem;
   }
   
-  /* Модальные окна */
   .modal-content {
     width: 95%;
     margin: 1rem;
@@ -730,7 +892,6 @@ export default {
   }
 }
 
-/* Для очень маленьких экранов (до 480px) */
 @media (max-width: 480px) {
   .account-header {
     flex-direction: column;
@@ -755,7 +916,6 @@ export default {
   }
 }
 
-/* Для планшетов в горизонтальной ориентации (1025px-1280px) */
 @media (min-width: 1025px) and (max-width: 1280px) {
   .desktop-table {
     display: block;
@@ -772,11 +932,7 @@ export default {
   }
   
   .action-buttons {
-    flex-direction: column;
-  }
-  
-  .action-buttons .btn-sm {
-    width: 100%;
+    flex-direction: row;
   }
 }
 </style>
