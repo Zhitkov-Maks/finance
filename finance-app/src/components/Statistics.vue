@@ -98,6 +98,9 @@
               <span class="progress-text">{{ getPercentage(category.total) }}%</span>
             </div>
           </div>
+          <div class="category-percent-info">
+            {{ getPercentage(category.total) }}% от общей суммы {{ currentType === 'income' ? 'доходов' : 'расходов' }}
+          </div>
 
           <!-- Subcategories with their own progress bars (blue color) -->
           <div v-if="category.children && category.children.length" class="subcategories">
@@ -194,6 +197,10 @@
                 </div>
               </div>
               
+              <div class="month-category-percent-info">
+                {{ getMonthCategoryPercentage(item.total_amount, cat.total) }}% от общей суммы за месяц
+              </div>
+              
               <!-- Дочерние категории (blue color) -->
               <div v-if="cat.children && cat.children.length" class="month-subcategories">
                 <div v-for="child in cat.children" :key="child.id" class="month-subcategory">
@@ -285,7 +292,9 @@
                             <span class="progress-text-small">{{ getMonthCategoryPercentage(item.total_amount, cat.total) }}%</span>
                           </div>
                         </div>
-                        
+                        <div class="category-percent-info-expanded">
+                          {{ getMonthCategoryPercentage(item.total_amount, cat.total) }}%
+                        </div>
                         <!-- Дочерние категории (blue color) -->
                         <div v-if="cat.children && cat.children.length" class="subcategories-expanded">
                           <div v-for="child in cat.children" :key="child.id" class="subcategory-row">
@@ -722,6 +731,30 @@ export default {
   font-weight: 600;
   position: relative;
   overflow: hidden;
+}
+
+.category-percent-info {
+  font-size: 0.7rem;
+  color: var(--gray-color);
+  text-align: right;
+  margin-top: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.month-category-percent-info {
+  font-size: 0.7rem;
+  color: var(--gray-color);
+  text-align: right;
+  margin-top: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.category-percent-info-expanded {
+  font-size: 0.7rem;
+  color: var(--gray-color);
+  text-align: right;
+  margin-top: 0.25rem;
+  margin-bottom: 0.5rem;
 }
 
 /* Стиль для дочерних категорий - СИНИЙ цвет */
@@ -1255,6 +1288,10 @@ export default {
   .progress-text-small,
   .progress-text-very-small {
     font-size: 9px;
+  }
+  .category-percent-info,
+  .month-category-percent-info {
+    font-size: 0.65rem;
   }
 }
 
