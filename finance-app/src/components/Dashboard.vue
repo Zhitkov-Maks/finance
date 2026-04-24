@@ -19,29 +19,39 @@
       </div>
     </div>
     
-    <!-- Быстрые действия -->
-    <div class="quick-actions">
+    <!-- Быстрые действия и курсы валют -->
+    <div class="actions-panel">
       <button @click="showAddTransaction = true" class="btn btn-success">
         <i class="fas fa-exchange-alt"></i> Добавить транзакцию
       </button>
+      
+      <div class="exchange-rates" v-if="exchangeRates.length > 0">
+        <div v-for="rate in exchangeRates" :key="rate.code" class="rate-item" :title="`Курс ЦБ РФ на ${rate.date}`">
+          <span class="rate-currency">{{ rate.code }}</span>
+          <span class="rate-value">{{ rate.value }} ₽</span>
+        </div>
+        <div v-if="exchangeRatesError" class="rate-error" title="Не удалось загрузить курс валют">
+          ⚠️
+        </div>
+      </div>
+      <div v-else-if="!exchangeRatesLoading" class="exchange-rates-placeholder"></div>
     </div>
     
+    <!-- Последние доходы -->
     <div class="card">
       <div class="card-header">
-        <h3 class="card-title">Последние транзакции</h3>
-        <router-link to="/transactions" class="btn btn-secondary">Все транзакции</router-link>
+        <h3 class="card-title">Последние доходы</h3>
+        <router-link to="/transactions?type=income" class="btn btn-secondary">Все доходы</router-link>
       </div>
       
-      <!-- Для мобильных и планшетов: карточки вместо таблицы -->
+      <!-- Для мобильных и планшетов: карточки -->
       <div class="mobile-transactions">
-        <div v-for="transaction in recentTransactions" :key="transaction.id" class="transaction-card">
+        <div v-for="transaction in recentIncomes" :key="transaction.id" class="transaction-card">
           <div class="transaction-header">
             <div class="transaction-date">{{ formatDate(transaction.create_at) }}</div>
-            <span class="badge" :class="transaction.transaction_type === 'income' ? 'badge-success' : 'badge-danger'">
-              {{ transaction.transaction_type === 'income' ? 'Доход' : 'Расход' }}
-            </span>
+            <span class="badge badge-success">Доход</span>
           </div>
-          <div class="transaction-amount" :class="transaction.transaction_type === 'income' ? 'text-success' : 'text-danger'">
+          <div class="transaction-amount text-success">
             {{ formatCurrency(transaction.amount) }}
           </div>
           <div class="transaction-details">
@@ -59,8 +69,8 @@
             </div>
           </div>
         </div>
-        <div v-if="recentTransactions.length === 0" class="empty-state">
-          Нет транзакций
+        <div v-if="recentIncomes.length === 0" class="empty-state">
+          Нет доходов
         </div>
       </div>
       
@@ -71,55 +81,61 @@
             <tr>
               <th>Дата</th>
               <th>Сумма</th>
-              <th>Тип</th>
               <th>Категория</th>
               <th>Счет</th>
               <th>Комментарий</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="transaction in recentTransactions" :key="transaction.id">
+            <tr v-for="transaction in recentIncomes" :key="transaction.id">
               <td>{{ formatDate(transaction.create_at) }}</td>
-              <td :class="transaction.transaction_type === 'income' ? 'text-success' : 'text-danger'">
-                {{ formatCurrency(transaction.amount) }}
-                </td>
-              <td>
-                <span class="badge" :class="transaction.transaction_type === 'income' ? 'badge-success' : 'badge-danger'">
-                  {{ transaction.transaction_type === 'income' ? 'Доход' : 'Расход' }}
-                </span>
-                </td>
+              <td class="text-success">{{ formatCurrency(transaction.amount) }}</td>
               <td>{{ transaction.category?.name || '—' }}</td>
               <td>{{ transaction.account?.name || '—' }}</td>
               <td>{{ transaction.comment || '—' }}</td>
             </tr>
-            <tr v-if="recentTransactions.length === 0">
-              <td colspan="6" class="text-center">Нет транзакций</td>
+            <tr v-if="recentIncomes.length === 0">
+              <td colspan="5" class="text-center">Нет доходов</td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
     
+    <!-- Последние расходы -->
     <div class="card">
       <div class="card-header">
-        <h3 class="card-title">Мои счета</h3>
+        <h3 class="card-title">Последние расходы</h3>
+        <router-link to="/transactions?type=expense" class="btn btn-secondary">Все расходы</router-link>
       </div>
       
-      <!-- Для мобильных и планшетов: карточки счетов -->
-      <div class="mobile-accounts">
-        <div v-for="account in accounts" :key="account.id" class="account-card">
-          <div class="account-name">{{ account.name }}</div>
-          <div class="account-balance" :class="parseFloat(account.balance) >= 0 ? 'text-success' : 'text-danger'">
-            {{ formatCurrency(account.balance) }}
+      <!-- Для мобильных и планшетов: карточки -->
+      <div class="mobile-transactions">
+        <div v-for="transaction in recentExpenses" :key="transaction.id" class="transaction-card">
+          <div class="transaction-header">
+            <div class="transaction-date">{{ formatDate(transaction.create_at) }}</div>
+            <span class="badge badge-danger">Расход</span>
           </div>
-          <div class="account-status">
-            <span class="badge" :class="account.is_active ? 'badge-success' : 'badge-danger'">
-              {{ account.is_active ? 'Активен' : 'Неактивен' }}
-            </span>
+          <div class="transaction-amount text-danger">
+            {{ formatCurrency(transaction.amount) }}
+          </div>
+          <div class="transaction-details">
+            <div class="detail-item">
+              <span class="detail-label">Категория:</span>
+              <span class="detail-value">{{ transaction.category?.name || '—' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Счет:</span>
+              <span class="detail-value">{{ transaction.account?.name || '—' }}</span>
+            </div>
+            <div v-if="transaction.comment" class="detail-item">
+              <span class="detail-label">Комментарий:</span>
+              <span class="detail-value">{{ transaction.comment }}</span>
+            </div>
           </div>
         </div>
-        <div v-if="accounts.length === 0" class="empty-state">
-          Нет созданных счетов
+        <div v-if="recentExpenses.length === 0" class="empty-state">
+          Нет расходов
         </div>
       </div>
       
@@ -128,27 +144,23 @@
         <table class="table">
           <thead>
             <tr>
-              <th>Название</th>
-              <th>Баланс</th>
-              <th>Статус</th>
+              <th>Дата</th>
+              <th>Сумма</th>
+              <th>Категория</th>
+              <th>Счет</th>
+              <th>Комментарий</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="account in accounts" :key="account.id">
-              <td>
-                <strong>{{ account.name }}</strong>
-              </td>
-              <td :class="parseFloat(account.balance) >= 0 ? 'text-success' : 'text-danger'">
-                {{ formatCurrency(account.balance) }}
-              </td>
-              <td>
-                <span class="badge" :class="account.is_active ? 'badge-success' : 'badge-danger'">
-                  {{ account.is_active ? 'Активен' : 'Неактивен' }}
-                </span>
-              </td>
+            <tr v-for="transaction in recentExpenses" :key="transaction.id">
+              <td>{{ formatDate(transaction.create_at) }}</td>
+              <td class="text-danger">{{ formatCurrency(transaction.amount) }}</td>
+              <td>{{ transaction.category?.name || '—' }}</td>
+              <td>{{ transaction.account?.name || '—' }}</td>
+              <td>{{ transaction.comment || '—' }}</td>
             </tr>
-            <tr v-if="accounts.length === 0">
-              <td colspan="3" class="text-center">Нет созданных счетов</td>
+            <tr v-if="recentExpenses.length === 0">
+              <td colspan="5" class="text-center">Нет расходов</td>
             </tr>
           </tbody>
         </table>
@@ -213,18 +225,26 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import apiService from '../services/api.js'
 
 export default {
   name: 'Dashboard',
   setup() {
     const accounts = ref([])
-    const allTransactionsList = ref([]) // Добавляем отдельный массив для всех транзакций
+    const incomeTransactionsList = ref([])
+    const expenseTransactionsList = ref([])
     const incomeCategories = ref([])
     const expenseCategories = ref([])
     const loading = ref(false)
     const showAddTransaction = ref(false)
+    const monthlyIncome = ref(0)
+    const monthlyExpense = ref(0)
+    const exchangeRates = ref([])
+    const exchangeRatesLoading = ref(true)
+    const exchangeRatesError = ref(false)
+    let ratesUpdateInterval = null
+    
     const newTransaction = ref({
       type: 'expense',
       amount: '',
@@ -233,82 +253,77 @@ export default {
       comment: ''
     })
     
-    const totalBalance = computed(() => {
-      return accounts.value
-        .filter(acc => acc.is_active)
-        .reduce((sum, acc) => sum + parseFloat(acc.balance), 0)
-    })
-
-    const activeAccounts = computed(() => {
-      return accounts.value.filter(acc => acc.is_active)
-    })
+    // --- Логика валют ---
+    const CURRENCIES_TO_SHOW = ['USD', 'EUR', 'CNY']
     
-    // Доходы за месяц
-    const monthlyIncome = computed(() => {
-      const now = new Date()
-      return allTransactionsList.value
-        .filter(t => {
-          if (t.transaction_type !== 'income') return false
-          const date = new Date(t.create_at)
-          return date.getMonth() === now.getMonth() && 
-                 date.getFullYear() === now.getFullYear()
-        })
-        .reduce((sum, t) => sum + parseFloat(t.amount), 0)
-    })
-    
-    // Расходы за месяц
-    const monthlyExpense = computed(() => {
-      const now = new Date()
-      return allTransactionsList.value
-        .filter(t => {
-          if (t.transaction_type !== 'expense') return false
-          const date = new Date(t.create_at)
-          return date.getMonth() === now.getMonth() && 
-                 date.getFullYear() === now.getFullYear()
-        })
-        .reduce((sum, t) => sum + parseFloat(t.amount), 0)
-    })
-    
-    // Последние 5 транзакций
-    const recentTransactions = computed(() => {
-      return [...allTransactionsList.value]
-        .sort((a, b) => new Date(b.create_at) - new Date(a.create_at))
-        .slice(0, 5)
-    })
-    
-    const availableCategories = computed(() => {
-      const categories = newTransaction.value.type === 'income' ? incomeCategories.value : expenseCategories.value
-      return flattenCategories(categories)
-    })
-    
-    const flattenCategories = (categories, level = 0) => {
-      let result = []
-      for (const cat of categories) {
-        result.push({ ...cat, level, name: cat.name })
-        if (cat.children && cat.children.length) {
-          result = result.concat(flattenCategories(cat.children, level + 1))
+    const fetchExchangeRates = async () => {
+      exchangeRatesLoading.value = true
+      exchangeRatesError.value = false
+      try {
+        const response = await fetch('https://www.cbr-xml-daily.ru/daily_json.js')
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+        const data = await response.json()
+        
+        const rates = []
+        for (const code of CURRENCIES_TO_SHOW) {
+          if (data.Valute[code]) {
+            const valute = data.Valute[code]
+            const valuePerUnit = valute.Value / valute.Nominal
+            rates.push({
+              code: code,
+              name: valute.Name,
+              value: valuePerUnit.toFixed(2),
+              date: data.Date.split('T')[0]
+            })
+          } else {
+            console.warn(`Currency ${code} not found in response`)
+          }
         }
+        exchangeRates.value = rates
+        exchangeRatesError.value = false
+      } catch (error) {
+        console.error('Failed to fetch exchange rates:', error)
+        exchangeRatesError.value = true
+      } finally {
+        exchangeRatesLoading.value = false
       }
-      return result
+    }
+    
+    // --- Статистика за месяц ---
+    const loadMonthlyStatistics = async () => {
+      const now = new Date()
+      const month = now.getMonth() + 1
+      const year = now.getFullYear()
+      
+      try {
+        const expenseStats = await apiService.getStatistics(month, year, 'expense')
+        monthlyExpense.value = parseFloat(expenseStats.total_amount) || 0
+        
+        const incomeStats = await apiService.getStatistics(month, year, 'income')
+        monthlyIncome.value = parseFloat(incomeStats.total_amount) || 0
+        
+        console.log(`Статистика за ${month}.${year}: доходы=${monthlyIncome.value}, расходы=${monthlyExpense.value}`)
+      } catch (error) {
+        console.error('Error loading monthly statistics:', error)
+        monthlyIncome.value = 0
+        monthlyExpense.value = 0
+      }
     }
     
     const loadData = async () => {
       loading.value = true
       try {
-        // Загрузка счетов
+        // Загрузка счетов (только для баланса и выбора в модалке)
         const accountsData = await apiService.getAccounts(1, 100)
         accounts.value = accountsData.results[0]?.accounts || []
-
-        // Загрузка транзакций доходов (больше, чтобы получить достаточно для отображения)
-        const incomeData = await apiService.getTransactions({ page: 1, page_size: 10, type: 'income' })
-        const incomeTransactions = (incomeData.results || []).map(t => ({ ...t, transaction_type: 'income' }))
         
-        // Загрузка транзакций расходов
-        const expenseData = await apiService.getTransactions({ page: 1, page_size: 10, type: 'expense' })
-        const expenseTransactions = (expenseData.results || []).map(t => ({ ...t, transaction_type: 'expense' }))
+        // Загрузка доходов (последние 5)
+        const incomeData = await apiService.getTransactions({ page: 1, page_size: 5, type: 'income' })
+        incomeTransactionsList.value = (incomeData.results || []).map(t => ({ ...t, transaction_type: 'income' }))
         
-        // Объединяем все транзакции
-        allTransactionsList.value = [...incomeTransactions, ...expenseTransactions]
+        // Загрузка расходов (последние 5)
+        const expenseData = await apiService.getTransactions({ page: 1, page_size: 5, type: 'expense' })
+        expenseTransactionsList.value = (expenseData.results || []).map(t => ({ ...t, transaction_type: 'expense' }))
         
         // Загрузка категорий
         const incomeCatData = await apiService.getCategories('income', 1, 100, true)
@@ -317,8 +332,11 @@ export default {
         const expenseCatData = await apiService.getCategories('expense', 1, 100, true)
         expenseCategories.value = expenseCatData.results || []
         
-        console.log('Загружено транзакций:', allTransactionsList.value.length)
-        console.log('Последние 5:', recentTransactions.value.length)
+        // Загрузка статистики за текущий месяц
+        await loadMonthlyStatistics()
+        
+        console.log('Загружено доходов:', incomeTransactionsList.value.length)
+        console.log('Загружено расходов:', expenseTransactionsList.value.length)
       } catch (error) {
         console.error('Error loading data:', error)
       } finally {
@@ -356,7 +374,7 @@ export default {
     }
     
     const formatCurrency = (value) => {
-      if (!value) return '0 ₽'
+      if (!value && value !== 0) return '0 ₽'
       return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(value)
     }
     
@@ -365,8 +383,56 @@ export default {
       return new Date(dateString).toLocaleDateString('ru-RU')
     }
     
+    const totalBalance = computed(() => {
+      return accounts.value
+        .filter(acc => acc.is_active)
+        .reduce((sum, acc) => sum + parseFloat(acc.balance), 0)
+    })
+    
+    const activeAccounts = computed(() => {
+      return accounts.value.filter(acc => acc.is_active)
+    })
+    
+    // Последние 5 доходов
+    const recentIncomes = computed(() => {
+      return [...incomeTransactionsList.value]
+        .sort((a, b) => new Date(b.create_at) - new Date(a.create_at))
+        .slice(0, 5)
+    })
+    
+    // Последние 5 расходов
+    const recentExpenses = computed(() => {
+      return [...expenseTransactionsList.value]
+        .sort((a, b) => new Date(b.create_at) - new Date(a.create_at))
+        .slice(0, 5)
+    })
+    
+    const availableCategories = computed(() => {
+      const categories = newTransaction.value.type === 'income' ? incomeCategories.value : expenseCategories.value
+      return flattenCategories(categories)
+    })
+    
+    const flattenCategories = (categories, level = 0) => {
+      let result = []
+      for (const cat of categories) {
+        result.push({ ...cat, level, name: cat.name })
+        if (cat.children && cat.children.length) {
+          result = result.concat(flattenCategories(cat.children, level + 1))
+        }
+      }
+      return result
+    }
+    
     onMounted(() => {
       loadData()
+      fetchExchangeRates()
+      ratesUpdateInterval = setInterval(fetchExchangeRates, 3600000)
+    })
+    
+    onBeforeUnmount(() => {
+      if (ratesUpdateInterval) {
+        clearInterval(ratesUpdateInterval)
+      }
     })
     
     return {
@@ -378,8 +444,12 @@ export default {
       activeAccounts,
       monthlyIncome,
       monthlyExpense,
-      recentTransactions,
+      recentIncomes,
+      recentExpenses,
       availableCategories,
+      exchangeRates,
+      exchangeRatesLoading,
+      exchangeRatesError,
       addTransaction,
       formatCurrency,
       formatDate
@@ -389,25 +459,78 @@ export default {
 </script>
 
 <style scoped>
-/* Стили остаются без изменений */
-.quick-actions {
+/* Панель действий и курсы */
+.actions-panel {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.exchange-rates {
   display: flex;
   gap: 1rem;
-  margin-bottom: 2rem;
+  background: var(--light-color, #f3f4f6);
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
   flex-wrap: wrap;
 }
 
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--light-color);
+.rate-item {
+  display: inline-flex;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
-.text-center {
-  text-align: center;
+.rate-currency {
+  color: var(--gray-color, #6b7280);
+}
+
+.rate-value {
+  color: var(--dark-color, #1f2937);
+  font-weight: 600;
+}
+
+.rate-error {
+  cursor: help;
+  font-size: 1rem;
+}
+
+.exchange-rates-placeholder {
+  min-width: 180px;
+}
+
+/* Стили карточек */
+.card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  box-shadow: var(--shadow);
+  margin-bottom: 1.5rem;
+}
+
+.card:last-child {
+  margin-bottom: 0;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--light-color);
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
 }
 
 .stats-grid {
@@ -462,23 +585,7 @@ export default {
   color: #991b1b;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid var(--light-color);
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.card-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-/* Стили для карточек транзакций (мобильная и планшетная версия) */
+/* Мобильные карточки */
 .mobile-transactions {
   display: none;
 }
@@ -536,39 +643,6 @@ export default {
   max-width: 60%;
 }
 
-/* Стили для карточек счетов (мобильная и планшетная версия) */
-.mobile-accounts {
-  display: none;
-}
-
-.account-card {
-  background: var(--white);
-  border: 1px solid var(--light-color);
-  border-radius: var(--radius);
-  padding: 1rem;
-  margin-bottom: 0.75rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.account-name {
-  font-weight: 600;
-  font-size: 1rem;
-  flex: 1;
-}
-
-.account-balance {
-  font-weight: 700;
-  font-size: 1.125rem;
-}
-
-.account-status {
-  flex-shrink: 0;
-}
-
 .empty-state {
   text-align: center;
   padding: 2rem;
@@ -598,17 +672,26 @@ export default {
   color: var(--gray-color);
 }
 
-/* Адаптивные стили - для планшетов и мобильных */
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--light-color);
+}
+
+.text-center {
+  text-align: center;
+}
+
+/* Адаптивные стили */
 @media (max-width: 1024px) {
   .desktop-table {
     display: none;
   }
   
   .mobile-transactions {
-    display: block;
-  }
-  
-  .mobile-accounts {
     display: block;
   }
   
@@ -637,16 +720,25 @@ export default {
   .card-title {
     text-align: center;
   }
+  
+  .actions-panel {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .exchange-rates {
+    justify-content: center;
+  }
 }
 
-/* Для маленьких планшетов и больших телефонов (до 768px) */
 @media (max-width: 768px) {
   h1 {
     font-size: 1.5rem;
     margin-bottom: 1rem !important;
     text-align: center;
   }
-
+  
   .stats-grid {
     grid-template-columns: 1fr;
   }
@@ -657,18 +749,6 @@ export default {
   
   .stat-title {
     font-size: 0.75rem;
-  }
-  
-  .quick-actions {
-    flex-direction: column;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-  }
-  
-  .quick-actions .btn {
-    width: 100%;
-    justify-content: center;
-    padding: 0.75rem;
   }
   
   .modal-content {
@@ -704,7 +784,6 @@ export default {
   }
 }
 
-/* Для очень маленьких экранов (до 480px) */
 @media (max-width: 480px) {
   h1 {
     font-size: 1.25rem;
@@ -718,11 +797,6 @@ export default {
     font-size: 1rem;
   }
   
-  .account-card {
-    flex-direction: column;
-    text-align: center;
-  }
-  
   .detail-item {
     flex-direction: column;
     align-items: flex-start;
@@ -733,19 +807,23 @@ export default {
     max-width: 100%;
     text-align: left;
   }
+  
+  .exchange-rates {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .rate-item {
+    font-size: 0.75rem;
+  }
 }
 
-/* Для планшетов в горизонтальной ориентации (1024px-1280px) */
 @media (min-width: 1025px) and (max-width: 1280px) {
   .desktop-table {
     display: block;
   }
   
   .mobile-transactions {
-    display: none;
-  }
-  
-  .mobile-accounts {
     display: none;
   }
   
