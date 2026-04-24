@@ -25,7 +25,7 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "False") == "True"
+DEBUG = os.getenv("DEBUG", "False")
 
 # Домены для продакшена
 ALLOWED_HOSTS = [
@@ -82,14 +82,14 @@ USE_X_FORWARDED_PORT = True
 # В зависимости от окружения
 if DEBUG:
     # Режим разработки - широкие разрешения
-    CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOW_ALL_ORIGINS = True
     CORS_ALLOWED_ORIGINS = [
         "http://localhost",
         "http://localhost:80",
         "http://localhost:8080",
         "http://localhost:5173",
         "http://127.0.0.1",
-        "http://127.0.0.1:8000",
+        "http://127.0.0.1:8001",
         "http://127.0.0.1:8080",
         "http://0.0.0.0:80",
         "http://vue_app",
@@ -161,11 +161,11 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = False         # Изменено: HTTPS только на Nginx
     SESSION_COOKIE_HTTPONLY = True
     CSRF_COOKIE_HTTPONLY = True
-    
+
     # Другие security настройки
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
-    
+
     # Clickjacking защита
     X_FRAME_OPTIONS = 'DENY'
 

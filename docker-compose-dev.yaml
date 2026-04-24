@@ -59,33 +59,28 @@ services:
     networks:
       - app_network
 
-  swag:
-    image: lscr.io/linuxserver/swag:latest      # Официальный образ
-    container_name: swag                        # Имя контейнера
-    cap_add:
-      - NET_ADMIN                               # Права для работы fail2ban [citation:4]
-    environment:
-      - PUID=1000                               # ID вашего пользователя
-      - PGID=1000                               # ID вашей группы
-      - TZ=Europe/Moscow                        # Ваш часовой пояс
-      - URL=m-zhitkov.ru                        # ★ ВАШ ГОЛОВНОЙ ДОМЕН
-      - SUBDOMAINS=www                          # Поддомены через запятую (можно www,portainer)
-      - VALIDATION=http                         # Способ проверки домена (через HTTP)
-      - EMAIL=m-zhitkov@inbox.ru                # ★ ВАША ПОЧТА (для уведомлений Let's Encrypts
-    volumes:
-      - ./swag-config:/config                   # Папка для всех настроек SWAG на вашем сервере
-      - ./nginx-conf:/config/nginx/site-confs:rw
-    ports:
-      - 80:80                                   # Порты 80 и 443 должны быть открыты
-      - 443:443
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: nginx-proxy
     restart: unless-stopped
-    networks:
-      - app_network
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:rw
     depends_on:
       django_app:
         condition: service_healthy
       vue_app:
         condition: service_started
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
 networks:
   app_network:
     driver: bridge
