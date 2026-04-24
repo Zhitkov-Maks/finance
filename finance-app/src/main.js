@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import App from './App.vue'
+import Profile from './components/Profile.vue'
 import './styles/main.css'
 
 // Импорт компонентов
@@ -21,7 +22,8 @@ const routes = [
   { path: '/transactions', component: TransactionsList, meta: { requiresAuth: true } },
   { path: '/transfers', component: TransferForm, meta: { requiresAuth: true } },
   { path: '/debts', component: DebtsList, meta: { requiresAuth: true } },
-  { path: '/statistics', component: Statistics, meta: { requiresAuth: true } }
+  { path: '/statistics', component: Statistics, meta: { requiresAuth: true } },
+  { path: '/profile', name: 'Profile', component: Profile,  meta: { requiresAuth: true } }
 ]
 
 const router = createRouter({

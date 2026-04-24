@@ -46,6 +46,11 @@
           <span>Статистика</span>
         </router-link>
         
+        <router-link to="/profile" class="nav-item" @click="closeMobileMenu">
+          <i class="fas fa-user-circle"></i>
+          <span>Профиль</span>
+        </router-link>
+        
         <button @click="logout" class="nav-item logout-btn">
           <i class="fas fa-sign-out-alt"></i>
           <span>Выйти</span>
@@ -57,6 +62,12 @@
     <div v-if="mobileMenuOpen" class="mobile-overlay" @click="closeMobileMenu"></div>
     
     <div class="main-content">
+      <div class="top-bar" v-if="!isMobile">
+        <div class="user-menu" @click="goToProfile">
+          <i class="fas fa-user-circle"></i>
+          <span>Профиль</span>
+        </div>
+      </div>
       <router-view />
     </div>
   </div>
@@ -93,6 +104,11 @@ export default {
       if (!isMobile.value) {
         closeMobileMenu()
       }
+    }
+
+    const goToProfile = () => {
+      router.push('/profile')
+      closeMobileMenu()
     }
 
     const logout = async () => {
@@ -132,6 +148,7 @@ export default {
       isMobile,
       toggleMobileMenu,
       closeMobileMenu,
+      goToProfile,
       logout
     }
   }
@@ -697,5 +714,33 @@ textarea.form-control {
   background: #fed7aa;
   color: #92400e;
   border: 1px solid #fed7aa;
+}
+
+.top-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: white;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: var(--shadow);
+}
+
+.user-menu:hover {
+  background: var(--light-color);
+  transform: translateY(-1px);
+}
+
+.user-menu i {
+  font-size: 1.25rem;
+  color: var(--primary-color);
 }
 </style>

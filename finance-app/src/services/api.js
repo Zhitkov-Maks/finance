@@ -5,6 +5,7 @@ const API_BASE_URL = '/api/v1'
 class ApiService {
   constructor() {
     this.token = localStorage.getItem('auth_token')
+    this.baseUrl = API_BASE_URL
     this.client = axios.create({
       baseURL: API_BASE_URL,
       headers: {
@@ -17,9 +18,11 @@ class ApiService {
   setupInterceptors() {
     this.client.interceptors.request.use(config => {
       const token = localStorage.getItem('auth_token')
-      if (token && !config.url.includes('/auth/')) {
+      // Добавляем токен для всех запросов, кроме логина и регистрации
+      if (token && !config.url.includes('/auth/token/login/') && !config.url.includes('/auth/users/')) {
         config.headers['Authorization'] = `Token ${token}`
       }
+      console.log(`Making request to: ${config.url}`, config.headers)
       return config
     })
   }
@@ -34,7 +37,16 @@ class ApiService {
     localStorage.removeItem('auth_token')
   }
 
-  // Аутентификация - используем правильные URL
+  getAuthHeaders() {
+    const token = localStorage.getItem('auth_token')
+    return {
+      'Authorization': `Token ${token}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    }
+  }
+
+  // Аутентификация
   async register(email, password, rePassword) {
     const response = await this.client.post('/auth/users/', {
       email,
@@ -67,6 +79,46 @@ class ApiService {
   async getUserInfo() {
     const response = await this.client.get('/auth/users/')
     return response.data
+  }
+
+  // ==================== User Profile ====================
+  async getCurrentUser() {
+    try {
+      const token = localStorage.getItem('auth_token')
+      console.log('Getting current user with token:', token ? 'Token present' : 'No token')
+      
+      const response = await this.client.get('/auth/users/me/', {
+        headers: {
+          'Authorization': `Token ${token}`
+        }
+      })
+      console.log('User info response:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('Error fetching current user:', error.response?.data || error.message)
+      throw error
+    }
+  }
+
+  async changePassword(currentPassword, newPassword) {
+    try {
+      const token = localStorage.getItem('auth_token')
+      console.log('Changing password with token:', token ? 'Token present' : 'No token')
+      
+      const response = await this.client.post('/auth/users/set_password/', {
+        current_password: currentPassword,
+        new_password: newPassword
+      }, {
+        headers: {
+          'Authorization': `Token ${token}`
+        }
+      })
+      console.log('Password change response:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('Error changing password:', error.response?.data || error.message)
+      throw error
+    }
   }
 
   // Счета
@@ -287,7 +339,28 @@ class ApiService {
     delete this.client.defaults.headers.common['Authorization']
     localStorage.removeItem('auth_token')
     sessionStorage.clear()
-}
+  }
+
+  async changeEmail(currentPassword, newEmail) {
+    try {
+      const token = localStorage.getItem('auth_token')
+      console.log('Changing email with token:', token ? 'Token present' : 'No token')
+      
+      const response = await this.client.post('/auth/users/set_email/', {
+        current_password: currentPassword,
+        new_email: newEmail
+      }, {
+        headers: {
+          'Authorization': `Token ${token}`
+        }
+      })
+      console.log('Email change response:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('Error changing email:', error.response?.data || error.message)
+      throw error
+    }
+  }
 }
 
 export default new ApiService()
