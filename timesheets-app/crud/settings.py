@@ -18,7 +18,7 @@ async def create_settings(data: dict, user_id: str) -> None:
         client.close()
 
 
-async def get_settings_user_by_id(user_id: int) -> dict:
+async def get_settings_user_by_id(user_id: str) -> dict:
     """
     Get the user's settings.
 

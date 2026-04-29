@@ -1,204 +1,133 @@
-from datetime import datetime, UTC
+from datetime import datetime
+
+from fastapi import HTTPException, status
 
 from crud.many import add_many_shifts
-from crud.settings import get_settings_user_by_id
-from crud.get_data import get_hours_for_month
-from crud.create import write_salary, delete_record
-from crud.statistics import get_information_for_month
+from crud.statistics import get_information_for_month, get_info_by_date
+from crud.get_data import get_salary_for_day
+from utils.salary import get_settings, normalization_salary_for_month, \
+    recalculation_salary
 from utils.valute import get_valute_info
-from utils.calculate import calc_valute
 
 
-async def get_settings(user_id: str) -> tuple[float]:
-    """
-    Return the basic user settings.
+async def get_shifts_for_month(
+    user_id: str,
+    year: int,
+    month: int
+) -> list:
+    returned_shifts = []
+    shifts = await get_information_for_month(user_id, year, month)
 
-    :param user_id: The user's ID.
-    """
-    settings: dict = await get_settings_user_by_id(user_id)
-    if not settings:
-        raise KeyError("Нет настроек для рассчета.")
-
-    price: float = float(settings.get("price_time", 0))
-    cold: float = float(settings.get("price_cold", 0))
-    overtime: float = float(settings.get("price_overtime", 0))
-    award: float = float(settings.get("price_award", 0))
-    return price, cold, overtime, award
-
-
-async def calculation_overtime(
-    settings: tuple[float],
-    time: float,
-    norm: int,
-    total_hours: float
-) -> tuple:
-    """
-    Calculate how much the user earned per shift
-    if he has already overworked by the hour.
-
-    :param settings: User settings.
-    :param time: Time worked.
-    :param norm: The standard of hours per month.
-    :param total_hours: How many hours have been worked already this month.
-    :return dict: A tuple with data to save.
-    """
-    price, _, overtime, _ = settings
-    time_over = (time + total_hours) - norm
-    earned = round(
-        min(time_over, time) * (price + overtime) +
-        max((time - time_over), 0) * price, 2
-    )
-    return earned, min(time_over, time), overtime * min(time_over, time)
-
-
-async def earned_calculation(
-    settings: tuple[float],
-    time: float,
-    user_id: int,
-    date,
-    total_hours=None
-) -> dict[str, float]:
-    """
-    Create a dictionary for future storage in the database.
-
-    :param settings: User settings.
-    :param time: Time worked.
-    :param user_id: User's ID.
-    :param date: The date for adding the shift.
-    :return dict: Dictionary with the configuration for writing.
-    """
-    configuration: dict[str, float] = dict()
-    year, month = date.year, date.month
-    if total_hours is None:
-        total_hours: tuple[float] = await get_hours_for_month(
-            user_id, year, month
+    for shift in shifts:
+        returned_shifts.append(
+            {
+                "day_id": str(shift.get("_id")),
+                "base_hours": shift.get("base_hours"),
+                "date": str(shift.get("date")),
+                "earned": shift.get("earned")
+            }
         )
-    norm_hours = 180 if month == 2 else 190
+    return returned_shifts
 
-    earned_time = time * settings[0]
-    earned_cold = time * settings[1]
-    configuration.update(
-        base_hours=time,
-        earned_cold=earned_cold,
-        earned=(earned_time + earned_cold),
-        earned_hours=earned_time
+
+async def dictionary_formation(shift) -> dict:
+    return {
+        "day_id": str(shift.get("_id")),
+        "base_hours": shift.get("base_hours"),
+        "date": str(shift.get("date")),
+        "earned": shift.get("earned"),
+        "earned_cold": shift.get("earned_cold", 0),
+        "earned_hours": shift.get("earned_hours"),
+        "period": shift.get("period"),
+        "valute": shift.get("valute")
+    }
+
+
+async def get_specific_shift(user_id, date: str) -> dict | bool:
+    shift = await get_info_by_date(user_id, date)
+    if shift:
+        return await dictionary_formation(shift)
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail={
+            "result": False,
+            "description": "Запись о смене не найдена."
+        }
     )
 
-    if settings[2] > 0 and (time + total_hours) > norm_hours:
-        (
-            earned_time,
-            hours_overtime,
-            earned_overtime
-        ) = await calculation_overtime(settings, time, norm_hours, total_hours)
-
-        configuration.update(
-            hours_overtime=hours_overtime,
-            earned_overtime=earned_overtime,
-            earned=(earned_time + earned_cold),
-            earned_hours=earned_time - earned_overtime,
-        )
-    return configuration
+async def get_specific_shift_by_day_id(day_id: str) -> dict | bool:
+    shift = await get_salary_for_day(day_id)
+    if shift:
+        return await dictionary_formation(shift)
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail={
+            "result": False,
+            "description": "Запись о смене не найдена."
+        }
+    )
 
 
-async def earned_per_shift(
+async def create_data_by_add_shifts(
+    user_id: str,
     time: float,
-    user_id: int,
-    date: str,
-    notes: str | None,
-    data: dict
-) -> tuple[float, float]:
+    list_dates: list[str]
+) -> None:
     """
-    Generate the amount earned per shift..
+    Create shift records for the user based on the provided data.
 
-    :param time: Hours worked.
     :param user_id: The user's ID.
-    :return: The earned amount for the month.
-    :param date: The date for recording.
+    :param time: The total number of hours worked.
+    :param list_dates: A list of string dates in the "YYYY-MM-DD"
+                        format for which You need to create shift records.
+    :return: None.
     """
-    valute_data: dict[str, tuple[int, float]] = await get_valute_info()
-    settings: tuple[float] = await get_settings(user_id)
-    parse_date = datetime.strptime(date, "%Y-%m-%d")
-    salary = await earned_calculation(settings, time, user_id, parse_date)
-
-    if notes:
-        salary.update(notes=notes)
-
-    await write_salary(salary, user_id, parse_date, valute_data)
-    await normalization_salary_for_month(user_id, settings, data)
+    date_objects = [datetime.strptime(d, "%Y-%m-%d") for d in list_dates]
+    data = {"year": date_objects[0].year, "month": date_objects[0].month}
+    sorted_dates = sorted(date_objects)
+    await save_shifts_all(user_id, time, sorted_dates, data)
 
 
-async def normalization_salary_for_month(
-    user_id: int,
-    settings: dict,
+async def save_shifts_all(
+    user_id: str,
+    time: float,
+    sorted_dates: list,
     data: dict
 ) -> None:
     """
-    Recalculation of monthly salary as the hours may be
-    changed and the calculation may be incorrect.
+    Saves with a progress bar.
 
+    :param data:
     :param user_id: The user's ID.
-    :param settings: User settings.
-    :param data: User settings.
+    :param time: The number of hours.
+    :param sorted_dates: A sorted list of dates.
     """
-    year = data.get("year", datetime.now(UTC).year)
-    month = data.get("month", datetime.now(UTC).month)
-    result = await get_information_for_month(user_id, year, month)
-    sorted_result = sorted(result, key=lambda x: x["date"])
-    valute_data: dict[str, tuple[int, float]] = await get_valute_info()
+    try:
+        valute_data: dict[str, tuple[int, float]] = await get_valute_info()
+        settings: tuple[float] = await get_settings(user_id)
 
-    total_hours = 0
-    salaries: list[dict] = []
+        total_hours = 0
+        salaries = []
+        for i, d in enumerate(sorted_dates, 1):
+            salary = await recalculation_salary(
+                time=time,
+                user_id=user_id,
+                date=d,
+                valute_data=valute_data,
+                settings=settings,
+                total_hours=total_hours
+            )
+            total_hours += float(time)
+            salaries.append(salary)
 
-    for item in sorted_result:
-        notes = item.get("notes")
-        time = item.get("base_hours")
-        date = item.get("date")
-        await delete_record(datetime.strftime(date, "%Y-%m-%d"), user_id)
-        salary = await recalculation_salary(
-            time=time,
-            user_id=user_id,
-            date=date,
-            notes=notes,
-            valute_data=valute_data,
-            settings=settings,
-            total_hours=total_hours
+        await add_many_shifts(salaries)
+        await normalization_salary_for_month(user_id, settings, data)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "result": False,
+                "description": "Ошибка при сохранении."
+            }
         )
-        total_hours += float(time)
-        salaries.append(salary)
-
-    await add_many_shifts(salaries)
-
-
-async def recalculation_salary(
-    time: float,
-    user_id: int,
-    date: str,
-    notes: str | None,
-    valute_data,
-    settings: tuple,
-    total_hours
-) -> tuple[float, float]:
-    """
-    Recalculate the salary so that there are no errors in the calculations.
-
-    :param time: Hours worked.
-    :param user_id: The user's ID.
-    :param date: The date for recording.
-    :param notes: Note if it exists.
-    :param settings: User settings for the calculation.
-    :param total_hours: The number of hours worked per month.
-    """
-    salary = await earned_calculation(
-        settings, time, user_id, date, total_hours
-    )
-    salary.update(
-        user_id=user_id,
-        date=date,
-        period=1 if date.day <= 15 else 2,
-        valute=await calc_valute(salary.get("earned"), valute_data),
-        date_write=datetime.now()
-    )
-
-    if notes:
-        salary.update(notes=notes)
-    return salary

@@ -11,7 +11,7 @@ from crud.statistics import aggregate_valute
 URL = "https://www.cbr-xml-daily.ru/daily_json.js"
 
 
-async def request_valute_info() -> str:
+async def request_valute_info() -> dict:
     """
     Request information about the ruble exchange rate.
     """
@@ -101,38 +101,3 @@ async def get_all_valute_for_month(
         )
     }
 
-
-async def get_valute_show_message() -> str:
-    """
-    Return the line with information about some currencies.
-    """
-    data = await request_valute_info()
-    message = "*" * 40 + "\n\n"
-    message += f"Курс рубля на {data["Date"][:10]}.\n\n"
-    message += (
-        f"{data['Valute']['BYN']['Nominal']}Br "
-        f"{data['Valute']['BYN']['Name']}: "
-        f"{data['Valute']['BYN']['Value']:.2f}₽.\n"
-    )
-    message += (
-        f"{data['Valute']['USD']['Nominal']}$ "
-        f"{data["Valute"]["USD"]["Name"]}: "
-        f"{data["Valute"]["USD"]["Value"]:.2f}₽.\n"
-    )
-    message += (
-        f"{data['Valute']['EUR']['Nominal']}€ "
-        f"{data["Valute"]["EUR"]["Name"]}: "
-        f"{data["Valute"]["EUR"]["Value"]:.2f}₽.\n"
-    )
-    message += (
-        f"{data['Valute']['CNY']['Nominal']}¥ "
-        f"{data["Valute"]["CNY"]["Name"]}: "
-        f"{data["Valute"]["CNY"]["Value"]:.2f}₽.\n"
-    )
-    message += (
-        f"{data['Valute']['UZS']['Nominal']:,}Soʻm "
-        f"{data["Valute"]["UZS"]["Name"]}: "
-        f"{data["Valute"]["UZS"]["Value"]:.2f}₽.\n\n"
-    )
-    message += "*" * 40 + "\n"
-    return message

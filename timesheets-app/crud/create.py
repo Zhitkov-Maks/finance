@@ -1,6 +1,11 @@
 from datetime import UTC, datetime
+from bson import ObjectId
+from bson.errors import InvalidId
+
+from fastapi import HTTPException, status
 
 import pymongo
+from pymongo.errors import DuplicateKeyError
 from database.db_conf import MongoDB
 from utils.calculate import calc_valute
 
@@ -9,7 +14,7 @@ async def write_other(
     data: dict,
     user: int,
     valute_data: dict[str, float]
-) -> bool:
+) -> bool | Exception:
     """
     Add a new income record (without updating the existing ones).
 
@@ -45,15 +50,15 @@ async def write_other(
         result = collection.insert_one(record)
         return result.acknowledged
 
-    except Exception:
-        return False
+    except Exception as err:
+        return err
     finally:
         client.close()
 
 
 async def write_salary(
     data: dict,
-    user_id: int,
+    user_id: str,
     date: datetime,
     valute_data: dict[str, tuple[int, float]]
 ) -> None:
@@ -93,35 +98,38 @@ async def write_salary(
         client.close()
 
 
-async def delete_record(date: str, user_id) -> None:
+async def delete_record(day_id: str) -> None:
     """
     Deleted the records from the database by user ID and date.
 
-    :param date: The date of the record being deleted.
-    :param user_id: The user's ID.
+    :param day_id: The day's ID.
     """
     client: MongoDB = MongoDB()
     try:
-        parse_date = datetime.strptime(date, "%Y-%m-%d")
         collection = client.get_collection("salaries")
-        collection.delete_one({
-            "user_id": user_id,
-            "date": parse_date
-        })
-        client.close()
+        object_id = ObjectId(day_id)
+        collection.delete_one({"_id": object_id})
+    except InvalidId:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "result": False,
+                "description": "Ошибка идентификатора."
+            }
+        )
     finally:
         client.close()
 
 
-async def remove_other_income_expese(collections: str, id_: str) -> None:
+async def remove_other_income_expense(collections: str, id_: str) -> None:
     """
     Delete the records from the database by record ID.
 
     :param collections: Type of collection (other income or expenses).
     :param id_: The ID of the record.
     """
+    client: MongoDB = MongoDB()
     try:
-        client: MongoDB = MongoDB()
         collection = client.get_collection(collections)
         collection.delete_one({
             "_id": id_

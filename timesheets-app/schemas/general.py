@@ -10,3 +10,10 @@ class SuccessSchema(BaseModel):
                     "completed successfully or not."
     )
 
+
+class NotFound(BaseModel):
+    result: bool
+    description: str
+
+class NotFoundShift(BaseModel):
+    detail: NotFound

@@ -7,15 +7,15 @@ from database.db_conf import MongoDB
 async def get_other_incomes_for_year(
     user_id: int,
     year: int
-) -> list:
+) -> list | dict:
     """
     Get other data for the selected year.
 
     :param user_id: The user's ID.
     :param year: The transmitted year.
     """
+    client: MongoDB = MongoDB()
     try:
-        client: MongoDB = MongoDB()
         collection = client.get_collection("other_income")
         pipeline = [
             {
@@ -64,13 +64,14 @@ async def get_other_incomes_expenses(
     """
     Get other data for the selected month.
 
+    :param income:
     :param user_id: The user's ID.
     :param year:    The transmitted year.
     :param month: The transferred month.
     """
-    type_ = "other_income" if income else "expences"
+    type_ = "other_income" if income else "expenses"
+    client: MongoDB = MongoDB()
     try:
-        client: MongoDB = MongoDB()
         collection = client.get_collection(type_)
         cursor = collection.find(
             {
@@ -86,7 +87,7 @@ async def get_other_incomes_expenses(
 
 
 async def get_information_for_month(
-    user_id: int,
+    user_id: str,
     year: int,
     month: int
 ) -> list:
@@ -97,8 +98,8 @@ async def get_information_for_month(
     :param year: The transmitted year.
     :param month: The transferred month.
     """
+    client: MongoDB = MongoDB()
     try:
-        client: MongoDB = MongoDB()
         collection = client.get_collection("salaries")
         start_date = datetime(year, month, 1)
         end_date = start_date + relativedelta(months=1)
@@ -121,8 +122,8 @@ async def get_info_by_date(user_id: int, date: str) -> dict:
     :param user_id: The user's ID.
     :param date: A specific date to show to the user.
     """
+    client: MongoDB = MongoDB()
     try:
-        client: MongoDB = MongoDB()
         parse_date = datetime.strptime(date, "%Y-%m-%d")
         collection = client.get_collection("salaries")
         data: dict = collection.find_one(
@@ -140,8 +141,8 @@ async def statistics_for_year(year: int, user_id: int) -> dict:
     :param user_id: The user's ID.
     :param year: The transmitted year.
     """
+    client: MongoDB = MongoDB()
     try:
-        client: MongoDB = MongoDB()
         collection = client.get_collection("salaries")
         start_date = datetime(year, 1, 1)
         end_date = datetime(year + 1, 1, 1)
@@ -198,8 +199,8 @@ async def aggregate_data(
     :param month: The transferred month.
     :param period: 1st or 2nd periods.
     """
+    client: MongoDB = MongoDB()
     try:
-        client: MongoDB = MongoDB()
         collection = client.get_collection("salaries")
         start_date = datetime(year, month, 1)
         end_date = start_date + relativedelta(months=1)
@@ -221,8 +222,8 @@ async def aggregate_data(
                     "total_earned_cold": {"$sum": "$earned_cold"},
                     "total_award": {"$sum": "$award_amount"},
                     "total_operations": {"$sum": "$count_operations"},
-                    "total_overitme": {"$sum": "$earned_overtime"},
-                    "total_hours_overitme": {"$sum": "$hours_overtime"},
+                    "total_overtime": {"$sum": "$earned_overtime"},
+                    "total_hours_overtime": {"$sum": "$hours_overtime"},
                 }
             }
         ]
@@ -252,8 +253,8 @@ async def get_other_sum(
     :return: A dictionary with the key 'total_sum' and the sum,
                 or an empty dictionary
     """
+    client = MongoDB()
     try:
-        client = MongoDB()
         collection = (
             client.get_collection("other_income")
             if type_operation == "income"
@@ -293,12 +294,13 @@ async def aggregate_valute(
     Calculate the amount of hours worked for the period
     and the amount of payment for the hours.
 
+    :param collection:
     :param user_id: The user's ID.
     :param year: The transmitted year.
     :param month: The transferred month.
     """
+    client: MongoDB = MongoDB()
     try:
-        client: MongoDB = MongoDB()
         collection = client.get_collection(collection)
         start_date = datetime(year, month, 1)
         end_date = start_date + relativedelta(months=1)

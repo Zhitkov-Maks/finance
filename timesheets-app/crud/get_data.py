@@ -1,38 +1,38 @@
 from datetime import datetime
+
+from bson.errors import InvalidId
 from dateutil.relativedelta import relativedelta
+from bson import ObjectId
+from pymongo.errors import DuplicateKeyError
 
 from database.db_conf import MongoDB
 
-import pymongo
 
-
-async def get_salary_for_day(day_id: str) -> None:
+async def get_salary_for_day(day_id: str) -> dict | None:
     """
     Get the data for the day.
 
-    :param daн_id: The ID of the record.
+    :param day_id: The ID of the record.
     """
+    client = MongoDB()
     try:
-        client = MongoDB()
         collection = client.get_collection("salaries")
-        data: dict = collection.find_one({"_id": day_id})
-        return data
+        object_id = ObjectId(day_id)
+        return collection.find_one({"_id": object_id})
     finally:
         client.close()
 
 
-async def get_hours_for_month(
-    user_id: int,
-    year: int,
-    month: int
-) -> dict:
+async def get_hours_for_month(user_id: str, year: int, month: int):
     """
     Aggregate the hours for the month.
 
+    :param month:
+    :param year:
     :param user_id: The user's ID.
     """
+    client: MongoDB = MongoDB()
     try:
-        client: MongoDB = MongoDB()
         collection = client.get_collection("salaries")
         start_date = datetime(year, month, 1)
         end_date = start_date + relativedelta(months=1)
@@ -64,9 +64,7 @@ async def get_hours_for_month(
         client.close()
 
 
-async def update_salary(
-    day_id: int, data: dict
-) -> None:
+async def update_salary(day_id: str, data: dict) -> None:
     """
     Update your salary for the day.
 
@@ -75,14 +73,14 @@ async def update_salary(
     """
     client: MongoDB = MongoDB()
     collection = client.get_collection("salaries")
-
     try:
+        object_id = ObjectId(day_id)
         collection.update_one(
-            {"_id": day_id},
+            {"_id": object_id},
             {"$set": data},
             upsert=True
         )
-    except pymongo.errors.DuplicateKeyError:
+    except (DuplicateKeyError, InvalidId):
         pass
     finally:
         client.close()
