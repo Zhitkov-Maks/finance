@@ -1,8 +1,7 @@
 from fastapi import APIRouter, status
 
 from crud.statistics import aggregate_data, statistics_for_year
-from schemas.statistics import AggregateSchema, StatisticForMonth, \
-    StatisticForYearSchema
+from schemas.statistics import StatisticForMonth, StatisticForYearSchema
 
 statistic = APIRouter(prefix="/statistic", tags=["STATISTICS"])
 
