@@ -308,8 +308,16 @@ export default {
       comment: ''
     })
 
+    // Исправленный computed для активных счетов
     const activeAccounts = computed(() => {
-      return accounts.value.filter(acc => acc.is_active)
+      if (!accounts.value || !Array.isArray(accounts.value)) {
+        console.log('accounts.value не массив:', accounts.value)
+        return []
+      }
+      
+      const active = accounts.value.filter(acc => acc && acc.is_active === true)
+      console.log('Всего счетов:', accounts.value.length, 'Активных:', active.length)
+      return active
     })
 
     const availableCategories = computed(() => {
@@ -319,10 +327,14 @@ export default {
 
     const flattenCategories = (categories, level = 0) => {
       let result = []
+      if (!categories || !Array.isArray(categories)) return result
+      
       for (const cat of categories) {
-        result.push({ ...cat, level, name: cat.name })
-        if (cat.children && cat.children.length) {
-          result = result.concat(flattenCategories(cat.children, level + 1))
+        if (cat) {
+          result.push({ ...cat, level, name: cat.name })
+          if (cat.children && cat.children.length) {
+            result = result.concat(flattenCategories(cat.children, level + 1))
+          }
         }
       }
       return result
@@ -368,9 +380,28 @@ export default {
 
     const loadAccounts = async () => {
       try {
+        console.log('Начинаем загрузку счетов...')
         const response = await apiService.getAccounts(1, 100)
-        accounts.value = response.results || []
+        console.log('Ответ от API счетов:', response)
+        
+        // Нормализуем ответ
+        let accountsData = []
+        if (response && response.results) {
+          accountsData = response.results
+        } else if (response && response.accounts) {
+          accountsData = response.accounts
+        } else if (Array.isArray(response)) {
+          accountsData = response
+        } else if (response && response.data && Array.isArray(response.data)) {
+          accountsData = response.data
+        }
+        
+        accounts.value = accountsData
         console.log('Загружено счетов:', accounts.value.length)
+        
+        if (accounts.value.length === 0) {
+          console.warn('Нет загруженных счетов! Проверьте API endpoint.')
+        }
       } catch (error) {
         console.error('Error loading accounts:', error)
         accounts.value = []
@@ -383,9 +414,11 @@ export default {
           apiService.getCategories('income', 1, 100, true),
           apiService.getCategories('expense', 1, 100, true)
         ])
-        incomeCategories.value = incomeData.results || []
-        expenseCategories.value = expenseData.results || []
-        console.log('Загружены категории')
+        
+        incomeCategories.value = incomeData.results || incomeData.data || []
+        expenseCategories.value = expenseData.results || expenseData.data || []
+        console.log('Загружены категории доходов:', incomeCategories.value.length)
+        console.log('Загружены категории расходов:', expenseCategories.value.length)
       } catch (error) {
         console.error('Error loading categories:', error)
         incomeCategories.value = []
@@ -396,7 +429,6 @@ export default {
     // Применение фильтров
     const applyFilters = () => {
       console.log('Применяем фильтры:', localFilters.value)
-      // Копируем локальные фильтры в активные
       activeFilters.value = { ...localFilters.value }
       currentPage.value = 1
       loadTransactions()
@@ -448,6 +480,9 @@ export default {
         comment: ''
       }
       showAddModal.value = true
+      
+      // Логируем доступные счета при открытии модалки
+      console.log('Доступные счета при открытии модалки:', activeAccounts.value)
     }
 
     const saveTransaction = async () => {
@@ -543,6 +578,7 @@ export default {
     onMounted(async () => {
       console.log('Компонент смонтирован')
       await Promise.all([loadTransactions(), loadAccounts(), loadCategories()])
+      console.log('Все данные загружены, активных счетов:', activeAccounts.value.length)
     })
 
     return {
