@@ -23,7 +23,7 @@ async def get_salary_for_day(day_id: str) -> dict | None:
         client.close()
 
 
-async def get_hours_for_month(user_id: str, year: int, month: int):
+async def get_hours_for_month(user_id: int, year: int, month: int):
     """
     Aggregate the hours for the month.
 

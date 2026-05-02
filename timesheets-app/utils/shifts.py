@@ -11,7 +11,7 @@ from utils.valute import get_valute_info
 
 
 async def get_shifts_for_month(
-    user_id: str,
+    user_id: int,
     year: int,
     month: int
 ) -> list:
@@ -69,7 +69,7 @@ async def get_specific_shift_by_day_id(day_id: str) -> dict | bool:
 
 
 async def create_data_by_add_shifts(
-    user_id: str,
+    user_id: int,
     time: float,
     list_dates: list[str]
 ) -> None:
@@ -89,7 +89,7 @@ async def create_data_by_add_shifts(
 
 
 async def save_shifts_all(
-    user_id: str,
+    user_id: int,
     time: float,
     sorted_dates: list,
     data: dict

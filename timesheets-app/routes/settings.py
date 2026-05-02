@@ -18,7 +18,7 @@ settings_router = APIRouter(prefix="/settings", tags=["SETTINGS"])
     response_model=SuccessSchema
 )
 async def create_user_settings(
-    user_id: str,
+    user_id: int,
     settings: SettingsSchema
 ):
     """Create user settings for working with salary calculation."""
@@ -31,7 +31,7 @@ async def create_user_settings(
     status_code=status.HTTP_200_OK,
     response_model=SettingsSchema
 )
-async def get_user_settings(user: str):
+async def get_user_settings(user: int):
     """Get user settings by ID."""
     settings_data: dict = await get_settings_user_by_id(user_id=user)
     return SettingsSchema(**settings_data)
@@ -42,6 +42,6 @@ async def get_user_settings(user: str):
     status_code=status.HTTP_200_OK,
     response_model=SettingsSchema
 )
-async def delete_user_settings(user: str):
+async def delete_user_settings(user: int):
     """Delete user settings by ID."""
     return await delete_settings(user_id=user)

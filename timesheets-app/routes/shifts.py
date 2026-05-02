@@ -24,7 +24,7 @@ shift_router = APIRouter(prefix="/shifts", tags=["SHIFTS"])
     response_model=SuccessSchema
 )
 async def create_shift(
-    user_id: str,
+    user_id: int,
     data: ShiftSchema
 ) -> SuccessSchema:
     """Создать запись о рабочей смене."""
@@ -33,8 +33,7 @@ async def create_shift(
     await earned_per_shift(
         time,
         user_id,
-        date,
-        data=data
+        date
     )
     return SuccessSchema(result=True)
 
@@ -44,15 +43,14 @@ async def create_shift(
     status_code=status.HTTP_201_CREATED,
     response_model=SuccessSchema
 )
-async def update_shift(user_id: str, data: ShiftSchema) -> SuccessSchema:
+async def update_shift(user_id: int, data: ShiftSchema) -> SuccessSchema:
     """Изменить данные о рабочей смене."""
     data = data.model_dump()
     time, date, notes = data.get("time"), data.get("date"), data.get("notes")
     await earned_per_shift(
         time,
         user_id,
-        date,
-        data=data
+        date
     )
     return SuccessSchema(result=True)
 
@@ -63,7 +61,7 @@ async def update_shift(user_id: str, data: ShiftSchema) -> SuccessSchema:
     response_model=ListShiftSchema
 )
 async def get_list_shifts_for_month(
-    user_id: str,
+    user_id: int,
     year: int,
     month: int
 ) -> ListShiftSchema:
@@ -79,7 +77,7 @@ async def get_list_shifts_for_month(
     response_model=SpecificShift,
     responses={404: {"model": NotFoundShift}}
 )
-async def get_shift_by_concrete_day(user_id: str, date: str):
+async def get_shift_by_concrete_day(user_id: int, date: str):
     """Получить данные о смене по дате."""
     return await get_specific_shift(user_id, date)
 
@@ -99,12 +97,12 @@ async def get_shift_by_day_id(day_id: str):
     status_code=status.HTTP_200_OK,
     response_model=SpecificShift
 )
-async def get_shift_by_day_id(
+async def create_award_for_day(
     day_id: str,
     count_operations: int,
-    user_id: str
+    user_id: int
 ):
-    """Получить данные о смене по идентификатору смены."""
+    """Добавить данные о заработанной премии."""
     return await earned_for_award(count_operations, user_id, day_id)
 
 
@@ -123,10 +121,10 @@ async def delete_shift_by_day_id(day_id: str):
     response_model=SuccessSchema
 )
 async def get_shift_by_day_id(
-    user_id: str,
+    user_id: int,
     data: ManyAddShifts
 ):
-    """Получить данные о смене по идентификатору смены."""
+    """Групповое добавление смен за конкретный месяц."""
     data = data.model_dump()
     time = data.get("hours")
     list_dates = data.get("dates")

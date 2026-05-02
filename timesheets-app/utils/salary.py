@@ -1,5 +1,8 @@
 from datetime import datetime, UTC
 
+from fastapi import HTTPException
+from starlette import status
+
 from crud.many import add_many_shifts
 from crud.settings import get_settings_user_by_id
 from crud.get_data import get_hours_for_month, get_salary_for_day, update_salary
@@ -9,7 +12,7 @@ from utils.valute import get_valute_info
 from utils.calculate import calc_valute
 
 
-async def get_settings(user_id: str) -> tuple:
+async def get_settings(user_id: int) -> tuple:
     """
     Return the basic user settings.
 
@@ -17,7 +20,13 @@ async def get_settings(user_id: str) -> tuple:
     """
     settings: dict = await get_settings_user_by_id(user_id)
     if not settings:
-        raise KeyError("Нет настроек для расчёта.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "result": False,
+                "description": "Нет настроек для создания записи."
+            }
+        )
 
     price: float = float(settings.get("price_time", 0))
     cold: float = float(settings.get("price_cold", 0))
@@ -54,7 +63,7 @@ async def calculation_overtime(
 async def earned_calculation(
     settings: tuple,
     time: float,
-    user_id: str,
+    user_id: int,
     date,
     total_hours=None
 ) -> dict:
@@ -105,9 +114,8 @@ async def earned_calculation(
 
 async def earned_per_shift(
     time: float,
-    user_id: str,
-    date: str,
-    data: dict
+    user_id: int,
+    date: str
 ) -> None:
     """
     Generate the amount earned per shift..
@@ -123,11 +131,15 @@ async def earned_per_shift(
     parse_date = datetime.strptime(date, "%Y-%m-%d")
     salary = await earned_calculation(settings, time, user_id, parse_date)
     await write_salary(salary, user_id, parse_date, valute_data)
-    await normalization_salary_for_month(user_id, settings, data)
+    await normalization_salary_for_month(
+        user_id,
+        settings,
+        {"year": parse_date.year, "month": parse_date.month}
+    )
 
 
 async def normalization_salary_for_month(
-    user_id: str,
+    user_id: int,
     settings: tuple,
     data: dict
 ) -> None:
@@ -168,7 +180,7 @@ async def normalization_salary_for_month(
 
 async def recalculation_salary(
     time: float,
-    user_id: str,
+    user_id: int,
     date,  # datetime.date
     valute_data,
     settings: tuple,
@@ -204,7 +216,7 @@ async def calc_in_currency(earned: float) -> dict:
 
 async def earned_for_award(
     count_operations: int,
-    user_id: str,
+    user_id: int,
     day_id: str,
 ) -> dict:
     """

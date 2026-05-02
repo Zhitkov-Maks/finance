@@ -58,7 +58,7 @@ async def write_other(
 
 async def write_salary(
     data: dict,
-    user_id: str,
+    user_id: int,
     date: datetime,
     valute_data: dict[str, tuple[int, float]]
 ) -> None:

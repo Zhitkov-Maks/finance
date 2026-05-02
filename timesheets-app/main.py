@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 
 from routes.settings import settings_router
 from routes.shifts import shift_router
-
+from routes.statistic import statistic
 
 app = FastAPI(
     root_path="/api/v2",
@@ -19,6 +19,7 @@ app = FastAPI(
 
 app.include_router(settings_router)
 app.include_router(shift_router)
+app.include_router(statistic)
 
 
 @app.get("/health", include_in_schema=False)

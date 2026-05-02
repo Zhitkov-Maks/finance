@@ -1,7 +1,7 @@
 from database.db_conf import MongoDB
 
 
-async def create_settings(data: dict, user_id: str) -> None:
+async def create_settings(data: dict, user_id: int) -> None:
     """
     Create or update the user's settings.
 
@@ -18,7 +18,7 @@ async def create_settings(data: dict, user_id: str) -> None:
         client.close()
 
 
-async def get_settings_user_by_id(user_id: str) -> dict:
+async def get_settings_user_by_id(user_id: int) -> dict:
     """
     Get the user's settings.
 

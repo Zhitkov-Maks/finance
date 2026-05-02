@@ -1,93 +1,13 @@
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+from fastapi import HTTPException
+from starlette import status
 
 from database.db_conf import MongoDB
 
 
-async def get_other_incomes_for_year(
-    user_id: int,
-    year: int
-) -> list | dict:
-    """
-    Get other data for the selected year.
-
-    :param user_id: The user's ID.
-    :param year: The transmitted year.
-    """
-    client: MongoDB = MongoDB()
-    try:
-        collection = client.get_collection("other_income")
-        pipeline = [
-            {
-                "$match": {
-                    "user_id": user_id,
-                    "year": year
-                }
-            },
-            {
-                "$group": {
-                    "_id": None,
-                    "total_other_amount": {"$sum": "$amount"},
-                    "dollar": {"$sum": "$valute.dollar"},
-                    "euro": {"$sum": "$valute.euro"},
-                    "yena": {"$sum": "$valute.yena"},
-                    "som": {"$sum": "$valute.som"}
-                }
-            },
-            {
-                "$project": {
-                    "total_other_amount": {
-                        "$round": ["$total_other_amount", 2]
-                    },
-                    "dollar": {"$round": ["$dollar", 2]},
-                    "euro": {"$round": ["$euro", 2]},
-                    "yena": {"$round": ["$yena", 2]},
-                    "som": {"$round": ["$som", 2]}
-                }
-            }
-        ]
-
-        result = collection.aggregate(pipeline).to_list()
-        if len(result) != 0:
-            return result[0]
-        return {}
-    finally:
-        client.close()
-
-
-async def get_other_incomes_expenses(
-    user_id: int,
-    year: int,
-    month: int,
-    income: bool
-) -> list:
-    """
-    Get other data for the selected month.
-
-    :param income:
-    :param user_id: The user's ID.
-    :param year:    The transmitted year.
-    :param month: The transferred month.
-    """
-    type_ = "other_income" if income else "expenses"
-    client: MongoDB = MongoDB()
-    try:
-        collection = client.get_collection(type_)
-        cursor = collection.find(
-            {
-                "user_id": user_id,
-                "year": year,
-                "month": month
-            }
-        ).sort("_id", -1)
-        results = cursor.to_list(length=None)
-        return results
-    finally:
-        client.close()
-
-
 async def get_information_for_month(
-    user_id: str,
+    user_id: int,
     year: int,
     month: int
 ) -> list:
@@ -182,14 +102,23 @@ async def statistics_for_year(year: int, user_id: int) -> dict:
         result = collection.aggregate(pipeline).to_list()
         if len(result) != 0:
             return result[0]
-        return {}
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "result": False,
+                "description": "Нет данных за выбранный год."
+            }
+        )
     finally:
         client.close()
 
 
 async def aggregate_data(
-    year: int, month: int, user_id: int, period: int,
-) -> dict:
+        year: int,
+        month: int,
+        user_id: int,
+        period: int | None = None
+) -> dict | None:
     """
     Calculate the amount of hours worked for the period
     and the amount of payment for the hours.
@@ -197,7 +126,7 @@ async def aggregate_data(
     :param user_id: The user's ID.
     :param year: The transmitted year.
     :param month: The transferred month.
-    :param period: 1st or 2nd periods.
+    :param period: 1st or 2nd periods. If None - aggregates for entire month.
     """
     client: MongoDB = MongoDB()
     try:
@@ -205,14 +134,20 @@ async def aggregate_data(
         start_date = datetime(year, month, 1)
         end_date = start_date + relativedelta(months=1)
 
+        # Базовый match
+        match_stage = {
+            "$match": {
+                "user_id": user_id,
+                "date": {"$gte": start_date, "$lt": end_date}
+            }
+        }
+
+        # Добавляем фильтр по period только если он указан
+        if period is not None:
+            match_stage["$match"]["period"] = period
+
         pipeline = [
-            {
-                "$match": {
-                    "user_id": user_id,
-                    "date": {"$gte": start_date, "$lt": end_date},
-                    "period": period
-                }
-            },
+            match_stage,
             {
                 "$group": {
                     "_id": None,
@@ -224,117 +159,18 @@ async def aggregate_data(
                     "total_operations": {"$sum": "$count_operations"},
                     "total_overtime": {"$sum": "$earned_overtime"},
                     "total_hours_overtime": {"$sum": "$hours_overtime"},
-                }
-            }
-        ]
-
-        result = collection.aggregate(pipeline).to_list()
-        if len(result) != 0:
-            return result[0]
-        return {}
-    finally:
-        client.close()
-
-
-async def get_other_sum(
-    year: int,
-    month: int,
-    user_id: int,
-    type_operation: str
-) -> dict:
-    """
-    Aggregate the data on other income/expenses for the month.
-
-    :param user_id: User ID.
-    :param year: Year for the sample.
-    :param month: The month for the sample.
-    :param type_operation: Type of operation
-                            ('income' for income, otherwise - expenses)
-    :return: A dictionary with the key 'total_sum' and the sum,
-                or an empty dictionary
-    """
-    client = MongoDB()
-    try:
-        collection = (
-            client.get_collection("other_income")
-            if type_operation == "income"
-            else client.get_collection("expenses")
-        )
-
-        pipeline = [
-            {
-                "$match": {
-                    "user_id": user_id,
-                    "year": year,
-                    "month": month
-                }
-            },
-            {
-                "$group": {
-                    "_id": None,
-                    "total_sum": {"$sum": "$amount"}
-                }
-            }
-        ]
-
-        result = collection.aggregate(pipeline).to_list()
-
-        return result[0] if result else {}
-    except Exception:
-        return {}
-    finally:
-        if client:
-            client.close()
-
-
-async def aggregate_valute(
-    year: int, month: int, user_id: int, collection: str
-) -> dict:
-    """
-    Calculate the amount of hours worked for the period
-    and the amount of payment for the hours.
-
-    :param collection:
-    :param user_id: The user's ID.
-    :param year: The transmitted year.
-    :param month: The transferred month.
-    """
-    client: MongoDB = MongoDB()
-    try:
-        collection = client.get_collection(collection)
-        start_date = datetime(year, month, 1)
-        end_date = start_date + relativedelta(months=1)
-
-        pipeline = [
-            {
-                "$match": {
-                    "user_id": user_id,
-                    "date": {"$gte": start_date, "$lt": end_date}
-                }
-            },
-            {
-                "$group": {
-                    "_id": None,
                     "dollar": {"$sum": "$valute.dollar"},
                     "euro": {"$sum": "$valute.euro"},
                     "yena": {"$sum": "$valute.yena"},
                     "som": {"$sum": "$valute.som"}
                 }
-            },
-            {
-                "$project": {
-                    "dollar": {"$round": ["$dollar", 2]},
-                    "euro": {"$round": ["$euro", 2]},
-                    "yena": {"$round": ["$yena", 2]},
-                    "som": {"$round": ["$som", 2]}
-                }
             }
         ]
 
         result = collection.aggregate(pipeline).to_list()
         if len(result) != 0:
-
             return result[0]
-        return {}
+        return None
+
     finally:
         client.close()
