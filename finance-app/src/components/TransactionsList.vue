@@ -1,5 +1,267 @@
 <template>
-  <!-- шаблон остается ТАКИМ ЖЕ, как в вашем последнем рабочем варианте -->
+  <div>
+    <div class="page-header">
+      <h1>Транзакции</h1>
+      <button @click="openAddModal" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Добавить транзакцию
+      </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="card">
+      <div class="filters-header" @click="showFilters = !showFilters">
+        <h3>Фильтры</h3>
+        <i :class="showFilters ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
+      </div>
+      
+      <div class="filters" :class="{ 'filters-hidden': !showFilters }">
+        <div class="filter-group">
+          <label>Тип:</label>
+          <select v-model="filters.type" class="form-control">
+            <option value="">Все</option>
+            <option value="income">Доходы</option>
+            <option value="expense">Расходы</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>Счет:</label>
+          <input type="text" v-model="filters.account_name" placeholder="Название счета" class="form-control">
+        </div>
+
+        <div class="filter-group">
+          <label>Категория:</label>
+          <input type="text" v-model="filters.category_name" placeholder="Категория" class="form-control">
+        </div>
+
+        <div class="filter-group">
+          <label>Сумма от:</label>
+          <input type="number" v-model="filters.amount_gte" placeholder="Мин" class="form-control">
+        </div>
+
+        <div class="filter-group">
+          <label>Сумма до:</label>
+          <input type="number" v-model="filters.amount_lte" placeholder="Макс" class="form-control">
+        </div>
+
+        <div class="filter-group">
+          <label>Дата с:</label>
+          <input type="date" v-model="filters.create_at_after" class="form-control">
+        </div>
+
+        <div class="filter-group">
+          <label>Дата по:</label>
+          <input type="date" v-model="filters.create_at_before" class="form-control">
+        </div>
+
+        <div class="filter-actions">
+          <button @click="applyFilters" class="btn btn-primary">Применить</button>
+          <button @click="resetFilters" class="btn btn-secondary">Сбросить</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div v-if="loading" class="loading-state">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Загрузка...</p>
+    </div>
+
+    <!-- Transactions Table / Mobile Cards -->
+    <div v-else class="card">
+      <!-- Мобильные карточки -->
+      <div class="mobile-transactions">
+        <div v-for="transaction in transactions" :key="transaction.id" class="transaction-card">
+          <div class="transaction-header">
+            <div class="transaction-date">{{ formatDate(transaction.create_at) }}</div>
+            <div class="transaction-actions-mobile">
+              <button @click="editTransaction(transaction)" class="btn-icon" title="Редактировать">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button @click="confirmDelete(transaction)" class="btn-icon btn-icon-danger" title="Удалить">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="transaction-amount" :class="transaction.transaction_type === 'income' ? 'text-success' : 'text-danger'">
+            {{ formatCurrency(transaction.amount) }}
+          </div>
+          
+          <div class="transaction-details">
+            <div class="detail-item">
+              <span class="detail-label">
+                <i class="fas fa-tag"></i> Тип:
+              </span>
+              <span class="badge" :class="transaction.transaction_type === 'income' ? 'badge-success' : 'badge-danger'">
+                {{ transaction.transaction_type === 'income' ? 'Доход' : 'Расход' }}
+              </span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">
+                <i class="fas fa-folder"></i> Категория:
+              </span>
+              <span class="detail-value">{{ transaction.category?.name || '—' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">
+                <i class="fas fa-credit-card"></i> Счет:
+              </span>
+              <span class="detail-value">{{ transaction.account?.name || '—' }}</span>
+            </div>
+            <div v-if="transaction.comment" class="detail-item">
+              <span class="detail-label">
+                <i class="fas fa-comment"></i> Комментарий:
+              </span>
+              <span class="detail-value">{{ transaction.comment }}</span>
+            </div>
+          </div>
+        </div>
+        <div v-if="transactions.length === 0" class="empty-state">
+          <i class="fas fa-receipt"></i>
+          <p>Нет транзакций</p>
+        </div>
+      </div>
+
+      <!-- Десктопная таблица -->
+      <div class="desktop-table">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Дата</th>
+              <th>Сумма</th>
+              <th>Тип</th>
+              <th>Категория</th>
+              <th>Счет</th>
+              <th>Комментарий</th>
+              <th>Действия</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="transaction in transactions" :key="transaction.id">
+              <td>{{ transaction.id }}</td>
+              <td>{{ formatDate(transaction.create_at) }}</td>
+              <td :class="transaction.transaction_type === 'income' ? 'text-success' : 'text-danger'">
+                <strong>{{ formatCurrency(transaction.amount) }}</strong>
+              </td>
+              <td>
+                <span class="badge" :class="transaction.transaction_type === 'income' ? 'badge-success' : 'badge-danger'">
+                  {{ transaction.transaction_type === 'income' ? 'Доход' : 'Расход' }}
+                </span>
+               </td>
+              <td>{{ transaction.category?.name || '—' }}</td>
+              <td>{{ transaction.account?.name || '—' }}</td>
+              <td>{{ transaction.comment || '—' }}</td>
+              <td>
+                <button @click="editTransaction(transaction)" class="btn btn-sm btn-info" title="Редактировать">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button @click="confirmDelete(transaction)" class="btn btn-sm btn-danger" title="Удалить">
+                  <i class="fas fa-trash"></i>
+                </button>
+               </td>
+            </tr>
+            <tr v-if="transactions.length === 0">
+              <td colspan="8" class="text-center">Нет транзакций</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" v-if="totalPages > 1 && !loading">
+      <button @click="prevPage" :disabled="currentPage === 1" class="btn btn-secondary">
+        <i class="fas fa-chevron-left"></i> <span class="pagination-text">Назад</span>
+      </button>
+      <span class="pagination-info">
+        Страница {{ currentPage }} из {{ totalPages }}
+        (всего записей: {{ totalItems }})
+      </span>
+      <button @click="nextPage" :disabled="currentPage === totalPages" class="btn btn-secondary">
+        <span class="pagination-text">Вперед</span> <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+
+    <!-- Create/Edit Modal -->
+    <div v-if="showAddModal" class="modal" @click.self="closeModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>{{ editingTransaction ? 'Редактировать транзакцию' : 'Добавить транзакцию' }}</h3>
+          <button class="modal-close" @click="closeModal">&times;</button>
+        </div>
+
+        <form @submit.prevent="saveTransaction">
+          <div class="form-group">
+            <label class="form-label required">Тип</label>
+            <select v-model="formData.type" class="form-control" required @change="onTypeChange">
+              <option value="income">💰 Доход</option>
+              <option value="expense">💸 Расход</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label required">Сумма</label>
+            <input type="number" v-model="formData.amount" class="form-control" step="0.01" required placeholder="0.00">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label required">Категория</label>
+            <select v-model="formData.category" class="form-control" required>
+              <option value="">Выберите категорию</option>
+              <option v-for="cat in availableCategories" :key="cat.id" :value="cat.id">
+                {{ '—'.repeat(cat.level) }} {{ cat.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label required">Счет</label>
+            <select v-model="formData.account" class="form-control" required>
+              <option value="">Выберите счет</option>
+              <option v-for="acc in activeAccounts" :key="acc.id" :value="acc.id">
+                {{ acc.name }} ({{ formatCurrency(acc.balance) }})
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label required">Дата и время</label>
+            <input type="datetime-local" v-model="formData.create_at" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Комментарий</label>
+            <textarea v-model="formData.comment" class="form-control" rows="3" placeholder="Необязательно"></textarea>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" @click="closeModal" class="btn btn-secondary">Отмена</button>
+            <button type="submit" class="btn btn-primary">
+              {{ editingTransaction ? 'Обновить' : 'Создать' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div v-if="showDeleteModal" class="modal" @click.self="showDeleteModal = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Подтверждение удаления</h3>
+          <button class="modal-close" @click="showDeleteModal = false">&times;</button>
+        </div>
+        <p>Вы уверены, что хотите удалить транзакцию?</p>
+        <p class="text-muted">Сумма: {{ formatCurrency(transactionToDelete?.amount) }}</p>
+        <div class="modal-footer">
+          <button @click="showDeleteModal = false" class="btn btn-secondary">Отмена</button>
+          <button @click="deleteTransaction" class="btn btn-danger">Да, удалить</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -9,26 +271,27 @@ import apiService from '../services/api.js'
 export default {
   name: 'TransactionsList',
   setup() {
-    const transactions = ref([]) // Только текущая страница
+    const transactions = ref([])
     const accounts = ref([])
     const incomeCategories = ref([])
     const expenseCategories = ref([])
+    const loading = ref(false)
 
-    // Серверная пагинация и фильтрация
-    const serverState = ref({
-      currentPage: 1,
-      pageSize: 50,
-      totalPages: 1,
-      totalItems: 0,
-      filters: {
-        type: '',
-        account_name: '',
-        category_name: '',
-        amount_gte: '',
-        amount_lte: '',
-        create_at_after: '',
-        create_at_before: ''
-      }
+    // Пагинация
+    const currentPage = ref(1)
+    const pageSize = ref(50)
+    const totalPages = ref(1)
+    const totalItems = ref(0)
+
+    // Фильтры
+    const filters = ref({
+      type: '',
+      account_name: '',
+      category_name: '',
+      amount_gte: '',
+      amount_lte: '',
+      create_at_after: '',
+      create_at_before: ''
     })
 
     const showAddModal = ref(false)
@@ -68,33 +331,48 @@ export default {
       return result
     }
 
-    // Загрузка данных с сервера с текущими фильтрами и пагинацией
-    const loadData = async () => {
+    // Загрузка транзакций с сервера с фильтрацией и пагинацией
+    const loadTransactions = async () => {
+      loading.value = true
       try {
+        // Строим параметры запроса
         const params = {
-          page: serverState.value.currentPage,
-          page_size: serverState.value.pageSize,
-          ...serverState.value.filters
+          page: currentPage.value,
+          page_size: pageSize.value
         }
 
-        // Если нет фильтра по типу, загружаем все
+        // Добавляем только непустые фильтры
+        Object.keys(filters.value).forEach(key => {
+          if (filters.value[key] !== '' && filters.value[key] !== null && filters.value[key] !== undefined) {
+            params[key] = filters.value[key]
+          }
+        })
+
+        console.log('Загрузка транзакций с параметрами:', params)
+        
         const response = await apiService.getTransactions(params)
         
         transactions.value = response.results || []
-        serverState.value.totalItems = response.count || 0
-        serverState.value.totalPages = Math.ceil(serverState.value.totalItems / serverState.value.pageSize)
+        totalItems.value = response.count || 0
+        totalPages.value = Math.ceil(totalItems.value / pageSize.value)
+        
+        console.log(`Загружено ${transactions.value.length} транзакций из ${totalItems.value}`)
       } catch (error) {
         console.error('Error loading transactions:', error)
         transactions.value = []
-        serverState.value.totalItems = 0
-        serverState.value.totalPages = 1
+        totalItems.value = 0
+        totalPages.value = 1
+      } finally {
+        loading.value = false
       }
     }
 
     const loadAccounts = async () => {
       try {
-        const data = await apiService.getAccounts(1, 100)
-        accounts.value = data.results[0]?.accounts || []
+        const response = await apiService.getAccounts(1, 100)
+        // Исправляем обработку ответа
+        accounts.value = response.results || response.accounts || []
+        console.log('Загружено счетов:', accounts.value.length)
       } catch (error) {
         console.error('Error loading accounts:', error)
         accounts.value = []
@@ -109,6 +387,8 @@ export default {
         ])
         incomeCategories.value = incomeData.results || []
         expenseCategories.value = expenseData.results || []
+        console.log('Загружено категорий доходов:', incomeCategories.value.length)
+        console.log('Загружено категорий расходов:', expenseCategories.value.length)
       } catch (error) {
         console.error('Error loading categories:', error)
         incomeCategories.value = []
@@ -116,10 +396,10 @@ export default {
       }
     }
 
-    // Применение фильтров - сбрасываем на первую страницу и загружаем
+    // Применение фильтров - сбрасываем на первую страницу и перезагружаем
     const applyFilters = () => {
-      serverState.value.currentPage = 1
-      loadData()
+      currentPage.value = 1
+      loadTransactions()
     }
 
     // Debounced фильтрация для текстовых полей
@@ -127,24 +407,14 @@ export default {
     const applyFiltersDebounced = () => {
       clearTimeout(debounceTimer)
       debounceTimer = setTimeout(() => {
-        serverState.value.currentPage = 1
-        loadData()
-      }, 300)
+        currentPage.value = 1
+        loadTransactions()
+      }, 500)
     }
 
-    // Навигация по страницам
-    const goToPage = (page) => {
-      if (page >= 1 && page <= serverState.value.totalPages) {
-        serverState.value.currentPage = page
-        loadData()
-      }
-    }
-
-    const prevPage = () => goToPage(serverState.value.currentPage - 1)
-    const nextPage = () => goToPage(serverState.value.currentPage + 1)
-
+    // Сброс фильтров
     const resetFilters = () => {
-      serverState.value.filters = {
+      filters.value = {
         type: '',
         account_name: '',
         category_name: '',
@@ -153,18 +423,53 @@ export default {
         create_at_after: '',
         create_at_before: ''
       }
-      serverState.value.currentPage = 1
-      loadData()
+      currentPage.value = 1
+      loadTransactions()
     }
 
-    // Watchers для автоматического применения фильтров
-    watch(() => serverState.value.filters.type, () => {
-      serverState.value.currentPage = 1
-      loadData()
+    // Навигация по страницам
+    const goToPage = (page) => {
+      if (page >= 1 && page <= totalPages.value) {
+        currentPage.value = page
+        loadTransactions()
+      }
+    }
+
+    const prevPage = () => goToPage(currentPage.value - 1)
+    const nextPage = () => goToPage(currentPage.value + 1)
+
+    // Следим за изменениями фильтров для автоматической загрузки
+    watch(() => filters.value.type, () => {
+      currentPage.value = 1
+      loadTransactions()
     })
 
-    watch(() => serverState.value.filters.create_at_after, applyFilters)
-    watch(() => serverState.value.filters.create_at_before, applyFilters)
+    watch(() => filters.value.create_at_after, () => {
+      currentPage.value = 1
+      loadTransactions()
+    })
+
+    watch(() => filters.value.create_at_before, () => {
+      currentPage.value = 1
+      loadTransactions()
+    })
+
+    // Для текстовых полей используем debounced загрузку
+    watch(() => filters.value.account_name, () => {
+      applyFiltersDebounced()
+    })
+
+    watch(() => filters.value.category_name, () => {
+      applyFiltersDebounced()
+    })
+
+    watch(() => filters.value.amount_gte, () => {
+      applyFiltersDebounced()
+    })
+
+    watch(() => filters.value.amount_lte, () => {
+      applyFiltersDebounced()
+    })
 
     const onTypeChange = () => {
       formData.value.category = ''
@@ -205,8 +510,8 @@ export default {
         }
         
         closeModal()
-        await loadData() // Перезагружаем текущую страницу
-        await loadAccounts()
+        await loadTransactions() // Перезагружаем текущую страницу
+        await loadAccounts() // Обновляем балансы счетов
       } catch (error) {
         console.error('Error saving transaction:', error)
         alert('Ошибка при сохранении транзакции')
@@ -237,10 +542,10 @@ export default {
         showDeleteModal.value = false
         
         // Если удалили последнюю транзакцию на странице, переходим на предыдущую
-        if (transactions.value.length === 1 && serverState.value.currentPage > 1) {
-          serverState.value.currentPage--
+        if (transactions.value.length === 1 && currentPage.value > 1) {
+          currentPage.value--
         }
-        await loadData()
+        await loadTransactions()
         await loadAccounts()
       } catch (error) {
         console.error('Error deleting transaction:', error)
@@ -275,17 +580,23 @@ export default {
     }
 
     onMounted(async () => {
-      await Promise.all([loadData(), loadAccounts(), loadCategories()])
+      await Promise.all([loadTransactions(), loadAccounts(), loadCategories()])
     })
 
     return {
       // Данные для шаблона
-      transactions, // Текущая страница транзакций
+      transactions,
       activeAccounts,
       availableCategories,
+      loading,
       
-      // Состояние сервера
-      serverState,
+      // Пагинация
+      currentPage,
+      totalPages,
+      totalItems,
+      
+      // Фильтры
+      filters,
       
       // UI состояние
       showFilters,
@@ -302,7 +613,6 @@ export default {
       confirmDelete,
       deleteTransaction,
       applyFilters,
-      applyFiltersDebounced,
       resetFilters,
       closeModal,
       prevPage,
