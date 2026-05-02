@@ -21,6 +21,7 @@ class TransferSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transfer
         fields = [
+            "id",
             "source_account",
             "source_account_name",
             "destination_account", 
