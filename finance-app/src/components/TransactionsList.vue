@@ -164,15 +164,17 @@
       </div>
 
       <!-- Pagination -->
-      <div class="pagination" v-if="totalPages > 1">
-        <button @click="prevPage" :disabled="currentPage === 1" class="btn btn-secondary">
-          <i class="fas fa-chevron-left"></i> <span class="pagination-text">Назад</span>
-        </button>
-        <span class="pagination-info">Страница {{ currentPage }} из {{ totalPages }}</span>
-        <button @click="nextPage" :disabled="currentPage === totalPages" class="btn btn-secondary">
-          <span class="pagination-text">Вперед</span> <i class="fas fa-chevron-right"></i>
-        </button>
-      </div>
+    <div class="pagination" v-if="serverPagination.totalPages > 1">
+      <button @click="prevPage" :disabled="serverPagination.currentPage === 1" class="btn btn-secondary">
+        <i class="fas fa-chevron-left"></i> <span class="pagination-text">Назад</span>
+      </button>
+      <span class="pagination-info">
+        Страница {{ serverPagination.currentPage }} из {{ serverPagination.totalPages }}
+        (всего записей: {{ serverPagination.totalItems }})
+      </span>
+      <button @click="nextPage" :disabled="serverPagination.currentPage === serverPagination.totalPages" class="btn btn-secondary">
+        <span class="pagination-text">Вперед</span> <i class="fas fa-chevron-right"></i>
+      </button>
     </div>
 
     <!-- Create/Edit Modal -->
@@ -267,15 +269,22 @@ export default {
     const accounts = ref([])
     const incomeCategories = ref([])
     const expenseCategories = ref([])
-    const currentPage = ref(1)
-    const pageSize = ref(10)
+
+    // Добавляем состояние для пагинации
+    const serverPagination = ref({
+      currentPage: 1,
+      pageSize: 50,
+      totalPages: 1,
+      totalItems: 0
+    })
+
     const showAddModal = ref(false)
     const showDeleteModal = ref(false)
     const showFilters = ref(true)
     const editingTransaction = ref(null)
     const transactionToDelete = ref(null)
     let debounceTimer = null
-    
+
     const filters = ref({
       type: '',
       account_name: '',
@@ -285,7 +294,7 @@ export default {
       create_at_after: '',
       create_at_before: ''
     })
-    
+
     const formData = ref({
       type: 'expense',
       amount: '',
@@ -295,57 +304,18 @@ export default {
       comment: ''
     })
 
-    // Объединенные транзакции с типом
+    // Объединённые транзакции с типом (используются только для отображения, если не нужна серверная фильтрация)
     const allTransactions = computed(() => {
       const income = incomeTransactions.value.map(t => ({ ...t, transaction_type: 'income' }))
       const expense = expenseTransactions.value.map(t => ({ ...t, transaction_type: 'expense' }))
       return [...income, ...expense]
     })
 
-    // Фильтрованные транзакции
-    const filteredTransactions = computed(() => {
-      let filtered = [...allTransactions.value]
-      
-      if (filters.value.type) {
-        filtered = filtered.filter(t => t.transaction_type === filters.value.type)
-      }
-      if (filters.value.account_name) {
-        filtered = filtered.filter(t => 
-          t.account?.name?.toLowerCase().includes(filters.value.account_name.toLowerCase())
-        )
-      }
-      if (filters.value.category_name) {
-        filtered = filtered.filter(t => 
-          t.category?.name?.toLowerCase().includes(filters.value.category_name.toLowerCase())
-        )
-      }
-      if (filters.value.amount_gte) {
-        filtered = filtered.filter(t => parseFloat(t.amount) >= parseFloat(filters.value.amount_gte))
-      }
-      if (filters.value.amount_lte) {
-        filtered = filtered.filter(t => parseFloat(t.amount) <= parseFloat(filters.value.amount_lte))
-      }
-      if (filters.value.create_at_after) {
-        filtered = filtered.filter(t => new Date(t.create_at) >= new Date(filters.value.create_at_after))
-      }
-      if (filters.value.create_at_before) {
-        filtered = filtered.filter(t => new Date(t.create_at) <= new Date(filters.value.create_at_before))
-      }
-      
-      // Сортировка по дате (новые сверху)
-      filtered.sort((a, b) => new Date(b.create_at) - new Date(a.create_at))
-      
-      return filtered
-    })
+    // Пагинированные транзакции (теперь берём напрямую из serverPagination)
+    const paginatedTransactions = computed(() => allTransactions.value)
 
-    // Пагинированные транзакции
-    const paginatedTransactions = computed(() => {
-      const start = (currentPage.value - 1) * pageSize.value
-      const end = start + pageSize.value
-      return filteredTransactions.value.slice(start, end)
-    })
-
-    const totalPages = computed(() => Math.ceil(filteredTransactions.value.length / pageSize.value))
+    // Удаляем локальную пагинацию, используем серверную
+    const totalPages = computed(() => serverPagination.value.totalPages)
 
     // Активные счета
     const activeAccounts = computed(() => {
@@ -371,13 +341,44 @@ export default {
 
     const loadTransactions = async () => {
       try {
-        const [incomeData, expenseData] = await Promise.all([
-          apiService.getTransactions({ page: 1, page_size: 100, type: 'income' }),
-          apiService.getTransactions({ page: 1, page_size: 100, type: 'expense' })
-        ])
-        
-        incomeTransactions.value = incomeData.results || []
-        expenseTransactions.value = expenseData.results || []
+        // Подготавливаем параметры запроса
+        const params = {
+          page: serverPagination.value.currentPage,
+          page_size: serverPagination.value.pageSize,
+        }
+
+        // Добавляем фильтры в запрос
+        if (filters.value.type) params.type = filters.value.type
+        if (filters.value.account_name) params.account_name = filters.value.account_name
+        if (filters.value.category_name) params.category_name = filters.value.category_name
+        if (filters.value.amount_gte) params.amount_gte = filters.value.amount_gte
+        if (filters.value.amount_lte) params.amount_lte = filters.value.amount_lte
+        if (filters.value.create_at_after) params.create_at_after = filters.value.create_at_after
+        if (filters.value.create_at_before) params.create_at_before = filters.value.create_at_before
+
+        // Загружаем только нужный тип или оба
+        if (filters.value.type === 'income') {
+          const incomeData = await apiService.getTransactions(params)
+          incomeTransactions.value = incomeData.results || []
+          expenseTransactions.value = []
+          serverPagination.value.totalItems = incomeData.count
+        } else if (filters.value.type === 'expense') {
+          const expenseData = await apiService.getTransactions(params)
+          expenseTransactions.value = expenseData.results || []
+          incomeTransactions.value = []
+          serverPagination.value.totalItems = expenseData.count
+        } else {
+          // Загружаем оба типа по отдельности
+          const [incomeData, expenseData] = await Promise.all([
+            apiService.getTransactions({ ...params, type: 'income' }),
+            apiService.getTransactions({ ...params, type: 'expense' })
+          ])
+          incomeTransactions.value = incomeData.results || []
+          expenseTransactions.value = expenseData.results || []
+          serverPagination.value.totalItems = (incomeData.count || 0) + (expenseData.count || 0)
+        }
+
+        serverPagination.value.totalPages = Math.ceil(serverPagination.value.totalItems / serverPagination.value.pageSize)
       } catch (error) {
         console.error('Error loading transactions:', error)
       }
@@ -396,7 +397,7 @@ export default {
       try {
         const incomeData = await apiService.getCategories('income', 1, 100, true)
         incomeCategories.value = incomeData.results || []
-        
+
         const expenseData = await apiService.getCategories('expense', 1, 100, true)
         expenseCategories.value = expenseData.results || []
       } catch (error) {
@@ -426,7 +427,7 @@ export default {
         alert('Заполните все поля')
         return
       }
-      
+
       try {
         const data = {
           amount: formData.value.amount,
@@ -435,7 +436,7 @@ export default {
           account: parseInt(formData.value.account),
           comment: formData.value.comment
         }
-        
+
         if (editingTransaction.value) {
           await apiService.updateTransaction(editingTransaction.value.id, data)
         } else {
@@ -478,15 +479,30 @@ export default {
       }
     }
 
+    // Применение фильтров с серверной загрузкой
     const applyFilters = () => {
-      currentPage.value = 1
+      serverPagination.value.currentPage = 1
+      loadTransactions()
     }
 
-    const applyFiltersDebounced = () => {
-      if (debounceTimer) clearTimeout(debounceTimer)
-      debounceTimer = setTimeout(() => {
-        applyFilters()
-      }, 500)
+    // Смена страницы
+    const changePage = (page) => {
+      serverPagination.value.currentPage = page
+      loadTransactions()
+    }
+
+    const prevPage = () => {
+      if (serverPagination.value.currentPage > 1) {
+        serverPagination.value.currentPage--
+        loadTransactions()
+      }
+    }
+
+    const nextPage = () => {
+      if (serverPagination.value.currentPage < serverPagination.value.totalPages) {
+        serverPagination.value.currentPage++
+        loadTransactions()
+      }
     }
 
     const resetFilters = () => {
@@ -507,18 +523,6 @@ export default {
       editingTransaction.value = null
     }
 
-    const prevPage = () => {
-      if (currentPage.value > 1) {
-        currentPage.value--
-      }
-    }
-
-    const nextPage = () => {
-      if (currentPage.value < totalPages.value) {
-        currentPage.value++
-      }
-    }
-
     const formatCurrency = (value) => {
       if (!value) return '0 ₽'
       return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(value)
@@ -530,16 +534,15 @@ export default {
     }
 
     onMounted(() => {
-      Promise.all([loadTransactions(), loadAccounts(), loadCategories()])
+      loadTransactions() // Загружаем транзакции с текущей пагинацией и фильтрами
+      Promise.all([loadAccounts(), loadCategories()])
     })
 
     return {
       paginatedTransactions,
-      filteredTransactions,
       accounts,
       activeAccounts,
-      currentPage,
-      totalPages,
+      serverPagination, // Добавляем в возврат для использования в шаблоне
       filters,
       showFilters,
       showAddModal,
@@ -554,11 +557,11 @@ export default {
       confirmDelete,
       deleteTransaction,
       applyFilters,
-      applyFiltersDebounced,
       resetFilters,
       closeModal,
       prevPage,
       nextPage,
+      changePage, // Добавляем новую функцию смены страницы
       onTypeChange,
       formatCurrency,
       formatDate
@@ -566,6 +569,7 @@ export default {
   }
 }
 </script>
+
 
 <style scoped>
 .page-header {
