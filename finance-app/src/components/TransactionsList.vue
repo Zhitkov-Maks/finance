@@ -271,7 +271,7 @@ export default {
     const totalPages = ref(1)
     const totalItems = ref(0)
 
-    // Локальные фильтры (для привязки к форме)
+    // Локальные фильтры
     const localFilters = ref({
       type: '',
       account_name: '',
@@ -282,7 +282,7 @@ export default {
       create_at_before: ''
     })
     
-    // Активные фильтры (которые применяются)
+    // Активные фильтры
     const activeFilters = ref({
       type: '',
       account_name: '',
@@ -308,16 +308,12 @@ export default {
       comment: ''
     })
 
-    // Исправленный computed для активных счетов
     const activeAccounts = computed(() => {
       if (!accounts.value || !Array.isArray(accounts.value)) {
-        console.log('accounts.value не массив:', accounts.value)
         return []
       }
-      
-      const active = accounts.value.filter(acc => acc && acc.is_active === true)
-      console.log('Всего счетов:', accounts.value.length, 'Активных:', active.length)
-      return active
+      // Фильтруем только активные счета
+      return accounts.value.filter(acc => acc && acc.is_active === true)
     })
 
     const availableCategories = computed(() => {
@@ -350,7 +346,6 @@ export default {
           page_size: pageSize.value
         }
         
-        // Добавляем только активные фильтры
         Object.keys(activeFilters.value).forEach(key => {
           if (activeFilters.value[key] && activeFilters.value[key] !== '') {
             params[key] = activeFilters.value[key]
@@ -358,9 +353,7 @@ export default {
         })
 
         console.log('Отправляем запрос с параметрами:', params)
-        
         const response = await apiService.getTransactions(params)
-        
         console.log('Получен ответ:', response)
         
         transactions.value = response.results || []
@@ -379,36 +372,48 @@ export default {
     }
 
     const loadAccounts = async () => {
+      console.log('=== НАЧАЛО ЗАГРУЗКИ СЧЕТОВ ===')
       try {
-        console.log('Начинаем загрузку счетов...')
         const response = await apiService.getAccounts(1, 100)
         console.log('Ответ от API счетов:', response)
         
-        // Нормализуем ответ
+        // ИСПРАВЛЕННАЯ ЛОГИКА - извлекаем счета из правильной структуры
         let accountsData = []
-        if (response && response.results) {
+        
+        // Проверяем структуру ответа
+        if (response.results && response.results.length > 0 && response.results[0].accounts) {
+          // Счета находятся в response.results[0].accounts
+          accountsData = response.results[0].accounts
+          console.log('Счета из response.results[0].accounts:', accountsData)
+        } else if (response.results && Array.isArray(response.results)) {
+          // Альтернативная структура
           accountsData = response.results
-        } else if (response && response.accounts) {
+        } else if (response.accounts && Array.isArray(response.accounts)) {
           accountsData = response.accounts
         } else if (Array.isArray(response)) {
           accountsData = response
-        } else if (response && response.data && Array.isArray(response.data)) {
-          accountsData = response.data
+        } else {
+          console.log('Неизвестная структура ответа:', response)
+          accountsData = []
         }
         
         accounts.value = accountsData
-        console.log('Загружено счетов:', accounts.value.length)
+        console.log(`Загружено ${accounts.value.length} счетов`)
         
-        if (accounts.value.length === 0) {
-          console.warn('Нет загруженных счетов! Проверьте API endpoint.')
-        }
+        // Выводим информацию о каждом счете
+        accounts.value.forEach((acc, index) => {
+          console.log(`Счет ${index + 1}: ${acc.name} (ID: ${acc.id}), баланс: ${acc.balance}, активен: ${acc.is_active}`)
+        })
+        
       } catch (error) {
-        console.error('Error loading accounts:', error)
+        console.error('Ошибка при загрузке счетов:', error)
         accounts.value = []
       }
+      console.log('=== ЗАГРУЗКА СЧЕТОВ ЗАВЕРШЕНА ===')
     }
 
     const loadCategories = async () => {
+      console.log('Загрузка категорий...')
       try {
         const [incomeData, expenseData] = await Promise.all([
           apiService.getCategories('income', 1, 100, true),
@@ -417,8 +422,8 @@ export default {
         
         incomeCategories.value = incomeData.results || incomeData.data || []
         expenseCategories.value = expenseData.results || expenseData.data || []
-        console.log('Загружены категории доходов:', incomeCategories.value.length)
-        console.log('Загружены категории расходов:', expenseCategories.value.length)
+        console.log('Категории доходов:', incomeCategories.value.length)
+        console.log('Категории расходов:', expenseCategories.value.length)
       } catch (error) {
         console.error('Error loading categories:', error)
         incomeCategories.value = []
@@ -426,7 +431,6 @@ export default {
       }
     }
 
-    // Применение фильтров
     const applyFilters = () => {
       console.log('Применяем фильтры:', localFilters.value)
       activeFilters.value = { ...localFilters.value }
@@ -434,7 +438,6 @@ export default {
       loadTransactions()
     }
 
-    // Сброс фильтров
     const resetFilters = () => {
       console.log('Сброс фильтров')
       localFilters.value = {
@@ -470,6 +473,7 @@ export default {
     }
 
     const openAddModal = () => {
+      console.log('Открытие модального окна, доступные счета:', activeAccounts.value)
       editingTransaction.value = null
       formData.value = {
         type: 'expense',
@@ -480,9 +484,6 @@ export default {
         comment: ''
       }
       showAddModal.value = true
-      
-      // Логируем доступные счета при открытии модалки
-      console.log('Доступные счета при открытии модалки:', activeAccounts.value)
     }
 
     const saveTransaction = async () => {
@@ -576,9 +577,10 @@ export default {
     }
 
     onMounted(async () => {
-      console.log('Компонент смонтирован')
+      console.log('=== КОМПОНЕНТ СМОНТИРОВАН ===')
       await Promise.all([loadTransactions(), loadAccounts(), loadCategories()])
-      console.log('Все данные загружены, активных счетов:', activeAccounts.value.length)
+      console.log('=== ВСЕ ДАННЫЕ ЗАГРУЖЕНЫ ===')
+      console.log('Доступные счета для выбора:', activeAccounts.value)
     })
 
     return {
