@@ -17,7 +17,7 @@
       <div class="filters" :class="{ 'filters-hidden': !showFilters }">
         <div class="filter-group">
           <label>Тип:</label>
-          <select v-model="filters.type" class="form-control">
+          <select v-model="localFilters.type" class="form-control">
             <option value="">Все</option>
             <option value="income">Доходы</option>
             <option value="expense">Расходы</option>
@@ -26,32 +26,32 @@
 
         <div class="filter-group">
           <label>Счет:</label>
-          <input type="text" v-model="filters.account_name" placeholder="Название счета" class="form-control">
+          <input type="text" v-model="localFilters.account_name" placeholder="Название счета" class="form-control">
         </div>
 
         <div class="filter-group">
           <label>Категория:</label>
-          <input type="text" v-model="filters.category_name" placeholder="Категория" class="form-control">
+          <input type="text" v-model="localFilters.category_name" placeholder="Категория" class="form-control">
         </div>
 
         <div class="filter-group">
           <label>Сумма от:</label>
-          <input type="number" v-model="filters.amount_gte" placeholder="Мин" class="form-control">
+          <input type="number" v-model="localFilters.amount_gte" placeholder="Мин" class="form-control">
         </div>
 
         <div class="filter-group">
           <label>Сумма до:</label>
-          <input type="number" v-model="filters.amount_lte" placeholder="Макс" class="form-control">
+          <input type="number" v-model="localFilters.amount_lte" placeholder="Макс" class="form-control">
         </div>
 
         <div class="filter-group">
           <label>Дата с:</label>
-          <input type="date" v-model="filters.create_at_after" class="form-control">
+          <input type="date" v-model="localFilters.create_at_after" class="form-control">
         </div>
 
         <div class="filter-group">
           <label>Дата по:</label>
-          <input type="date" v-model="filters.create_at_before" class="form-control">
+          <input type="date" v-model="localFilters.create_at_before" class="form-control">
         </div>
 
         <div class="filter-actions">
@@ -69,7 +69,6 @@
 
     <!-- Transactions Table / Mobile Cards -->
     <div v-else class="card">
-      <!-- Мобильные карточки -->
       <div class="mobile-transactions">
         <div v-for="transaction in transactions" :key="transaction.id" class="transaction-card">
           <div class="transaction-header">
@@ -123,7 +122,6 @@
         </div>
       </div>
 
-      <!-- Десктопная таблица -->
       <div class="desktop-table">
         <table class="table">
           <thead>
@@ -149,7 +147,7 @@
                 <span class="badge" :class="transaction.transaction_type === 'income' ? 'badge-success' : 'badge-danger'">
                   {{ transaction.transaction_type === 'income' ? 'Доход' : 'Расход' }}
                 </span>
-               </td>
+              </td>
               <td>{{ transaction.category?.name || '—' }}</td>
               <td>{{ transaction.account?.name || '—' }}</td>
               <td>{{ transaction.comment || '—' }}</td>
@@ -160,7 +158,7 @@
                 <button @click="confirmDelete(transaction)" class="btn btn-sm btn-danger" title="Удалить">
                   <i class="fas fa-trash"></i>
                 </button>
-               </td>
+              </td>
             </tr>
             <tr v-if="transactions.length === 0">
               <td colspan="8" class="text-center">Нет транзакций</td>
@@ -184,14 +182,13 @@
       </button>
     </div>
 
-    <!-- Create/Edit Modal -->
+    <!-- Modals (оставляем без изменений) -->
     <div v-if="showAddModal" class="modal" @click.self="closeModal">
       <div class="modal-content">
         <div class="modal-header">
           <h3>{{ editingTransaction ? 'Редактировать транзакцию' : 'Добавить транзакцию' }}</h3>
           <button class="modal-close" @click="closeModal">&times;</button>
         </div>
-
         <form @submit.prevent="saveTransaction">
           <div class="form-group">
             <label class="form-label required">Тип</label>
@@ -200,12 +197,10 @@
               <option value="expense">💸 Расход</option>
             </select>
           </div>
-
           <div class="form-group">
             <label class="form-label required">Сумма</label>
             <input type="number" v-model="formData.amount" class="form-control" step="0.01" required placeholder="0.00">
           </div>
-
           <div class="form-group">
             <label class="form-label required">Категория</label>
             <select v-model="formData.category" class="form-control" required>
@@ -215,7 +210,6 @@
               </option>
             </select>
           </div>
-
           <div class="form-group">
             <label class="form-label required">Счет</label>
             <select v-model="formData.account" class="form-control" required>
@@ -225,28 +219,22 @@
               </option>
             </select>
           </div>
-
           <div class="form-group">
             <label class="form-label required">Дата и время</label>
             <input type="datetime-local" v-model="formData.create_at" class="form-control" required>
           </div>
-
           <div class="form-group">
             <label class="form-label">Комментарий</label>
             <textarea v-model="formData.comment" class="form-control" rows="3" placeholder="Необязательно"></textarea>
           </div>
-
           <div class="modal-footer">
             <button type="button" @click="closeModal" class="btn btn-secondary">Отмена</button>
-            <button type="submit" class="btn btn-primary">
-              {{ editingTransaction ? 'Обновить' : 'Создать' }}
-            </button>
+            <button type="submit" class="btn btn-primary">{{ editingTransaction ? 'Обновить' : 'Создать' }}</button>
           </div>
         </form>
       </div>
     </div>
 
-    <!-- Delete Confirmation Modal -->
     <div v-if="showDeleteModal" class="modal" @click.self="showDeleteModal = false">
       <div class="modal-content">
         <div class="modal-header">
@@ -265,7 +253,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import apiService from '../services/api.js'
 
 export default {
@@ -283,8 +271,19 @@ export default {
     const totalPages = ref(1)
     const totalItems = ref(0)
 
-    // Фильтры
-    const filters = ref({
+    // Локальные фильтры (для привязки к форме)
+    const localFilters = ref({
+      type: '',
+      account_name: '',
+      category_name: '',
+      amount_gte: '',
+      amount_lte: '',
+      create_at_after: '',
+      create_at_before: ''
+    })
+    
+    // Активные фильтры (которые применяются)
+    const activeFilters = ref({
       type: '',
       account_name: '',
       category_name: '',
@@ -309,12 +308,10 @@ export default {
       comment: ''
     })
 
-    // Активные счета
     const activeAccounts = computed(() => {
       return accounts.value.filter(acc => acc.is_active)
     })
 
-    // Доступные категории в зависимости от выбранного типа
     const availableCategories = computed(() => {
       const categories = formData.value.type === 'income' ? incomeCategories.value : expenseCategories.value
       return flattenCategories(categories)
@@ -331,32 +328,34 @@ export default {
       return result
     }
 
-    // Загрузка транзакций с сервера с фильтрацией и пагинацией
+    // Загрузка транзакций
     const loadTransactions = async () => {
+      console.log('loadTransactions вызван')
       loading.value = true
       try {
-        // Строим параметры запроса
         const params = {
           page: currentPage.value,
           page_size: pageSize.value
         }
-
-        // Добавляем только непустые фильтры
-        Object.keys(filters.value).forEach(key => {
-          if (filters.value[key] !== '' && filters.value[key] !== null && filters.value[key] !== undefined) {
-            params[key] = filters.value[key]
+        
+        // Добавляем только активные фильтры
+        Object.keys(activeFilters.value).forEach(key => {
+          if (activeFilters.value[key] && activeFilters.value[key] !== '') {
+            params[key] = activeFilters.value[key]
           }
         })
 
-        console.log('Загрузка транзакций с параметрами:', params)
+        console.log('Отправляем запрос с параметрами:', params)
         
         const response = await apiService.getTransactions(params)
+        
+        console.log('Получен ответ:', response)
         
         transactions.value = response.results || []
         totalItems.value = response.count || 0
         totalPages.value = Math.ceil(totalItems.value / pageSize.value)
         
-        console.log(`Загружено ${transactions.value.length} транзакций из ${totalItems.value}`)
+        console.log(`Загружено ${transactions.value.length} транзакций`)
       } catch (error) {
         console.error('Error loading transactions:', error)
         transactions.value = []
@@ -370,8 +369,7 @@ export default {
     const loadAccounts = async () => {
       try {
         const response = await apiService.getAccounts(1, 100)
-        // Исправляем обработку ответа
-        accounts.value = response.results || response.accounts || []
+        accounts.value = response.results || []
         console.log('Загружено счетов:', accounts.value.length)
       } catch (error) {
         console.error('Error loading accounts:', error)
@@ -387,8 +385,7 @@ export default {
         ])
         incomeCategories.value = incomeData.results || []
         expenseCategories.value = expenseData.results || []
-        console.log('Загружено категорий доходов:', incomeCategories.value.length)
-        console.log('Загружено категорий расходов:', expenseCategories.value.length)
+        console.log('Загружены категории')
       } catch (error) {
         console.error('Error loading categories:', error)
         incomeCategories.value = []
@@ -396,25 +393,19 @@ export default {
       }
     }
 
-    // Применение фильтров - сбрасываем на первую страницу и перезагружаем
+    // Применение фильтров
     const applyFilters = () => {
+      console.log('Применяем фильтры:', localFilters.value)
+      // Копируем локальные фильтры в активные
+      activeFilters.value = { ...localFilters.value }
       currentPage.value = 1
       loadTransactions()
     }
 
-    // Debounced фильтрация для текстовых полей
-    let debounceTimer = null
-    const applyFiltersDebounced = () => {
-      clearTimeout(debounceTimer)
-      debounceTimer = setTimeout(() => {
-        currentPage.value = 1
-        loadTransactions()
-      }, 500)
-    }
-
     // Сброс фильтров
     const resetFilters = () => {
-      filters.value = {
+      console.log('Сброс фильтров')
+      localFilters.value = {
         type: '',
         account_name: '',
         category_name: '',
@@ -423,53 +414,24 @@ export default {
         create_at_after: '',
         create_at_before: ''
       }
+      activeFilters.value = { ...localFilters.value }
       currentPage.value = 1
       loadTransactions()
     }
 
-    // Навигация по страницам
-    const goToPage = (page) => {
-      if (page >= 1 && page <= totalPages.value) {
-        currentPage.value = page
+    const prevPage = () => {
+      if (currentPage.value > 1) {
+        currentPage.value--
         loadTransactions()
       }
     }
 
-    const prevPage = () => goToPage(currentPage.value - 1)
-    const nextPage = () => goToPage(currentPage.value + 1)
-
-    // Следим за изменениями фильтров для автоматической загрузки
-    watch(() => filters.value.type, () => {
-      currentPage.value = 1
-      loadTransactions()
-    })
-
-    watch(() => filters.value.create_at_after, () => {
-      currentPage.value = 1
-      loadTransactions()
-    })
-
-    watch(() => filters.value.create_at_before, () => {
-      currentPage.value = 1
-      loadTransactions()
-    })
-
-    // Для текстовых полей используем debounced загрузку
-    watch(() => filters.value.account_name, () => {
-      applyFiltersDebounced()
-    })
-
-    watch(() => filters.value.category_name, () => {
-      applyFiltersDebounced()
-    })
-
-    watch(() => filters.value.amount_gte, () => {
-      applyFiltersDebounced()
-    })
-
-    watch(() => filters.value.amount_lte, () => {
-      applyFiltersDebounced()
-    })
+    const nextPage = () => {
+      if (currentPage.value < totalPages.value) {
+        currentPage.value++
+        loadTransactions()
+      }
+    }
 
     const onTypeChange = () => {
       formData.value.category = ''
@@ -510,8 +472,8 @@ export default {
         }
         
         closeModal()
-        await loadTransactions() // Перезагружаем текущую страницу
-        await loadAccounts() // Обновляем балансы счетов
+        await loadTransactions()
+        await loadAccounts()
       } catch (error) {
         console.error('Error saving transaction:', error)
         alert('Ошибка при сохранении транзакции')
@@ -541,7 +503,6 @@ export default {
         await apiService.deleteTransaction(transactionToDelete.value.id)
         showDeleteModal.value = false
         
-        // Если удалили последнюю транзакцию на странице, переходим на предыдущую
         if (transactions.value.length === 1 && currentPage.value > 1) {
           currentPage.value--
         }
@@ -580,33 +541,25 @@ export default {
     }
 
     onMounted(async () => {
+      console.log('Компонент смонтирован')
       await Promise.all([loadTransactions(), loadAccounts(), loadCategories()])
     })
 
     return {
-      // Данные для шаблона
       transactions,
       activeAccounts,
       availableCategories,
       loading,
-      
-      // Пагинация
       currentPage,
       totalPages,
       totalItems,
-      
-      // Фильтры
-      filters,
-      
-      // UI состояние
+      localFilters,
       showFilters,
       showAddModal,
       showDeleteModal,
       editingTransaction,
       transactionToDelete,
       formData,
-      
-      // Методы
       openAddModal,
       saveTransaction,
       editTransaction,
