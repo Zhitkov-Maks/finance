@@ -46,7 +46,7 @@ class TransferFundsView(generics.CreateAPIView):
         destination_account: Account = serializer.validated_data[
             "destination_account"
         ]
-        amount: decimal = serializer.validated_data["amount"]
+        amount = serializer.validated_data["amount"]
 
         source_account.balance -= amount
         destination_account.balance += amount
