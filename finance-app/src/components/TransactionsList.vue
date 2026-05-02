@@ -162,8 +162,9 @@
           </tbody>
         </table>
       </div>
+    </div>
 
-      <!-- Pagination -->
+    <!-- Pagination -->
     <div class="pagination" v-if="serverPagination.totalPages > 1">
       <button @click="prevPage" :disabled="serverPagination.currentPage === 1" class="btn btn-secondary">
         <i class="fas fa-chevron-left"></i> <span class="pagination-text">Назад</span>
