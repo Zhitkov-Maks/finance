@@ -45,53 +45,77 @@
     </div>
 
     <div class="card">
-      <!-- Для мобильных и планшетов: карточки долгов -->
+      <!-- Мобильные и планшетные карточки с раскрытием -->
       <div class="mobile-debts">
         <div v-for="debt in filteredDebts" :key="debt.id" class="debt-card">
-          <div class="debt-header">
-            <div class="debt-contractor">
-              <strong>{{ debt.borrower_description }}</strong>
+          <!-- Компактный заголовок карточки -->
+          <div class="debt-compact" @click="toggleExpand(debt.id)">
+            <div class="compact-left">
+              <div class="debt-date-compact">{{ formatShortDate(getDebtDate(debt)) }}</div>
+              <div class="debt-contractor-compact">
+                <strong>{{ truncateText(debt.borrower_description, 20) }}</strong>
+              </div>
             </div>
-            <div class="debt-actions-mobile">
-              <button @click="viewDebt(debt)" class="btn-icon" title="Детали">
-                <i class="fas fa-eye"></i>
+            <div class="compact-right">
+              <div class="debt-amount-compact" :class="getDebtAmountClass(debt)">
+                {{ formatCurrency(getDebtAmount(debt)) }}
+              </div>
+              <button class="expand-icon" @click.stop="toggleExpand(debt.id)">
+                <i :class="expandedDebts.has(debt.id) ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
               </button>
-              <button 
-                v-if="!debt.is_repaid" 
-                @click="openRepayModal(debt)" 
-                class="btn-icon btn-icon-success" 
-                title="Погасить"
+            </div>
+          </div>
+
+          <!-- Раскрывающаяся детальная информация -->
+          <div v-if="expandedDebts.has(debt.id)" class="debt-expanded">
+            <div class="debt-details-expanded">
+              <div class="detail-item">
+                <span class="detail-label">
+                  <i class="fas fa-user"></i> Контрагент:
+                </span>
+                <span class="detail-value">{{ debt.borrower_description }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">
+                  <i class="fas fa-calendar"></i> Полная дата:
+                </span>
+                <span class="detail-value">{{ formatDate(getDebtDate(debt)) }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">
+                  <i class="fas fa-credit-card"></i> Счет:
+                </span>
+                <span class="detail-value">{{ getRealAccountName(debt) }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">
+                  <i class="fas fa-flag-checkered"></i> Статус:
+                </span>
+                <span class="badge" :class="debt.is_repaid ? 'badge-success' : 'badge-warning'">
+                  <i :class="debt.is_repaid ? 'fas fa-check-circle' : 'fas fa-clock'"></i>
+                  {{ debt.is_repaid ? 'Погашен' : 'Активен' }}
+                </span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">
+                  <i class="fas fa-tag"></i> Тип:
+                </span>
+                <span class="badge" :class="getDebtType(debt) === 'lend' ? 'badge-success' : 'badge-danger'">
+                  {{ getDebtType(debt) === 'lend' ? 'Мне должны' : 'Я должен' }}
+                </span>
+              </div>
+            </div>
+            <div class="debt-actions-expanded">
+              <button @click="viewDebt(debt)" class="btn btn-sm btn-info">
+                <i class="fas fa-eye"></i> Детали
+              </button>
+              <button
+                v-if="!debt.is_repaid"
+                @click="openRepayModal(debt)"
+                class="btn btn-sm btn-success"
               >
-                <i class="fas fa-check"></i>
+                <i class="fas fa-check"></i> Погасить
               </button>
-            </div>
-          </div>
-          
-          <div class="debt-amount" :class="getDebtAmountClass(debt)">
-            {{ formatCurrency(getDebtAmount(debt)) }}
-          </div>
-          
-          <div class="debt-details">
-            <div class="detail-item">
-              <span class="detail-label">
-                <i class="fas fa-calendar"></i> Дата:
-              </span>
-              <span class="detail-value">{{ formatDate(getDebtDate(debt)) }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">
-                <i class="fas fa-credit-card"></i> Счет:
-              </span>
-              <span class="detail-value">{{ getRealAccountName(debt) }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">
-                <i class="fas fa-flag-checkered"></i> Статус:
-              </span>
-              <span class="badge" :class="debt.is_repaid ? 'badge-success' : 'badge-warning'">
-                <i :class="debt.is_repaid ? 'fas fa-check-circle' : 'fas fa-clock'"></i>
-                {{ debt.is_repaid ? 'Погашен' : 'Активен' }}
-              </span>
             </div>
           </div>
         </div>
@@ -102,7 +126,7 @@
         </div>
       </div>
 
-      <!-- Для десктопа: таблица -->
+      <!-- Десктопная таблица -->
       <div class="desktop-table">
         <table class="table">
           <thead>
@@ -142,10 +166,10 @@
                   <button @click="viewDebt(debt)" class="btn btn-sm btn-info" title="Детали">
                     <i class="fas fa-eye"></i>
                   </button>
-                  <button 
-                    v-if="!debt.is_repaid" 
-                    @click="openRepayModal(debt)" 
-                    class="btn btn-sm btn-success" 
+                  <button
+                    v-if="!debt.is_repaid"
+                    @click="openRepayModal(debt)"
+                    class="btn btn-sm btn-success"
                     title="Погасить"
                   >
                     <i class="fas fa-check"></i>
@@ -207,11 +231,11 @@
 
           <div class="form-group">
             <label class="form-label required">Сумма</label>
-            <input 
-              type="number" 
-              v-model="formData.amount" 
-              class="form-control" 
-              step="0.01" 
+            <input
+              type="number"
+              v-model="formData.amount"
+              class="form-control"
+              step="0.01"
               required
               placeholder="Введите сумму"
             >
@@ -219,10 +243,10 @@
 
           <div class="form-group">
             <label class="form-label required">Контрагент</label>
-            <input 
-              type="text" 
-              v-model="formData.description" 
-              class="form-control" 
+            <input
+              type="text"
+              v-model="formData.description"
+              class="form-control"
               required
               placeholder="Кому/от кого? Например: Иван Петров"
             >
@@ -230,10 +254,10 @@
 
           <div class="form-group">
             <label class="form-label required">Дата</label>
-            <input 
-              type="date" 
-              v-model="formData.date" 
-              class="form-control" 
+            <input
+              type="date"
+              v-model="formData.date"
+              class="form-control"
               required
             >
           </div>
@@ -258,8 +282,8 @@
           <h3>Детали долга</h3>
           <button class="modal-close" @click="showViewModal = false">&times;</button>
         </div>
-        
-        <div v-if="currentDebt" class="debt-details">
+
+        <div v-if="currentDebt" class="debt-details-modal">
           <div class="detail-row">
             <span class="detail-label">ID:</span>
             <span class="detail-value">{{ currentDebt.id }}</span>
@@ -304,17 +328,18 @@
 
         <div class="alert alert-info">
           <i class="fas fa-info-circle"></i>
-          {{ currentDebt?.borrower_description }} - {{ formatCurrency(getDebtAmount(currentDebt)) }}
+          <strong>{{ currentDebt?.borrower_description }}</strong><br>
+          Сумма долга: {{ formatCurrency(getDebtAmount(currentDebt)) }}
         </div>
 
         <form @submit.prevent="repayDebt">
           <div class="form-group">
             <label class="form-label required">Сумма погашения</label>
-            <input 
-              type="number" 
-              v-model="repayAmount" 
-              class="form-control" 
-              step="0.01" 
+            <input
+              type="number"
+              v-model="repayAmount"
+              class="form-control"
+              step="0.01"
               :max="getDebtAmount(currentDebt)"
               required
             >
@@ -349,6 +374,8 @@ export default {
     const showRepayModal = ref(false)
     const currentDebt = ref(null)
     const repayAmount = ref(0)
+    const expandedDebts = ref(new Set())
+
     const formData = ref({
       type: 'lend',
       account_id: '',
@@ -362,36 +389,48 @@ export default {
     })
 
     const totalPages = computed(() => Math.ceil(totalCount.value / pageSize.value))
-    
+
+    const toggleExpand = (debtId) => {
+      if (expandedDebts.value.has(debtId)) {
+        expandedDebts.value.delete(debtId)
+      } else {
+        expandedDebts.value.add(debtId)
+      }
+      expandedDebts.value = new Set(expandedDebts.value)
+    }
+
+    const truncateText = (text, maxLength) => {
+      if (!text) return ''
+      if (text.length <= maxLength) return text
+      return text.substring(0, maxLength) + '...'
+    }
+
     const getDebtAmount = (debt) => {
       return debt.transfer?.amount || debt.amount || 0
     }
-    
+
     const getDebtDate = (debt) => {
       return debt.transfer?.timestamp || debt.date || null
     }
-    
+
     const getDebtType = (debt) => {
       if (debt.type) return debt.type
-      
+
       const destAccount = debt.transfer?.destination_account
       if (destAccount) {
         if (destAccount.name === 'debt') return 'borrow'
         if (destAccount.name === 'lend') return 'lend'
       }
-      
+
       return 'lend'
     }
-    
-    // Получаем реальный счет (source_account), а не служебный счет долга
+
     const getRealAccountName = (debt) => {
-      // Сначала пробуем получить source_account из transfer
       const sourceAccount = debt.transfer?.source_account
       if (sourceAccount && sourceAccount.name !== 'debt' && sourceAccount.name !== 'lend') {
         return sourceAccount.name
       }
-      
-      // Если нет, пробуем получить account_id из самого долга
+
       const accountId = debt.account || debt.account_id
       if (accountId && accounts.value.length) {
         const account = accounts.value.find(acc => acc.id === accountId)
@@ -399,20 +438,18 @@ export default {
           return account.name
         }
       }
-      
-      // Если ничего не нашли, ищем по transfer_id
+
       if (debt.transfer_id && accounts.value.length) {
-        // Пытаемся найти счет, который участвовал в трансфере
         for (const acc of accounts.value) {
           if (acc.id === debt.transfer_id) {
             return acc.name
           }
         }
       }
-      
+
       return 'Не указан'
     }
-    
+
     const filteredDebts = computed(() => {
       return debts.value.filter(debt => {
         const debtType = getDebtType(debt)
@@ -423,21 +460,21 @@ export default {
         }
       })
     })
-    
+
     const totalLend = computed(() => {
       return debts.value
         .filter(debt => getDebtType(debt) === 'lend' && !debt.is_repaid)
         .reduce((sum, d) => sum + parseFloat(getDebtAmount(d)), 0)
     })
-    
+
     const totalBorrow = computed(() => {
       return debts.value
         .filter(debt => getDebtType(debt) === 'borrow' && !debt.is_repaid)
         .reduce((sum, d) => sum + parseFloat(getDebtAmount(d)), 0)
     })
-    
+
     const netDebt = computed(() => totalLend.value - totalBorrow.value)
-    
+
     const getDebtAmountClass = (debt) => {
       const debtType = getDebtType(debt)
       return debtType === 'lend' ? 'text-success' : 'text-danger'
@@ -464,7 +501,7 @@ export default {
     }
 
     const getTypeDescription = (type) => {
-      return type === 'lend' 
+      return type === 'lend'
         ? 'Деньги будут списаны с вашего счета (вы даете в долг)'
         : 'Деньги будут зачислены на ваш счет (вы берете в долг)'
     }
@@ -489,20 +526,20 @@ export default {
         alert('Выберите счет')
         return
       }
-      
+
       if (!formData.value.amount || formData.value.amount <= 0) {
         alert('Введите корректную сумму')
         return
       }
-      
+
       if (!formData.value.description.trim()) {
         alert('Введите описание (контрагента)')
         return
       }
-      
+
       try {
         const apiType = formData.value.type === 'lend' ? 'borrow' : 'debt'
-        
+
         await apiService.createDebt(
           formData.value.account_id,
           apiType,
@@ -547,13 +584,13 @@ export default {
         alert('Введите корректную сумму')
         return
       }
-      
+
       const fullAmount = parseFloat(getDebtAmount(currentDebt.value))
       if (repayAmount.value > fullAmount) {
         alert('Сумма погашения не может превышать сумму долга')
         return
       }
-      
+
       try {
         await apiService.repayDebt(
           currentDebt.value.id,
@@ -592,7 +629,19 @@ export default {
 
     const formatDate = (dateString) => {
       if (!dateString) return ''
-      return new Date(dateString).toLocaleDateString('ru-RU')
+      return new Date(dateString).toLocaleDateString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      })
+    }
+
+    const formatShortDate = (dateString) => {
+      if (!dateString) return ''
+      return new Date(dateString).toLocaleDateString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit'
+      })
     }
 
     onMounted(() => {
@@ -622,10 +671,14 @@ export default {
       totalLend,
       totalBorrow,
       netDebt,
+      expandedDebts,
+      toggleExpand,
+      truncateText,
       getDebtAmount,
       getDebtDate,
       getDebtAmountClass,
       getRealAccountName,
+      getDebtType,
       getTypeDescription,
       openCreateModal,
       closeCreateModal,
@@ -637,14 +690,15 @@ export default {
       prevPage,
       nextPage,
       formatCurrency,
-      formatDate
+      formatDate,
+      formatShortDate
     }
   }
 }
 </script>
 
 <style scoped>
-/* Стили остаются без изменений */
+/* Общие стили */
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -659,6 +713,34 @@ export default {
   color: var(--dark-color);
 }
 
+/* Статистика */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: var(--white);
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.stat-title {
+  font-size: 0.875rem;
+  color: var(--gray-color);
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+/* Табы */
 .type-tabs {
   display: flex;
   gap: 0.5rem;
@@ -689,110 +771,7 @@ export default {
   color: var(--white);
 }
 
-.action-buttons {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.btn-sm {
-  padding: 0.375rem 0.75rem;
-  font-size: 0.875rem;
-}
-
-.btn-info {
-  background: #3b82f6;
-  color: white;
-}
-
-.btn-info:hover {
-  background: #2563eb;
-}
-
-.badge-info {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.badge-success {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.badge-warning {
-  background: #fed7aa;
-  color: #92400e;
-}
-
-.debt-details {
-  padding: 1rem;
-}
-
-.detail-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.75rem;
-  border-bottom: 1px solid var(--light-color);
-}
-
-.detail-row:last-child {
-  border-bottom: none;
-}
-
-.detail-label {
-  font-weight: 600;
-  color: var(--gray-color);
-}
-
-.detail-value {
-  font-weight: 500;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--light-color);
-}
-
-.form-text {
-  font-size: 0.75rem;
-  color: var(--gray-color);
-  margin-top: 0.25rem;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 3rem;
-}
-
-.empty-state i {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-  opacity: 0.5;
-}
-
-.text-center {
-  text-align: center;
-}
-
-.table-responsive {
-  overflow-x: auto;
-}
-
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 1rem;
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--light-color);
-}
-
-/* Стили для карточек долгов (мобильная и планшетная версия) */
+/* Мобильные карточки */
 .mobile-debts {
   display: none;
 }
@@ -801,61 +780,98 @@ export default {
   background: var(--white);
   border: 1px solid var(--light-color);
   border-radius: var(--radius);
-  padding: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+  transition: all 0.3s ease;
 }
 
-.debt-header {
+/* Компактный заголовок */
+.debt-compact {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--light-color);
+  align-items: center;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-.debt-contractor {
-  font-size: 1rem;
+.debt-compact:hover {
+  background-color: #f9fafb;
+}
+
+.compact-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   flex: 1;
 }
 
-.debt-actions-mobile {
-  display: flex;
-  gap: 0.5rem;
+.debt-date-compact {
+  font-size: 0.75rem;
+  color: var(--gray-color);
+  min-width: 55px;
 }
 
-.btn-icon {
+.debt-contractor-compact {
+  font-size: 0.875rem;
+  flex: 1;
+}
+
+.compact-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.debt-amount-compact {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.expand-icon {
   background: none;
   border: none;
   cursor: pointer;
   padding: 0.25rem;
   color: var(--gray-color);
   transition: color 0.3s;
-  font-size: 1rem;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
 }
 
-.btn-icon:hover {
+.expand-icon:hover {
+  background-color: var(--light-color);
   color: var(--primary-color);
 }
 
-.btn-icon-success:hover {
-  color: var(--secondary-color);
+/* Раскрывающаяся часть */
+.debt-expanded {
+  padding: 1rem;
+  border-top: 1px solid var(--light-color);
+  background-color: #fafafa;
+  animation: slideDown 0.3s ease;
 }
 
-.debt-amount {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-  text-align: center;
-  padding: 0.5rem;
-  background: var(--light-color);
-  border-radius: var(--radius);
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.debt-details {
+.debt-details-expanded {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
 }
 
 .detail-item {
@@ -870,7 +886,7 @@ export default {
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.5rem;
 }
 
 .detail-value {
@@ -878,6 +894,16 @@ export default {
   text-align: right;
   word-break: break-word;
   max-width: 60%;
+}
+
+.debt-actions-expanded {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.debt-actions-expanded .btn-sm {
+  padding: 0.5rem 1rem;
 }
 
 /* Десктопная таблица */
@@ -903,175 +929,306 @@ export default {
   color: var(--gray-color);
 }
 
-/* Адаптивные стили - для планшетов и мобильных */
+/* Кнопки и бейджи */
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-sm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.btn-info {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-info:hover {
+  background: #2563eb;
+}
+
+.btn-success {
+  background: var(--secondary-color);
+  color: white;
+}
+
+.btn-success:hover {
+  background: #059669;
+}
+
+.badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.badge-info {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.badge-success {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge-warning {
+  background: #fed7aa;
+  color: #92400e;
+}
+
+.badge-danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.text-success {
+  color: var(--secondary-color);
+}
+
+.text-danger {
+  color: var(--danger-color);
+}
+
+/* Модальные окна */
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--light-color);
+}
+
+.form-text {
+  font-size: 0.75rem;
+  color: var(--gray-color);
+  margin-top: 0.25rem;
+}
+
+.alert {
+  padding: 0.75rem;
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.alert-info {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.debt-details-modal {
+  padding: 0.5rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--light-color);
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+/* Пустое состояние */
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+}
+
+.empty-state i {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+/* Пагинация */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--light-color);
+}
+
+/* Адаптивные стили */
 @media (max-width: 1024px) {
   .desktop-table {
     display: none;
   }
-  
+
   .mobile-debts {
     display: block;
   }
-  
-  .card {
-    padding: 1rem;
-  }
-  
+
   .stats-grid {
     gap: 1rem;
   }
-  
+
   .stat-value {
     font-size: 1.5rem;
   }
 }
 
-/* Для мобильных устройств (до 768px) */
 @media (max-width: 768px) {
   .page-header {
     flex-direction: column;
     text-align: center;
   }
-  
+
   .page-header h1 {
     font-size: 1.5rem;
   }
-  
+
   .page-header .btn {
     width: 100%;
   }
-  
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .stat-card {
     padding: 1rem;
   }
-  
+
   .stat-title {
     font-size: 0.75rem;
   }
-  
+
   .stat-value {
     font-size: 1.25rem;
   }
-  
+
   .type-tabs {
     flex-direction: column;
+  }
+
+  .compact-left {
     gap: 0.5rem;
   }
-  
-  .tab-text {
-    display: inline;
+
+  .debt-date-compact {
+    min-width: 50px;
+    font-size: 0.7rem;
   }
-  
-  .debt-amount {
-    font-size: 1rem;
+
+  .debt-contractor-compact {
+    font-size: 0.8rem;
   }
-  
+
+  .debt-amount-compact {
+    font-size: 0.9rem;
+  }
+
   .modal-content {
     width: 95%;
     margin: 1rem;
     max-height: 85vh;
   }
-  
-  .modal-header h3 {
-    font-size: 1.1rem;
-  }
-  
-  .form-group {
-    margin-bottom: 0.75rem;
-  }
-  
-  .form-label {
-    font-size: 0.8rem;
-  }
-  
-  .form-control {
-    font-size: 16px;
-    padding: 0.5rem;
-  }
-  
+
   .modal-footer {
     flex-direction: column;
-    gap: 0.5rem;
   }
-  
+
   .modal-footer .btn {
     width: 100%;
   }
-  
+
   .pagination {
     flex-wrap: wrap;
   }
-  
-  .pagination-text {
-    display: inline;
-  }
 }
 
-/* Для очень маленьких экранов (до 480px) */
 @media (max-width: 480px) {
-  .debt-header {
-    flex-direction: column;
-    gap: 0.5rem;
+  .debt-compact {
+    padding: 0.6rem 0.75rem;
   }
-  
-  .debt-actions-mobile {
-    align-self: flex-end;
+
+  .compact-left {
+    gap: 0.4rem;
   }
-  
+
+  .debt-date-compact {
+    min-width: 45px;
+  }
+
+  .debt-contractor-compact {
+    font-size: 0.75rem;
+  }
+
   .detail-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.25rem;
   }
-  
+
   .detail-value {
     max-width: 100%;
     text-align: left;
   }
-  
-  .pagination-info {
-    font-size: 0.875rem;
+
+  .debt-actions-expanded {
+    flex-direction: column;
   }
-  
+
+  .debt-actions-expanded .btn-sm {
+    width: 100%;
+  }
+
+  .expand-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .pagination-text {
+    display: none;
+  }
+
   .pagination .btn {
     padding: 0.5rem;
   }
-  
-  .empty-state {
-    padding: 2rem;
-  }
-  
-  .empty-state i {
-    font-size: 2rem;
-  }
 }
 
-/* Для планшетов в горизонтальной ориентации (1025px-1280px) */
+/* Планшеты в горизонтальной ориентации */
 @media (min-width: 1025px) and (max-width: 1280px) {
   .desktop-table {
     display: block;
   }
-  
+
   .mobile-debts {
     display: none;
   }
-  
+
   .table th,
   .table td {
     padding: 0.5rem;
     font-size: 0.875rem;
   }
-  
-  .action-buttons {
-    flex-direction: column;
+}
+
+/* Планшеты в вертикальной ориентации */
+@media (min-width: 769px) and (max-width: 1024px) and (orientation: portrait) {
+  .desktop-table {
+    display: none;
   }
-  
-  .action-buttons .btn-sm {
-    width: 100%;
+
+  .mobile-debts {
+    display: block;
   }
 }
 </style>
