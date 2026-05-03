@@ -71,48 +71,67 @@
     <div v-else class="card">
       <div class="mobile-transactions">
         <div v-for="transaction in transactions" :key="transaction.id" class="transaction-card">
-          <div class="transaction-header">
-            <div class="transaction-date">{{ formatDate(transaction.create_at) }}</div>
-            <div class="transaction-actions-mobile">
-              <button @click="editTransaction(transaction)" class="btn-icon" title="Редактировать">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button @click="confirmDelete(transaction)" class="btn-icon btn-icon-danger" title="Удалить">
-                <i class="fas fa-trash"></i>
+          <!-- Компактный заголовок -->
+          <div class="transaction-compact" @click="toggleExpand(transaction.id)">
+            <div class="compact-left">
+              <div class="transaction-date-compact">{{ formatShortDate(transaction.create_at) }}</div>
+              <span class="badge" :class="getTransactionType(transaction) === 'income' ? 'badge-success' : 'badge-danger'">
+                {{ getTransactionType(transaction) === 'income' ? 'Доход' : 'Расход' }}
+              </span>
+            </div>
+            <div class="compact-right">
+              <div class="transaction-amount-compact" :class="getTransactionType(transaction) === 'income' ? 'text-success' : 'text-danger'">
+                {{ formatCurrency(transaction.amount) }}
+              </div>
+              <button class="expand-icon" @click.stop="toggleExpand(transaction.id)">
+                <i :class="expandedTransactions.has(transaction.id) ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
               </button>
             </div>
           </div>
-          
-          <div class="transaction-amount" :class="transaction.transaction_type === 'income' ? 'text-success' : 'text-danger'">
-            {{ formatCurrency(transaction.amount) }}
-          </div>
-          
-          <div class="transaction-details">
-            <div class="detail-item">
-              <span class="detail-label">
-                <i class="fas fa-tag"></i> Тип:
-              </span>
-              <span class="badge" :class="transaction.transaction_type === 'income' ? 'badge-success' : 'badge-danger'">
-                {{ transaction.transaction_type === 'income' ? 'Доход' : 'Расход' }}
-              </span>
+
+          <!-- Раскрывающаяся детальная информация -->
+          <div v-if="expandedTransactions.has(transaction.id)" class="transaction-expanded">
+            <div class="transaction-details">
+              <div class="detail-item">
+                <span class="detail-label">
+                  <i class="fas fa-tag"></i> Тип:
+                </span>
+                <span class="badge" :class="getTransactionType(transaction) === 'income' ? 'badge-success' : 'badge-danger'">
+                  {{ getTransactionType(transaction) === 'income' ? 'Доход' : 'Расход' }}
+                </span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">
+                  <i class="fas fa-folder"></i> Категория:
+                </span>
+                <span class="detail-value">{{ transaction.category?.name || '—' }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">
+                  <i class="fas fa-credit-card"></i> Счет:
+                </span>
+                <span class="detail-value">{{ transaction.account?.name || '—' }}</span>
+              </div>
+              <div v-if="transaction.comment" class="detail-item">
+                <span class="detail-label">
+                  <i class="fas fa-comment"></i> Комментарий:
+                </span>
+                <span class="detail-value">{{ transaction.comment }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">
+                  <i class="fas fa-clock"></i> Полная дата:
+                </span>
+                <span class="detail-value">{{ formatDate(transaction.create_at) }}</span>
+              </div>
             </div>
-            <div class="detail-item">
-              <span class="detail-label">
-                <i class="fas fa-folder"></i> Категория:
-              </span>
-              <span class="detail-value">{{ transaction.category?.name || '—' }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">
-                <i class="fas fa-credit-card"></i> Счет:
-              </span>
-              <span class="detail-value">{{ transaction.account?.name || '—' }}</span>
-            </div>
-            <div v-if="transaction.comment" class="detail-item">
-              <span class="detail-label">
-                <i class="fas fa-comment"></i> Комментарий:
-              </span>
-              <span class="detail-value">{{ transaction.comment }}</span>
+            <div class="transaction-actions-expanded">
+              <button @click="editTransaction(transaction)" class="btn btn-sm btn-info">
+                <i class="fas fa-edit"></i> Редактировать
+              </button>
+              <button @click="confirmDelete(transaction)" class="btn btn-sm btn-danger">
+                <i class="fas fa-trash"></i> Удалить
+              </button>
             </div>
           </div>
         </div>
@@ -140,12 +159,12 @@
             <tr v-for="transaction in transactions" :key="transaction.id">
               <td>{{ transaction.id }}</td>
               <td>{{ formatDate(transaction.create_at) }}</td>
-              <td :class="transaction.transaction_type === 'income' ? 'text-success' : 'text-danger'">
+              <td :class="getTransactionType(transaction) === 'income' ? 'text-success' : 'text-danger'">
                 <strong>{{ formatCurrency(transaction.amount) }}</strong>
               </td>
               <td>
-                <span class="badge" :class="transaction.transaction_type === 'income' ? 'badge-success' : 'badge-danger'">
-                  {{ transaction.transaction_type === 'income' ? 'Доход' : 'Расход' }}
+                <span class="badge" :class="getTransactionType(transaction) === 'income' ? 'badge-success' : 'badge-danger'">
+                  {{ getTransactionType(transaction) === 'income' ? 'Доход' : 'Расход' }}
                 </span>
               </td>
               <td>{{ transaction.category?.name || '—' }}</td>
@@ -182,7 +201,7 @@
       </button>
     </div>
 
-    <!-- Modals (оставляем без изменений) -->
+    <!-- Add/Edit Modal -->
     <div v-if="showAddModal" class="modal" @click.self="closeModal">
       <div class="modal-content">
         <div class="modal-header">
@@ -235,6 +254,7 @@
       </div>
     </div>
 
+    <!-- Delete Modal -->
     <div v-if="showDeleteModal" class="modal" @click.self="showDeleteModal = false">
       <div class="modal-content">
         <div class="modal-header">
@@ -264,6 +284,7 @@ export default {
     const incomeCategories = ref([])
     const expenseCategories = ref([])
     const loading = ref(false)
+    const expandedTransactions = ref(new Set())
 
     // Пагинация
     const currentPage = ref(1)
@@ -281,7 +302,7 @@ export default {
       create_at_after: '',
       create_at_before: ''
     })
-    
+
     // Активные фильтры
     const activeFilters = ref({
       type: '',
@@ -308,15 +329,60 @@ export default {
       comment: ''
     })
 
+    // Функция для получения типа транзакции
+    const getTransactionType = (transaction) => {
+      if (!transaction) return 'expense'
+
+      // 1. Прямое поле transaction_type
+      if (transaction.transaction_type) {
+        return transaction.transaction_type
+      }
+
+      // 2. Поле type
+      if (transaction.type) {
+        return transaction.type
+      }
+
+      // 3. Определяем по типу категории (самый надежный способ для вашего API)
+      if (transaction.category && transaction.category.type_transaction) {
+        return transaction.category.type_transaction
+      }
+
+      // 4. Если есть ID категории, но нет объекта, пробуем найти категорию в загруженных списках
+      if (transaction.category_id) {
+        const allCategories = [...incomeCategories.value, ...expenseCategories.value]
+        const foundCategory = findCategoryById(allCategories, transaction.category_id)
+        if (foundCategory && foundCategory.type_transaction) {
+          return foundCategory.type_transaction
+        }
+      }
+
+      // 5. По умолчанию расход
+      console.warn('Не удалось определить тип транзакции:', transaction)
+      return 'expense'
+    }
+
+    // Вспомогательная функция для поиска категории по ID
+    const findCategoryById = (categories, id) => {
+      for (const cat of categories) {
+        if (cat.id === id) return cat
+        if (cat.children && cat.children.length) {
+          const found = findCategoryById(cat.children, id)
+          if (found) return found
+        }
+      }
+      return null
+    }
+
     const activeAccounts = computed(() => {
       if (!accounts.value || !Array.isArray(accounts.value)) {
         return []
       }
-      // Фильтруем только активные счета
       return accounts.value.filter(acc => acc && acc.is_active === true)
     })
 
     const availableCategories = computed(() => {
+      // Используем тип из формы для фильтрации категорий
       const categories = formData.value.type === 'income' ? incomeCategories.value : expenseCategories.value
       return flattenCategories(categories)
     })
@@ -324,10 +390,15 @@ export default {
     const flattenCategories = (categories, level = 0) => {
       let result = []
       if (!categories || !Array.isArray(categories)) return result
-      
+
       for (const cat of categories) {
         if (cat) {
-          result.push({ ...cat, level, name: cat.name })
+          result.push({
+            ...cat,
+            level,
+            name: cat.name,
+            type_transaction: cat.type_transaction // Сохраняем тип категории
+          })
           if (cat.children && cat.children.length) {
             result = result.concat(flattenCategories(cat.children, level + 1))
           }
@@ -336,7 +407,16 @@ export default {
       return result
     }
 
-    // Загрузка транзакций
+    const toggleExpand = (transactionId) => {
+      if (expandedTransactions.value.has(transactionId)) {
+        expandedTransactions.value.delete(transactionId)
+      } else {
+        expandedTransactions.value.add(transactionId)
+      }
+      // Создаем новый Set для триггера реактивности
+      expandedTransactions.value = new Set(expandedTransactions.value)
+    }
+
     const loadTransactions = async () => {
       console.log('loadTransactions вызван')
       loading.value = true
@@ -345,7 +425,7 @@ export default {
           page: currentPage.value,
           page_size: pageSize.value
         }
-        
+
         Object.keys(activeFilters.value).forEach(key => {
           if (activeFilters.value[key] && activeFilters.value[key] !== '') {
             params[key] = activeFilters.value[key]
@@ -355,12 +435,26 @@ export default {
         console.log('Отправляем запрос с параметрами:', params)
         const response = await apiService.getTransactions(params)
         console.log('Получен ответ:', response)
-        
-        transactions.value = response.results || []
+
+        // Обрабатываем транзакции, добавляя информацию о типе из категории
+        const processedTransactions = (response.results || []).map(transaction => {
+          // Если у транзакции нет типа, но есть категория, добавляем тип из категории
+          if (!transaction.transaction_type && transaction.category && transaction.category.type_transaction) {
+            transaction.transaction_type = transaction.category.type_transaction
+          }
+          return transaction
+        })
+
+        transactions.value = processedTransactions
         totalItems.value = response.count || 0
         totalPages.value = Math.ceil(totalItems.value / pageSize.value)
-        
+
         console.log(`Загружено ${transactions.value.length} транзакций`)
+        // Выводим первую транзакцию для отладки
+        if (transactions.value.length > 0) {
+          console.log('Пример транзакции:', transactions.value[0])
+          console.log('Тип первой транзакции:', getTransactionType(transactions.value[0]))
+        }
       } catch (error) {
         console.error('Error loading transactions:', error)
         transactions.value = []
@@ -376,17 +470,13 @@ export default {
       try {
         const response = await apiService.getAccounts(1, 100)
         console.log('Ответ от API счетов:', response)
-        
-        // ИСПРАВЛЕННАЯ ЛОГИКА - извлекаем счета из правильной структуры
+
         let accountsData = []
-        
-        // Проверяем структуру ответа
+
         if (response.results && response.results.length > 0 && response.results[0].accounts) {
-          // Счета находятся в response.results[0].accounts
           accountsData = response.results[0].accounts
           console.log('Счета из response.results[0].accounts:', accountsData)
         } else if (response.results && Array.isArray(response.results)) {
-          // Альтернативная структура
           accountsData = response.results
         } else if (response.accounts && Array.isArray(response.accounts)) {
           accountsData = response.accounts
@@ -396,15 +486,14 @@ export default {
           console.log('Неизвестная структура ответа:', response)
           accountsData = []
         }
-        
+
         accounts.value = accountsData
         console.log(`Загружено ${accounts.value.length} счетов`)
-        
-        // Выводим информацию о каждом счете
+
         accounts.value.forEach((acc, index) => {
           console.log(`Счет ${index + 1}: ${acc.name} (ID: ${acc.id}), баланс: ${acc.balance}, активен: ${acc.is_active}`)
         })
-        
+
       } catch (error) {
         console.error('Ошибка при загрузке счетов:', error)
         accounts.value = []
@@ -415,13 +504,23 @@ export default {
     const loadCategories = async () => {
       console.log('Загрузка категорий...')
       try {
-        const [incomeData, expenseData] = await Promise.all([
-          apiService.getCategories('income', 1, 100, true),
-          apiService.getCategories('expense', 1, 100, true)
-        ])
-        
-        incomeCategories.value = incomeData.results || incomeData.data || []
-        expenseCategories.value = expenseData.results || expenseData.data || []
+        // Загружаем все категории без фильтрации по типу
+        const allCategoriesResponse = await apiService.getCategories('', 1, 100, true)
+        console.log('Все категории:', allCategoriesResponse)
+
+        let allCategories = []
+        if (allCategoriesResponse.results && Array.isArray(allCategoriesResponse.results)) {
+          allCategories = allCategoriesResponse.results
+        } else if (Array.isArray(allCategoriesResponse)) {
+          allCategories = allCategoriesResponse
+        } else if (allCategoriesResponse.data && Array.isArray(allCategoriesResponse.data)) {
+          allCategories = allCategoriesResponse.data
+        }
+
+        // Разделяем категории по типу
+        incomeCategories.value = allCategories.filter(cat => cat.type_transaction === 'income')
+        expenseCategories.value = allCategories.filter(cat => cat.type_transaction === 'expense')
+
         console.log('Категории доходов:', incomeCategories.value.length)
         console.log('Категории расходов:', expenseCategories.value.length)
       } catch (error) {
@@ -506,7 +605,7 @@ export default {
         } else {
           await apiService.createTransaction(formData.value.type, data)
         }
-        
+
         closeModal()
         await loadTransactions()
         await loadAccounts()
@@ -518,12 +617,13 @@ export default {
 
     const editTransaction = (transaction) => {
       editingTransaction.value = transaction
+      const transactionType = getTransactionType(transaction)
       formData.value = {
-        type: transaction.transaction_type || transaction.type,
+        type: transactionType,
         amount: transaction.amount,
         category: transaction.category?.id || '',
         account: transaction.account?.id || '',
-        create_at: transaction.create_at.slice(0, 16),
+        create_at: transaction.create_at?.slice(0, 16) || new Date().toISOString().slice(0, 16),
         comment: transaction.comment || ''
       }
       showAddModal.value = true
@@ -538,7 +638,7 @@ export default {
       try {
         await apiService.deleteTransaction(transactionToDelete.value.id)
         showDeleteModal.value = false
-        
+
         if (transactions.value.length === 1 && currentPage.value > 1) {
           currentPage.value--
         }
@@ -556,12 +656,12 @@ export default {
     }
 
     const formatCurrency = (value) => {
-      if (!value) return '0 ₽'
-      return new Intl.NumberFormat('ru-RU', { 
-        style: 'currency', 
+      if (!value && value !== 0) return '0 ₽'
+      return new Intl.NumberFormat('ru-RU', {
+        style: 'currency',
         currency: 'RUB',
         minimumFractionDigits: 0,
-        maximumFractionDigits: 2 
+        maximumFractionDigits: 2
       }).format(value)
     }
 
@@ -571,6 +671,16 @@ export default {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }
+
+    const formatShortDate = (dateString) => {
+      if (!dateString) return ''
+      return new Date(dateString).toLocaleString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
         hour: '2-digit',
         minute: '2-digit'
       })
@@ -598,6 +708,9 @@ export default {
       editingTransaction,
       transactionToDelete,
       formData,
+      expandedTransactions,
+      getTransactionType,
+      toggleExpand,
       openAddModal,
       saveTransaction,
       editTransaction,
@@ -610,13 +723,15 @@ export default {
       nextPage,
       onTypeChange,
       formatCurrency,
-      formatDate
+      formatDate,
+      formatShortDate
     }
   }
 }
 </script>
 
 <style scoped>
+/* ... все стили остаются без изменений ... */
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -751,7 +866,7 @@ export default {
   color: var(--danger-color);
 }
 
-/* Стили для карточек транзакций (мобильная и планшетная версия) */
+/* Компактные карточки для мобильных устройств */
 .mobile-transactions {
   display: none;
 }
@@ -760,60 +875,91 @@ export default {
   background: var(--white);
   border: 1px solid var(--light-color);
   border-radius: var(--radius);
-  padding: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+  transition: all 0.3s ease;
 }
 
-.transaction-header {
+.transaction-compact {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--light-color);
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-.transaction-date {
+.transaction-compact:hover {
+  background-color: #f9fafb;
+}
+
+.compact-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.transaction-date-compact {
   font-size: 0.75rem;
   color: var(--gray-color);
+  min-width: 70px;
 }
 
-.transaction-actions-mobile {
+.compact-right {
   display: flex;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-.btn-icon {
+.transaction-amount-compact {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.expand-icon {
   background: none;
   border: none;
   cursor: pointer;
   padding: 0.25rem;
   color: var(--gray-color);
   transition: color 0.3s;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
 }
 
-.btn-icon:hover {
+.expand-icon:hover {
+  background-color: var(--light-color);
   color: var(--primary-color);
 }
 
-.btn-icon-danger:hover {
-  color: var(--danger-color);
+.transaction-expanded {
+  padding: 1rem;
+  border-top: 1px solid var(--light-color);
+  background-color: #fafafa;
+  animation: slideDown 0.3s ease;
 }
 
-.transaction-amount {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-  text-align: center;
-  padding: 0.5rem;
-  background: var(--light-color);
-  border-radius: var(--radius);
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .transaction-details {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
 }
 
 .detail-item {
@@ -828,7 +974,7 @@ export default {
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.5rem;
 }
 
 .detail-value {
@@ -836,6 +982,16 @@ export default {
   text-align: right;
   word-break: break-word;
   max-width: 60%;
+}
+
+.transaction-actions-expanded {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.transaction-actions-expanded .btn-sm {
+  padding: 0.5rem 1rem;
 }
 
 .empty-state {
@@ -850,7 +1006,6 @@ export default {
   opacity: 0.5;
 }
 
-/* Десктопная таблица */
 .desktop-table {
   display: block;
   overflow-x: auto;
@@ -873,148 +1028,132 @@ export default {
   color: var(--gray-color);
 }
 
-/* Адаптивные стили - для планшетов и мобильных */
 @media (max-width: 1024px) {
   .desktop-table {
     display: none;
   }
-  
+
   .mobile-transactions {
     display: block;
   }
-  
+
   .filters-header {
     display: flex;
   }
-  
+
   .filters {
     display: grid;
     padding: 1rem;
   }
-  
+
   .filters-hidden {
     display: none;
   }
-  
+
   .card {
     padding: 0;
   }
 }
 
-/* Для мобильных устройств (до 768px) */
 @media (max-width: 768px) {
   .page-header {
     flex-direction: column;
     text-align: center;
   }
-  
+
   .page-header h1 {
     font-size: 1.5rem;
   }
-  
+
   .page-header .btn {
     width: 100%;
   }
-  
+
   .filters {
     grid-template-columns: 1fr;
     gap: 0.75rem;
   }
-  
+
   .filter-actions {
     flex-direction: column;
   }
-  
+
   .filter-actions .btn {
     width: 100%;
   }
-  
+
   .pagination {
     flex-wrap: wrap;
   }
-  
-  .pagination-text {
-    display: inline;
+
+  .compact-left {
+    gap: 0.5rem;
   }
-  
-  /* Модальные окна */
+
+  .transaction-date-compact {
+    min-width: 60px;
+    font-size: 0.7rem;
+  }
+
+  .transaction-amount-compact {
+    font-size: 0.9rem;
+  }
+
+  .badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.6rem;
+  }
+
   .modal-content {
     width: 95%;
     margin: 1rem;
     max-height: 85vh;
   }
-  
+
   .modal-header h3 {
     font-size: 1.1rem;
   }
-  
+
   .form-group {
     margin-bottom: 0.75rem;
   }
-  
-  .form-label {
-    font-size: 0.8rem;
-  }
-  
+
   .form-control {
     font-size: 16px;
-    padding: 0.5rem;
-  }
-  
-  .modal-footer {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  
-  .modal-footer .btn {
-    width: 100%;
   }
 }
 
-/* Для очень маленьких экранов (до 480px) */
 @media (max-width: 480px) {
-  .transaction-amount {
-    font-size: 1rem;
+  .transaction-compact {
+    padding: 0.6rem 0.75rem;
   }
-  
+
+  .compact-left {
+    gap: 0.4rem;
+  }
+
+  .transaction-date-compact {
+    min-width: 55px;
+    font-size: 0.65rem;
+  }
+
   .detail-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.25rem;
   }
-  
+
   .detail-value {
     max-width: 100%;
     text-align: left;
   }
-  
-  .pagination-info {
-    font-size: 0.875rem;
-  }
-  
-  .pagination .btn {
-    padding: 0.5rem;
-  }
-}
 
-/* Для планшетов в горизонтальной ориентации (1025px-1280px) */
-@media (min-width: 1025px) and (max-width: 1280px) {
-  .desktop-table {
-    display: block;
+  .transaction-actions-expanded {
+    flex-direction: column;
   }
-  
-  .mobile-transactions {
-    display: none;
-  }
-  
-  .table th,
-  .table td {
-    padding: 0.5rem;
-    font-size: 0.875rem;
-  }
-  
-  .btn-sm {
-    padding: 0.2rem 0.4rem;
+
+  .transaction-actions-expanded .btn-sm {
+    width: 100%;
   }
 }
 </style>

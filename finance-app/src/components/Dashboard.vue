@@ -1,30 +1,30 @@
 <template>
-  <div>
-    <h1 style="margin-bottom: 2rem;">Дашборд</h1>
-    
+  <div class="dashboard-container">
+    <h1 class="dashboard-title">Дашборд</h1>
+
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-title">Общий баланс</div>
         <div class="stat-value">{{ formatCurrency(totalBalance) }}</div>
       </div>
-      
+
       <div class="stat-card">
         <div class="stat-title">Доходы (месяц)</div>
         <div class="stat-value text-success">{{ formatCurrency(monthlyIncome) }}</div>
       </div>
-      
+
       <div class="stat-card">
         <div class="stat-title">Расходы (месяц)</div>
         <div class="stat-value text-danger">{{ formatCurrency(monthlyExpense) }}</div>
       </div>
     </div>
-    
+
     <!-- Быстрые действия и курсы валют -->
     <div class="actions-panel">
       <button @click="showAddTransaction = true" class="btn btn-success">
         <i class="fas fa-exchange-alt"></i> Добавить транзакцию
       </button>
-      
+
       <div class="exchange-rates" v-if="exchangeRates.length > 0">
         <div v-for="rate in exchangeRates" :key="rate.code" class="rate-item" :title="`Курс ЦБ РФ на ${rate.date}`">
           <span class="rate-currency">{{ rate.code }}</span>
@@ -36,45 +36,69 @@
       </div>
       <div v-else-if="!exchangeRatesLoading" class="exchange-rates-placeholder"></div>
     </div>
-    
+
     <!-- Последние доходы -->
     <div class="card">
       <div class="card-header">
         <h3 class="card-title">Последние доходы</h3>
         <router-link to="/transactions?type=income" class="btn btn-secondary">Все доходы</router-link>
       </div>
-      
-      <!-- Для мобильных и планшетов: карточки -->
+
+      <!-- Мобильные и планшетные карточки с раскрытием -->
       <div class="mobile-transactions">
         <div v-for="transaction in recentIncomes" :key="transaction.id" class="transaction-card">
-          <div class="transaction-header">
-            <div class="transaction-date">{{ formatDate(transaction.create_at) }}</div>
-            <span class="badge badge-success">Доход</span>
-          </div>
-          <div class="transaction-amount text-success">
-            {{ formatCurrency(transaction.amount) }}
-          </div>
-          <div class="transaction-details">
-            <div class="detail-item">
-              <span class="detail-label">Категория:</span>
-              <span class="detail-value">{{ transaction.category?.name || '—' }}</span>
+          <div class="transaction-compact" @click="toggleIncomeExpand(transaction.id)">
+            <div class="compact-left">
+              <div class="transaction-date-compact">{{ formatShortDate(transaction.create_at) }}</div>
+              <span class="badge badge-success">Доход</span>
             </div>
-            <div class="detail-item">
-              <span class="detail-label">Счет:</span>
-              <span class="detail-value">{{ transaction.account?.name || '—' }}</span>
+            <div class="compact-right">
+              <div class="transaction-amount-compact text-success">
+                {{ formatCurrency(transaction.amount) }}
+              </div>
+              <button class="expand-icon" @click.stop="toggleIncomeExpand(transaction.id)">
+                <i :class="expandedIncomes.has(transaction.id) ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
+              </button>
             </div>
-            <div v-if="transaction.comment" class="detail-item">
-              <span class="detail-label">Комментарий:</span>
-              <span class="detail-value">{{ transaction.comment }}</span>
+          </div>
+
+          <!-- Раскрывающаяся часть -->
+          <div v-if="expandedIncomes.has(transaction.id)" class="transaction-expanded">
+            <div class="transaction-details-expanded">
+              <div class="detail-item">
+                <span class="detail-label">
+                  <i class="fas fa-calendar"></i> Полная дата:
+                </span>
+                <span class="detail-value">{{ formatDate(transaction.create_at) }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">
+                  <i class="fas fa-folder"></i> Категория:
+                </span>
+                <span class="detail-value">{{ transaction.category?.name || '—' }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">
+                  <i class="fas fa-credit-card"></i> Счет:
+                </span>
+                <span class="detail-value">{{ transaction.account?.name || '—' }}</span>
+              </div>
+              <div v-if="transaction.comment" class="detail-item">
+                <span class="detail-label">
+                  <i class="fas fa-comment"></i> Комментарий:
+                </span>
+                <span class="detail-value">{{ transaction.comment }}</span>
+              </div>
             </div>
           </div>
         </div>
         <div v-if="recentIncomes.length === 0" class="empty-state">
-          Нет доходов
+          <i class="fas fa-money-bill-wave"></i>
+          <p>Нет доходов</p>
         </div>
       </div>
-      
-      <!-- Для десктопа: таблица -->
+
+      <!-- Десктопная таблица -->
       <div class="desktop-table">
         <table class="table">
           <thead>
@@ -101,45 +125,69 @@
         </table>
       </div>
     </div>
-    
+
     <!-- Последние расходы -->
     <div class="card">
       <div class="card-header">
         <h3 class="card-title">Последние расходы</h3>
         <router-link to="/transactions?type=expense" class="btn btn-secondary">Все расходы</router-link>
       </div>
-      
-      <!-- Для мобильных и планшетов: карточки -->
+
+      <!-- Мобильные и планшетные карточки с раскрытием -->
       <div class="mobile-transactions">
         <div v-for="transaction in recentExpenses" :key="transaction.id" class="transaction-card">
-          <div class="transaction-header">
-            <div class="transaction-date">{{ formatDate(transaction.create_at) }}</div>
-            <span class="badge badge-danger">Расход</span>
-          </div>
-          <div class="transaction-amount text-danger">
-            {{ formatCurrency(transaction.amount) }}
-          </div>
-          <div class="transaction-details">
-            <div class="detail-item">
-              <span class="detail-label">Категория:</span>
-              <span class="detail-value">{{ transaction.category?.name || '—' }}</span>
+          <div class="transaction-compact" @click="toggleExpenseExpand(transaction.id)">
+            <div class="compact-left">
+              <div class="transaction-date-compact">{{ formatShortDate(transaction.create_at) }}</div>
+              <span class="badge badge-danger">Расход</span>
             </div>
-            <div class="detail-item">
-              <span class="detail-label">Счет:</span>
-              <span class="detail-value">{{ transaction.account?.name || '—' }}</span>
+            <div class="compact-right">
+              <div class="transaction-amount-compact text-danger">
+                {{ formatCurrency(transaction.amount) }}
+              </div>
+              <button class="expand-icon" @click.stop="toggleExpenseExpand(transaction.id)">
+                <i :class="expandedExpenses.has(transaction.id) ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
+              </button>
             </div>
-            <div v-if="transaction.comment" class="detail-item">
-              <span class="detail-label">Комментарий:</span>
-              <span class="detail-value">{{ transaction.comment }}</span>
+          </div>
+
+          <!-- Раскрывающаяся часть -->
+          <div v-if="expandedExpenses.has(transaction.id)" class="transaction-expanded">
+            <div class="transaction-details-expanded">
+              <div class="detail-item">
+                <span class="detail-label">
+                  <i class="fas fa-calendar"></i> Полная дата:
+                </span>
+                <span class="detail-value">{{ formatDate(transaction.create_at) }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">
+                  <i class="fas fa-folder"></i> Категория:
+                </span>
+                <span class="detail-value">{{ transaction.category?.name || '—' }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">
+                  <i class="fas fa-credit-card"></i> Счет:
+                </span>
+                <span class="detail-value">{{ transaction.account?.name || '—' }}</span>
+              </div>
+              <div v-if="transaction.comment" class="detail-item">
+                <span class="detail-label">
+                  <i class="fas fa-comment"></i> Комментарий:
+                </span>
+                <span class="detail-value">{{ transaction.comment }}</span>
+              </div>
             </div>
           </div>
         </div>
         <div v-if="recentExpenses.length === 0" class="empty-state">
-          Нет расходов
+          <i class="fas fa-receipt"></i>
+          <p>Нет расходов</p>
         </div>
       </div>
-      
-      <!-- Для десктопа: таблица -->
+
+      <!-- Десктопная таблица -->
       <div class="desktop-table">
         <table class="table">
           <thead>
@@ -166,7 +214,7 @@
         </table>
       </div>
     </div>
-    
+
     <!-- Modal: Добавить транзакцию -->
     <div v-if="showAddTransaction" class="modal" @click.self="showAddTransaction = false">
       <div class="modal-content">
@@ -174,7 +222,7 @@
           <h3>Добавить транзакцию</h3>
           <button class="modal-close" @click="showAddTransaction = false">&times;</button>
         </div>
-        
+
         <form @submit.prevent="addTransaction">
           <div class="form-group">
             <label class="form-label">Тип</label>
@@ -183,12 +231,12 @@
               <option value="expense">Расход</option>
             </select>
           </div>
-          
+
           <div class="form-group">
             <label class="form-label">Сумма</label>
             <input type="number" v-model="newTransaction.amount" class="form-control" step="0.01" required>
           </div>
-          
+
           <div class="form-group">
             <label class="form-label">Категория</label>
             <select v-model="newTransaction.category" class="form-control" required>
@@ -198,7 +246,7 @@
               </option>
             </select>
           </div>
-          
+
           <div class="form-group">
             <label class="form-label">Счет</label>
             <select v-model="newTransaction.account" class="form-control" required>
@@ -208,12 +256,12 @@
               </option>
             </select>
           </div>
-          
+
           <div class="form-group">
             <label class="form-label">Комментарий</label>
             <textarea v-model="newTransaction.comment" class="form-control" rows="2"></textarea>
           </div>
-          
+
           <div class="modal-footer">
             <button type="button" @click="showAddTransaction = false" class="btn btn-secondary">Отмена</button>
             <button type="submit" class="btn btn-primary">Добавить</button>
@@ -243,8 +291,10 @@ export default {
     const exchangeRates = ref([])
     const exchangeRatesLoading = ref(true)
     const exchangeRatesError = ref(false)
+    const expandedIncomes = ref(new Set())
+    const expandedExpenses = ref(new Set())
     let ratesUpdateInterval = null
-    
+
     const newTransaction = ref({
       type: 'expense',
       amount: '',
@@ -252,10 +302,10 @@ export default {
       account: '',
       comment: ''
     })
-    
+
     // --- Логика валют ---
     const CURRENCIES_TO_SHOW = ['USD', 'EUR', 'CNY']
-    
+
     const fetchExchangeRates = async () => {
       exchangeRatesLoading.value = true
       exchangeRatesError.value = false
@@ -263,7 +313,7 @@ export default {
         const response = await fetch('https://www.cbr-xml-daily.ru/daily_json.js')
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
         const data = await response.json()
-        
+
         const rates = []
         for (const code of CURRENCIES_TO_SHOW) {
           if (data.Valute[code]) {
@@ -288,20 +338,39 @@ export default {
         exchangeRatesLoading.value = false
       }
     }
-    
+
+    // Функции для раскрытия карточек
+    const toggleIncomeExpand = (transactionId) => {
+      if (expandedIncomes.value.has(transactionId)) {
+        expandedIncomes.value.delete(transactionId)
+      } else {
+        expandedIncomes.value.add(transactionId)
+      }
+      expandedIncomes.value = new Set(expandedIncomes.value)
+    }
+
+    const toggleExpenseExpand = (transactionId) => {
+      if (expandedExpenses.value.has(transactionId)) {
+        expandedExpenses.value.delete(transactionId)
+      } else {
+        expandedExpenses.value.add(transactionId)
+      }
+      expandedExpenses.value = new Set(expandedExpenses.value)
+    }
+
     // --- Статистика за месяц ---
     const loadMonthlyStatistics = async () => {
       const now = new Date()
       const month = now.getMonth() + 1
       const year = now.getFullYear()
-      
+
       try {
         const expenseStats = await apiService.getStatistics(month, year, 'expense')
         monthlyExpense.value = parseFloat(expenseStats.total_amount) || 0
-        
+
         const incomeStats = await apiService.getStatistics(month, year, 'income')
         monthlyIncome.value = parseFloat(incomeStats.total_amount) || 0
-        
+
         console.log(`Статистика за ${month}.${year}: доходы=${monthlyIncome.value}, расходы=${monthlyExpense.value}`)
       } catch (error) {
         console.error('Error loading monthly statistics:', error)
@@ -309,32 +378,27 @@ export default {
         monthlyExpense.value = 0
       }
     }
-    
+
     const loadData = async () => {
       loading.value = true
       try {
-        // Загрузка счетов (только для баланса и выбора в модалке)
         const accountsData = await apiService.getAccounts(1, 100)
         accounts.value = accountsData.results[0]?.accounts || []
-        
-        // Загрузка доходов (последние 5)
+
         const incomeData = await apiService.getTransactions({ page: 1, page_size: 5, type: 'income' })
         incomeTransactionsList.value = (incomeData.results || []).map(t => ({ ...t, transaction_type: 'income' }))
-        
-        // Загрузка расходов (последние 5)
+
         const expenseData = await apiService.getTransactions({ page: 1, page_size: 5, type: 'expense' })
         expenseTransactionsList.value = (expenseData.results || []).map(t => ({ ...t, transaction_type: 'expense' }))
-        
-        // Загрузка категорий
+
         const incomeCatData = await apiService.getCategories('income', 1, 100, true)
         incomeCategories.value = incomeCatData.results || []
-        
+
         const expenseCatData = await apiService.getCategories('expense', 1, 100, true)
         expenseCategories.value = expenseCatData.results || []
-        
-        // Загрузка статистики за текущий месяц
+
         await loadMonthlyStatistics()
-        
+
         console.log('Загружено доходов:', incomeTransactionsList.value.length)
         console.log('Загружено расходов:', expenseTransactionsList.value.length)
       } catch (error) {
@@ -343,13 +407,13 @@ export default {
         loading.value = false
       }
     }
-    
+
     const addTransaction = async () => {
       if (!newTransaction.value.category || !newTransaction.value.account) {
         alert('Заполните все поля')
         return
       }
-      
+
       try {
         await apiService.createTransaction(newTransaction.value.type, {
           amount: newTransaction.value.amount,
@@ -372,46 +436,58 @@ export default {
         alert('Ошибка при создании транзакции')
       }
     }
-    
+
     const formatCurrency = (value) => {
       if (!value && value !== 0) return '0 ₽'
       return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(value)
     }
-    
+
     const formatDate = (dateString) => {
       if (!dateString) return ''
-      return new Date(dateString).toLocaleDateString('ru-RU')
+      return new Date(dateString).toLocaleDateString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      })
     }
-    
+
+    const formatShortDate = (dateString) => {
+      if (!dateString) return ''
+      return new Date(dateString).toLocaleDateString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }
+
     const totalBalance = computed(() => {
       return accounts.value
         .filter(acc => acc.is_active)
         .reduce((sum, acc) => sum + parseFloat(acc.balance), 0)
     })
-    
+
     const activeAccounts = computed(() => {
       return accounts.value.filter(acc => acc.is_active)
     })
-    
-    // Последние 5 доходов
+
     const recentIncomes = computed(() => {
       return [...incomeTransactionsList.value]
         .sort((a, b) => new Date(b.create_at) - new Date(a.create_at))
         .slice(0, 5)
     })
-    
-    // Последние 5 расходов
+
     const recentExpenses = computed(() => {
       return [...expenseTransactionsList.value]
         .sort((a, b) => new Date(b.create_at) - new Date(a.create_at))
         .slice(0, 5)
     })
-    
+
     const availableCategories = computed(() => {
       const categories = newTransaction.value.type === 'income' ? incomeCategories.value : expenseCategories.value
       return flattenCategories(categories)
     })
-    
+
     const flattenCategories = (categories, level = 0) => {
       let result = []
       for (const cat of categories) {
@@ -422,19 +498,19 @@ export default {
       }
       return result
     }
-    
+
     onMounted(() => {
       loadData()
       fetchExchangeRates()
       ratesUpdateInterval = setInterval(fetchExchangeRates, 3600000)
     })
-    
+
     onBeforeUnmount(() => {
       if (ratesUpdateInterval) {
         clearInterval(ratesUpdateInterval)
       }
     })
-    
+
     return {
       accounts,
       loading,
@@ -450,15 +526,30 @@ export default {
       exchangeRates,
       exchangeRatesLoading,
       exchangeRatesError,
+      expandedIncomes,
+      expandedExpenses,
+      toggleIncomeExpand,
+      toggleExpenseExpand,
       addTransaction,
       formatCurrency,
-      formatDate
+      formatDate,
+      formatShortDate
     }
   }
 }
 </script>
 
 <style scoped>
+/* Увеличенный отступ сверху для дашборда */
+.dashboard-container {
+  padding-top: 0.5rem;
+}
+
+.dashboard-title {
+  margin-bottom: 2rem;
+  margin-top: 0;
+}
+
 /* Панель действий и курсы */
 .actions-panel {
   display: flex;
@@ -585,7 +676,7 @@ export default {
   color: #991b1b;
 }
 
-/* Мобильные карточки */
+/* Мобильные карточки с раскрытием */
 .mobile-transactions {
   display: none;
 }
@@ -594,34 +685,90 @@ export default {
   background: var(--white);
   border: 1px solid var(--light-color);
   border-radius: var(--radius);
-  padding: 1rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+  transition: all 0.3s ease;
 }
 
-.transaction-header {
+.transaction-compact {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--light-color);
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-.transaction-date {
+.transaction-compact:hover {
+  background-color: #f9fafb;
+}
+
+.compact-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.transaction-date-compact {
   font-size: 0.75rem;
   color: var(--gray-color);
+  min-width: 65px;
 }
 
-.transaction-amount {
-  font-size: 1.25rem;
+.compact-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.transaction-amount-compact {
+  font-size: 1rem;
   font-weight: 700;
-  margin-bottom: 0.75rem;
 }
 
-.transaction-details {
+.expand-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  color: var(--gray-color);
+  transition: color 0.3s;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.expand-icon:hover {
+  background-color: var(--light-color);
+  color: var(--primary-color);
+}
+
+.transaction-expanded {
+  padding: 1rem;
+  border-top: 1px solid var(--light-color);
+  background-color: #fafafa;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.transaction-details-expanded {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .detail-item {
@@ -634,6 +781,9 @@ export default {
 .detail-label {
   color: var(--gray-color);
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .detail-value {
@@ -647,6 +797,16 @@ export default {
   text-align: center;
   padding: 2rem;
   color: var(--gray-color);
+}
+
+.empty-state i {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.5;
+}
+
+.empty-state p {
+  margin: 0;
 }
 
 /* Десктопная таблица */
@@ -690,131 +850,170 @@ export default {
   .desktop-table {
     display: none;
   }
-  
+
   .mobile-transactions {
     display: block;
   }
-  
+
   .stats-grid {
     gap: 1rem;
   }
-  
+
   .stat-value {
     font-size: 1.5rem;
   }
-  
+
   .card {
     padding: 1rem;
   }
-  
+
   .card-header {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .card-header .btn {
     width: 100%;
     text-align: center;
   }
-  
+
   .card-title {
     text-align: center;
   }
-  
+
   .actions-panel {
     flex-direction: column;
     align-items: stretch;
     gap: 1rem;
   }
-  
+
   .exchange-rates {
     justify-content: center;
   }
 }
 
 @media (max-width: 768px) {
-  h1 {
+  .dashboard-container {
+    padding-top: 0;
+  }
+
+  .dashboard-title {
     font-size: 1.5rem;
-    margin-bottom: 1rem !important;
+    margin-bottom: 1rem;
     text-align: center;
   }
-  
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .stat-card {
     padding: 1rem;
   }
-  
+
   .stat-title {
     font-size: 0.75rem;
   }
-  
+
+  .stat-value {
+    font-size: 1.25rem;
+  }
+
+  .compact-left {
+    gap: 0.5rem;
+  }
+
+  .transaction-date-compact {
+    min-width: 55px;
+    font-size: 0.7rem;
+  }
+
+  .transaction-amount-compact {
+    font-size: 0.9rem;
+  }
+
+  .badge {
+    font-size: 0.7rem;
+  }
+
   .modal-content {
     width: 95%;
     margin: 1rem;
     max-height: 85vh;
   }
-  
+
   .modal-header h3 {
     font-size: 1.1rem;
   }
-  
+
   .form-group {
     margin-bottom: 0.75rem;
   }
-  
+
   .form-label {
     font-size: 0.8rem;
   }
-  
+
   .form-control {
     font-size: 16px;
     padding: 0.5rem;
   }
-  
+
   .modal-footer {
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   .modal-footer .btn {
     width: 100%;
   }
 }
 
 @media (max-width: 480px) {
-  h1 {
+  .dashboard-title {
     font-size: 1.25rem;
   }
-  
+
   .stat-value {
-    font-size: 1.25rem;
-  }
-  
-  .transaction-amount {
     font-size: 1rem;
   }
-  
+
+  .transaction-compact {
+    padding: 0.6rem 0.75rem;
+  }
+
+  .compact-left {
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .transaction-date-compact {
+    min-width: 50px;
+  }
+
   .detail-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.25rem;
   }
-  
+
   .detail-value {
     max-width: 100%;
     text-align: left;
   }
-  
+
   .exchange-rates {
     width: 100%;
     justify-content: space-between;
   }
-  
+
   .rate-item {
     font-size: 0.75rem;
+  }
+
+  .expand-icon {
+    width: 36px;
+    height: 36px;
   }
 }
 
