@@ -13,6 +13,7 @@ import TransactionsList from './components/TransactionsList.vue'
 import TransferForm from './components/TransferForm.vue'
 import DebtsList from './components/DebtsList.vue'
 import Statistics from './components/Statistics.vue'
+import TimesheetsView from './components/TimesheetsView.vue'
 
 const routes = [
   { path: '/', component: Dashboard, meta: { requiresAuth: true } },
@@ -23,7 +24,8 @@ const routes = [
   { path: '/transfers', component: TransferForm, meta: { requiresAuth: true } },
   { path: '/debts', component: DebtsList, meta: { requiresAuth: true } },
   { path: '/statistics', component: Statistics, meta: { requiresAuth: true } },
-  { path: '/profile', name: 'Profile', component: Profile,  meta: { requiresAuth: true } }
+  { path: '/profile', name: 'Profile', component: Profile,  meta: { requiresAuth: true } },
+  { path: '/timesheets', name: 'timesheets', component: TimesheetsView, meta: { requiresAuth: true }}
 ]
 
 const router = createRouter({

@@ -28,13 +28,13 @@ class SpecificShift(BaseModel):
     base_hours: float
     date: str
     earned: float
-    earned_cold: float
+    earned_cold: float | None = None
+    earned_overtime: float | None = None
     earned_hours: float
     period: int
     valute: Valute
     award_amount: float | None = None
     count_operations: float | None = None
-    notes: str | None = None
 
 
 class ManyAddShifts(BaseModel):

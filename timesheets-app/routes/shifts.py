@@ -40,7 +40,7 @@ async def create_shift(
 
 @shift_router.put(
     path="/",
-    status_code=status.HTTP_201_CREATED,
+    status_code=status.HTTP_200_OK,
     response_model=SuccessSchema
 )
 async def update_shift(user_id: int, data: ShiftSchema) -> SuccessSchema:
@@ -116,7 +116,7 @@ async def delete_shift_by_day_id(day_id: str):
 
 
 @shift_router.post(
-    path="/{day_id}/many/",
+    path="/many/",
     status_code=status.HTTP_201_CREATED,
     response_model=SuccessSchema
 )

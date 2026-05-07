@@ -31,17 +31,16 @@ async def create_user_settings(
     status_code=status.HTTP_200_OK,
     response_model=SettingsSchema
 )
-async def get_user_settings(user: int):
+async def get_user_settings(user_id: int):
     """Get user settings by ID."""
-    settings_data: dict = await get_settings_user_by_id(user_id=user)
+    settings_data: dict = await get_settings_user_by_id(user_id=user_id)
     return SettingsSchema(**settings_data)
 
 
 @settings_router.delete(
     path="/",
-    status_code=status.HTTP_200_OK,
-    response_model=SettingsSchema
+    status_code=status.HTTP_204_NO_CONTENT
 )
-async def delete_user_settings(user: int):
+async def delete_user_settings(user_id: int):
     """Delete user settings by ID."""
-    return await delete_settings(user_id=user)
+    await delete_settings(user_id=user_id)
