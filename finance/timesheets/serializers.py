@@ -104,20 +104,6 @@ class ShiftsRequestSerializer(serializers.Serializer):
         help_text="Список дат в формате YYYY-MM-DD"
     )
 
-    def validate_hours(self, value):
-        if value <= 0:
-            raise serializers.ValidationError("Количество часов должно быть положительным")
-        if value > 24:
-            raise serializers.ValidationError("Количество часов не может превышать 24")
-        return value
-
-    def validate_dates(self, value):
-        today = date.today()
-        for d in value:
-            if d < today:
-                raise serializers.ValidationError(f"Дата {d} не может быть в прошлом")
-        return value
-
     def validate(self, data):
         # Уникальные даты
         if len(data['dates']) != len(set(data['dates'])):
