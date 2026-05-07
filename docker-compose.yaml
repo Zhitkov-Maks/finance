@@ -1,4 +1,5 @@
 services:
+  # ========== БАЗЫ ДАННЫХ ==========
   finance_db:
     image: postgres:15-alpine
     container_name: finance-db
@@ -21,6 +22,32 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    expose:
+      - "5432"
+
+  mongodb:
+    image: mongo:7.0
+    container_name: mongodb
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${DB_MONGO_NAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_MONGO_PASS}
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - app_network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    expose:
+      - "27017"
+
+  # ========== БЭКЕНДЫ ==========
 
   django_app:
     build:
@@ -46,38 +73,68 @@ services:
       retries: 3
       start_period: 40s
 
+  fastapi:
+    build:
+      context: ./timesheets-app
+      dockerfile: Dockerfile
+    container_name: fastapi
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - MONGODB_URL=mongodb://${DB_MONGO_NAME}:${DB_MONGO_PASS}@mongodb:27017
+      - DEBUG=False
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - app_network
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ========== ФРОНТЕНД ==========
+
   vue_app:
     build:
       context: ./finance-app
     container_name: vue-app
     restart: unless-stopped
-    expose:
-      - "80"
     depends_on:
       django_app:
         condition: service_started
     networks:
       - app_network
+    expose:
+      - "80"
+
+  # ========== SWAG (NGINX С SSL) ==========
 
   swag:
-    image: lscr.io/linuxserver/swag:latest      # Официальный образ
-    container_name: swag                        # Имя контейнера
+    image: lscr.io/linuxserver/swag:latest
+    container_name: swag
     cap_add:
-      - NET_ADMIN                               # Права для работы fail2ban [citation:4]
+      - NET_ADMIN
     environment:
-      - PUID=1000                               # ID вашего пользователя
-      - PGID=1000                               # ID вашей группы
-      - TZ=Europe/Moscow                        # Ваш часовой пояс
-      - URL=m-zhitkov.ru                        # ★ ВАШ ГОЛОВНОЙ ДОМЕН
-      - SUBDOMAINS=www                          # Поддомены через запятую (можно www,portainer)
-      - VALIDATION=http                         # Способ проверки домена (через HTTP)
-      - EMAIL=m-zhitkov@inbox.ru                # ★ ВАША ПОЧТА (для уведомлений Let's Encrypts
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Moscow
+      - URL=m-zhitkov.ru
+      - SUBDOMAINS=www
+      - VALIDATION=http
+      - EMAIL=m-zhitkov@inbox.ru
+      - ONLY_SUBDOMAINS=false
     volumes:
-      - ./swag-config:/config                   # Папка для всех настроек SWAG на вашем сервере
+      - ./swag_config:/config
       - ./nginx-conf:/config/nginx/site-confs:rw
     ports:
-      - 80:80                                   # Порты 80 и 443 должны быть открыты
-      - 443:443
+      - "80:80"
+      - "443:443"
     restart: unless-stopped
     networks:
       - app_network
@@ -86,9 +143,13 @@ services:
         condition: service_healthy
       vue_app:
         condition: service_started
+      fastapi:
+        condition: service_healthy
+
 networks:
   app_network:
     driver: bridge
 
 volumes:
   postgres_data:
+  mongodb_data:

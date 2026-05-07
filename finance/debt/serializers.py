@@ -27,6 +27,7 @@ class AccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = Account
         fields = ['id', 'name']
+        ref_name = 'DebtAccount'
 
 
 class TransferDebtSerializer(serializers.ModelSerializer):

@@ -1,3 +1,6 @@
+from fastapi import HTTPException
+from starlette import status
+
 from database.db_conf import MongoDB
 
 
@@ -31,7 +34,13 @@ async def get_settings_user_by_id(user_id: int) -> dict:
 
         if data is not None:
             return data
-        return {}
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "result": False,
+                "description": "Пользователь не найден."
+            }
+        )
     finally:
         client.close()
 
@@ -46,5 +55,15 @@ async def delete_settings(user_id) -> None:
     try:
         collection = client.get_collection("users_settings")
         collection.delete_one({"user_id": user_id})
+
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "result": False,
+                "description": "Пользователь не найден."
+            }
+        )
+
     finally:
         client.close()

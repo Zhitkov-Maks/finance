@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'transfer.apps.TransferConfig',
     'transactions.apps.TransactionsConfig',
     'analytics.apps.AnalyticsConfig',
+    'timesheets.apps.TimesheetsConfig',
     'django_filters',
     'drf_spectacular',
     'corsheaders',
@@ -83,10 +84,11 @@ USE_X_FORWARDED_PORT = True
 if DEBUG:
     # Режим разработки - широкие разрешения
     CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOW_CREDENTIALS = True
     CORS_ALLOWED_ORIGINS = [
         "http://localhost",
         "http://localhost:80",
-        "http://localhost:8080",
+        "http://localhost:8000",
         "http://localhost:5173",
         "http://127.0.0.1",
         "http://127.0.0.1:8001",
@@ -133,13 +135,11 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-CORS_ALLOW_CREDENTIALS = True
-
 # CSRF настройки
 if DEBUG:
     CSRF_TRUSTED_ORIGINS = [
         "http://localhost",
-        "http://localhost:80",
+        "http://localhost:8000",
         "http://127.0.0.1",
         "http://vue_app",
         "http://nginx_proxy",
@@ -279,7 +279,7 @@ SPECTACULAR_SETTINGS = {
         'url': 'https://opensource.org/licenses/MIT',
     },
     'SERVERS': [
-        {'url': 'http://localhost:8001', 'description': 'Локальная среда разработки'},
+        {'url': 'http://localhost:8000', 'description': 'Локальная среда разработки'},
         {'url': 'https://m-zhitkov.ru', 'description': 'Продакшн'},
     ],
     'SCHEMA_PATH_PREFIX': '/api/',

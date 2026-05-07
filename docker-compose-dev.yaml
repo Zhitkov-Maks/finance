@@ -1,4 +1,16 @@
+version: '3.8'
+
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  mongodb_data:
+
 services:
+  # ========== БАЗЫ ДАННЫХ ==========
+  
   finance_db:
     image: postgres:15-alpine
     container_name: finance-db
@@ -22,13 +34,37 @@ services:
       retries: 5
       start_period: 10s
 
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    env_file:
+      - .env
+    environment:
+      - "MONGO_INITDB_ROOT_USERNAME=${DB_MONGO_NAME}"
+      - "MONGO_INITDB_ROOT_PASSWORD=${DB_MONGO_PASS}"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - app_network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ========== БЭКЕНДЫ ==========
+  
   django_app:
     build:
       context: ./finance
     container_name: api
     restart: unless-stopped
-    expose:
-      - "8001"
+    ports:
+      - "8001:8001"  # Пробрасываем порт для доступа извне
     env_file:
       - .env
     depends_on:
@@ -46,6 +82,30 @@ services:
       retries: 3
       start_period: 40s
 
+  fastapi:
+    build: ./timesheets-app
+    container_name: fastapi
+    restart: always
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - MONGODB_URL=mongodb://${DB_MONGO_NAME}:${DB_MONGO_PASS}@mongodb:27017
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ========== ФРОНТЕНД ==========
+  
   vue_app:
     build:
       context: ./finance-app
@@ -56,9 +116,13 @@ services:
     depends_on:
       django_app:
         condition: service_started
+      fastapi:
+        condition: service_started
     networks:
       - app_network
 
+  # ========== NGINX (ОБРАТНЫЙ ПРОКСИ) ==========
+  
   nginx:
     image: nginx:1.25-alpine
     container_name: nginx-proxy
@@ -72,6 +136,8 @@ services:
         condition: service_healthy
       vue_app:
         condition: service_started
+      fastapi:
+        condition: service_started
     networks:
       - app_network
     healthcheck:
@@ -80,10 +146,3 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-
-networks:
-  app_network:
-    driver: bridge
-
-volumes:
-  postgres_data:

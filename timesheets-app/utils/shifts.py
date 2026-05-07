@@ -39,7 +39,10 @@ async def dictionary_formation(shift) -> dict:
         "earned_cold": shift.get("earned_cold", 0),
         "earned_hours": shift.get("earned_hours"),
         "period": shift.get("period"),
-        "valute": shift.get("valute")
+        "valute": shift.get("valute"),
+        "award_amount": shift.get("award_amount", 0),
+        "count_operations": shift.get("count_operations", 0),
+        "earned_overtime": shift.get("earned_overtime", 0)
     }
 
 

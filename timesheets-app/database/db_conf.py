@@ -6,7 +6,7 @@ from pymongo.errors import ConnectionFailure
 from config import DB_MONGO_NAME, DB_MONGO_PASS
 
 
-MONGO_URI = f"mongodb://{DB_MONGO_NAME}:{DB_MONGO_PASS}@localhost:27017"
+MONGO_URI = f"mongodb://{DB_MONGO_NAME}:{DB_MONGO_PASS}@mongodb"
 
 
 class MongoDB:

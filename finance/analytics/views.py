@@ -16,6 +16,7 @@ from .filter import MonthlyAnalyticsService
 from .schemas import transaction_analytic_schema
 
 
+@extend_schema(tags=["Analytics"])
 @transaction_analytic_schema
 class GetAnalyticForMonth(generics.GenericAPIView):
     """Get monthly analytics."""
