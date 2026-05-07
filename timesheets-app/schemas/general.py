@@ -12,8 +12,17 @@ class SuccessSchema(BaseModel):
 
 
 class NotFound(BaseModel):
-    result: bool
-    description: str
+    """A class for dealing with errors that occur if no result is found."""
+    result: bool = Field(
+        ...,
+        description="False when a 404 error occurs."
+    )
+    description: str = Field(
+        ...,
+        description="A detailed description of the circumstances under"
+                    " which the error occurred."
+    )
 
 class NotFoundShift(BaseModel):
+    """A class that provides detailed information about the error."""
     detail: NotFound
