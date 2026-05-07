@@ -15,6 +15,11 @@
           <i class="fas fa-tachometer-alt"></i>
           <span>Дашборд</span>
         </router-link>
+
+        <router-link to="/timesheets" class="nav-item" @click="closeMobileMenu">
+          <i class="fas fa-calendar-alt"></i>
+          <span>Мой график</span>
+        </router-link>
         
         <router-link to="/accounts" class="nav-item" @click="closeMobileMenu">
           <i class="fas fa-credit-card"></i>
