@@ -1448,12 +1448,12 @@ export default {
 }
 
 .calendar-day.weekend-with-shift {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: #8B0000;
   color: white;
 }
 
 .calendar-day.has-shift {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #000080 100%);
   color: white;
   box-shadow: 0 2px 8px rgba(59,130,246,0.3);
 }
