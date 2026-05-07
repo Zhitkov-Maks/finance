@@ -602,6 +602,36 @@ export default {
       return !!(period.dollar || period.euro || period.yena || period.som)
     }
 
+    // Общая функция для обработки ошибок API
+    const handleApiError = (error, defaultMessage = 'Произошла ошибка') => {
+      console.error('API Error:', error)
+      
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail
+        
+        if (Array.isArray(detail)) {
+          // Формируем сообщение для каждого поля
+          const errors = detail.map(err => {
+            const field = err.loc?.filter(l => l !== 'body').join('.') || 'неизвестное поле'
+            // Убираем префикс "Value error, " если он есть
+            const cleanMsg = err.msg.replace(/^Value error,\s*/, '')
+            return `${field}: ${cleanMsg}`
+          })
+          showNotification(`Ошибка валидации:\n${errors.join('\n')}`, 'error')
+        } else if (typeof detail === 'string') {
+          showNotification(detail, 'error')
+        } else if (detail.message) {
+          showNotification(detail.message, 'error')
+        } else {
+          showNotification(defaultMessage, 'error')
+        }
+      } else if (error.message) {
+        showNotification(error.message, 'error')
+      } else {
+        showNotification(defaultMessage, 'error')
+      }
+    }
+
     const loadShifts = async () => {
       try {
         const month = currentDate.value.getMonth() + 1
@@ -609,8 +639,7 @@ export default {
         const response = await apiService.getShiftsByMonth(month, year)
         shifts.value = response.result || []
       } catch (error) {
-        console.error('Error loading shifts:', error)
-        showNotification('Ошибка при загрузке смен', 'error')
+        handleApiError(error, 'Ошибка при загрузке смен')
       }
     }
 
@@ -621,7 +650,7 @@ export default {
         const response = await apiService.getMonthlyStatistics(month, year)
         monthlyStats.value = response
       } catch (error) {
-        console.error('Error loading statistics:', error)
+        handleApiError(error, 'Ошибка при загрузке статистики')
       }
     }
 
@@ -632,8 +661,7 @@ export default {
         yearStats.value = response
         yearStatsYear.value = year
       } catch (error) {
-        console.error('Error loading year statistics:', error)
-        showNotification('Ошибка при загрузке годовой статистики', 'error')
+        handleApiError(error, 'Ошибка при загрузке годовой статистики')
       }
     }
 
@@ -989,8 +1017,7 @@ export default {
         closeShiftModal()
         await loadData()
       } catch (error) {
-        console.error('Error saving shift:', error)
-        showNotification('Ошибка при сохранении смены', 'error')
+        handleApiError(error, 'Ошибка при сохранении смены')
       }
     }
 
@@ -1004,8 +1031,7 @@ export default {
           closeShiftModal()
           await loadData()
         } catch (error) {
-          console.error('Error deleting shift:', error)
-          showNotification('Ошибка при удалении смены', 'error')
+          handleApiError(error, 'Ошибка при удалении смены')
         }
       }
     }
@@ -1023,8 +1049,7 @@ export default {
         await loadData()
         showNotification('Премия успешно добавлена', 'success')
       } catch (error) {
-        console.error('Error adding award:', error)
-        showNotification('Ошибка при добавлении премии', 'error')
+        handleApiError(error, 'Ошибка при добавлении премии')
       }
     }
 
@@ -1048,8 +1073,7 @@ export default {
         closeSettingsModal()
         await loadData()
       } catch (error) {
-        console.error('Error saving settings:', error)
-        showNotification('Ошибка при сохранении настроек', 'error')
+        handleApiError(error, 'Ошибка при сохранении настроек')
       }
     }
 
@@ -1062,8 +1086,7 @@ export default {
           showNotification('Настройки удалены', 'success')
           closeSettingsModal()
         } catch (error) {
-          console.error('Error deleting settings:', error)
-          showNotification('Ошибка при удалении настроек', 'error')
+          handleApiError(error, 'Ошибка при удалении настроек')
         }
       }
     }
@@ -1094,8 +1117,7 @@ export default {
         closeAddManyModal()
         await loadData()
       } catch (error) {
-        console.error('Error adding many shifts:', error)
-        showNotification('Ошибка при добавлении смен', 'error')
+        handleApiError(error, 'Ошибка при добавлении смен')
       }
     }
 
@@ -1130,10 +1152,10 @@ export default {
         year: 'numeric'
       })
     }
+
     const generateAvailableYears = () => {
       const currentYear = new Date().getFullYear()
       const years = []
-      // Генерируем годы от текущего - 10 до текущего + 2
       for (let i = currentYear - 10; i <= currentYear + 2; i++) {
         years.push(i)
       }
@@ -1148,15 +1170,14 @@ export default {
         console.error('Error loading year statistics:', error)
         yearStats.value = null
         if (error.response?.status === 404) {
-          // Нет данных за этот год - просто показываем пустое состояние
           return
         }
-        showNotification('Ошибка при загрузке годовой статистики', 'error')
+        handleApiError(error, 'Ошибка при загрузке годовой статистики')
       }
     }
 
     const openYearStatsModal = async () => {
-      generateAvailableYears()  // Обновляем список лет при открытии
+      generateAvailableYears()
       selectedYear.value = currentDate.value.getFullYear()
       await loadYearStatisticsForYear(selectedYear.value)
       showYearStatsModal.value = true
@@ -1223,7 +1244,7 @@ export default {
 
     onMounted(() => {
       loadData()
-      addNotificationStyles(),
+      addNotificationStyles()
       generateAvailableYears()
     })
 
