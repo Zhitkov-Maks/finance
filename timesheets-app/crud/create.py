@@ -10,52 +10,6 @@ from database.db_conf import MongoDB
 from utils.calculate import calc_valute
 
 
-async def write_other(
-    data: dict,
-    user: int,
-    valute_data: dict[str, float]
-) -> bool | Exception:
-    """
-    Add a new income record (without updating the existing ones).
-
-    :param valute_data:
-    :param data: Recording data.
-    :param user: ID user.
-    :return: True on success, False on error.
-    """
-    type_operation: str = data.get("type_")
-    required = {"amount", "description", "month", "year"}
-    if not all(field in data for field in required):
-        return False
-
-    parse_date = datetime(data.get("year"), data.get("month"), 1)
-
-    client = MongoDB()
-    try:
-        if type_operation == "income":
-            collection = client.get_collection("other_income")
-        else:
-            collection = client.get_collection("expenses")
-
-        record = {
-            "user_id": user,
-            "amount": float(data["amount"]),
-            "description": data["description"],
-            "month": int(data["month"]),
-            "year": int(data["year"]),
-            "valute": valute_data,
-            "date": parse_date
-        }
-
-        result = collection.insert_one(record)
-        return result.acknowledged
-
-    except Exception as err:
-        return err
-    finally:
-        client.close()
-
-
 async def write_salary(
     data: dict,
     user_id: int,
@@ -98,7 +52,7 @@ async def write_salary(
         client.close()
 
 
-async def delete_record(day_id: str) -> None:
+async def delete_record(day_id: str) -> dict:
     """
     Deleted the records from the database by user ID and date.
 
@@ -108,7 +62,9 @@ async def delete_record(day_id: str) -> None:
     try:
         collection = client.get_collection("salaries")
         object_id = ObjectId(day_id)
+        data = collection.find_one({"_id": object_id})
         collection.delete_one({"_id": object_id})
+        return data
     except InvalidId:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -117,22 +73,5 @@ async def delete_record(day_id: str) -> None:
                 "description": "Ошибка идентификатора."
             }
         )
-    finally:
-        client.close()
-
-
-async def remove_other_income_expense(collections: str, id_: str) -> None:
-    """
-    Delete the records from the database by record ID.
-
-    :param collections: Type of collection (other income or expenses).
-    :param id_: The ID of the record.
-    """
-    client: MongoDB = MongoDB()
-    try:
-        collection = client.get_collection(collections)
-        collection.delete_one({
-            "_id": id_
-        })
     finally:
         client.close()

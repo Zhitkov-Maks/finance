@@ -6,7 +6,8 @@ from schemas.shifts import (
     SpecificShift
 )
 from schemas.general import SuccessSchema, NotFoundShift
-from utils.salary import earned_for_award, earned_per_shift
+from utils.salary import earned_for_award, earned_per_shift, \
+    get_settings, normalization_salary_for_month
 from utils.shifts import (
     create_data_by_add_shifts, get_shifts_for_month,
     get_specific_shift,
@@ -112,7 +113,12 @@ async def create_award_for_day(
 )
 async def delete_shift_by_day_id(day_id: str):
     """Удалить запись о смене по идентификатору."""
-    await delete_record(day_id)
+    data = await delete_record(day_id)
+    user_id, date = data.get("user_id"), data.get("date")
+    settings: tuple = await get_settings(user_id)
+    await normalization_salary_for_month(
+        user_id, settings, {"year": date.year, "month": date.month}
+    )
 
 
 @shift_router.post(
