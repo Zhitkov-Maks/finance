@@ -554,9 +554,9 @@ export default {
     const showYearCurrency = ref(false)
 
     const openSections = ref({
-      period1: true,
-      period2: true,
-      total: true
+      period1: false,
+      period2: false,
+      total: false
     })
     const openCurrency = ref({
       period1: false,
