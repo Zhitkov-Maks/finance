@@ -46,7 +46,7 @@ async def dictionary_formation(shift) -> dict:
     }
 
 
-async def get_specific_shift(user_id, date: str) -> dict | bool:
+async def get_specific_shift(user_id, date: str) -> dict:
     shift = await get_info_by_date(user_id, date)
     if shift:
         return await dictionary_formation(shift)
@@ -118,7 +118,8 @@ async def save_shifts_all(
                 date=d,
                 valute_data=valute_data,
                 settings=settings,
-                total_hours=total_hours
+                total_hours=total_hours,
+                old_data={}
             )
             total_hours += float(time)
             salaries.append(salary)

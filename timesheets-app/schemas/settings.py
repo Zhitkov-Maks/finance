@@ -3,6 +3,10 @@ from pydantic import BaseModel
 
 
 class SettingsSchema(BaseModel):
+    """
+    A class for describing fields and the types of these
+    fields when working with salary settings.
+    """
     price_time: float = Field(..., description="Hourly wage")
     price_overtime: float = Field(..., description="Extra pay for overtime")
     price_cold: float = Field(

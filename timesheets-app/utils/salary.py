@@ -118,13 +118,12 @@ async def earned_per_shift(
     date: str
 ) -> None:
     """
-    Generate the amount earned per shift..
+    Generate the amount earned per shift.
 
-    :param data:
     :param time: Hours worked.
     :param user_id: The user's ID.
-    :return: The earned amount for the month.
     :param date: The date for recording.
+    :return: The earned amount for the month.
     """
     valute_data: dict[str, tuple[int, float]] = await get_valute_info()
     settings: tuple[float] = await get_settings(user_id)
@@ -135,6 +134,22 @@ async def earned_per_shift(
         user_id,
         settings,
         {"year": parse_date.year, "month": parse_date.month}
+    )
+
+
+async def critical_data(data: dict) -> tuple:
+    old_need_data = {}
+    if data.get("count_operations", 0) > 0:
+        old_need_data.update(
+            award_amount=data.get("award_amount"),
+            count_operations=data.get("count_operations")
+        )
+    return (
+        data.get("notes"),
+        data.get("base_hours"),
+        data.get("_id"),
+        data.get("date"),
+        old_need_data
     )
 
 
@@ -161,8 +176,7 @@ async def normalization_salary_for_month(
     salaries: list[dict] = []
 
     for item in sorted_result:
-        notes, time = item.get("notes"), item.get("base_hours")
-        day_id, date = item.get("_id"), item.get("date")
+        notes, time, day_id, date, old_data = await critical_data(item)
         await delete_record(day_id)
         salary = await recalculation_salary(
             time=time,
@@ -170,7 +184,8 @@ async def normalization_salary_for_month(
             date=date,
             valute_data=valute_data,
             settings=settings,
-            total_hours=total_hours
+            total_hours=total_hours,
+            old_data=old_data
         )
         total_hours += float(time)
         salaries.append(salary)
@@ -184,7 +199,8 @@ async def recalculation_salary(
     date,  # datetime.date
     valute_data,
     settings: tuple,
-    total_hours
+    total_hours,
+    old_data
 ) -> dict:
     """
     Recalculate the salary so that there are no errors in the calculations.
@@ -195,16 +211,22 @@ async def recalculation_salary(
     :param date: The date for recording.
     :param settings: User settings for the calculation.
     :param total_hours: The number of hours worked per month.
+    :param old_data: If there is information about the premium.
     """
     salary = await earned_calculation(
         settings, time, user_id, date, total_hours
     )
+    if old_data:
+        salary.update(
+            earned=(salary.get("earned") + old_data.get("award_amount"))
+        )
     salary.update(
         user_id=user_id,
         date=date,
         period=1 if date.day <= 15 else 2,
         valute=await calc_valute(salary.get("earned"), valute_data),
-        date_write=datetime.now()
+        date_write=datetime.now(),
+        **old_data
     )
     return salary
 
