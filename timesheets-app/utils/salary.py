@@ -83,9 +83,7 @@ async def earned_calculation(
     configuration: dict[str, float] = dict()
     year, month = date.year, date.month
     if total_hours is None:
-        total_hours: tuple[float] = await get_hours_for_month(
-            user_id, year, month
-        )
+        total_hours: float = await get_hours_for_month(user_id, year, month)
     norm_hours = 180 if month == 2 else 190
 
     earned_time = time * settings[0]  # Hourly payment.
