@@ -25,7 +25,7 @@ async def get_settings_user_by_id(user_id: int) -> dict:
     """
     Get the user's settings.
 
-    :param user_id: The telegram ID.
+    :param user_id: The user's ID.
     """
     client: MongoDB = MongoDB()
     try:

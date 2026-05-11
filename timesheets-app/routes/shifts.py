@@ -13,9 +13,9 @@ from utils.salary import (
     normalization_salary_for_month
 )
 from utils.shifts import (
-    create_data_by_add_shifts, get_shifts_for_month,
-    get_specific_shift,
-    get_specific_shift_by_day_id
+    add_shifts_for_month, get_shift_data_for_specific_date,
+    get_shifts_for_month,
+    get_shift_data_by_day_id
 )
 from crud.create import delete_record
 
@@ -61,11 +61,9 @@ async def get_list_shifts_for_month(
     user_id: int,
     year: int,
     month: int
-) -> ListShiftSchema:
+) -> dict[str, list[dict]]:
     """Получить список смен за месяц, для добавления в календарь."""
-    return ListShiftSchema(
-        result=await get_shifts_for_month(user_id, year, month)
-    )
+    return {"result": await get_shifts_for_month(user_id, year, month)}
 
 
 @shift_router.get(
@@ -76,7 +74,7 @@ async def get_list_shifts_for_month(
 )
 async def get_shift_by_concrete_day(user_id: int, date: str) -> dict:
     """Получить данные о смене по дате."""
-    return await get_specific_shift(user_id, date)
+    return await get_shift_data_for_specific_date(user_id, date)
 
 
 @shift_router.get(
@@ -86,7 +84,7 @@ async def get_shift_by_concrete_day(user_id: int, date: str) -> dict:
 )
 async def get_shift_by_day_id(day_id: str) -> dict:
     """Получить данные о смене по идентификатору смены."""
-    return await get_specific_shift_by_day_id(day_id)
+    return await get_shift_data_by_day_id(day_id)
 
 
 @shift_router.post(
@@ -133,5 +131,5 @@ async def create_shifts(
     data: dict = data.model_dump()
     time: float = data.get("hours")
     list_dates: list[str] = data.get("dates")
-    await create_data_by_add_shifts(user_id, time, list_dates)
+    await add_shifts_for_month(user_id, time, list_dates)
     return SuccessSchema(result=True)

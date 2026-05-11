@@ -19,14 +19,16 @@ async def write_salary(
     """
     Save or update the user's settings.
 
-    :param date:
-    :param user_id:
-    :param data:
+    :param date: The date of the completed shift.
+    :param user_id: The user's ID.
+    :param data: Shift data to save.
     :param valute_data: Information about the ruble exchange rate.
     """
     client: MongoDB = MongoDB()
     period: int = 1 if date.day <= 15 else 2
-    earned_in_valute = await calc_valute(data.get("earned"), valute_data)
+    earned_in_valute: dict[str, float] = await calc_valute(
+        data.get("earned"), valute_data
+    )
     data.update(
         period=period,
         valute=earned_in_valute,
