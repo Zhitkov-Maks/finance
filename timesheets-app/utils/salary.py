@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, UTC
 
 from fastapi import HTTPException
@@ -17,6 +18,7 @@ async def get_settings(user_id: int) -> tuple:
     Return the basic user settings.
 
     :param user_id: The user's ID.
+    :return tuple: The tuple and the user's settings.
     """
     settings: dict = await get_settings_user_by_id(user_id)
     if not settings:
@@ -45,13 +47,13 @@ async def calculation_overtime(
     Calculate how much the user earned per shift
     if he has already overworked by the hour.
 
-    :param settings: User settings.
+    :param settings: The user's settings.
     :param time: Time worked.
     :param norm: The standard of hours per month.
     :param total_hours: How many hours have been worked already this month.
     :return dict: A tuple with data to save.
     """
-    price, _, overtime, _ = settings
+    price, _, overtime, _ = settings  # Unpack the settings into variables
     time_over = (time + total_hours) - norm
     earned = round(
         min(time_over, time) * (price + overtime) +
@@ -64,14 +66,15 @@ async def earned_calculation(
     settings: tuple,
     time: float,
     user_id: int,
-    date,
+    date: datetime,
     total_hours=None
 ) -> dict:
     """
-    Create a dictionary for future storage in the database.
+    Calculation of earnings per shift, taking into account
+    all the input data.
 
-    :param total_hours:
-    :param settings: User settings.
+    :param total_hours: Total hours worked in a month.
+    :param settings: The user's settings.
     :param time: Time worked.
     :param user_id: User's ID.
     :param date: The date for adding the shift.
@@ -80,15 +83,11 @@ async def earned_calculation(
     configuration: dict[str, float] = dict()
     year, month = date.year, date.month
     if total_hours is None:
-        total_hours: tuple[float] = await get_hours_for_month(
-            user_id,
-            year,
-            month
-        )
+        total_hours: float = await get_hours_for_month(user_id, year, month)
     norm_hours = 180 if month == 2 else 190
 
-    earned_time = time * settings[0]
-    earned_cold = time * settings[1]
+    earned_time = time * settings[0]  # Hourly payment.
+    earned_cold = time * settings[1]  # Additional payment for cold
     configuration.update(
         base_hours=time,
         earned_cold=earned_cold,
@@ -125,27 +124,34 @@ async def earned_per_shift(
     :param date: The date for recording.
     :return: The earned amount for the month.
     """
-    valute_data: dict[str, tuple[int, float]] = await get_valute_info()
-    settings: tuple[float] = await get_settings(user_id)
     parse_date = datetime.strptime(date, "%Y-%m-%d")
+    settings = await get_settings(user_id)
+    valute_data = await get_valute_info()
     salary = await earned_calculation(settings, time, user_id, parse_date)
-    await write_salary(salary, user_id, parse_date, valute_data)
-    await normalization_salary_for_month(
-        user_id,
-        settings,
-        {"year": parse_date.year, "month": parse_date.month}
+    await asyncio.gather(
+        write_salary(salary, user_id, parse_date, valute_data),
+        normalization_salary_for_month(
+            user_id,
+            settings,
+            {"year": parse_date.year, "month": parse_date.month}
+        )
     )
 
 
 async def critical_data(data: dict) -> tuple:
-    old_need_data = {}
+    """
+    Critical data for overwriting shifts.
+
+    :param data: Information about the shift for a specific date.
+    :return: A tuple with critical data.
+    """
+    old_need_data: dict[str, float] = {}
     if data.get("count_operations", 0) > 0:
         old_need_data.update(
             award_amount=data.get("award_amount"),
             count_operations=data.get("count_operations")
         )
     return (
-        data.get("notes"),
         data.get("base_hours"),
         data.get("_id"),
         data.get("date"),
@@ -164,19 +170,19 @@ async def normalization_salary_for_month(
 
     :param user_id: The user's ID.
     :param settings: User settings.
-    :param data: User settings.
+    :param data: Year and month data.
     """
     year = data.get("year", datetime.now(UTC).year)
     month = data.get("month", datetime.now(UTC).month)
-    result = await get_information_for_month(user_id, year, month)
-    sorted_result = sorted(result, key=lambda x: x["date"])
+    result: list[dict] = await get_information_for_month(user_id, year, month)
+    sorted_result: list[dict] = sorted(result, key=lambda x: x["date"])
     valute_data: dict[str, tuple[int, float]] = await get_valute_info()
 
     total_hours = 0
     salaries: list[dict] = []
 
     for item in sorted_result:
-        notes, time, day_id, date, old_data = await critical_data(item)
+        time, day_id, date, old_data = await critical_data(item)
         await delete_record(day_id)
         salary = await recalculation_salary(
             time=time,
@@ -196,16 +202,16 @@ async def normalization_salary_for_month(
 async def recalculation_salary(
     time: float,
     user_id: int,
-    date,  # datetime.date
-    valute_data,
+    date: datetime,
+    valute_data: dict,
     settings: tuple,
-    total_hours,
-    old_data
+    total_hours: float,
+    old_data: dict
 ) -> dict:
     """
     Recalculate the salary so that there are no errors in the calculations.
 
-    :param valute_data:
+    :param valute_data: Information about the ruble exchange rate.
     :param time: Hours worked.
     :param user_id: The user's ID.
     :param date: The date for recording.
@@ -213,7 +219,7 @@ async def recalculation_salary(
     :param total_hours: The number of hours worked per month.
     :param old_data: If there is information about the premium.
     """
-    salary = await earned_calculation(
+    salary: dict = await earned_calculation(
         settings, time, user_id, date, total_hours
     )
     if old_data:
@@ -232,6 +238,12 @@ async def recalculation_salary(
 
 
 async def calc_in_currency(earned: float) -> dict:
+    """
+    Request a calculation of earnings in a foreign currency.
+
+    :param earned: How much is earned in total.
+    :return: Dictionary with values in foreign currency.
+    """
     current_valute: dict = await get_valute_info()
     return await calc_valute(earned, current_valute)
 

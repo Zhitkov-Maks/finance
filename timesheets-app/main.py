@@ -27,5 +27,5 @@ async def health_check() -> JSONResponse:
     """It is needed to inform about readiness for work."""
     return JSONResponse(
         status_code=200,
-        content={"status": "healthy", "service": "tracking_app"}
+        content={"status": "healthy", "service": "timesheets_app"}
     )

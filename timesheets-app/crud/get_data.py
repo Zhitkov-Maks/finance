@@ -13,6 +13,7 @@ async def get_salary_for_day(day_id: str) -> dict | None:
     Get the data for the day.
 
     :param day_id: The ID of the record.
+    :return dict: A dictionary with detailed information per shift.
     """
     client = MongoDB()
     try:
@@ -23,12 +24,14 @@ async def get_salary_for_day(day_id: str) -> dict | None:
         client.close()
 
 
-async def get_hours_for_month(user_id: int, year: int, month: int):
+async def get_hours_for_month(
+    user_id: int, year: int, month: int
+) -> float:
     """
     Aggregate the hours for the month.
 
-    :param month:
-    :param year:
+    :param month: The month for the request.
+    :param year: The year for the request.
     :param user_id: The user's ID.
     """
     client: MongoDB = MongoDB()

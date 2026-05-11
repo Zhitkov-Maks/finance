@@ -5,8 +5,11 @@ from fastapi import HTTPException, status
 from crud.many import add_many_shifts
 from crud.statistics import get_information_for_month, get_info_by_date
 from crud.get_data import get_salary_for_day
-from utils.salary import get_settings, normalization_salary_for_month, \
+from utils.salary import (
+    get_settings,
+    normalization_salary_for_month,
     recalculation_salary
+)
 from utils.valute import get_valute_info
 
 
@@ -14,9 +17,17 @@ async def get_shifts_for_month(
     user_id: int,
     year: int,
     month: int
-) -> list:
-    returned_shifts = []
-    shifts = await get_information_for_month(user_id, year, month)
+) -> list[dict[str, str]]:
+    """
+    Collect information about shifts for the selected month.
+
+    :param user_id: The user's ID.
+    :param year: The year for the database query.
+    :param month: The month for the database query.
+    :return: A list with brief information about shifts.
+    """
+    returned_shifts: list[dict[str, str]] = []
+    shifts: list[dict] = await get_information_for_month(user_id, year, month)
 
     for shift in shifts:
         returned_shifts.append(
@@ -30,7 +41,13 @@ async def get_shifts_for_month(
     return returned_shifts
 
 
-async def dictionary_formation(shift) -> dict:
+async def dictionary_formation(shift: dict) -> dict:
+    """
+    We select the necessary information to send to the user.
+
+    :param shift: Detailed information about the shift.
+    :return: Dictionary for serialization.
+    """
     return {
         "day_id": str(shift.get("_id")),
         "base_hours": shift.get("base_hours"),
@@ -46,8 +63,15 @@ async def dictionary_formation(shift) -> dict:
     }
 
 
-async def get_specific_shift(user_id, date: str) -> dict:
-    shift = await get_info_by_date(user_id, date)
+async def get_shift_data_for_specific_date(user_id: int, date: str) -> dict:
+    """
+    Requesting and processing information about a shift by user and date.
+
+    :param user_id: The user's ID.
+    :param date: The date for which the information is requested.
+    :return: Dictionary with information about the shift.
+    """
+    shift: dict = await get_info_by_date(user_id, date)
     if shift:
         return await dictionary_formation(shift)
     raise HTTPException(
@@ -58,8 +82,14 @@ async def get_specific_shift(user_id, date: str) -> dict:
         }
     )
 
-async def get_specific_shift_by_day_id(day_id: str) -> dict | bool:
-    shift = await get_salary_for_day(day_id)
+async def get_shift_data_by_day_id(day_id: str) -> dict:
+    """
+    Get shift data by ID.
+
+    :param day_id: The day's ID.
+    :return: Dictionary with information about the shift.
+    """
+    shift: dict = await get_salary_for_day(day_id)
     if shift:
         return await dictionary_formation(shift)
     raise HTTPException(
@@ -71,21 +101,22 @@ async def get_specific_shift_by_day_id(day_id: str) -> dict | bool:
     )
 
 
-async def create_data_by_add_shifts(
+async def add_shifts_for_month(
     user_id: int,
     time: float,
     list_dates: list[str]
 ) -> None:
     """
-    Create shift records for the user based on the provided data.
+    Form a list of sorted dates from the transmitted dates as a
+    string and send the data for saving.
 
     :param user_id: The user's ID.
-    :param time: The total number of hours worked.
+    :param time: The number of hours worked to calculate.
     :param list_dates: A list of string dates in the "YYYY-MM-DD"
                         format for which You need to create shift records.
     :return: None.
     """
-    date_objects = [datetime.strptime(d, "%Y-%m-%d") for d in list_dates]
+    date_objects: list = [datetime.strptime(d, "%Y-%m-%d") for d in list_dates]
     data = {"year": date_objects[0].year, "month": date_objects[0].month}
     sorted_dates = sorted(date_objects)
     await save_shifts_all(user_id, time, sorted_dates, data)
@@ -98,9 +129,10 @@ async def save_shifts_all(
     data: dict
 ) -> None:
     """
-    Saves with a progress bar.
+    Calculation of salary based on the provided data and
+    sending it for saving in the database.
 
-    :param data:
+    :param data: A dictionary with information about the year and month.
     :param user_id: The user's ID.
     :param time: The number of hours.
     :param sorted_dates: A sorted list of dates.
@@ -110,7 +142,8 @@ async def save_shifts_all(
         settings: tuple[float] = await get_settings(user_id)
 
         total_hours = 0
-        salaries = []
+        salaries: list[dict] = []
+        # We are creating a list for adding shifts en masse.
         for i, d in enumerate(sorted_dates, 1):
             salary = await recalculation_salary(
                 time=time,

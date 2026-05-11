@@ -114,10 +114,10 @@ async def statistics_for_year(year: int, user_id: int) -> dict:
 
 
 async def aggregate_data(
-        year: int,
-        month: int,
-        user_id: int,
-        period: int | None = None
+    year: int,
+    month: int,
+    user_id: int,
+    period: int | None = None
 ) -> dict | None:
     """
     Calculate the amount of hours worked for the period
