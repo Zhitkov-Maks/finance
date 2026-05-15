@@ -1,6 +1,8 @@
 <template>
   <div class="statistics-page">
-    <h1 class="page-title">Аналитика</h1>
+    <div class="page-header">
+      <h1 class="page-title">Аналитика</h1>
+    </div>
 
     <!-- Фильтры -->
     <div class="card filters-card">
@@ -88,7 +90,7 @@
     </div>
 
     <!-- Месячная статистика -->
-    <div class="card" v-if="selectedPeriod === 'month'">
+    <div class="card full-width-card" v-if="selectedPeriod === 'month'">
       <div class="card-header">
         <h3 class="card-title">Разбивка по категориям</h3>
         <div class="sort-buttons">
@@ -101,7 +103,7 @@
         </div>
       </div>
 
-      <!-- Круговая диаграмма -->
+      <!-- Круговая диаграмма на всю ширину -->
       <div class="pie-chart-section" v-if="statistics.length > 0">
         <div class="pie-chart-wrapper">
           <canvas id="pieChartCanvas" class="pie-chart-canvas"></canvas>
@@ -115,9 +117,9 @@
         </div>
       </div>
 
-      <!-- Список категорий -->
-      <div class="categories-list">
-        <div v-for="category in sortedStatistics" :key="category.id" class="category-item">
+      <!-- Список категорий на всю ширину -->
+      <div class="categories-list full-width">
+        <div v-for="category in sortedStatistics" :key="category.id" class="category-item full-width-item">
           <div class="category-header" @click="category.children?.length && toggleCategory(category.id)">
             <div class="category-name">
               <i v-if="category.children?.length" :class="expandedCategories[category.id] ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" class="expand-icon"></i>
@@ -169,7 +171,7 @@
     </div>
 
     <!-- Годовая статистика -->
-    <div class="card" v-if="selectedPeriod === 'year'">
+    <div class="card full-width-card" v-if="selectedPeriod === 'year'">
       <div class="card-header">
         <h3 class="card-title">Аналитика по месяцам</h3>
       </div>
@@ -290,7 +292,7 @@
     </div>
 
     <!-- График -->
-    <div class="card" v-if="selectedPeriod === 'year' && monthlyAnalytics.length > 0">
+    <div class="card full-width-card" v-if="selectedPeriod === 'year' && monthlyAnalytics.length > 0">
       <div class="card-header">
         <h3 class="card-title">Визуализация</h3>
       </div>
@@ -326,7 +328,6 @@ export default {
     const sortOrder = ref('desc')
     const categoryColors = ref({})
     let resizeObserver = null
-    let pieChartInitialized = false
 
     const years = computed(() => {
       const currentYear = new Date().getFullYear()
@@ -405,20 +406,11 @@ export default {
       const ctx = canvas.getContext('2d')
       if (!ctx) return
 
-      // Получаем размер контейнера
       const container = canvas.parentElement
       if (!container) return
 
       const containerWidth = container.clientWidth
-      // Размер круга: на мобильных 280px, на планшетах 300px, на десктопе 320px
-      let size = 320
-      if (containerWidth <= 480) {
-        size = Math.min(containerWidth - 40, 280)
-      } else if (containerWidth <= 768) {
-        size = Math.min(containerWidth - 60, 300)
-      } else {
-        size = Math.min(containerWidth - 80, 320)
-      }
+      let size = Math.min(containerWidth - 40, 350)
 
       canvas.width = size
       canvas.height = size
@@ -427,7 +419,7 @@ export default {
 
       const centerX = size / 2
       const centerY = size / 2
-      const radius = size / 2 - 25
+      const radius = size / 2 - 20
 
       ctx.clearRect(0, 0, size, size)
 
@@ -446,17 +438,16 @@ export default {
         ctx.arc(centerX, centerY, radius, startAngle, endAngle)
         ctx.fill()
         ctx.strokeStyle = '#ffffff'
-        ctx.lineWidth = 2
+        ctx.lineWidth = 1.5
         ctx.stroke()
 
-        // Добавляем текст процента для больших сегментов
-        if (percentage > 0.05) {
+        if (percentage > 0.08) {
           const midAngle = startAngle + angle / 2
           const textRadius = radius * 0.7
           const x = centerX + Math.cos(midAngle) * textRadius
           const y = centerY + Math.sin(midAngle) * textRadius
           ctx.fillStyle = '#ffffff'
-          const fontSize = size < 250 ? 10 : 12
+          const fontSize = size < 250 ? 11 : 13
           ctx.font = `bold ${fontSize}px Arial`
           ctx.shadowBlur = 0
           const percentText = `${getPercentage(category.total)}%`
@@ -627,7 +618,6 @@ export default {
       loadStatistics()
       window.addEventListener('resize', handleResize)
 
-      // Наблюдаем за изменением размера контейнера
       if (window.ResizeObserver) {
         resizeObserver = new ResizeObserver(() => {
           if (selectedPeriod.value === 'month' && statistics.value.length > 0) {
@@ -667,26 +657,45 @@ export default {
 .statistics-page {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 0 1rem;
+  padding: 0;
   background: #f3f4f6;
   min-height: 100vh;
 }
 
+.page-header {
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+}
+
 .page-title {
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   font-weight: 700;
-  margin-bottom: 1.5rem;
+  margin: 0;
   color: #1f2937;
+  text-align: center;
 }
 
 /* ========== Карточки ========== */
 .card {
   background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  margin-bottom: 1.5rem;
+  border-radius: 0;
+  box-shadow: none;
+  margin-bottom: 0.5rem;
   overflow: hidden;
-  border: 1px solid #e5e7eb;
+  border: none;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.full-width-card {
+  margin-left: 0;
+  margin-right: 0;
+  border-radius: 0;
+}
+
+.card:last-child {
+  margin-bottom: 0;
 }
 
 .card-header {
@@ -694,14 +703,14 @@ export default {
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 1rem;
-  padding: 1.25rem 1.5rem;
+  gap: 0.75rem;
+  padding: 1rem;
   border-bottom: 1px solid #e5e7eb;
   background: #ffffff;
 }
 
 .card-title {
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 600;
   margin: 0;
   color: #1f2937;
@@ -709,14 +718,14 @@ export default {
 
 /* ========== Фильтры ========== */
 .filters-card {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .filters-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem;
+  padding: 0.875rem 1rem;
   cursor: pointer;
   background: #f9fafb;
   border-bottom: 1px solid #e5e7eb;
@@ -727,14 +736,14 @@ export default {
 }
 
 .filters-title {
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 600;
   margin: 0;
   color: #374151;
 }
 
 .filters-body {
-  padding: 1.5rem;
+  padding: 1rem;
   background: #ffffff;
   transition: all 0.3s ease;
 }
@@ -744,27 +753,25 @@ export default {
 }
 
 .filters-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .filter-field {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.375rem;
 }
 
 .filter-label {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 500;
   color: #4b5563;
 }
 
 .filter-actions {
-  display: flex;
-  gap: 0.5rem;
+  margin-top: 0.5rem;
 }
 
 /* ========== Формы и кнопки ========== */
@@ -772,10 +779,11 @@ export default {
   padding: 0.5rem 0.75rem;
   border: 1px solid #d1d5db;
   border-radius: 8px;
-  font-size: 0.875rem;
+  font-size: 0.813rem;
   transition: all 0.2s;
   background: #ffffff;
   color: #1f2937;
+  width: 100%;
 }
 
 .form-control:hover {
@@ -792,18 +800,18 @@ export default {
   padding: 0.5rem 1rem;
   border: 1px solid #d1d5db;
   border-radius: 8px;
-  font-size: 0.875rem;
+  font-size: 0.813rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
   background: #f9fafb;
   color: #374151;
+  width: 100%;
 }
 
 .btn:hover {
   background: #f3f4f6;
   border-color: #9ca3af;
-  transform: translateY(-1px);
 }
 
 .btn-primary {
@@ -815,18 +823,18 @@ export default {
 .btn-primary:hover {
   background: #4f46e5;
   border-color: #4f46e5;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .btn-sort {
-  padding: 0.5rem 1rem;
+  padding: 0.375rem 0.75rem;
   background: #f9fafb;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  font-size: 0.813rem;
+  font-size: 0.75rem;
   cursor: pointer;
   transition: all 0.2s;
   color: #374151;
+  width: auto;
 }
 
 .btn-sort:hover {
@@ -848,41 +856,40 @@ export default {
 /* ========== Карточки статистики ========== */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  padding: 0 0.5rem;
 }
 
 .stat-card {
   background: #ffffff;
-  border-radius: 12px;
-  padding: 1.25rem;
+  border-radius: 10px;
+  padding: 0.875rem;
   text-align: center;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   border: 1px solid #e5e7eb;
-  transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+.stat-card:first-child {
+  grid-column: span 2;
 }
 
 .stat-card-title {
-  font-size: 0.75rem;
+  font-size: 0.688rem;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   color: #6b7280;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.375rem;
 }
 
 .stat-card-value {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 700;
 }
 
 .stat-card-subtitle {
-  font-size: 0.688rem;
+  font-size: 0.625rem;
   color: #9ca3af;
   margin-top: 0.25rem;
 }
@@ -894,20 +901,18 @@ export default {
 /* ========== Круговая диаграмма ========== */
 .pie-chart-section {
   display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-  justify-content: center;
+  flex-direction: column;
+  gap: 1rem;
   align-items: center;
-  padding: 1.5rem;
+  padding: 1rem;
   background: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
 }
 
 .pie-chart-wrapper {
-  flex-shrink: 0;
   display: flex;
   justify-content: center;
   align-items: center;
+  width: 100%;
   background: transparent;
 }
 
@@ -918,10 +923,8 @@ export default {
 }
 
 .pie-chart-legend {
-  flex: 1;
-  min-width: 180px;
-  max-width: 280px;
-  max-height: 320px;
+  width: 100%;
+  max-height: 250px;
   overflow-y: auto;
   background: #ffffff;
   border-radius: 8px;
@@ -932,7 +935,7 @@ export default {
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   padding: 0.5rem;
   border-bottom: 1px solid #e5e7eb;
 }
@@ -942,35 +945,48 @@ export default {
 }
 
 .legend-color {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 3px;
   flex-shrink: 0;
 }
 
 .legend-name {
   flex: 1;
-  font-size: 0.813rem;
+  font-size: 0.75rem;
   color: #374151;
 }
 
 .legend-percent {
-  font-size: 0.813rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: #6b7280;
 }
 
-/* ========== Список категорий ========== */
+/* ========== Список категорий на всю ширину ========== */
 .categories-list {
-  padding: 1.5rem;
+  padding: 0;
+}
+
+.categories-list.full-width {
+  padding: 0;
 }
 
 .category-item {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0;
   padding: 1rem;
-  background: #f9fafb;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.category-item:last-child {
+  border-bottom: none;
+}
+
+.category-item.full-width-item {
+  border-radius: 0;
 }
 
 .category-header {
@@ -992,31 +1008,33 @@ export default {
   align-items: center;
   gap: 0.5rem;
   font-weight: 600;
+  font-size: 0.875rem;
   color: #1f2937;
 }
 
 .expand-icon {
-  font-size: 0.75rem;
+  font-size: 0.688rem;
   color: #6b7280;
 }
 
 .placeholder-icon {
-  width: 16px;
+  width: 12px;
   visibility: hidden;
 }
 
 .category-total {
   font-weight: 600;
+  font-size: 0.875rem;
   color: #374151;
 }
 
 /* ========== Прогресс-бары ========== */
 .progress-wrapper {
-  margin-top: 0.75rem;
+  margin-top: 0.5rem;
 }
 
 .progress-bar {
-  height: 32px;
+  height: 28px;
   background: #e5e7eb;
   border-radius: 8px;
   overflow: hidden;
@@ -1024,7 +1042,7 @@ export default {
 }
 
 .progress-bar.small {
-  height: 28px;
+  height: 24px;
 }
 
 .progress-fill {
@@ -1032,10 +1050,10 @@ export default {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding-right: 10px;
+  padding-right: 8px;
   color: white;
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.688rem;
   transition: width 0.3s ease;
 }
 
@@ -1052,17 +1070,17 @@ export default {
 }
 
 .progress-text {
-  font-size: 0.75rem;
+  font-size: 0.688rem;
   text-shadow: 0 0 2px rgba(0,0,0,0.3);
 }
 
 .progress-text-small {
-  font-size: 0.688rem;
+  font-size: 0.625rem;
   text-shadow: 0 0 2px rgba(0,0,0,0.3);
 }
 
 .progress-percent-info {
-  font-size: 0.688rem;
+  font-size: 0.625rem;
   color: #6b7280;
   text-align: right;
   margin-top: 0.25rem;
@@ -1070,14 +1088,14 @@ export default {
 
 /* ========== Подкатегории ========== */
 .subcategories {
-  margin-top: 1rem;
-  padding-left: 1.5rem;
+  margin-top: 0.75rem;
+  padding-left: 1rem;
 }
 
 .subcategory-item {
-  margin-bottom: 1rem;
-  padding: 0.75rem;
-  background: #ffffff;
+  margin-bottom: 0.75rem;
+  padding: 0.625rem;
+  background: #f9fafb;
   border-radius: 8px;
   border: 1px solid #e5e7eb;
   border-left-width: 3px;
@@ -1089,38 +1107,38 @@ export default {
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.375rem;
 }
 
 .subcategory-name {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.813rem;
+  gap: 0.375rem;
+  font-size: 0.75rem;
   color: #4b5563;
 }
 
 .subcategory-total {
   font-weight: 600;
-  font-size: 0.813rem;
+  font-size: 0.75rem;
 }
 
 .subcategory-progress {
-  margin: 0.5rem 0;
+  margin: 0.375rem 0;
 }
 
 .subcategory-percent {
-  font-size: 0.688rem;
+  font-size: 0.625rem;
   color: #6b7280;
   text-align: right;
 }
 
 .expand-hint {
-  font-size: 0.75rem;
+  font-size: 0.688rem;
   color: #6366f1;
   cursor: pointer;
   text-align: right;
-  margin-top: 0.5rem;
+  margin-top: 0.375rem;
   padding: 0.25rem;
 }
 
@@ -1130,16 +1148,21 @@ export default {
 
 /* ========== Мобильные карточки месяцев ========== */
 .mobile-months-grid {
-  display: none;
-  padding: 1rem;
+  display: block;
+  padding: 0;
 }
 
 .mobile-month-card {
-  background: #f9fafb;
-  border-radius: 8px;
+  background: #ffffff;
+  border-radius: 0;
   padding: 1rem;
-  margin-bottom: 1rem;
-  border: 1px solid #e5e7eb;
+  margin-bottom: 0;
+  border: none;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.mobile-month-card:last-child {
+  border-bottom: none;
 }
 
 .mobile-month-header {
@@ -1148,7 +1171,7 @@ export default {
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid #e5e7eb;
 }
@@ -1162,113 +1185,53 @@ export default {
 
 .month-name-text {
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.875rem;
 }
 
 .mobile-month-amount {
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 700;
 }
 
 .mobile-stats-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .mobile-stat {
   text-align: center;
   padding: 0.5rem;
-  background: #ffffff;
+  background: #f9fafb;
   border-radius: 8px;
   border: 1px solid #e5e7eb;
 }
 
 .mobile-stat-label {
-  font-size: 0.688rem;
+  font-size: 0.625rem;
   color: #6b7280;
   margin-bottom: 0.25rem;
 }
 
 .mobile-stat-value {
-  font-size: 0.875rem;
+  font-size: 0.813rem;
   font-weight: 600;
 }
 
 .mobile-progress {
-  margin-top: 0.75rem;
+  margin-top: 0.5rem;
 }
 
 .progress-label {
-  font-size: 0.688rem;
+  font-size: 0.625rem;
   color: #6b7280;
   margin-bottom: 0.25rem;
 }
 
-/* ========== Десктоп таблица ========== */
+/* ========== Десктоп таблица (скрыта на мобильных) ========== */
 .desktop-table-wrapper {
-  overflow-x: auto;
-  padding: 0 1rem 1rem 1rem;
-}
-
-.analytics-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
-  background: #ffffff;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #e5e7eb;
-}
-
-.analytics-table th,
-.analytics-table td {
-  padding: 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.analytics-table th {
-  background: #f9fafb;
-  font-weight: 600;
-  color: #4b5563;
-  border-bottom: 2px solid #e5e7eb;
-}
-
-.analytics-table tr:last-child td {
-  border-bottom: none;
-}
-
-.analytics-table tr:hover td {
-  background: #f9fafb;
-}
-
-.table-month-cell {
-  white-space: nowrap;
-}
-
-.table-month-cell strong {
-  font-weight: 600;
-}
-
-.table-progress {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 100px;
-}
-
-.table-progress .progress-bar {
-  flex: 1;
-  margin: 0;
-}
-
-.table-progress-value {
-  font-size: 0.75rem;
-  font-weight: 500;
-  min-width: 40px;
-  color: #4b5563;
+  display: none;
 }
 
 /* ========== Тренд бейджи ========== */
@@ -1278,14 +1241,14 @@ export default {
   justify-content: center;
   padding: 0.125rem 0.375rem;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: 0.688rem;
   font-weight: 500;
 }
 
 .trend-badge.small {
-  font-size: 0.688rem;
+  font-size: 0.625rem;
   padding: 0.125rem 0.375rem;
-  margin-left: 0.5rem;
+  margin-left: 0.375rem;
 }
 
 .trend-badge.trend-up {
@@ -1306,42 +1269,36 @@ export default {
 /* ========== Годовая сводка ========== */
 .year-summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
-  padding: 1.5rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  padding: 1rem;
   border-top: 1px solid #e5e7eb;
   background: #f9fafb;
 }
 
 .summary-card {
   text-align: center;
-  padding: 0.75rem;
+  padding: 0.625rem;
   background: #ffffff;
   border-radius: 8px;
   border: 1px solid #e5e7eb;
-  transition: transform 0.2s;
-}
-
-.summary-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .summary-label {
-  font-size: 0.688rem;
+  font-size: 0.625rem;
   color: #6b7280;
   margin-bottom: 0.25rem;
 }
 
 .summary-value {
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: #1f2937;
 }
 
 /* ========== График ========== */
 .chart-section {
-  padding: 1.5rem;
+  padding: 1rem;
   overflow-x: auto;
   background: #ffffff;
 }
@@ -1354,8 +1311,8 @@ export default {
 
 .chart-note {
   text-align: center;
-  padding: 0.75rem;
-  font-size: 0.75rem;
+  padding: 0.5rem;
+  font-size: 0.688rem;
   color: #6b7280;
   border-top: 1px solid #e5e7eb;
   background: #f9fafb;
@@ -1364,13 +1321,13 @@ export default {
 /* ========== Пустое состояние ========== */
 .empty-state {
   text-align: center;
-  padding: 3rem;
+  padding: 2rem;
   color: #6b7280;
 }
 
 .empty-state i {
-  font-size: 3rem;
-  margin-bottom: 1rem;
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
   opacity: 0.5;
 }
 
@@ -1378,143 +1335,114 @@ export default {
   text-align: center;
 }
 
-/* ========== Адаптивность ========== */
-@media (max-width: 1024px) {
-  .filters-header {
-    display: flex;
+/* ========== Планшеты и десктоп ========== */
+@media (min-width: 768px) {
+  .statistics-page {
+    padding: 0 1rem;
   }
 
-  .filters-body {
-    padding: 1rem;
+  .page-header {
+    background: transparent;
+    border-bottom: none;
+    padding: 0;
+    margin-bottom: 1.5rem;
   }
 
-  .stats-grid {
-    gap: 0.75rem;
-  }
-
-  .stat-card-value {
-    font-size: 1.25rem;
-  }
-
-  .pie-chart-section {
-    flex-direction: column;
-  }
-
-  .pie-chart-legend {
-    max-width: 100%;
-    max-height: 250px;
-  }
-}
-
-@media (max-width: 768px) {
   .page-title {
-    font-size: 1.5rem;
-    text-align: center;
+    font-size: 1.75rem;
+    text-align: left;
+    padding: 0;
   }
 
-  .filters-grid {
-    grid-template-columns: 1fr;
+  .card {
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    border: 1px solid #e5e7eb;
   }
 
-  .filter-actions .btn {
-    width: 100%;
+  .full-width-card {
+    border-radius: 12px;
   }
 
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .stat-card:first-child {
-    grid-column: span 2;
-  }
-
-  .desktop-table-wrapper {
-    display: none;
-  }
-
-  .mobile-months-grid {
-    display: block;
-  }
-
-  .year-summary {
-    grid-template-columns: repeat(2, 1fr);
+  .card:last-child {
+    margin-bottom: 1.5rem;
   }
 
   .card-header {
-    flex-direction: column;
-    align-items: flex-start;
+    padding: 1.25rem 1.5rem;
   }
 
-  .sort-buttons {
-    width: 100%;
+  .filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
   }
 
-  .btn-sort {
-    flex: 1;
-    text-align: center;
+  .filter-actions .btn {
+    width: auto;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 0;
+    margin-bottom: 1.5rem;
+  }
+
+  .stat-card:first-child {
+    grid-column: auto;
+  }
+
+  .stat-card {
+    padding: 1.25rem;
+  }
+
+  .pie-chart-section {
+    flex-direction: row;
+    padding: 1.5rem;
+  }
+
+  .pie-chart-legend {
+    max-width: 280px;
+    max-height: 320px;
   }
 
   .categories-list {
-    padding: 1rem;
+    padding: 1.5rem;
+  }
+
+  .categories-list.full-width {
+    padding: 1.5rem;
   }
 
   .category-item {
-    padding: 0.75rem;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
   }
 
-  .subcategories {
-    padding-left: 0.75rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .stat-card-value {
-    font-size: 1rem;
-  }
-
-  .stat-card-title {
-    font-size: 0.688rem;
-  }
-
-  .year-summary {
-    grid-template-columns: 1fr;
-  }
-
-  .mobile-stats-grid {
-    gap: 0.5rem;
-  }
-
-  .mobile-stat-value {
-    font-size: 0.75rem;
-  }
-
-  .progress-bar {
-    height: 28px;
-  }
-
-  .progress-bar.small {
-    height: 24px;
-  }
-
-  .progress-text,
-  .progress-text-small {
-    font-size: 0.625rem;
-  }
-
-  .category-total {
-    font-size: 0.875rem;
-  }
-}
-
-@media (min-width: 769px) and (max-width: 1024px) {
-  .desktop-table-wrapper {
-    display: block;
+  .category-item.full-width-item {
+    border-radius: 10px;
   }
 
   .mobile-months-grid {
     display: none;
   }
 
+  .desktop-table-wrapper {
+    display: block;
+    padding: 0 1.5rem 1.5rem 1.5rem;
+  }
+
+  .year-summary {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    padding: 1.5rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
   .analytics-table {
     font-size: 0.75rem;
   }
