@@ -49,7 +49,7 @@
           </div>
 
           <div class="filter-actions">
-            <button @click="loadStatistics" class="btn btn-primary btn-sm">Применить</button>
+            <button @click="loadStatistics" class="btn btn-primary">Применить</button>
           </div>
         </div>
       </div>
@@ -65,7 +65,7 @@
       </div>
 
       <div class="stat-card" v-if="selectedPeriod === 'year'">
-        <div class="stat-card-title">Количество транзакций</div>
+        <div class="stat-card-title">Транзакций</div>
         <div class="stat-card-value">{{ transactionCount }}</div>
       </div>
 
@@ -103,9 +103,11 @@
 
       <!-- Круговая диаграмма -->
       <div class="pie-chart-section" v-if="statistics.length > 0">
-        <canvas id="pieChartCanvas" width="400" height="400" class="pie-chart-canvas"></canvas>
+        <div class="pie-chart-wrapper">
+          <canvas id="pieChartCanvas" class="pie-chart-canvas"></canvas>
+        </div>
         <div class="pie-chart-legend">
-          <div v-for="(category, index) in statistics" :key="category.id" class="legend-item">
+          <div v-for="category in statistics" :key="category.id" class="legend-item">
             <span class="legend-color" :style="{ backgroundColor: getCategoryColor(category.id) }"></span>
             <span class="legend-name">{{ category.name }}</span>
             <span class="legend-percent">{{ getPercentage(category.total) }}%</span>
@@ -187,29 +189,21 @@
 
           <div class="mobile-stats-grid">
             <div class="mobile-stat">
-              <div class="mobile-stat-label">
-                <i class="fas fa-receipt"></i> Транзакции
-              </div>
+              <div class="mobile-stat-label">Транзакции</div>
               <div class="mobile-stat-value">{{ item.transaction_count }}</div>
             </div>
             <div class="mobile-stat">
-              <div class="mobile-stat-label">
-                <i class="fas fa-chart-line"></i> Средняя
-              </div>
+              <div class="mobile-stat-label">Средняя</div>
               <div class="mobile-stat-value">{{ formatCurrency(item.avg_amount) }}</div>
             </div>
             <div class="mobile-stat">
-              <div class="mobile-stat-label">
-                <i class="fas fa-percent"></i> Изменение
-              </div>
+              <div class="mobile-stat-label">Изменение</div>
               <div class="mobile-stat-value" :class="getTrendClass(item)">
                 {{ item.change_vs_prev_percent !== 0 ? (item.change_vs_prev_percent > 0 ? '+' : '') + item.change_vs_prev_percent.toFixed(1) + '%' : '—' }}
               </div>
             </div>
             <div class="mobile-stat">
-              <div class="mobile-stat-label">
-                <i class="fas fa-ruble-sign"></i> Абс. изм.
-              </div>
+              <div class="mobile-stat-label">Абс. изм.</div>
               <div class="mobile-stat-value" :class="getTrendClass(item)">
                 {{ item.absolute_change_vs_prev !== 0 ? (item.absolute_change_vs_prev > 0 ? '+' : '') + formatCurrency(Math.abs(item.absolute_change_vs_prev)) : '—' }}
               </div>
@@ -311,7 +305,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import apiService from '../services/api.js'
 
 export default {
@@ -331,6 +325,8 @@ export default {
     const expandedCategories = ref({})
     const sortOrder = ref('desc')
     const categoryColors = ref({})
+    let resizeObserver = null
+    let pieChartInitialized = false
 
     const years = computed(() => {
       const currentYear = new Date().getFullYear()
@@ -409,13 +405,31 @@ export default {
       const ctx = canvas.getContext('2d')
       if (!ctx) return
 
-      const width = canvas.width
-      const height = canvas.height
-      const centerX = width / 2
-      const centerY = height / 2
-      const radius = Math.min(width, height) / 2 - 40
+      // Получаем размер контейнера
+      const container = canvas.parentElement
+      if (!container) return
 
-      ctx.clearRect(0, 0, width, height)
+      const containerWidth = container.clientWidth
+      // Размер круга: на мобильных 280px, на планшетах 300px, на десктопе 320px
+      let size = 320
+      if (containerWidth <= 480) {
+        size = Math.min(containerWidth - 40, 280)
+      } else if (containerWidth <= 768) {
+        size = Math.min(containerWidth - 60, 300)
+      } else {
+        size = Math.min(containerWidth - 80, 320)
+      }
+
+      canvas.width = size
+      canvas.height = size
+      canvas.style.width = `${size}px`
+      canvas.style.height = `${size}px`
+
+      const centerX = size / 2
+      const centerY = size / 2
+      const radius = size / 2 - 25
+
+      ctx.clearRect(0, 0, size, size)
 
       if (statistics.value.length === 0) return
 
@@ -431,18 +445,22 @@ export default {
         ctx.moveTo(centerX, centerY)
         ctx.arc(centerX, centerY, radius, startAngle, endAngle)
         ctx.fill()
-        ctx.strokeStyle = '#fff'
+        ctx.strokeStyle = '#ffffff'
         ctx.lineWidth = 2
         ctx.stroke()
 
+        // Добавляем текст процента для больших сегментов
         if (percentage > 0.05) {
           const midAngle = startAngle + angle / 2
           const textRadius = radius * 0.7
           const x = centerX + Math.cos(midAngle) * textRadius
           const y = centerY + Math.sin(midAngle) * textRadius
-          ctx.fillStyle = '#fff'
-          ctx.font = 'bold 12px Arial'
-          ctx.fillText(`${getPercentage(category.total)}%`, x - 15, y + 4)
+          ctx.fillStyle = '#ffffff'
+          const fontSize = size < 250 ? 10 : 12
+          ctx.font = `bold ${fontSize}px Arial`
+          ctx.shadowBlur = 0
+          const percentText = `${getPercentage(category.total)}%`
+          ctx.fillText(percentText, x - (fontSize * percentText.length) / 3, y + fontSize / 3)
         }
 
         startAngle = endAngle
@@ -596,14 +614,38 @@ export default {
 
     const handleResize = () => {
       checkMobile()
-      if (selectedPeriod.value === 'year' && monthlyAnalytics.value.length > 0) setTimeout(() => drawChart(), 100)
-      if (selectedPeriod.value === 'month' && statistics.value.length > 0) setTimeout(() => drawPieChart(), 100)
+      if (selectedPeriod.value === 'year' && monthlyAnalytics.value.length > 0) {
+        setTimeout(() => drawChart(), 100)
+      }
+      if (selectedPeriod.value === 'month' && statistics.value.length > 0) {
+        setTimeout(() => drawPieChart(), 100)
+      }
     }
 
     onMounted(() => {
       checkMobile()
       loadStatistics()
       window.addEventListener('resize', handleResize)
+
+      // Наблюдаем за изменением размера контейнера
+      if (window.ResizeObserver) {
+        resizeObserver = new ResizeObserver(() => {
+          if (selectedPeriod.value === 'month' && statistics.value.length > 0) {
+            setTimeout(() => drawPieChart(), 100)
+          }
+        })
+        const pieWrapper = document.querySelector('.pie-chart-wrapper')
+        if (pieWrapper) {
+          resizeObserver.observe(pieWrapper)
+        }
+      }
+    })
+
+    onUnmounted(() => {
+      window.removeEventListener('resize', handleResize)
+      if (resizeObserver) {
+        resizeObserver.disconnect()
+      }
     })
 
     watch([currentType, selectedPeriod, selectedYear, selectedMonth], () => loadStatistics())
@@ -635,7 +677,6 @@ export default {
   font-weight: 700;
   margin-bottom: 1.5rem;
   color: #1f2937;
-  background: transparent;
 }
 
 /* ========== Карточки ========== */
@@ -777,11 +818,6 @@ export default {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.btn-sm {
-  padding: 0.5rem 1rem;
-  font-size: 0.813rem;
-}
-
 .btn-sort {
   padding: 0.5rem 1rem;
   background: #f9fafb;
@@ -859,7 +895,7 @@ export default {
 .pie-chart-section {
   display: flex;
   flex-wrap: wrap;
-  gap: 2rem;
+  gap: 1.5rem;
   justify-content: center;
   align-items: center;
   padding: 1.5rem;
@@ -867,19 +903,25 @@ export default {
   border-bottom: 1px solid #e5e7eb;
 }
 
+.pie-chart-wrapper {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: transparent;
+}
+
 .pie-chart-canvas {
-  max-width: 350px;
-  max-height: 350px;
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 0.5rem;
-  border: 1px solid #e5e7eb;
+  display: block;
+  margin: 0 auto;
+  background: transparent;
 }
 
 .pie-chart-legend {
   flex: 1;
-  min-width: 200px;
-  max-height: 350px;
+  min-width: 180px;
+  max-width: 280px;
+  max-height: 320px;
   overflow-y: auto;
   background: #ffffff;
   border-radius: 8px;
@@ -1359,6 +1401,7 @@ export default {
   }
 
   .pie-chart-legend {
+    max-width: 100%;
     max-height: 250px;
   }
 }
