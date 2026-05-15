@@ -1,129 +1,161 @@
 <template>
-  <div>
-    <h1 style="margin-bottom: 2rem;">Аналитика</h1>
+  <div class="statistics-page">
+    <h1 class="page-title">Аналитика</h1>
 
-    <div class="card">
+    <!-- Фильтры -->
+    <div class="card filters-card">
       <div class="filters-header" @click="showFilters = !showFilters">
-        <h3>Фильтры</h3>
+        <h3 class="filters-title">Фильтры</h3>
         <i :class="showFilters ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
       </div>
-      
-      <div class="filters" :class="{ 'filters-hidden': !showFilters }">
-        <div class="filter-group">
-          <label>Тип:</label>
-          <select v-model="currentType" class="form-control">
-            <option value="income">Доходы</option>
-            <option value="expense">Расходы</option>
-          </select>
-        </div>
 
-        <div class="filter-group">
-          <label>Период:</label>
-          <select v-model="selectedPeriod" class="form-control">
-            <option value="month">За месяц</option>
-            <option value="year">За год</option>
-          </select>
-        </div>
+      <div class="filters-body" :class="{ 'filters-hidden': !showFilters }">
+        <div class="filters-grid">
+          <div class="filter-field">
+            <label class="filter-label">Тип:</label>
+            <select v-model="currentType" class="form-control">
+              <option value="income">Доходы</option>
+              <option value="expense">Расходы</option>
+            </select>
+          </div>
 
-        <div class="filter-group" v-if="selectedPeriod === 'month'">
-          <label>Год:</label>
-          <select v-model="selectedYear" class="form-control">
-            <option v-for="year in years" :key="year" :value="year">{{ year }}</option>
-          </select>
-        </div>
+          <div class="filter-field">
+            <label class="filter-label">Период:</label>
+            <select v-model="selectedPeriod" class="form-control">
+              <option value="month">За месяц</option>
+              <option value="year">За год</option>
+            </select>
+          </div>
 
-        <div class="filter-group" v-if="selectedPeriod === 'month'">
-          <label>Месяц:</label>
-          <select v-model="selectedMonth" class="form-control">
-            <option v-for="(name, index) in months" :key="index" :value="index + 1">{{ name }}</option>
-          </select>
-        </div>
+          <div class="filter-field" v-if="selectedPeriod === 'month'">
+            <label class="filter-label">Год:</label>
+            <select v-model="selectedYear" class="form-control">
+              <option v-for="year in years" :key="year" :value="year">{{ year }}</option>
+            </select>
+          </div>
 
-        <div class="filter-group" v-if="selectedPeriod === 'year'">
-          <label>Год:</label>
-          <select v-model="selectedYear" class="form-control">
-            <option v-for="year in years" :key="year" :value="year">{{ year }}</option>
-          </select>
-        </div>
+          <div class="filter-field" v-if="selectedPeriod === 'month'">
+            <label class="filter-label">Месяц:</label>
+            <select v-model="selectedMonth" class="form-control">
+              <option v-for="(name, index) in months" :key="index" :value="index + 1">{{ name }}</option>
+            </select>
+          </div>
 
-        <div class="filter-actions">
-          <button @click="loadStatistics" class="btn btn-primary">Применить</button>
+          <div class="filter-field" v-if="selectedPeriod === 'year'">
+            <label class="filter-label">Год:</label>
+            <select v-model="selectedYear" class="form-control">
+              <option v-for="year in years" :key="year" :value="year">{{ year }}</option>
+            </select>
+          </div>
+
+          <div class="filter-actions">
+            <button @click="loadStatistics" class="btn btn-primary btn-sm">Применить</button>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Summary Cards -->
+    <!-- Карточки статистики -->
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-title">Общая сумма</div>
-        <div class="stat-value" :class="currentType === 'income' ? 'text-success' : 'text-danger'">
+        <div class="stat-card-title">Общая сумма</div>
+        <div class="stat-card-value" :class="currentType === 'income' ? 'text-success' : 'text-danger'">
           {{ formatCurrency(totalAmount) }}
         </div>
       </div>
 
       <div class="stat-card" v-if="selectedPeriod === 'year'">
-        <div class="stat-title">Количество транзакций</div>
-        <div class="stat-value">{{ transactionCount }}</div>
+        <div class="stat-card-title">Количество транзакций</div>
+        <div class="stat-card-value">{{ transactionCount }}</div>
       </div>
 
       <div class="stat-card" v-if="selectedPeriod === 'year'">
-        <div class="stat-title">Средняя сумма</div>
-        <div class="stat-value">{{ formatCurrency(averageAmount) }}</div>
+        <div class="stat-card-title">Средняя сумма</div>
+        <div class="stat-card-value">{{ formatCurrency(averageAmount) }}</div>
+      </div>
+
+      <div class="stat-card" v-if="selectedPeriod === 'year' && monthlyAnalytics.length > 0">
+        <div class="stat-card-title">Максимум</div>
+        <div class="stat-card-value text-success">{{ formatCurrency(maxMonthAmount) }}</div>
+        <div class="stat-card-subtitle">{{ maxMonthName }}</div>
+      </div>
+
+      <div class="stat-card" v-if="selectedPeriod === 'year' && monthlyAnalytics.length > 0">
+        <div class="stat-card-title">Минимум</div>
+        <div class="stat-card-value text-danger">{{ formatCurrency(minMonthAmount) }}</div>
+        <div class="stat-card-subtitle">{{ minMonthName }}</div>
       </div>
     </div>
 
-    <!-- Category Breakdown (only for month view) -->
+    <!-- Месячная статистика -->
     <div class="card" v-if="selectedPeriod === 'month'">
       <div class="card-header">
         <h3 class="card-title">Разбивка по категориям</h3>
+        <div class="sort-buttons">
+          <button @click="sortCategories('desc')" class="btn-sort" :class="{ active: sortOrder === 'desc' }">
+            <i class="fas fa-sort-amount-down"></i> По убыванию
+          </button>
+          <button @click="sortCategories('asc')" class="btn-sort" :class="{ active: sortOrder === 'asc' }">
+            <i class="fas fa-sort-amount-up-alt"></i> По возрастанию
+          </button>
+        </div>
       </div>
 
-      <!-- Универсальное отображение категорий -->
-      <div class="categories-container">
-        <div v-for="category in statistics" :key="category.id" class="category-stat">
-          <div class="category-header">
-            <span class="category-name">
+      <!-- Круговая диаграмма -->
+      <div class="pie-chart-section" v-if="statistics.length > 0">
+        <canvas id="pieChartCanvas" width="400" height="400" class="pie-chart-canvas"></canvas>
+        <div class="pie-chart-legend">
+          <div v-for="(category, index) in statistics" :key="category.id" class="legend-item">
+            <span class="legend-color" :style="{ backgroundColor: getCategoryColor(category.id) }"></span>
+            <span class="legend-name">{{ category.name }}</span>
+            <span class="legend-percent">{{ getPercentage(category.total) }}%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Список категорий -->
+      <div class="categories-list">
+        <div v-for="category in sortedStatistics" :key="category.id" class="category-item">
+          <div class="category-header" @click="category.children?.length && toggleCategory(category.id)">
+            <div class="category-name">
+              <i v-if="category.children?.length" :class="expandedCategories[category.id] ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" class="expand-icon"></i>
+              <i v-else class="fas fa-folder placeholder-icon"></i>
               <i class="fas fa-folder"></i>
-              {{ category.name }}
-            </span>
-            <span class="category-total">{{ formatCurrency(category.total) }}</span>
-          </div>
-          
-          <div class="progress-bar">
-            <div 
-              class="progress-fill" 
-              :style="{ width: getPercentage(category.total) + '%' }"
-              :class="currentType === 'income' ? 'progress-income' : 'progress-expense'"
-            >
-              <span class="progress-text">{{ getPercentage(category.total) }}%</span>
+              <span>{{ category.name }}</span>
             </div>
-          </div>
-          <div class="category-percent-info">
-            {{ getPercentage(category.total) }}% от общей суммы {{ currentType === 'income' ? 'доходов' : 'расходов' }}
+            <div class="category-total">{{ formatCurrency(category.total) }}</div>
           </div>
 
-          <!-- Subcategories with their own progress bars (blue color) -->
-          <div v-if="category.children && category.children.length" class="subcategories">
-            <div v-for="child in category.children" :key="child.id" class="subcategory-item">
+          <div class="progress-wrapper">
+            <div class="progress-bar">
+              <div class="progress-fill" :style="{ width: getPercentage(category.total) + '%' }" :class="currentType === 'income' ? 'progress-income' : 'progress-expense'">
+                <span class="progress-text">{{ getPercentage(category.total) }}%</span>
+              </div>
+            </div>
+            <div class="progress-percent-info">{{ getPercentage(category.total) }}% от общей суммы</div>
+          </div>
+
+          <!-- Подкатегории -->
+          <div v-if="category.children?.length" class="subcategories" v-show="expandedCategories[category.id]">
+            <div v-for="child in sortedChildren(category.children)" :key="child.id" class="subcategory-item">
               <div class="subcategory-header">
-                <span class="subcategory-name">
+                <div class="subcategory-name">
                   <i class="fas fa-level-down-alt"></i>
-                  {{ child.name }}
-                </span>
-                <span class="subcategory-total">{{ formatCurrency(child.total) }}</span>
+                  <span>{{ child.name }}</span>
+                </div>
+                <div class="subcategory-total">{{ formatCurrency(child.total) }}</div>
               </div>
               <div class="progress-bar subcategory-progress">
-                <div 
-                  class="progress-fill progress-subcategory" 
-                  :style="{ width: getSubPercentage(category.total, child.total) + '%' }"
-                >
+                <div class="progress-fill progress-subcategory" :style="{ width: getSubPercentage(category.total, child.total) + '%' }">
                   <span class="progress-text-small">{{ getSubPercentage(category.total, child.total) }}%</span>
                 </div>
               </div>
-              <div class="subcategory-percent-info">
-                {{ getSubPercentage(category.total, child.total) }}% от категории "{{ category.name }}"
-              </div>
+              <div class="subcategory-percent">{{ getSubPercentage(category.total, child.total) }}% от категории</div>
             </div>
+          </div>
+
+          <div v-if="category.children?.length && !expandedCategories[category.id]" class="expand-hint" @click="toggleCategory(category.id)">
+            <i class="fas fa-eye"></i> Показать подкатегории ({{ category.children.length }})
           </div>
         </div>
 
@@ -134,218 +166,145 @@
       </div>
     </div>
 
-    <!-- Monthly Analytics (only for year view) -->
+    <!-- Годовая статистика -->
     <div class="card" v-if="selectedPeriod === 'year'">
       <div class="card-header">
         <h3 class="card-title">Аналитика по месяцам</h3>
       </div>
 
-      <!-- Для мобильных и планшетов: карточки месяцев -->
-      <div class="mobile-months">
-        <div v-for="item in monthlyAnalytics" :key="item.period" class="month-card" @click="toggleMonthDetails(item)">
-          <div class="month-header">
-            <div class="month-name">
-              {{ item.month_name }} {{ item.year }}
-              <i :class="expandedMonths[item.period] ? 'fas fa-chevron-up' : 'fas fa-chevron-down'" class="expand-icon"></i>
+      <!-- Мобильные карточки -->
+      <div class="mobile-months-grid">
+        <div v-for="item in monthlyAnalytics" :key="item.period" class="mobile-month-card">
+          <div class="mobile-month-header">
+            <div class="mobile-month-name">
+              <span class="month-name-text">{{ item.month_name }} {{ item.year }}</span>
+              <span class="trend-badge" :class="getTrendBadgeClass(item)">{{ item.trend_vs_prev }}</span>
             </div>
-            <div class="month-total" :class="currentType === 'income' ? 'text-success' : 'text-danger'">
+            <div class="mobile-month-amount" :class="currentType === 'income' ? 'text-success' : 'text-danger'">
               {{ formatCurrency(item.total_amount) }}
             </div>
           </div>
-          
-          <div class="month-details">
-            <div class="detail-item">
-              <span class="detail-label">
-                <i class="fas fa-receipt"></i> Транзакций:
-              </span>
-              <span class="detail-value">{{ item.transaction_count }}</span>
+
+          <div class="mobile-stats-grid">
+            <div class="mobile-stat">
+              <div class="mobile-stat-label">
+                <i class="fas fa-receipt"></i> Транзакции
+              </div>
+              <div class="mobile-stat-value">{{ item.transaction_count }}</div>
             </div>
-            <div class="detail-item">
-              <span class="detail-label">
-                <i class="fas fa-chart-line"></i> Средняя сумма:
-              </span>
-              <span class="detail-value">{{ formatCurrency(item.avg_amount) }}</span>
+            <div class="mobile-stat">
+              <div class="mobile-stat-label">
+                <i class="fas fa-chart-line"></i> Средняя
+              </div>
+              <div class="mobile-stat-value">{{ formatCurrency(item.avg_amount) }}</div>
             </div>
-            <div class="detail-item">
-              <span class="detail-label">
-                <i class="fas fa-trend"></i> Изменение:
-              </span>
-              <span class="detail-value" v-if="item.change_vs_prev_percent !== 0" :class="getTrendClass(item)">
-                {{ item.trend_vs_prev }} {{ Math.abs(item.change_vs_prev_percent).toFixed(1) }}%
-              </span>
-              <span class="detail-value" v-else>—</span>
+            <div class="mobile-stat">
+              <div class="mobile-stat-label">
+                <i class="fas fa-percent"></i> Изменение
+              </div>
+              <div class="mobile-stat-value" :class="getTrendClass(item)">
+                {{ item.change_vs_prev_percent !== 0 ? (item.change_vs_prev_percent > 0 ? '+' : '') + item.change_vs_prev_percent.toFixed(1) + '%' : '—' }}
+              </div>
+            </div>
+            <div class="mobile-stat">
+              <div class="mobile-stat-label">
+                <i class="fas fa-ruble-sign"></i> Абс. изм.
+              </div>
+              <div class="mobile-stat-value" :class="getTrendClass(item)">
+                {{ item.absolute_change_vs_prev !== 0 ? (item.absolute_change_vs_prev > 0 ? '+' : '') + formatCurrency(Math.abs(item.absolute_change_vs_prev)) : '—' }}
+              </div>
             </div>
           </div>
 
-          <!-- Разбивка по категориям для месяца -->
-          <div v-if="expandedMonths[item.period] && monthCategories[item.period]" class="month-categories">
-            <div class="month-categories-title">
-              <i class="fas fa-chart-pie"></i> Разбивка по категориям
-            </div>
-            <div v-for="cat in monthCategories[item.period]" :key="cat.id" class="month-category-item">
-              <div class="month-category-header">
-                <span class="month-category-name">{{ cat.name }}</span>
-                <span class="month-category-total">{{ formatCurrency(cat.total) }}</span>
+          <div class="mobile-progress">
+            <div class="progress-label">Доля от максимума</div>
+            <div class="progress-bar small">
+              <div class="progress-fill" :style="{ width: getMonthPercentOfMax(item.total_amount) + '%' }" :class="currentType === 'income' ? 'progress-income' : 'progress-expense'">
+                <span class="progress-text-small">{{ getMonthPercentOfMax(item.total_amount) }}%</span>
               </div>
-              <div class="progress-bar small">
-                <div 
-                  class="progress-fill" 
-                  :style="{ width: getMonthCategoryPercentage(item.total_amount, cat.total) + '%' }"
-                  :class="currentType === 'income' ? 'progress-income' : 'progress-expense'"
-                >
-                  <span class="progress-text-small">{{ getMonthCategoryPercentage(item.total_amount, cat.total) }}%</span>
-                </div>
-              </div>
-              
-              <div class="month-category-percent-info">
-                {{ getMonthCategoryPercentage(item.total_amount, cat.total) }}% от общей суммы за месяц
-              </div>
-              
-              <!-- Дочерние категории (blue color) -->
-              <div v-if="cat.children && cat.children.length" class="month-subcategories">
-                <div v-for="child in cat.children" :key="child.id" class="month-subcategory">
-                  <div class="month-subcategory-header">
-                    <span class="month-subcategory-name">
-                      <i class="fas fa-level-down-alt"></i>
-                      {{ child.name }}
-                    </span>
-                    <span class="month-subcategory-total">{{ formatCurrency(child.total) }}</span>
-                  </div>
-                  <div class="progress-bar very-small">
-                    <div 
-                      class="progress-fill progress-subcategory" 
-                      :style="{ width: getMonthSubCategoryPercentage(cat.total, child.total) + '%' }"
-                    >
-                      <span class="progress-text-very-small">{{ getMonthSubCategoryPercentage(cat.total, child.total) }}%</span>
-                    </div>
-                  </div>
-                  <div class="month-subcategory-percentage">
-                    {{ getMonthSubCategoryPercentage(cat.total, child.total) }}% от категории "{{ cat.name }}"
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div v-if="!monthCategories[item.period] || monthCategories[item.period].length === 0" class="empty-state-small">
-              Нет данных по категориям
             </div>
           </div>
-        </div>
-        <div v-if="monthlyAnalytics.length === 0" class="empty-state">
-          <i class="fas fa-chart-line"></i>
-          <p>Нет данных за выбранный год</p>
         </div>
       </div>
 
-      <!-- Для десктопа: таблица с возможностью раскрытия -->
-      <div class="desktop-table">
-        <table class="table">
+      <!-- Десктоп таблица -->
+      <div class="desktop-table-wrapper">
+        <table class="analytics-table">
           <thead>
             <tr>
               <th>Месяц</th>
               <th>Сумма</th>
-              <th>Кол-во транзакций</th>
-              <th>Средняя сумма</th>
+              <th>Транзакции</th>
+              <th>Средняя</th>
               <th>Изменение</th>
-              <th style="width: 50px"></th>
+              <th>Абс. изменение</th>
+              <th>Доля от макс.</th>
             </tr>
           </thead>
           <tbody>
-            <template v-for="item in monthlyAnalytics" :key="item.period">
-              <tr @click="toggleMonthDetails(item)" style="cursor: pointer;">
-                <td>
-                  <strong>{{ item.month_name }} {{ item.year }}</strong>
-                </td>
-                <td :class="currentType === 'income' ? 'text-success' : 'text-danger'">
-                  {{ formatCurrency(item.total_amount) }}
-                </td>
-                <td>{{ item.transaction_count }}</td>
-                <td>{{ formatCurrency(item.avg_amount) }}</td>
-                <td>
-                  <span v-if="item.change_vs_prev_percent !== 0" :class="getTrendClass(item)">
-                    {{ item.trend_vs_prev }} {{ Math.abs(item.change_vs_prev_percent).toFixed(1) }}%
-                  </span>
-                  <span v-else>—</span>
-                </td>
-                <td style="text-align: center;">
-                  <i :class="expandedMonths[item.period] ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
-                </td>
-              </tr>
-              <tr v-if="expandedMonths[item.period]">
-                <td colspan="6" class="expanded-row">
-                  <div class="month-categories-table">
-                    <div class="expanded-title">
-                      <i class="fas fa-chart-pie"></i> Разбивка по категориям за {{ item.month_name }} {{ item.year }}
-                    </div>
-                    <div v-if="monthCategories[item.period] && monthCategories[item.period].length > 0">
-                      <div v-for="cat in monthCategories[item.period]" :key="cat.id" class="month-category-expanded">
-                        <div class="category-row">
-                          <span class="category-name-expanded">{{ cat.name }}</span>
-                          <span class="category-total-expanded">{{ formatCurrency(cat.total) }}</span>
-                          <span class="category-percentage-expanded">{{ getMonthCategoryPercentage(item.total_amount, cat.total) }}%</span>
-                        </div>
-                        <div class="progress-bar small">
-                          <div 
-                            class="progress-fill" 
-                            :style="{ width: getMonthCategoryPercentage(item.total_amount, cat.total) + '%' }"
-                            :class="currentType === 'income' ? 'progress-income' : 'progress-expense'"
-                          >
-                            <span class="progress-text-small">{{ getMonthCategoryPercentage(item.total_amount, cat.total) }}%</span>
-                          </div>
-                        </div>
-                        <div class="category-percent-info-expanded">
-                          {{ getMonthCategoryPercentage(item.total_amount, cat.total) }}%
-                        </div>
-                        <!-- Дочерние категории (blue color) -->
-                        <div v-if="cat.children && cat.children.length" class="subcategories-expanded">
-                          <div v-for="child in cat.children" :key="child.id" class="subcategory-row">
-                            <div class="subcategory-info">
-                              <span class="subcategory-name-expanded">
-                                <i class="fas fa-level-down-alt"></i>
-                                {{ child.name }}
-                              </span>
-                              <span class="subcategory-total-expanded">{{ formatCurrency(child.total) }}</span>
-                            </div>
-                            <div class="progress-bar very-small">
-                              <div 
-                                class="progress-fill progress-subcategory" 
-                                :style="{ width: getMonthSubCategoryPercentage(cat.total, child.total) + '%' }"
-                              >
-                                <span class="progress-text-very-small">{{ getMonthSubCategoryPercentage(cat.total, child.total) }}%</span>
-                              </div>
-                            </div>
-                            <div class="subcategory-percentage-expanded">
-                              {{ getMonthSubCategoryPercentage(cat.total, child.total) }}% от категории "{{ cat.name }}"
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div v-else class="empty-state-small">
-                      Нет данных по категориям
-                    </div>
+            <tr v-for="item in monthlyAnalytics" :key="item.period">
+              <td class="table-month-cell">
+                <strong>{{ item.month_name }} {{ item.year }}</strong>
+                <span class="trend-badge small" :class="getTrendBadgeClass(item)">{{ item.trend_vs_prev }}</span>
+              </td>
+              <td :class="currentType === 'income' ? 'text-success' : 'text-danger'">
+                <strong>{{ formatCurrency(item.total_amount) }}</strong>
+              </td>
+              <td>{{ item.transaction_count }}</td>
+              <td>{{ formatCurrency(item.avg_amount) }}</td>
+              <td :class="getTrendClass(item)">
+                {{ item.change_vs_prev_percent !== 0 ? (item.change_vs_prev_percent > 0 ? '+' : '') + item.change_vs_prev_percent.toFixed(1) + '%' : '—' }}
+              </td>
+              <td :class="getTrendClass(item)">
+                {{ item.absolute_change_vs_prev !== 0 ? (item.absolute_change_vs_prev > 0 ? '+' : '') + formatCurrency(Math.abs(item.absolute_change_vs_prev)) : '—' }}
+              </td>
+              <td>
+                <div class="table-progress">
+                  <div class="progress-bar small">
+                    <div class="progress-fill" :style="{ width: getMonthPercentOfMax(item.total_amount) + '%' }" :class="currentType === 'income' ? 'progress-income' : 'progress-expense'"></div>
                   </div>
-                </td>
-              </tr>
-            </template>
+                  <span class="table-progress-value">{{ getMonthPercentOfMax(item.total_amount) }}%</span>
+                </div>
+              </td>
+            </tr>
             <tr v-if="monthlyAnalytics.length === 0">
-              <td colspan="6" class="text-center">Нет данных</td>
+              <td colspan="7" class="text-center">Нет данных за выбранный год</td>
             </tr>
           </tbody>
         </table>
       </div>
+
+      <!-- Годовая сводка -->
+      <div class="year-summary" v-if="monthlyAnalytics.length > 0">
+        <div class="summary-card">
+          <div class="summary-label">Среднее за месяц</div>
+          <div class="summary-value">{{ formatCurrency(averageMonthlyAmount) }}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Медиана</div>
+          <div class="summary-value">{{ formatCurrency(medianMonthlyAmount) }}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Стандартное отклонение</div>
+          <div class="summary-value">{{ formatCurrency(standardDeviation) }}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Коэф. вариации</div>
+          <div class="summary-value">{{ coefficientOfVariation.toFixed(1) }}%</div>
+        </div>
+      </div>
     </div>
 
-    <!-- Charts (only for year view) -->
+    <!-- График -->
     <div class="card" v-if="selectedPeriod === 'year' && monthlyAnalytics.length > 0">
       <div class="card-header">
         <h3 class="card-title">Визуализация</h3>
       </div>
-      <div class="chart-container">
-        <canvas id="chartCanvas" width="800" height="400" style="max-width: 100%; height: auto;"></canvas>
+      <div class="chart-section">
+        <canvas id="chartCanvas" width="800" height="400" class="chart-canvas"></canvas>
       </div>
       <div class="chart-note" v-if="isMobile">
-        <i class="fas fa-chart-simple"></i>
-        Для детального просмотра графика поверните устройство горизонтально
+        <i class="fas fa-chart-simple"></i> Поверните устройство для детального просмотра
       </div>
     </div>
   </div>
@@ -359,6 +318,7 @@ export default {
   name: 'Statistics',
   setup() {
     const statistics = ref([])
+    const sortedStatistics = ref([])
     const monthlyAnalytics = ref([])
     const totalAmount = ref(0)
     const transactionCount = ref(0)
@@ -368,167 +328,226 @@ export default {
     const selectedMonth = ref(new Date().getMonth() + 1)
     const showFilters = ref(true)
     const isMobile = ref(false)
-    const expandedMonths = ref({})
-    const monthCategories = ref({})
-    
+    const expandedCategories = ref({})
+    const sortOrder = ref('desc')
+    const categoryColors = ref({})
+
     const years = computed(() => {
       const currentYear = new Date().getFullYear()
       return Array.from({ length: 5 }, (_, i) => currentYear - i)
     })
-    
-    const months = [
-      'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-      'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-    ]
 
-    const averageAmount = computed(() => {
-      if (transactionCount.value === 0) return 0
-      return totalAmount.value / transactionCount.value
+    const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
+
+    const colorPalette = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1', '#14b8a6', '#d946ef', '#0ea5e9', '#a855f7', '#22c55e']
+
+    const averageAmount = computed(() => transactionCount.value === 0 ? 0 : totalAmount.value / transactionCount.value)
+
+    const maxMonthAmount = computed(() => {
+      if (monthlyAnalytics.value.length === 0) return 0
+      return Math.max(...monthlyAnalytics.value.map(item => parseFloat(item.total_amount)))
     })
+
+    const maxMonthName = computed(() => {
+      const maxItem = monthlyAnalytics.value.reduce((max, item) => parseFloat(item.total_amount) > parseFloat(max.total_amount) ? item : max, monthlyAnalytics.value[0])
+      return maxItem ? `${maxItem.month_name} ${maxItem.year}` : ''
+    })
+
+    const minMonthAmount = computed(() => {
+      if (monthlyAnalytics.value.length === 0) return 0
+      return Math.min(...monthlyAnalytics.value.map(item => parseFloat(item.total_amount)))
+    })
+
+    const minMonthName = computed(() => {
+      const minItem = monthlyAnalytics.value.reduce((min, item) => parseFloat(item.total_amount) < parseFloat(min.total_amount) ? item : min, monthlyAnalytics.value[0])
+      return minItem ? `${minItem.month_name} ${minItem.year}` : ''
+    })
+
+    const averageMonthlyAmount = computed(() => {
+      if (monthlyAnalytics.value.length === 0) return 0
+      const sum = monthlyAnalytics.value.reduce((s, item) => s + parseFloat(item.total_amount), 0)
+      return sum / monthlyAnalytics.value.length
+    })
+
+    const medianMonthlyAmount = computed(() => {
+      if (monthlyAnalytics.value.length === 0) return 0
+      const amounts = [...monthlyAnalytics.value].map(item => parseFloat(item.total_amount)).sort((a, b) => a - b)
+      const mid = Math.floor(amounts.length / 2)
+      return amounts.length % 2 === 0 ? (amounts[mid - 1] + amounts[mid]) / 2 : amounts[mid]
+    })
+
+    const standardDeviation = computed(() => {
+      if (monthlyAnalytics.value.length < 2) return 0
+      const mean = averageMonthlyAmount.value
+      const squaredDiffs = monthlyAnalytics.value.map(item => Math.pow(parseFloat(item.total_amount) - mean, 2))
+      const variance = squaredDiffs.reduce((sum, val) => sum + val, 0) / monthlyAnalytics.value.length
+      return Math.sqrt(variance)
+    })
+
+    const coefficientOfVariation = computed(() => {
+      if (averageMonthlyAmount.value === 0) return 0
+      return (standardDeviation.value / averageMonthlyAmount.value) * 100
+    })
+
+    const getCategoryColor = (categoryId) => categoryColors.value[categoryId] || '#ccc'
+
+    const assignColorsToCategories = () => {
+      statistics.value.forEach((category, index) => {
+        categoryColors.value[category.id] = colorPalette[index % colorPalette.length]
+      })
+    }
+
+    const getMonthPercentOfMax = (amount) => {
+      if (maxMonthAmount.value === 0) return 0
+      return ((parseFloat(amount) / maxMonthAmount.value) * 100).toFixed(1)
+    }
+
+    const drawPieChart = () => {
+      const canvas = document.getElementById('pieChartCanvas')
+      if (!canvas) return
+
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+
+      const width = canvas.width
+      const height = canvas.height
+      const centerX = width / 2
+      const centerY = height / 2
+      const radius = Math.min(width, height) / 2 - 40
+
+      ctx.clearRect(0, 0, width, height)
+
+      if (statistics.value.length === 0) return
+
+      let startAngle = -Math.PI / 2
+
+      statistics.value.forEach((category) => {
+        const percentage = parseFloat(getPercentage(category.total)) / 100
+        const angle = percentage * 2 * Math.PI
+        const endAngle = startAngle + angle
+
+        ctx.beginPath()
+        ctx.fillStyle = categoryColors.value[category.id]
+        ctx.moveTo(centerX, centerY)
+        ctx.arc(centerX, centerY, radius, startAngle, endAngle)
+        ctx.fill()
+        ctx.strokeStyle = '#fff'
+        ctx.lineWidth = 2
+        ctx.stroke()
+
+        if (percentage > 0.05) {
+          const midAngle = startAngle + angle / 2
+          const textRadius = radius * 0.7
+          const x = centerX + Math.cos(midAngle) * textRadius
+          const y = centerY + Math.sin(midAngle) * textRadius
+          ctx.fillStyle = '#fff'
+          ctx.font = 'bold 12px Arial'
+          ctx.fillText(`${getPercentage(category.total)}%`, x - 15, y + 4)
+        }
+
+        startAngle = endAngle
+      })
+    }
+
+    const sortCategories = (order) => {
+      sortOrder.value = order
+      const sorted = [...statistics.value]
+      sorted.sort((a, b) => sortOrder.value === 'desc' ? parseFloat(b.total) - parseFloat(a.total) : parseFloat(a.total) - parseFloat(b.total))
+      sortedStatistics.value = sorted
+    }
+
+    const sortedChildren = (children) => {
+      return [...children].sort((a, b) => parseFloat(b.total) - parseFloat(a.total))
+    }
+
+    const toggleCategory = (categoryId) => {
+      expandedCategories.value[categoryId] = !expandedCategories.value[categoryId]
+      expandedCategories.value = { ...expandedCategories.value }
+    }
 
     const checkMobile = () => {
       isMobile.value = window.innerWidth <= 768
     }
 
-    const loadMonthCategories = async (year, month) => {
-      try {
-        const data = await apiService.getMonthStatistics(month, year, currentType.value)
-        return data.statistics || []
-      } catch (error) {
-        console.error(`Error loading categories for ${month}.${year}:`, error)
-        return []
-      }
-    }
-
     const loadStatistics = async () => {
       try {
         if (selectedPeriod.value === 'month') {
-          const data = await apiService.getMonthStatistics(
-            selectedMonth.value, 
-            selectedYear.value, 
-            currentType.value
-          )
-          
+          const data = await apiService.getMonthStatistics(selectedMonth.value, selectedYear.value, currentType.value)
           totalAmount.value = parseFloat(data.total_amount) || 0
           statistics.value = data.statistics || []
-          
-          const countTransactions = (categories) => {
-            let count = 0
-            for (const cat of categories) {
-              if (cat.transaction_count) {
-                count += cat.transaction_count
-              }
-              if (cat.children && cat.children.length) {
-                count += countTransactions(cat.children)
-              }
-            }
-            return count
-          }
-          
-          transactionCount.value = countTransactions(statistics.value)
-          monthlyAnalytics.value = []
-          
+          assignColorsToCategories()
+          sortCategories(sortOrder.value)
+
+          const newExpanded = {}
+          statistics.value.forEach(cat => { newExpanded[cat.id] = false })
+          expandedCategories.value = newExpanded
+
+          await nextTick()
+          setTimeout(() => drawPieChart(), 100)
         } else {
           const yearlyData = await apiService.getMonthlyAnalytics(selectedYear.value, currentType.value)
           monthlyAnalytics.value = yearlyData.results || []
-          
           totalAmount.value = monthlyAnalytics.value.reduce((sum, item) => sum + parseFloat(item.total_amount), 0)
           transactionCount.value = monthlyAnalytics.value.reduce((sum, item) => sum + item.transaction_count, 0)
-          
           statistics.value = []
-          
-          // Очищаем кэш категорий при смене года или типа
-          monthCategories.value = {}
-          expandedMonths.value = {}
-          
+          sortedStatistics.value = []
+
           await nextTick()
-          if (monthlyAnalytics.value.length > 0) {
-            setTimeout(() => drawChart(), 100)
-          }
+          if (monthlyAnalytics.value.length > 0) setTimeout(() => drawChart(), 100)
         }
       } catch (error) {
         console.error('Error loading statistics:', error)
       }
     }
 
-    const toggleMonthDetails = async (item) => {
-      const period = item.period
-      
-      if (expandedMonths.value[period]) {
-        expandedMonths.value[period] = false
-      } else {
-        if (!monthCategories.value[period]) {
-          const [year, month] = period.split('-')
-          monthCategories.value[period] = await loadMonthCategories(parseInt(year), parseInt(month))
-        }
-        expandedMonths.value[period] = true
-      }
-      
-      expandedMonths.value = { ...expandedMonths.value }
-    }
-
     const getPercentage = (total) => {
       if (totalAmount.value === 0) return 0
-      const percentage = (parseFloat(total) / totalAmount.value) * 100
-      return percentage.toFixed(1)
+      return ((parseFloat(total) / totalAmount.value) * 100).toFixed(1)
     }
 
     const getSubPercentage = (parentTotal, childTotal) => {
       if (parseFloat(parentTotal) === 0) return 0
-      const percentage = (parseFloat(childTotal) / parseFloat(parentTotal)) * 100
-      return percentage.toFixed(1)
-    }
-
-    const getMonthCategoryPercentage = (monthTotal, categoryTotal) => {
-      if (parseFloat(monthTotal) === 0) return 0
-      const percentage = (parseFloat(categoryTotal) / parseFloat(monthTotal)) * 100
-      return percentage.toFixed(1)
-    }
-
-    const getMonthSubCategoryPercentage = (categoryTotal, subCategoryTotal) => {
-      if (parseFloat(categoryTotal) === 0) return 0
-      const percentage = (parseFloat(subCategoryTotal) / parseFloat(categoryTotal)) * 100
-      return percentage.toFixed(1)
+      return ((parseFloat(childTotal) / parseFloat(parentTotal)) * 100).toFixed(1)
     }
 
     const getTrendClass = (item) => {
-      if (item.change_vs_prev_percent > 0) {
-        return currentType.value === 'income' ? 'text-success' : 'text-danger'
-      } else if (item.change_vs_prev_percent < 0) {
-        return currentType.value === 'income' ? 'text-danger' : 'text-success'
-      }
+      if (item.change_vs_prev_percent > 0) return currentType.value === 'income' ? 'text-success' : 'text-danger'
+      if (item.change_vs_prev_percent < 0) return currentType.value === 'income' ? 'text-danger' : 'text-success'
       return ''
+    }
+
+    const getTrendBadgeClass = (item) => {
+      if (item.change_vs_prev_percent > 0) return 'trend-up'
+      if (item.change_vs_prev_percent < 0) return 'trend-down'
+      return 'trend-neutral'
     }
 
     const drawChart = () => {
       const canvas = document.getElementById('chartCanvas')
       if (!canvas) return
-      
+
       const ctx = canvas.getContext('2d')
       if (!ctx) return
-      
+
       ctx.clearRect(0, 0, canvas.width, canvas.height)
-      
       if (monthlyAnalytics.value.length === 0) return
-      
+
       const width = canvas.width
       const height = canvas.height
       const padding = isMobile.value ? 50 : 60
       const chartWidth = width - 2 * padding
       const chartHeight = height - 2 * padding
-      
       const maxValue = Math.max(...monthlyAnalytics.value.map(item => parseFloat(item.total_amount)), 0)
-      
+
       ctx.beginPath()
       ctx.strokeStyle = '#ccc'
       ctx.lineWidth = 1
-      
       ctx.moveTo(padding, padding)
       ctx.lineTo(padding, height - padding)
       ctx.moveTo(padding, height - padding)
       ctx.lineTo(width - padding, height - padding)
       ctx.stroke()
-      
+
       ctx.fillStyle = '#666'
       ctx.font = isMobile.value ? '10px Arial' : '12px Arial'
       for (let i = 0; i <= 5; i++) {
@@ -536,39 +555,31 @@ export default {
         const y = height - padding - (i / 5) * chartHeight
         ctx.fillText(formatCurrency(value), 10, y + 4)
       }
-        
+
       const step = chartWidth / (monthlyAnalytics.value.length - 1)
-      
       ctx.beginPath()
       ctx.strokeStyle = currentType.value === 'income' ? '#10b981' : '#ef4444'
       ctx.lineWidth = isMobile.value ? 2 : 3
-      
+
       monthlyAnalytics.value.forEach((item, index) => {
         const x = padding + index * step
         const y = height - padding - (parseFloat(item.total_amount) / maxValue) * chartHeight
-        
-        if (index === 0) {
-          ctx.moveTo(x, y)
-        } else {
-          ctx.lineTo(x, y)
-        }
+        if (index === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
       })
       ctx.stroke()
-      
+
       monthlyAnalytics.value.forEach((item, index) => {
         const x = padding + index * step
         const y = height - padding - (parseFloat(item.total_amount) / maxValue) * chartHeight
-        
         ctx.beginPath()
         ctx.fillStyle = currentType.value === 'income' ? '#10b981' : '#ef4444'
         ctx.arc(x, y, isMobile.value ? 4 : 6, 0, 2 * Math.PI)
         ctx.fill()
-        
         ctx.beginPath()
         ctx.fillStyle = 'white'
         ctx.arc(x, y, isMobile.value ? 2 : 3, 0, 2 * Math.PI)
         ctx.fill()
-        
         ctx.fillStyle = '#666'
         ctx.font = isMobile.value ? '10px Arial' : '12px Arial'
         const monthLabel = isMobile.value ? item.month_name.substring(0, 3) : item.month_name.substring(0, 3)
@@ -580,14 +591,13 @@ export default {
       if (!value && value !== 0) return '0 ₽'
       const numValue = parseFloat(value)
       if (isNaN(numValue)) return '0 ₽'
-      return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(numValue)
+      return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(numValue)
     }
 
     const handleResize = () => {
       checkMobile()
-      if (selectedPeriod.value === 'year' && monthlyAnalytics.value.length > 0) {
-        setTimeout(() => drawChart(), 100)
-      }
+      if (selectedPeriod.value === 'year' && monthlyAnalytics.value.length > 0) setTimeout(() => drawChart(), 100)
+      if (selectedPeriod.value === 'month' && statistics.value.length > 0) setTimeout(() => drawPieChart(), 100)
     }
 
     onMounted(() => {
@@ -596,119 +606,378 @@ export default {
       window.addEventListener('resize', handleResize)
     })
 
-    watch([currentType, selectedPeriod, selectedYear, selectedMonth], () => {
-      loadStatistics()
-    })
+    watch([currentType, selectedPeriod, selectedYear, selectedMonth], () => loadStatistics())
 
     return {
-      statistics,
-      monthlyAnalytics,
-      totalAmount,
-      transactionCount,
-      currentType,
-      selectedPeriod,
-      selectedYear,
-      selectedMonth,
-      years,
-      months,
-      averageAmount,
-      showFilters,
-      isMobile,
-      expandedMonths,
-      monthCategories,
-      loadStatistics,
-      toggleMonthDetails,
-      getPercentage,
-      getSubPercentage,
-      getMonthCategoryPercentage,
-      getMonthSubCategoryPercentage,
-      getTrendClass,
-      formatCurrency
+      statistics, sortedStatistics, monthlyAnalytics, totalAmount, transactionCount, currentType,
+      selectedPeriod, selectedYear, selectedMonth, years, months, averageAmount, showFilters, isMobile,
+      expandedCategories, sortOrder, maxMonthAmount, maxMonthName, minMonthAmount, minMonthName,
+      averageMonthlyAmount, medianMonthlyAmount, standardDeviation, coefficientOfVariation,
+      loadStatistics, toggleCategory, sortCategories, sortedChildren, getPercentage, getSubPercentage,
+      getMonthPercentOfMax, getTrendClass, getTrendBadgeClass, formatCurrency, getCategoryColor
     }
   }
 }
 </script>
 
 <style scoped>
-.filters-header {
-  display: none;
+/* ========== Общие стили ========== */
+.statistics-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  background: #f3f4f6;
+  min-height: 100vh;
+}
+
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: #1f2937;
+  background: transparent;
+}
+
+/* ========== Карточки ========== */
+.card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.card-header {
+  display: flex;
   justify-content: space-between;
   align-items: center;
-  cursor: pointer;
-  padding: 1rem;
-  background: var(--white);
-  border-radius: var(--radius);
-  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
 }
 
-.filters-header h3 {
-  font-size: 1rem;
+.card-title {
+  font-size: 1.125rem;
+  font-weight: 600;
   margin: 0;
+  color: #1f2937;
 }
 
-.filters {
+/* ========== Фильтры ========== */
+.filters-card {
+  margin-bottom: 1.5rem;
+}
+
+.filters-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  cursor: pointer;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.filters-header:hover {
+  background: #f3f4f6;
+}
+
+.filters-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  color: #374151;
+}
+
+.filters-body {
+  padding: 1.5rem;
+  background: #ffffff;
+  transition: all 0.3s ease;
+}
+
+.filters-hidden {
+  display: none;
+}
+
+.filters-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
-  align-items: end;
-  padding: 1rem;
+  align-items: flex-end;
 }
 
-.filter-group {
+.filter-field {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.filter-group label {
-  font-weight: 500;
+.filter-label {
   font-size: 0.875rem;
+  font-weight: 500;
+  color: #4b5563;
 }
 
 .filter-actions {
   display: flex;
   gap: 0.5rem;
+}
+
+/* ========== Формы и кнопки ========== */
+.form-control {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  background: #ffffff;
+  color: #1f2937;
+}
+
+.form-control:hover {
+  border-color: #9ca3af;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #f9fafb;
+  color: #374151;
+}
+
+.btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  background: #6366f1;
+  color: white;
+  border: 1px solid #6366f1;
+}
+
+.btn-primary:hover {
+  background: #4f46e5;
+  border-color: #4f46e5;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.813rem;
+}
+
+.btn-sort {
+  padding: 0.5rem 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.813rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #374151;
+}
+
+.btn-sort:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.btn-sort.active {
+  background: #6366f1;
+  color: white;
+  border-color: #6366f1;
+}
+
+.sort-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ========== Карточки статистики ========== */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+}
+
+.stat-card-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.stat-card-subtitle {
+  font-size: 0.688rem;
+  color: #9ca3af;
+  margin-top: 0.25rem;
+}
+
+/* ========== Цвета текста ========== */
+.text-success { color: #10b981; }
+.text-danger { color: #ef4444; }
+
+/* ========== Круговая диаграмма ========== */
+.pie-chart-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  justify-content: center;
   align-items: center;
+  padding: 1.5rem;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
 }
 
-/* Стили для категорий */
-.categories-container {
-  display: block;
+.pie-chart-canvas {
+  max-width: 350px;
+  max-height: 350px;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 0.5rem;
+  border: 1px solid #e5e7eb;
 }
 
-.category-stat {
+.pie-chart-legend {
+  flex: 1;
+  min-width: 200px;
+  max-height: 350px;
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 0.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.legend-item:last-child {
+  border-bottom: none;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.legend-name {
+  flex: 1;
+  font-size: 0.813rem;
+  color: #374151;
+}
+
+.legend-percent {
+  font-size: 0.813rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+/* ========== Список категорий ========== */
+.categories-list {
+  padding: 1.5rem;
+}
+
+.category-item {
   margin-bottom: 1.5rem;
   padding: 1rem;
-  background: var(--light-color);
-  border-radius: var(--radius);
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
 }
 
 .category-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
   flex-wrap: wrap;
   gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.category-header:hover {
+  opacity: 0.8;
 }
 
 .category-name {
-  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.expand-icon {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.placeholder-icon {
+  width: 16px;
+  visibility: hidden;
 }
 
 .category-total {
   font-weight: 600;
+  color: #374151;
+}
+
+/* ========== Прогресс-бары ========== */
+.progress-wrapper {
+  margin-top: 0.75rem;
 }
 
 .progress-bar {
   height: 32px;
   background: #e5e7eb;
-  border-radius: var(--radius);
+  border-radius: 8px;
   overflow: hidden;
-  margin: 0.5rem 0;
   position: relative;
 }
 
@@ -716,77 +985,48 @@ export default {
   height: 28px;
 }
 
-.progress-bar.very-small {
-  height: 24px;
-}
-
 .progress-fill {
   height: 100%;
-  transition: width 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding-right: 8px;
+  padding-right: 10px;
   color: white;
   font-weight: 600;
-  position: relative;
-  overflow: hidden;
+  font-size: 0.75rem;
+  transition: width 0.3s ease;
 }
 
-.category-percent-info {
-  font-size: 0.7rem;
-  color: var(--gray-color);
-  text-align: right;
-  margin-top: 0.25rem;
-  margin-bottom: 0.5rem;
+.progress-income {
+  background: linear-gradient(90deg, #10b981, #34d399);
 }
 
-.month-category-percent-info {
-  font-size: 0.7rem;
-  color: var(--gray-color);
-  text-align: right;
-  margin-top: 0.25rem;
-  margin-bottom: 0.5rem;
+.progress-expense {
+  background: linear-gradient(90deg, #ef4444, #f87171);
 }
 
-.category-percent-info-expanded {
-  font-size: 0.7rem;
-  color: var(--gray-color);
-  text-align: right;
-  margin-top: 0.25rem;
-  margin-bottom: 0.5rem;
-}
-
-/* Стиль для дочерних категорий - СИНИЙ цвет */
 .progress-subcategory {
-  background: linear-gradient(90deg, #3b82f6, #60a5fa, #93c5fd);
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
 }
 
 .progress-text {
-  font-size: 12px;
+  font-size: 0.75rem;
   text-shadow: 0 0 2px rgba(0,0,0,0.3);
 }
 
 .progress-text-small {
-  font-size: 11px;
+  font-size: 0.688rem;
   text-shadow: 0 0 2px rgba(0,0,0,0.3);
 }
 
-.progress-text-very-small {
-  font-size: 10px;
-  text-shadow: 0 0 2px rgba(0,0,0,0.3);
+.progress-percent-info {
+  font-size: 0.688rem;
+  color: #6b7280;
+  text-align: right;
+  margin-top: 0.25rem;
 }
 
-/* Градиенты для доходов (основные категории) */
-.progress-income {
-  background: linear-gradient(90deg, #10b981, #34d399, #6ee7b7);
-}
-
-/* Градиенты для расходов (основные категории) */
-.progress-expense {
-  background: linear-gradient(90deg, #ef4444, #f87171, #fca5a5);
-}
-
+/* ========== Подкатегории ========== */
 .subcategories {
   margin-top: 1rem;
   padding-left: 1.5rem;
@@ -795,368 +1035,295 @@ export default {
 .subcategory-item {
   margin-bottom: 1rem;
   padding: 0.75rem;
-  background: white;
-  border-radius: var(--radius);
-  border-left: 3px solid #3b82f6;
-}
-
-.subcategory-item:last-child {
-  margin-bottom: 0;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  border-left-width: 3px;
 }
 
 .subcategory-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
   flex-wrap: wrap;
   gap: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .subcategory-name {
-  color: var(--gray-color);
   display: flex;
   align-items: center;
   gap: 0.5rem;
-}
-
-.subcategory-name i {
-  font-size: 0.75rem;
+  font-size: 0.813rem;
+  color: #4b5563;
 }
 
 .subcategory-total {
   font-weight: 600;
+  font-size: 0.813rem;
 }
 
 .subcategory-progress {
   margin: 0.5rem 0;
 }
 
-.subcategory-percent-info {
-  font-size: 0.7rem;
-  color: var(--gray-color);
-  text-align: right;
-  margin-top: 0.25rem;
-}
-
-/* Стили для раскрывающихся категорий в годовой аналитике */
-.expanded-row {
-  background: #f9fafb;
-  padding: 1rem;
-}
-
-.month-categories-table {
-  padding: 1rem;
-}
-
-.expanded-title {
-  font-weight: 600;
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--light-color);
-}
-
-.month-category-expanded {
-  margin-bottom: 1rem;
-  padding: 0.75rem;
-  background: white;
-  border-radius: var(--radius);
-}
-
-.category-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.category-name-expanded {
-  font-weight: 600;
-  flex: 1;
-}
-
-.category-total-expanded {
-  font-weight: 500;
-  min-width: 100px;
+.subcategory-percent {
+  font-size: 0.688rem;
+  color: #6b7280;
   text-align: right;
 }
 
-.category-percentage-expanded {
-  color: var(--gray-color);
-  font-size: 0.875rem;
-  min-width: 70px;
-  text-align: right;
-}
-
-.subcategories-expanded {
-  margin-top: 0.75rem;
-  padding-left: 1.5rem;
-}
-
-.subcategory-row {
-  padding: 0.75rem;
-  border-left: 3px solid #3b82f6;
-  margin-top: 0.5rem;
-  background: #f9fafb;
-  border-radius: var(--radius);
-}
-
-.subcategory-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.subcategory-name-expanded {
-  color: var(--gray-color);
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.subcategory-name-expanded i {
+.expand-hint {
   font-size: 0.75rem;
-}
-
-.subcategory-total-expanded {
-  font-weight: 500;
-  min-width: 100px;
+  color: #6366f1;
+  cursor: pointer;
   text-align: right;
+  margin-top: 0.5rem;
+  padding: 0.25rem;
 }
 
-.subcategory-percentage-expanded {
-  font-size: 0.7rem;
-  color: var(--gray-color);
-  text-align: right;
-  margin-top: 0.25rem;
+.expand-hint:hover {
+  text-decoration: underline;
 }
 
-/* Стили для карточек месяцев (мобильная версия) */
-.mobile-months {
+/* ========== Мобильные карточки месяцев ========== */
+.mobile-months-grid {
   display: none;
+  padding: 1rem;
 }
 
-.month-card {
-  background: var(--white);
-  border: 1px solid var(--light-color);
-  border-radius: var(--radius);
+.mobile-month-card {
+  background: #f9fafb;
+  border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1rem;
-  cursor: pointer;
-  transition: all 0.2s;
+  border: 1px solid #e5e7eb;
 }
 
-.month-card:hover {
-  box-shadow: var(--shadow);
-}
-
-.month-header {
+.mobile-month-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--light-color);
   flex-wrap: wrap;
   gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
 }
 
-.month-name {
+.mobile-month-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.month-name-text {
   font-weight: 600;
   font-size: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
 }
 
-.expand-icon {
-  color: var(--gray-color);
-  font-size: 0.875rem;
-}
-
-.month-total {
-  font-weight: 700;
+.mobile-month-amount {
   font-size: 1.125rem;
+  font-weight: 700;
 }
 
-.month-details {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.month-categories {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--light-color);
-}
-
-.month-categories-title {
-  font-weight: 600;
-  margin-bottom: 0.75rem;
-  font-size: 0.875rem;
-  color: var(--primary-color);
-}
-
-.month-category-item {
+.mobile-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
   margin-bottom: 1rem;
-  padding: 0.75rem;
-  background: var(--light-color);
-  border-radius: var(--radius);
 }
 
-.month-category-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.month-category-name {
-  font-weight: 500;
-}
-
-.month-category-total {
-  font-weight: 500;
-}
-
-.month-category-percentage {
-  font-size: 0.75rem;
-  color: var(--gray-color);
-  text-align: right;
-  margin-top: 0.25rem;
-}
-
-.month-subcategories {
-  margin-top: 0.75rem;
-  padding-left: 1rem;
-}
-
-.month-subcategory {
-  padding: 0.5rem;
-  background: white;
-  border-radius: var(--radius);
-  margin-top: 0.5rem;
-  border-left: 3px solid #3b82f6;
-}
-
-.month-subcategory-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.month-subcategory-name {
-  font-size: 0.875rem;
-  color: var(--gray-color);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.month-subcategory-total {
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.month-subcategory-percentage {
-  font-size: 0.7rem;
-  color: var(--gray-color);
-  text-align: right;
-  margin-top: 0.25rem;
-}
-
-.empty-state-small {
+.mobile-stat {
   text-align: center;
-  padding: 1rem;
-  color: var(--gray-color);
+  padding: 0.5rem;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.mobile-stat-label {
+  font-size: 0.688rem;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.mobile-stat-value {
   font-size: 0.875rem;
+  font-weight: 600;
 }
 
-/* Десктопная таблица */
-.desktop-table {
-  display: block;
+.mobile-progress {
+  margin-top: 0.75rem;
+}
+
+.progress-label {
+  font-size: 0.688rem;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+/* ========== Десктоп таблица ========== */
+.desktop-table-wrapper {
   overflow-x: auto;
+  padding: 0 1rem 1rem 1rem;
 }
 
-.table {
+.analytics-table {
   width: 100%;
   border-collapse: collapse;
+  font-size: 0.875rem;
+  background: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
 }
 
-.table th,
-.table td {
+.analytics-table th,
+.analytics-table td {
   padding: 0.75rem;
   text-align: left;
-  border-bottom: 1px solid var(--light-color);
+  border-bottom: 1px solid #e5e7eb;
 }
 
-.table th {
+.analytics-table th {
+  background: #f9fafb;
   font-weight: 600;
-  background: var(--light-color);
+  color: #4b5563;
+  border-bottom: 2px solid #e5e7eb;
 }
 
-.chart-container {
+.analytics-table tr:last-child td {
+  border-bottom: none;
+}
+
+.analytics-table tr:hover td {
+  background: #f9fafb;
+}
+
+.table-month-cell {
+  white-space: nowrap;
+}
+
+.table-month-cell strong {
+  font-weight: 600;
+}
+
+.table-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 100px;
+}
+
+.table-progress .progress-bar {
+  flex: 1;
+  margin: 0;
+}
+
+.table-progress-value {
+  font-size: 0.75rem;
+  font-weight: 500;
+  min-width: 40px;
+  color: #4b5563;
+}
+
+/* ========== Тренд бейджи ========== */
+.trend-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.trend-badge.small {
+  font-size: 0.688rem;
+  padding: 0.125rem 0.375rem;
+  margin-left: 0.5rem;
+}
+
+.trend-badge.trend-up {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.trend-badge.trend-down {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.trend-badge.trend-neutral {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
+}
+
+/* ========== Годовая сводка ========== */
+.year-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.summary-card {
+  text-align: center;
+  padding: 0.75rem;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  transition: transform 0.2s;
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.summary-label {
+  font-size: 0.688rem;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.summary-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* ========== График ========== */
+.chart-section {
+  padding: 1.5rem;
   overflow-x: auto;
-  padding: 1rem;
+  background: #ffffff;
+}
+
+.chart-canvas {
+  max-width: 100%;
+  height: auto;
+  background: #ffffff;
 }
 
 .chart-note {
   text-align: center;
-  padding: 1rem;
-  color: var(--gray-color);
-  font-size: 0.875rem;
-  border-top: 1px solid var(--light-color);
-  margin-top: 1rem;
+  padding: 0.75rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.stat-card {
-  background: white;
-  padding: 1.5rem;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  text-align: center;
-}
-
-.stat-title {
-  font-size: 0.875rem;
-  color: var(--gray-color);
-  margin-bottom: 0.5rem;
-}
-
-.stat-value {
-  font-size: 1.5rem;
-  font-weight: 600;
-}
-
-.text-success {
-  color: var(--secondary-color);
-}
-
-.text-danger {
-  color: var(--danger-color);
-}
-
+/* ========== Пустое состояние ========== */
 .empty-state {
   text-align: center;
   padding: 3rem;
-  color: var(--gray-color);
+  color: #6b7280;
 }
 
 .empty-state i {
@@ -1165,198 +1332,153 @@ export default {
   opacity: 0.5;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid var(--light-color);
-  flex-wrap: wrap;
-  gap: 1rem;
+.text-center {
+  text-align: center;
 }
 
-.card-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-/* Адаптивные стили */
+/* ========== Адаптивность ========== */
 @media (max-width: 1024px) {
   .filters-header {
     display: flex;
   }
-  
-  .filters {
-    display: grid;
-  }
-  
-  .filters-hidden {
-    display: none;
-  }
-  
-  .card {
+
+  .filters-body {
     padding: 1rem;
   }
-  
+
   .stats-grid {
-    gap: 1rem;
+    gap: 0.75rem;
   }
-  
-  .stat-value {
+
+  .stat-card-value {
     font-size: 1.25rem;
+  }
+
+  .pie-chart-section {
+    flex-direction: column;
+  }
+
+  .pie-chart-legend {
+    max-height: 250px;
   }
 }
 
 @media (max-width: 768px) {
-  h1 {
-    text-align: center;
+  .page-title {
     font-size: 1.5rem;
+    text-align: center;
   }
 
-  .filters {
+  .filters-grid {
     grid-template-columns: 1fr;
-    gap: 0.75rem;
-    padding: 1rem;
   }
-  
-  .filter-actions {
-    flex-direction: column;
-  }
-  
+
   .filter-actions .btn {
     width: 100%;
   }
-  
+
   .stats-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
-  
-  .stat-card {
-    padding: 1rem;
+
+  .stat-card:first-child {
+    grid-column: span 2;
   }
-  
-  .stat-title {
-    font-size: 0.75rem;
-  }
-  
-  .desktop-table {
+
+  .desktop-table-wrapper {
     display: none;
   }
-  
-  .mobile-months {
+
+  .mobile-months-grid {
     display: block;
   }
-  
-  .month-name {
-    font-size: 0.875rem;
+
+  .year-summary {
+    grid-template-columns: repeat(2, 1fr);
   }
-  
-  .month-total {
-    font-size: 1rem;
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
-  
-  .detail-item {
-    font-size: 0.75rem;
+
+  .sort-buttons {
+    width: 100%;
   }
-  
-  .empty-state {
-    padding: 2rem;
+
+  .btn-sort {
+    flex: 1;
+    text-align: center;
   }
-  
-  .empty-state i {
-    font-size: 2rem;
+
+  .categories-list {
+    padding: 1rem;
   }
-  
-  .chart-container {
-    padding: 0.5rem;
+
+  .category-item {
+    padding: 0.75rem;
   }
-  
-  .progress-bar {
-    height: 28px;
-  }
-  
-  .progress-bar.small {
-    height: 24px;
-  }
-  
-  .progress-bar.very-small {
-    height: 20px;
-  }
-  
-  .progress-text,
-  .progress-text-small,
-  .progress-text-very-small {
-    font-size: 9px;
-  }
-  .category-percent-info,
-  .month-category-percent-info {
-    font-size: 0.65rem;
+
+  .subcategories {
+    padding-left: 0.75rem;
   }
 }
 
 @media (max-width: 480px) {
-  h1 {
-    font-size: 1.25rem;
-  }
-  
-  .stat-value {
+  .stat-card-value {
     font-size: 1rem;
   }
-  
-  .category-stat {
-    padding: 0.75rem;
+
+  .stat-card-title {
+    font-size: 0.688rem;
   }
-  
-  .subcategories {
-    padding-left: 0.75rem;
+
+  .year-summary {
+    grid-template-columns: 1fr;
   }
-  
-  .subcategory-item {
-    padding: 0.5rem;
+
+  .mobile-stats-grid {
+    gap: 0.5rem;
   }
-  
-  .month-card {
-    padding: 0.75rem;
+
+  .mobile-stat-value {
+    font-size: 0.75rem;
   }
-  
-  .detail-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
+
+  .progress-bar {
+    height: 28px;
   }
-  
-  .category-row,
-  .subcategory-info {
-    flex-direction: column;
-    align-items: flex-start;
+
+  .progress-bar.small {
+    height: 24px;
   }
-  
-  .category-total-expanded,
-  .category-percentage-expanded,
-  .subcategory-total-expanded,
-  .subcategory-percentage-expanded {
-    text-align: left;
+
+  .progress-text,
+  .progress-text-small {
+    font-size: 0.625rem;
+  }
+
+  .category-total {
+    font-size: 0.875rem;
   }
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
-  .stats-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  
-  .desktop-table {
+  .desktop-table-wrapper {
     display: block;
   }
-  
-  .mobile-months {
+
+  .mobile-months-grid {
     display: none;
   }
-  
-  .table th,
-  .table td {
+
+  .analytics-table {
+    font-size: 0.75rem;
+  }
+
+  .analytics-table th,
+  .analytics-table td {
     padding: 0.5rem;
-    font-size: 1rem;
   }
 }
 </style>
