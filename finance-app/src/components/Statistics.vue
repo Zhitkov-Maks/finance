@@ -176,7 +176,7 @@
         <h3 class="card-title">Аналитика по месяцам</h3>
       </div>
 
-      <!-- Мобильные карточки -->
+      <!-- Мобильные карточки (включая планшеты вертикально) -->
       <div class="mobile-months-grid">
         <div v-for="item in monthlyAnalytics" :key="item.period" class="mobile-month-card">
           <div class="mobile-month-header">
@@ -223,7 +223,7 @@
         </div>
       </div>
 
-      <!-- Десктоп таблица -->
+      <!-- Десктоп таблица (только для широких экранов) -->
       <div class="desktop-table-wrapper">
         <table class="analytics-table">
           <thead>
@@ -324,6 +324,7 @@ export default {
     const selectedMonth = ref(new Date().getMonth() + 1)
     const showFilters = ref(true)
     const isMobile = ref(false)
+    const isTablet = ref(false)
     const expandedCategories = ref({})
     const sortOrder = ref('desc')
     const categoryColors = ref({})
@@ -410,7 +411,7 @@ export default {
       if (!container) return
 
       const containerWidth = container.clientWidth
-      let size = Math.min(containerWidth - 40, 350)
+      let size = Math.min(containerWidth - 40, isTablet.value ? 280 : 350)
 
       canvas.width = size
       canvas.height = size
@@ -474,8 +475,10 @@ export default {
       expandedCategories.value = { ...expandedCategories.value }
     }
 
-    const checkMobile = () => {
-      isMobile.value = window.innerWidth <= 768
+    const checkScreenSize = () => {
+      const width = window.innerWidth
+      isMobile.value = width <= 768
+      isTablet.value = width >= 768 && width <= 1024
     }
 
     const loadStatistics = async () => {
@@ -543,7 +546,7 @@ export default {
 
       const width = canvas.width
       const height = canvas.height
-      const padding = isMobile.value ? 50 : 60
+      const padding = isMobile.value || isTablet.value ? 50 : 60
       const chartWidth = width - 2 * padding
       const chartHeight = height - 2 * padding
       const maxValue = Math.max(...monthlyAnalytics.value.map(item => parseFloat(item.total_amount)), 0)
@@ -558,7 +561,7 @@ export default {
       ctx.stroke()
 
       ctx.fillStyle = '#666'
-      ctx.font = isMobile.value ? '10px Arial' : '12px Arial'
+      ctx.font = isMobile.value || isTablet.value ? '10px Arial' : '12px Arial'
       for (let i = 0; i <= 5; i++) {
         const value = (maxValue / 5) * i
         const y = height - padding - (i / 5) * chartHeight
@@ -568,7 +571,7 @@ export default {
       const step = chartWidth / (monthlyAnalytics.value.length - 1)
       ctx.beginPath()
       ctx.strokeStyle = currentType.value === 'income' ? '#10b981' : '#ef4444'
-      ctx.lineWidth = isMobile.value ? 2 : 3
+      ctx.lineWidth = isMobile.value || isTablet.value ? 2 : 3
 
       monthlyAnalytics.value.forEach((item, index) => {
         const x = padding + index * step
@@ -583,16 +586,16 @@ export default {
         const y = height - padding - (parseFloat(item.total_amount) / maxValue) * chartHeight
         ctx.beginPath()
         ctx.fillStyle = currentType.value === 'income' ? '#10b981' : '#ef4444'
-        ctx.arc(x, y, isMobile.value ? 4 : 6, 0, 2 * Math.PI)
+        ctx.arc(x, y, isMobile.value || isTablet.value ? 4 : 6, 0, 2 * Math.PI)
         ctx.fill()
         ctx.beginPath()
         ctx.fillStyle = 'white'
-        ctx.arc(x, y, isMobile.value ? 2 : 3, 0, 2 * Math.PI)
+        ctx.arc(x, y, isMobile.value || isTablet.value ? 2 : 3, 0, 2 * Math.PI)
         ctx.fill()
         ctx.fillStyle = '#666'
-        ctx.font = isMobile.value ? '10px Arial' : '12px Arial'
-        const monthLabel = isMobile.value ? item.month_name.substring(0, 3) : item.month_name.substring(0, 3)
-        ctx.fillText(monthLabel, x - (isMobile.value ? 10 : 15), height - padding + (isMobile.value ? 15 : 20))
+        ctx.font = isMobile.value || isTablet.value ? '10px Arial' : '12px Arial'
+        const monthLabel = isMobile.value || isTablet.value ? item.month_name.substring(0, 3) : item.month_name.substring(0, 3)
+        ctx.fillText(monthLabel, x - (isMobile.value || isTablet.value ? 10 : 15), height - padding + (isMobile.value || isTablet.value ? 15 : 20))
       })
     }
 
@@ -604,7 +607,7 @@ export default {
     }
 
     const handleResize = () => {
-      checkMobile()
+      checkScreenSize()
       if (selectedPeriod.value === 'year' && monthlyAnalytics.value.length > 0) {
         setTimeout(() => drawChart(), 100)
       }
@@ -614,7 +617,7 @@ export default {
     }
 
     onMounted(() => {
-      checkMobile()
+      checkScreenSize()
       loadStatistics()
       window.addEventListener('resize', handleResize)
 
@@ -642,7 +645,7 @@ export default {
 
     return {
       statistics, sortedStatistics, monthlyAnalytics, totalAmount, transactionCount, currentType,
-      selectedPeriod, selectedYear, selectedMonth, years, months, averageAmount, showFilters, isMobile,
+      selectedPeriod, selectedYear, selectedMonth, years, months, averageAmount, showFilters, isMobile, isTablet,
       expandedCategories, sortOrder, maxMonthAmount, maxMonthName, minMonthAmount, minMonthName,
       averageMonthlyAmount, medianMonthlyAmount, standardDeviation, coefficientOfVariation,
       loadStatistics, toggleCategory, sortCategories, sortedChildren, getPercentage, getSubPercentage,
@@ -658,13 +661,12 @@ export default {
   max-width: 1400px;
   margin: 0 auto;
   padding: 0;
-  background: #f3f4f6;
   min-height: 100vh;
 }
 
 .page-header {
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
+  background: transparent;
+  border-bottom: none;
   padding: 1rem;
   margin-bottom: 0.5rem;
 }
@@ -1229,7 +1231,7 @@ export default {
   margin-bottom: 0.25rem;
 }
 
-/* ========== Десктоп таблица (скрыта на мобильных) ========== */
+/* ========== Десктоп таблица (скрыта на мобильных и планшетах) ========== */
 .desktop-table-wrapper {
   display: none;
 }
@@ -1335,15 +1337,131 @@ export default {
   text-align: center;
 }
 
-/* ========== Планшеты и десктоп ========== */
-@media (min-width: 768px) {
-  .statistics-page {
-    padding: 0 1rem;
+/* ========== ПЛАНШЕТЫ (вертикальная ориентация, 768px - 1024px) ========== */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .page-header {
+    padding: 0.75rem 0;
+    margin-bottom: 1rem;
   }
 
+  .page-title {
+    font-size: 1.5rem;
+    text-align: center;
+  }
+
+  .card {
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    border: 1px solid #e5e7eb;
+  }
+
+  .full-width-card {
+    border-radius: 12px;
+  }
+
+  .card:last-child {
+    margin-bottom: 1rem;
+  }
+
+  .card-header {
+    padding: 1rem;
+  }
+
+  .filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .filter-actions .btn {
+    width: auto;
+    min-width: 120px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.75rem;
+    padding: 0;
+    margin-bottom: 1rem;
+  }
+
+  .stat-card:first-child {
+    grid-column: auto;
+  }
+
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .stat-card-value {
+    font-size: 1.125rem;
+  }
+
+  /* Круговая диаграмма на планшете - фиксированный размер */
+  .pie-chart-section {
+    flex-direction: column;
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .pie-chart-wrapper {
+    min-height: 280px;
+  }
+
+  .pie-chart-legend {
+    max-width: 100%;
+    max-height: 250px;
+  }
+
+  .categories-list {
+    padding: 1rem;
+  }
+
+  .categories-list.full-width {
+    padding: 1rem;
+  }
+
+  .category-item {
+    margin-bottom: 0.75rem;
+    padding: 0.875rem;
+    background: #f9fafb;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+  }
+
+  .category-item.full-width-item {
+    border-radius: 10px;
+  }
+
+  /* На планшетах тоже используем мобильные карточки для годов */
+  .mobile-months-grid {
+    display: block;
+  }
+
+  .desktop-table-wrapper {
+    display: none;
+  }
+
+  .mobile-month-card {
+    border-radius: 10px;
+    margin-bottom: 0.75rem;
+    border: 1px solid #e5e7eb;
+  }
+
+  .year-summary {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .chart-section {
+    padding: 1rem;
+  }
+}
+
+/* ========== ДЕСКТОП (широкие экраны, > 1024px) ========== */
+@media (min-width: 1025px) {
   .page-header {
-    background: transparent;
-    border-bottom: none;
     padding: 0;
     margin-bottom: 1.5rem;
   }
@@ -1351,7 +1469,6 @@ export default {
   .page-title {
     font-size: 1.75rem;
     text-align: left;
-    padding: 0;
   }
 
   .card {
@@ -1427,6 +1544,7 @@ export default {
     border-radius: 10px;
   }
 
+  /* На десктопе показываем таблицу, скрываем мобильные карточки */
   .mobile-months-grid {
     display: none;
   }
@@ -1442,7 +1560,16 @@ export default {
   }
 }
 
-@media (min-width: 768px) and (max-width: 1024px) {
+/* Адаптивная таблица для планшетов в горизонтальной ориентации */
+@media (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
+  .desktop-table-wrapper {
+    display: block;
+  }
+
+  .mobile-months-grid {
+    display: none;
+  }
+
   .analytics-table {
     font-size: 0.75rem;
   }
