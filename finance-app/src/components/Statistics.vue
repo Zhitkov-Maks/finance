@@ -1371,6 +1371,7 @@ export default {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 0.75rem;
+    align-items: end;
   }
 
   .filter-actions .btn {
@@ -1493,6 +1494,7 @@ export default {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1rem;
+    align-items: end;
   }
 
   .filter-actions .btn {
