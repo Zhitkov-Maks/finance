@@ -365,17 +365,12 @@
             </div>
             <div v-if="selectedDay?.hasShift" class="award-section">
               <div class="award-divider"></div>
-              <div class="award-title">
-                <i class="fas fa-trophy"></i>
-                <span>Добавить мотивацию</span>
-              </div>
               <div class="form-group">
                 <label class="form-label">Количество операций:</label>
                 <input type="number" v-model.number="operationsCount" class="form-control" min="0" placeholder="Введите количество операций" />
               </div>
               <button class="btn-award" @click="addAward" :disabled="!operationsCount">
-                <i class="fas fa-gift"></i>
-                Рассчитать мотивацию
+                Добавить
               </button>
             </div>
           </div>
@@ -384,21 +379,17 @@
           <div class="footer-buttons-grid three-buttons">
             <button class="btn-primary" @click="saveShift">
               <i class="fas fa-save"></i>
-              <span>{{ selectedDay?.hasShift ? 'Обновить' : 'Создать' }}</span>
             </button>
             <button v-if="selectedDay?.hasShift" class="btn-danger" @click="deleteShift">
               <i class="fas fa-trash"></i>
-              <span>Удалить</span>
             </button>
             <button class="btn-secondary" @click="closeShiftModal">
               <i class="fas fa-times"></i>
-              <span>Отмена</span>
             </button>
           </div>
         </div>
       </div>
     </div>
-
     <div v-if="showSettingsModal" class="modal" @click.self="closeSettingsModal">
       <div class="modal-content">
         <div class="modal-header">
@@ -430,15 +421,12 @@
           <div class="footer-buttons-grid three-buttons">
             <button class="btn-danger" @click="deleteSettings" v-if="hasSettings">
               <i class="fas fa-trash"></i>
-              <span>Удалить</span>
             </button>
             <button class="btn-primary" @click="saveSettings">
               <i class="fas fa-save"></i>
-              <span>Сохранить</span>
             </button>
             <button class="btn-secondary" @click="closeSettingsModal">
               <i class="fas fa-times"></i>
-              <span>Отмена</span>
             </button>
           </div>
         </div>
@@ -1600,9 +1588,8 @@ export default {
 }
 
 .total-line {
-  margin-top: 0.5rem;
+  margin-top: 0rem;
   padding-top: 0.5rem;
-  border-top: 2px solid #e5e7eb;
 }
 
 .total-card .stat-card-header {
@@ -1616,7 +1603,7 @@ export default {
 }
 
 .currency-block {
-  margin-top: 0.75rem;
+  margin-top: 0rem;
   padding-top: 0.5rem;
   border-top: 1px solid #e5e7eb;
 }
@@ -1825,8 +1812,9 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem;
+  padding: 0.3rem 1rem;
   border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 0.5rem;
 }
 
 .modal-header h3 {
@@ -1847,7 +1835,7 @@ export default {
 }
 
 .modal-body {
-  padding: 1.5rem;
+  padding: 0rem 1.5rem;
 }
 
 .modal-footer {
@@ -1882,7 +1870,7 @@ export default {
 }
 
 .footer-buttons-grid.three-buttons button {
-  min-width: 120px;
+  min-width: 30px;
 }
 
 .footer-buttons-grid.four-buttons {
@@ -2003,19 +1991,19 @@ button:disabled {
 }
 
 .shift-details {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
   padding: 1rem;
   background: #f8fafc;
   border-radius: var(--radius);
 }
 
 .shift-actions {
-  margin-top: 1rem;
+  margin-top: 0rem;
 }
 
 .award-section {
-  margin-top: 1.5rem;
-  padding: 1rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
   background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
   border-radius: var(--radius);
   border: 1px solid #fde68a;
@@ -2027,17 +2015,8 @@ button:disabled {
   margin: -1rem -1rem 1rem -1rem;
 }
 
-.award-title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  font-weight: 600;
-  color: #d97706;
-}
-
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: 0.3rem;
 }
 
 .form-label {
@@ -2210,14 +2189,12 @@ button:disabled {
   }
 
   .footer-buttons-grid.three-buttons {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
     gap: 0.5rem;
     width: 100%;
   }
 
   .footer-buttons-grid.three-buttons button {
-    width: 100%;
+    width: 15%;
   }
 
   .footer-buttons-grid.four-buttons {
