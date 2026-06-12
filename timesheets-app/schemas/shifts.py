@@ -49,6 +49,10 @@ class SimpleShiftSchema(BaseModel):
         ...,
         description="How much the user earned during the work shift."
     )
+    count_operations: float = Field(
+        ...,
+        description="How many operations the user performed."
+    )
 
 
 class ListShiftSchema(BaseModel):

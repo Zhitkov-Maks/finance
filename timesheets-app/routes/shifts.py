@@ -13,7 +13,8 @@ from utils.salary import (
     normalization_salary_for_month
 )
 from utils.shifts import (
-    add_shifts_for_month, get_shift_data_for_specific_date,
+    add_shifts_for_month,
+    get_shift_data_for_specific_date,
     get_shifts_for_month,
     get_shift_data_by_day_id
 )

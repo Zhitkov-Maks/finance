@@ -1,5 +1,5 @@
 <template>
-  <div class="timesheets-container">
+  <div class="timesheets-container" v-if="monthlyStats">
     <!-- Заголовок -->
     <div class="page-header">
       <h1 class="page-title">
@@ -72,8 +72,9 @@
     </div>
 
     <!-- Детальная статистика за месяц -->
-    <div class="month-statistics" v-if="monthlyStats">
+    <div class="month-statistics">
       <div class="stats-container">
+        <!-- Период 1 -->
         <div class="stat-card" v-if="hasPeriodData(monthlyStats.period_one)">
           <div class="stat-card-header" @click="toggleSection('period1')">
             <i class="fas" :class="openSections.period1 ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
@@ -109,6 +110,29 @@
               <span class="stat-label">Кол-во операций:</span>
               <span class="stat-number">{{ monthlyStats.period_one.total_operations }}</span>
             </div>
+            <div v-if="monthlyStats.period_one.total_operations && monthlyStats.period_one.total_base_hours" class="stat-line productivity-line">
+              <span class="stat-label">⚡ Производительность:</span>
+              <span class="stat-number productivity">{{ getProductivity(monthlyStats.period_one.total_operations, monthlyStats.period_one.total_base_hours) }} оп/ч</span>
+            </div>
+            <div v-if="monthlyStats.period_one.total_earned_cold && monthlyStats.period_one.total_earned" class="stat-line cold-percent-line">
+              <span class="stat-label">❄️ Доля доплаты за холод:</span>
+              <span class="stat-number">{{ getColdPercent(monthlyStats.period_one.total_earned_cold, monthlyStats.period_one.total_earned) }}%</span>
+            </div>
+            <div v-if="monthlyStats.period_one.total_earned_cold && monthlyStats.period_one.total_earned_hours" class="stat-line cold-boost-line">
+              <span class="stat-label">📈 Холод добавляет к ставке:</span>
+              <span class="stat-number">{{ getColdBoostPercent(monthlyStats.period_one.total_earned_cold, monthlyStats.period_one.total_earned_hours) }}%</span>
+            </div>
+
+            <!-- Лучший день периода 1 -->
+            <div v-if="periodOneBestDay" class="best-day-period">
+              <div class="best-day-header">🏆 Лучший день периода</div>
+              <div class="best-day-content">
+                <span class="best-day-date">{{ periodOneBestDay.dateStr }}</span>
+                <span class="best-day-stats">{{ periodOneBestDay.count_operations }} оп / {{ periodOneBestDay.base_hours }} ч</span>
+                <span class="best-day-productivity">{{ periodOneBestDay.productivity.toFixed(2) }} оп/ч</span>
+              </div>
+            </div>
+
             <div class="currency-block" v-if="hasCurrencyData(monthlyStats.period_one)">
               <div class="currency-header" @click="toggleCurrency('period1')">
                 <i class="fas" :class="openCurrency.period1 ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
@@ -124,6 +148,7 @@
           </div>
         </div>
 
+        <!-- Период 2 -->
         <div class="stat-card" v-if="hasPeriodData(monthlyStats.period_two)">
           <div class="stat-card-header" @click="toggleSection('period2')">
             <i class="fas" :class="openSections.period2 ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
@@ -159,6 +184,29 @@
               <span class="stat-label">Кол-во операций:</span>
               <span class="stat-number">{{ monthlyStats.period_two.total_operations }}</span>
             </div>
+            <div v-if="monthlyStats.period_two.total_operations && monthlyStats.period_two.total_base_hours" class="stat-line productivity-line">
+              <span class="stat-label">⚡ Производительность:</span>
+              <span class="stat-number productivity">{{ getProductivity(monthlyStats.period_two.total_operations, monthlyStats.period_two.total_base_hours) }} оп/ч</span>
+            </div>
+            <div v-if="monthlyStats.period_two.total_earned_cold && monthlyStats.period_two.total_earned" class="stat-line cold-percent-line">
+              <span class="stat-label">❄️ Доля доплаты за холод:</span>
+              <span class="stat-number">{{ getColdPercent(monthlyStats.period_two.total_earned_cold, monthlyStats.period_two.total_earned) }}%</span>
+            </div>
+            <div v-if="monthlyStats.period_two.total_earned_cold && monthlyStats.period_two.total_earned_hours" class="stat-line cold-boost-line">
+              <span class="stat-label">📈 Холод добавляет к ставке:</span>
+              <span class="stat-number">{{ getColdBoostPercent(monthlyStats.period_two.total_earned_cold, monthlyStats.period_two.total_earned_hours) }}%</span>
+            </div>
+
+            <!-- Лучший день периода 2 -->
+            <div v-if="periodTwoBestDay" class="best-day-period">
+              <div class="best-day-header">🏆 Лучший день периода</div>
+              <div class="best-day-content">
+                <span class="best-day-date">{{ periodTwoBestDay.dateStr }}</span>
+                <span class="best-day-stats">{{ periodTwoBestDay.count_operations }} оп / {{ periodTwoBestDay.base_hours }} ч</span>
+                <span class="best-day-productivity">{{ periodTwoBestDay.productivity.toFixed(2) }} оп/ч</span>
+              </div>
+            </div>
+
             <div class="currency-block" v-if="hasCurrencyData(monthlyStats.period_two)">
               <div class="currency-header" @click="toggleCurrency('period2')">
                 <i class="fas" :class="openCurrency.period2 ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
@@ -174,6 +222,7 @@
           </div>
         </div>
 
+        <!-- Итого за месяц -->
         <div class="stat-card total-card">
           <div class="stat-card-header" @click="toggleSection('total')">
             <i class="fas" :class="openSections.total ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
@@ -209,6 +258,46 @@
               <span class="stat-label">Кол-во операций:</span>
               <span class="stat-number">{{ monthlyStats.total.total_operations }}</span>
             </div>
+            <div v-if="monthlyStats.total?.total_operations && monthlyStats.total?.total_base_hours" class="stat-line productivity-line">
+              <span class="stat-label">⚡ Производительность:</span>
+              <span class="stat-number productivity">{{ getProductivity(monthlyStats.total.total_operations, monthlyStats.total.total_base_hours) }} оп/ч</span>
+            </div>
+            <div v-if="monthlyStats.total?.total_earned_cold && monthlyStats.total?.total_earned" class="stat-line cold-percent-line">
+              <span class="stat-label">❄️ Доля доплаты за холод:</span>
+              <span class="stat-number">{{ getColdPercent(monthlyStats.total.total_earned_cold, monthlyStats.total.total_earned) }}%</span>
+            </div>
+            <div v-if="monthlyStats.total?.total_earned_cold && monthlyStats.total?.total_earned_hours" class="stat-line cold-boost-line">
+              <span class="stat-label">📈 Холод добавляет к ставке:</span>
+              <span class="stat-number">{{ getColdBoostPercent(monthlyStats.total.total_earned_cold, monthlyStats.total.total_earned_hours) }}%</span>
+            </div>
+            <div v-if="monthlyStats.total?.total_overtime && monthlyStats.total?.total_earned" class="stat-line overtime-percent-line">
+              <span class="stat-label">⏱️ Доля доплаты за переработку:</span>
+              <span class="stat-number overtime">{{ getOvertimePercent(monthlyStats.total.total_overtime, monthlyStats.total.total_earned) }}%</span>
+            </div>
+
+            <!-- Динамика производительности между периодами -->
+            <div v-if="periodOneProductivity !== null && periodTwoProductivity !== null" class="dynamics-line">
+              <div class="dynamics-header">📈 Динамика производительности</div>
+              <div class="dynamics-content">
+                <span class="period1-value">{{ periodOneProductivity.toFixed(2) }} оп/ч</span>
+                <i class="fas fa-arrow-right"></i>
+                <span class="period2-value">{{ periodTwoProductivity.toFixed(2) }} оп/ч</span>
+                <span class="dynamics-change" :class="productivityChangeClass">
+                  {{ productivityChangeSymbol }} {{ Math.abs(productivityChangePercent).toFixed(1) }}%
+                </span>
+              </div>
+            </div>
+
+            <!-- Лучший день месяца -->
+            <div v-if="monthBestDay" class="best-day-month">
+              <div class="best-day-header">🏆 Лучший день месяца</div>
+              <div class="best-day-content">
+                <span class="best-day-date">{{ monthBestDay.dateStr }} ({{ monthBestDay.dayOfWeek }})</span>
+                <span class="best-day-stats">{{ monthBestDay.count_operations }} оп / {{ monthBestDay.base_hours }} ч</span>
+                <span class="best-day-productivity">{{ monthBestDay.productivity.toFixed(2) }} оп/ч</span>
+              </div>
+            </div>
+
             <div class="currency-block" v-if="hasCurrencyData(monthlyStats.total)">
               <div class="currency-header" @click="toggleCurrency('total')">
                 <i class="fas" :class="openCurrency.total ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
@@ -226,7 +315,7 @@
       </div>
     </div>
 
-    <!-- Модальные окна (остаются без изменений) -->
+    <!-- Модальное окно добавления смен -->
     <div v-if="showAddManyModal" class="modal" @click.self="closeAddManyModal">
       <div class="modal-content large">
         <div class="modal-header">
@@ -305,7 +394,7 @@
       </div>
     </div>
 
-    <!-- Остальные модальные окна... -->
+    <!-- Модальное окно смены -->
     <div v-if="showShiftModal" class="modal" @click.self="closeShiftModal">
       <div class="modal-content">
         <div class="modal-header">
@@ -390,6 +479,8 @@
         </div>
       </div>
     </div>
+
+    <!-- Модальное окно настроек -->
     <div v-if="showSettingsModal" class="modal" @click.self="closeSettingsModal">
       <div class="modal-content">
         <div class="modal-header">
@@ -433,8 +524,7 @@
       </div>
     </div>
 
-    <!-- Замените модальное окно статистики за год на это: -->
-
+    <!-- Модальное окно статистики за год -->
     <div v-if="showYearStatsModal" class="modal" @click.self="closeYearStatsModal">
       <div class="modal-content">
         <div class="modal-header">
@@ -445,7 +535,6 @@
           <button class="modal-close" @click="closeYearStatsModal">&times;</button>
         </div>
         <div class="modal-body">
-          <!-- Добавлен выбор года -->
           <div class="year-selector">
             <button class="btn-year-nav" @click="prevYear">
               <i class="fas fa-chevron-left"></i>
@@ -508,6 +597,10 @@
       </div>
     </div>
   </div>
+  <div v-else class="loading-container">
+    <i class="fas fa-spinner fa-spin"></i>
+    <p>Загрузка данных...</p>
+  </div>
 </template>
 
 <script>
@@ -563,6 +656,113 @@ export default {
 
     const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
+    // Функция для определения границ периода по дате
+    const getPeriodNumber = (dateStr) => {
+      if (!dateStr) return 1
+      const day = parseInt(dateStr.split('-')[2])
+      return isNaN(day) ? 1 : (day <= 15 ? 1 : 2)
+    }
+
+    // Производительность по периодам (для динамики)
+    const periodOneProductivity = computed(() => {
+      if (!monthlyStats.value?.period_one?.total_operations || !monthlyStats.value?.period_one?.total_base_hours) return null
+      return monthlyStats.value.period_one.total_operations / monthlyStats.value.period_one.total_base_hours
+    })
+
+    const periodTwoProductivity = computed(() => {
+      if (!monthlyStats.value?.period_two?.total_operations || !monthlyStats.value?.period_two?.total_base_hours) return null
+      return monthlyStats.value.period_two.total_operations / monthlyStats.value.period_two.total_base_hours
+    })
+
+    const productivityChangePercent = computed(() => {
+      if (periodOneProductivity.value === null || periodTwoProductivity.value === null) return 0
+      return ((periodTwoProductivity.value - periodOneProductivity.value) / periodOneProductivity.value) * 100
+    })
+
+    const productivityChangeSymbol = computed(() => {
+      if (productivityChangePercent.value > 0) return '📈 +'
+      if (productivityChangePercent.value < 0) return '📉 '
+      return '➡️ '
+    })
+
+    const productivityChangeClass = computed(() => {
+      if (productivityChangePercent.value > 0) return 'positive'
+      if (productivityChangePercent.value < 0) return 'negative'
+      return 'neutral'
+    })
+
+    // Вычисление лучших дней по периодам
+    const periodOneBestDay = computed(() => {
+      if (!shifts.value || !Array.isArray(shifts.value) || shifts.value.length === 0) return null
+      const daysWithOps = shifts.value.filter(day =>
+        day &&
+        day.base_hours > 0 &&
+        day.count_operations > 0 &&
+        day.date &&
+        getPeriodNumber(day.date) === 1
+      )
+      if (daysWithOps.length === 0) return null
+      const best = daysWithOps.reduce((best, current) => {
+        const currentProd = current.count_operations / current.base_hours
+        const bestProd = best.count_operations / best.base_hours
+        return currentProd > bestProd ? current : best
+      }, daysWithOps[0])
+
+      if (!best) return null
+      const date = new Date(best.date)
+      return {
+        ...best,
+        dateStr: date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }),
+        productivity: best.count_operations / best.base_hours
+      }
+    })
+
+    const periodTwoBestDay = computed(() => {
+      if (!shifts.value || !Array.isArray(shifts.value) || shifts.value.length === 0) return null
+      const daysWithOps = shifts.value.filter(day =>
+        day &&
+        day.base_hours > 0 &&
+        day.count_operations > 0 &&
+        day.date &&
+        getPeriodNumber(day.date) === 2
+      )
+      if (daysWithOps.length === 0) return null
+      const best = daysWithOps.reduce((best, current) => {
+        const currentProd = current.count_operations / current.base_hours
+        const bestProd = best.count_operations / best.base_hours
+        return currentProd > bestProd ? current : best
+      }, daysWithOps[0])
+
+      if (!best) return null
+      const date = new Date(best.date)
+      return {
+        ...best,
+        dateStr: date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }),
+        productivity: best.count_operations / best.base_hours
+      }
+    })
+
+    // Лучший день за месяц
+    const monthBestDay = computed(() => {
+      if (!shifts.value || !Array.isArray(shifts.value) || shifts.value.length === 0) return null
+      const daysWithOps = shifts.value.filter(day => day && day.base_hours > 0 && day.count_operations > 0 && day.date)
+      if (daysWithOps.length === 0) return null
+      const best = daysWithOps.reduce((best, current) => {
+        const currentProd = current.count_operations / current.base_hours
+        const bestProd = best.count_operations / best.base_hours
+        return currentProd > bestProd ? current : best
+      }, daysWithOps[0])
+
+      if (!best || !best.date) return null
+      const date = new Date(best.date)
+      return {
+        ...best,
+        dateStr: date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }),
+        dayOfWeek: date.toLocaleDateString('ru-RU', { weekday: 'long' }),
+        productivity: best.count_operations / best.base_hours
+      }
+    })
+
     const isWeekendDay = (date) => {
       const dayOfWeek = date.getDay()
       return dayOfWeek === 0 || dayOfWeek === 6
@@ -590,18 +790,15 @@ export default {
       return !!(period.dollar || period.euro || period.yena || period.som)
     }
 
-    // Общая функция для обработки ошибок API
     const handleApiError = (error, defaultMessage = 'Произошла ошибка') => {
       console.error('API Error:', error)
-      
+
       if (error.response?.data?.detail) {
         const detail = error.response.data.detail
-        
+
         if (Array.isArray(detail)) {
-          // Формируем сообщение для каждого поля
           const errors = detail.map(err => {
             const field = err.loc?.filter(l => l !== 'body').join('.') || 'неизвестное поле'
-            // Убираем префикс "Value error, " если он есть
             const cleanMsg = err.msg.replace(/^Value error,\s*/, '')
             return `${field}: ${cleanMsg}`
           })
@@ -628,6 +825,7 @@ export default {
         shifts.value = response.result || []
       } catch (error) {
         handleApiError(error, 'Ошибка при загрузке смен')
+        shifts.value = []
       }
     }
 
@@ -639,6 +837,7 @@ export default {
         monthlyStats.value = response
       } catch (error) {
         handleApiError(error, 'Ошибка при загрузке статистики')
+        monthlyStats.value = null
       }
     }
 
@@ -1141,6 +1340,26 @@ export default {
       })
     }
 
+    const getProductivity = (operations, hours) => {
+      if (!operations || !hours || hours === 0) return '0'
+      return (operations / hours).toFixed(2)
+    }
+
+    const getColdPercent = (coldEarned, totalEarned) => {
+      if (!coldEarned || !totalEarned || totalEarned === 0) return '0'
+      return ((coldEarned / totalEarned) * 100).toFixed(1)
+    }
+
+    const getColdBoostPercent = (coldEarned, earnedHours) => {
+      if (!coldEarned || !earnedHours || earnedHours === 0) return '0'
+      return ((coldEarned / earnedHours) * 100).toFixed(1)
+    }
+
+    const getOvertimePercent = (overtimeEarned, totalEarned) => {
+      if (!overtimeEarned || !totalEarned || totalEarned === 0) return '0'
+      return ((overtimeEarned / totalEarned) * 100).toFixed(1)
+    }
+
     const generateAvailableYears = () => {
       const currentYear = new Date().getFullYear()
       const years = []
@@ -1303,7 +1522,19 @@ export default {
       availableYears,
       prevYear,
       nextYear,
-      onYearChange
+      onYearChange,
+      getProductivity,
+      getColdPercent,
+      getColdBoostPercent,
+      getOvertimePercent,
+      periodOneBestDay,
+      periodTwoBestDay,
+      monthBestDay,
+      periodOneProductivity,
+      periodTwoProductivity,
+      productivityChangePercent,
+      productivityChangeSymbol,
+      productivityChangeClass
     }
   }
 }
@@ -1316,6 +1547,26 @@ export default {
 
 .timesheets-container {
   padding: 0.5rem;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 1rem;
+  color: #64748b;
+}
+
+.loading-container i {
+  font-size: 2rem;
+  color: #3b82f6;
+}
+
+.loading-container p {
+  margin: 0;
+  font-size: 1rem;
 }
 
 .page-header {
@@ -1513,16 +1764,17 @@ export default {
   gap: 0.5rem;
   padding: 0.75rem 1rem;
   cursor: pointer;
-  background: #f1f5f9;
+  background: #3cb371;
   transition: background 0.3s;
+  border-radius: 10px;
 }
 
 .stat-card-header:hover {
-  background: #e2e8f0;
+  background: #006400;
 }
 
 .stat-card-header i {
-  color: #3b82f6;
+  color: #f0ffff;
   font-size: 0.875rem;
 }
 
@@ -1531,12 +1783,12 @@ export default {
   font-size: 0.9rem;
   margin: 0;
   font-weight: 600;
-  color: #1e293b;
+  color: #f0ffff;
 }
 
 .total-earned {
   font-weight: 700;
-  color: #10b981;
+  color: #f0ffff;
   font-size: 1rem;
 }
 
@@ -1637,6 +1889,117 @@ export default {
   border-radius: var(--radius);
 }
 
+/* Стили для лучшего дня в периоде */
+.best-day-period {
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-radius: var(--radius);
+  border-left: 3px solid #10b981;
+}
+
+.best-day-month {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-radius: var(--radius);
+  border-left: 3px solid #10b981;
+}
+
+.best-day-header {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #059669;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+
+.best-day-content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.best-day-date {
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: #1e293b;
+}
+
+.best-day-stats {
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+.best-day-productivity {
+  background: #10b981;
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+/* Стили для динамики производительности */
+.dynamics-line {
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  background: #f1f5f9;
+  border-radius: var(--radius);
+}
+
+.dynamics-header {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+.dynamics-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.period1-value, .period2-value {
+  font-weight: 600;
+  font-size: 0.85rem;
+  background: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius);
+}
+
+.dynamics-content i {
+  color: #3b82f6;
+  font-size: 0.7rem;
+}
+
+.dynamics-change {
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 20px;
+}
+
+.dynamics-change.positive {
+  background: #dcfce7;
+  color: #059669;
+}
+
+.dynamics-change.negative {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.dynamics-change.neutral {
+  background: #e2e8f0;
+  color: #64748b;
+}
+
 .selection-calendar {
   background: white;
   border-radius: var(--radius);
@@ -1669,7 +2032,7 @@ export default {
 
 .selection-day {
   position: relative;
-  aspect-ratio: 1;
+  aspect-ratio: 1.7;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2121,6 +2484,40 @@ button:disabled {
 
 .notification-error i {
   color: #ef4444;
+}
+
+.productivity-line {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  margin: 0.25rem 0;
+  padding: 0.5rem;
+  border-radius: var(--radius);
+}
+
+.productivity {
+  font-weight: 700;
+  color: #0284c7;
+  font-size: 1rem;
+}
+
+.cold-percent-line {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  margin: 0.25rem 0;
+  padding: 0.5rem;
+  border-radius: var(--radius);
+}
+
+.cold-boost-line {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  margin: 0.25rem 0;
+  padding: 0.5rem;
+  border-radius: var(--radius);
+}
+
+.overtime-percent-line {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  margin: 0.25rem 0;
+  padding: 0.5rem;
+  border-radius: var(--radius);
 }
 
 @keyframes slideIn {
