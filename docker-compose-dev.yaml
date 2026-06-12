@@ -10,7 +10,7 @@ services:
       - "POSTGRES_DB=${DB_NAME}"
     ports:
       - '127.0.0.1:5432:5432'
-    restart: unless-stopped
+    restart: always
     volumes:
       - postgres_data:/var/lib/postgresql/data
     env_file:
@@ -52,7 +52,7 @@ services:
     build:
       context: ./finance
     container_name: api
-    restart: unless-stopped
+    restart: always
     ports:
       - "8001:8001"  # Пробрасываем порт для доступа извне
     env_file:
@@ -98,7 +98,7 @@ services:
     build:
       context: ./finance-app
     container_name: vue-app
-    restart: unless-stopped
+    restart: always
     expose:
       - "80"
     depends_on:
@@ -114,7 +114,7 @@ services:
   nginx:
     image: nginx:1.25-alpine
     container_name: nginx-proxy
-    restart: unless-stopped
+    restart: always
     ports:
       - "80:80"
     volumes:
