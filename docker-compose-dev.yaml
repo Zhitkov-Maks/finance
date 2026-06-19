@@ -1,11 +1,3 @@
-networks:
-  app_network:
-    driver: bridge
-
-volumes:
-  postgres_data:
-  mongodb_data:
-
 services:
   # ========== БАЗЫ ДАННЫХ ==========
   
@@ -24,7 +16,7 @@ services:
     env_file:
       - ./.env
     networks:
-      - app_network
+      - finance_app_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
@@ -41,12 +33,12 @@ services:
     env_file:
       - .env
     environment:
-      - "MONGO_INITDB_ROOT_USERNAME=${DB_MONGO_NAME}"
-      - "MONGO_INITDB_ROOT_PASSWORD=${DB_MONGO_PASS}"
+      MONGO_INITDB_ROOT_USERNAME: ${DB_MONGO_NAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_MONGO_PASS}
     volumes:
       - mongodb_data:/data/db
     networks:
-      - app_network
+      - finance_app_network
     healthcheck:
       test: echo 'db.runCommand("ping").ok' | mongosh -u ${DB_MONGO_NAME} -p ${DB_MONGO_PASS} --authenticationDatabase admin localhost:27017/test --quiet
       interval: 10s
@@ -69,7 +61,7 @@ services:
       finance_db:
         condition: service_healthy
     networks:
-      - app_network
+      - finance_app_network
     volumes:
       - ./finance:/finance
     entrypoint: /finance/entrypoint.sh
@@ -88,13 +80,11 @@ services:
       - "8080:8080"
     env_file:
       - .env
-    environment:
-      - MONGODB_URL=mongodb://${DB_MONGO_NAME}:${DB_MONGO_PASS}@mongodb:27017
     depends_on:
       mongodb:
         condition: service_healthy
     networks:
-      - app_network
+      - finance_app_network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
@@ -117,7 +107,7 @@ services:
       fastapi:
         condition: service_started
     networks:
-      - app_network
+      - finance_app_network
 
   # ========== NGINX (ОБРАТНЫЙ ПРОКСИ) ==========
   
@@ -137,10 +127,18 @@ services:
       fastapi:
         condition: service_started
     networks:
-      - app_network
+      - finance_app_network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=5", "--spider", "http://localhost/"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
+
+networks:
+  finance_app_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  mongodb_data:

@@ -35,7 +35,8 @@ async def get_shifts_for_month(
                 "day_id": str(shift.get("_id")),
                 "base_hours": shift.get("base_hours"),
                 "date": str(shift.get("date")),
-                "earned": shift.get("earned")
+                "earned": shift.get("earned"),
+                "count_operations": shift.get("count_operations", 0)
             }
         )
     return returned_shifts
