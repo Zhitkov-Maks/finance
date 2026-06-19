@@ -2,6 +2,7 @@
   <div class="dashboard-container">
     <h1 class="dashboard-title">Дашборд</h1>
 
+    <!-- Статистика -->
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-title">Общий баланс</div>
@@ -19,7 +20,7 @@
       </div>
     </div>
 
-    <!-- Быстрые действия и курсы валют -->
+    <!-- Панель действий и курсы валют -->
     <div class="actions-panel">
       <button @click="showAddTransaction = true" class="btn btn-success">
         <i class="fas fa-exchange-alt"></i> Добавить транзакцию
@@ -37,181 +38,114 @@
       <div v-else-if="!exchangeRatesLoading" class="exchange-rates-placeholder"></div>
     </div>
 
-    <!-- Последние доходы -->
-    <div class="card">
-      <div class="card-header">
-        <h3 class="card-title">Последние доходы</h3>
-        <router-link to="/transactions?type=income" class="btn btn-secondary">Все доходы</router-link>
-      </div>
+    <!-- НОВЫЙ БЛОК: Финансовые метрики и прогноз -->
+    <div class="insights-grid">
+      <!-- Карточка прогноза -->
+      <div class="card forecast-card">
+        <div class="card-header">
+          <h3 class="card-title">📈 Прогноз на конец месяца</h3>
+          <span class="forecast-date">{{ formatDate(now) }}</span>
+        </div>
 
-      <!-- Мобильные и планшетные карточки с раскрытием -->
-      <div class="mobile-transactions">
-        <div v-for="transaction in recentIncomes" :key="transaction.id" class="transaction-card">
-          <div class="transaction-compact" @click="toggleIncomeExpand(transaction.id)">
-            <div class="compact-left">
-              <div class="transaction-date-compact">{{ formatShortDate(transaction.create_at) }}</div>
-              <span class="badge badge-success">Доход</span>
+        <div class="forecast-content">
+          <div class="forecast-main">
+            <div class="forecast-value" :class="forecastStatus.class">
+              {{ formatCurrency(forecastBalance) }}
             </div>
-            <div class="compact-right">
-              <div class="transaction-amount-compact text-success">
-                {{ formatCurrency(transaction.amount) }}
-              </div>
-              <button class="expand-icon" @click.stop="toggleIncomeExpand(transaction.id)">
-                <i :class="expandedIncomes.has(transaction.id) ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
-              </button>
+            <div class="forecast-label">Прогнозируемый остаток</div>
+          </div>
+
+          <div class="forecast-details">
+            <div class="forecast-item">
+              <span class="forecast-item-label">Средний доход в день</span>
+              <span class="forecast-item-value text-success">
+                {{ formatCurrency(averageDailyIncome) }}
+              </span>
+            </div>
+            <div class="forecast-item">
+              <span class="forecast-item-label">Средний расход в день</span>
+              <span class="forecast-item-value text-danger">
+                {{ formatCurrency(averageDailyExpense) }}
+              </span>
+            </div>
+            <div class="forecast-item">
+              <span class="forecast-item-label">Осталось дней</span>
+              <span class="forecast-item-value">{{ daysLeftInMonth }}</span>
+            </div>
+            <div class="forecast-item">
+              <span class="forecast-item-label">Дневной бюджет</span>
+              <span class="forecast-item-value" :class="dailyBudgetClass">
+                {{ formatCurrency(dailyBudget) }}
+              </span>
             </div>
           </div>
 
-          <!-- Раскрывающаяся часть -->
-          <div v-if="expandedIncomes.has(transaction.id)" class="transaction-expanded">
-            <div class="transaction-details-expanded">
-              <div class="detail-item">
-                <span class="detail-label">
-                  <i class="fas fa-calendar"></i> Полная дата:
-                </span>
-                <span class="detail-value">{{ formatDate(transaction.create_at) }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">
-                  <i class="fas fa-folder"></i> Категория:
-                </span>
-                <span class="detail-value">{{ transaction.category?.name || '—' }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">
-                  <i class="fas fa-credit-card"></i> Счет:
-                </span>
-                <span class="detail-value">{{ transaction.account?.name || '—' }}</span>
-              </div>
-              <div v-if="transaction.comment" class="detail-item">
-                <span class="detail-label">
-                  <i class="fas fa-comment"></i> Комментарий:
-                </span>
-                <span class="detail-value">{{ transaction.comment }}</span>
-              </div>
+          <!-- Прогресс-бар дня -->
+          <div class="daily-progress">
+            <div class="progress-label">
+              <span>Прогресс месяца</span>
+              <span>{{ dailyProgress }}%</span>
             </div>
-          </div>
-        </div>
-        <div v-if="recentIncomes.length === 0" class="empty-state">
-          <i class="fas fa-money-bill-wave"></i>
-          <p>Нет доходов</p>
-        </div>
-      </div>
-
-      <!-- Десктопная таблица -->
-      <div class="desktop-table">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Дата</th>
-              <th>Сумма</th>
-              <th>Категория</th>
-              <th>Счет</th>
-              <th>Комментарий</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="transaction in recentIncomes" :key="transaction.id">
-              <td>{{ formatDate(transaction.create_at) }}</td>
-              <td class="text-success">{{ formatCurrency(transaction.amount) }}</td>
-              <td>{{ transaction.category?.name || '—' }}</td>
-              <td>{{ transaction.account?.name || '—' }}</td>
-              <td>{{ transaction.comment || '—' }}</td>
-            </tr>
-            <tr v-if="recentIncomes.length === 0">
-              <td colspan="5" class="text-center">Нет доходов</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Последние расходы -->
-    <div class="card">
-      <div class="card-header">
-        <h3 class="card-title">Последние расходы</h3>
-        <router-link to="/transactions?type=expense" class="btn btn-secondary">Все расходы</router-link>
-      </div>
-
-      <!-- Мобильные и планшетные карточки с раскрытием -->
-      <div class="mobile-transactions">
-        <div v-for="transaction in recentExpenses" :key="transaction.id" class="transaction-card">
-          <div class="transaction-compact" @click="toggleExpenseExpand(transaction.id)">
-            <div class="compact-left">
-              <div class="transaction-date-compact">{{ formatShortDate(transaction.create_at) }}</div>
-              <span class="badge badge-danger">Расход</span>
-            </div>
-            <div class="compact-right">
-              <div class="transaction-amount-compact text-danger">
-                {{ formatCurrency(transaction.amount) }}
-              </div>
-              <button class="expand-icon" @click.stop="toggleExpenseExpand(transaction.id)">
-                <i :class="expandedExpenses.has(transaction.id) ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
-              </button>
+            <div class="progress-bar">
+              <div
+                class="progress-fill"
+                :style="{ width: dailyProgress + '%' }"
+                :class="progressClass"
+              ></div>
             </div>
           </div>
 
-          <!-- Раскрывающаяся часть -->
-          <div v-if="expandedExpenses.has(transaction.id)" class="transaction-expanded">
-            <div class="transaction-details-expanded">
-              <div class="detail-item">
-                <span class="detail-label">
-                  <i class="fas fa-calendar"></i> Полная дата:
-                </span>
-                <span class="detail-value">{{ formatDate(transaction.create_at) }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">
-                  <i class="fas fa-folder"></i> Категория:
-                </span>
-                <span class="detail-value">{{ transaction.category?.name || '—' }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">
-                  <i class="fas fa-credit-card"></i> Счет:
-                </span>
-                <span class="detail-value">{{ transaction.account?.name || '—' }}</span>
-              </div>
-              <div v-if="transaction.comment" class="detail-item">
-                <span class="detail-label">
-                  <i class="fas fa-comment"></i> Комментарий:
-                </span>
-                <span class="detail-value">{{ transaction.comment }}</span>
-              </div>
-            </div>
+          <!-- Статус прогноза -->
+          <div class="forecast-status" :class="forecastStatus.class">
+            <i :class="forecastStatus.icon"></i>
+            {{ forecastStatus.message }}
           </div>
-        </div>
-        <div v-if="recentExpenses.length === 0" class="empty-state">
-          <i class="fas fa-receipt"></i>
-          <p>Нет расходов</p>
         </div>
       </div>
 
-      <!-- Десктопная таблица -->
-      <div class="desktop-table">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Дата</th>
-              <th>Сумма</th>
-              <th>Категория</th>
-              <th>Счет</th>
-              <th>Комментарий</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="transaction in recentExpenses" :key="transaction.id">
-              <td>{{ formatDate(transaction.create_at) }}</td>
-              <td class="text-danger">{{ formatCurrency(transaction.amount) }}</td>
-              <td>{{ transaction.category?.name || '—' }}</td>
-              <td>{{ transaction.account?.name || '—' }}</td>
-              <td>{{ transaction.comment || '—' }}</td>
-            </tr>
-            <tr v-if="recentExpenses.length === 0">
-              <td colspan="5" class="text-center">Нет расходов</td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- Карточка сравнения с прошлым месяцем -->
+      <div class="card comparison-card">
+        <div class="card-header">
+          <h3 class="card-title">📊 Сравнение с прошлым месяцем</h3>
+        </div>
+
+        <div class="comparison-content">
+          <div class="comparison-item">
+            <div class="comparison-label">
+              <i class="fas fa-arrow-up text-success"></i> Доходы
+            </div>
+            <div class="comparison-values">
+              <span class="comparison-current">{{ formatCurrency(monthlyIncome) }}</span>
+              <span class="comparison-change" :class="incomeChangeClass">
+                {{ incomeChange }}
+              </span>
+            </div>
+          </div>
+
+          <div class="comparison-item">
+            <div class="comparison-label">
+              <i class="fas fa-arrow-down text-danger"></i> Расходы
+            </div>
+            <div class="comparison-values">
+              <span class="comparison-current">{{ formatCurrency(monthlyExpense) }}</span>
+              <span class="comparison-change" :class="expenseChangeClass">
+                {{ expenseChange }}
+              </span>
+            </div>
+          </div>
+
+          <div class="comparison-item highlight">
+            <div class="comparison-label">
+              <i class="fas fa-wallet"></i> Остаток
+            </div>
+            <div class="comparison-values">
+              <span class="comparison-current">{{ formatCurrency(monthlyIncome - monthlyExpense) }}</span>
+              <span class="comparison-change" :class="savingsChangeClass">
+                {{ savingsChange }}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -291,8 +225,7 @@ export default {
     const exchangeRates = ref([])
     const exchangeRatesLoading = ref(true)
     const exchangeRatesError = ref(false)
-    const expandedIncomes = ref(new Set())
-    const expandedExpenses = ref(new Set())
+    const now = ref(new Date())
     let ratesUpdateInterval = null
 
     const newTransaction = ref({
@@ -303,9 +236,215 @@ export default {
       comment: ''
     })
 
-    // --- Логика валют ---
-    const CURRENCIES_TO_SHOW = ['USD', 'EUR', 'CNY']
+    // Данные за прошлый месяц
+    const previousMonthData = ref({
+      income: 0,
+      expense: 0
+    })
 
+    // --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
+    const formatCurrency = (value) => {
+      if (!value && value !== 0) return '0 ₽'
+      return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(value)
+    }
+
+    const formatDate = (dateString) => {
+      if (!dateString) return ''
+      const date = typeof dateString === 'string' ? new Date(dateString) : dateString
+      return date.toLocaleDateString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      })
+    }
+
+    const formatShortDate = (dateString) => {
+      if (!dateString) return ''
+      return new Date(dateString).toLocaleDateString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }
+
+    // --- ОСНОВНЫЕ COMPUTED ---
+    const totalBalance = computed(() => {
+      return accounts.value
+        .filter(acc => acc.is_active)
+        .reduce((sum, acc) => sum + parseFloat(acc.balance), 0)
+    })
+
+    const activeAccounts = computed(() => {
+      return accounts.value.filter(acc => acc.is_active)
+    })
+
+    // --- Загрузка данных за прошлый месяц через API (как в Statistics) ---
+    const loadPreviousMonthStatistics = async () => {
+      const nowDate = new Date()
+      const currentMonth = nowDate.getMonth() + 1
+      const currentYear = nowDate.getFullYear()
+      
+      // Вычисляем предыдущий месяц
+      let prevMonth = currentMonth - 1
+      let prevYear = currentYear
+      if (prevMonth === 0) {
+        prevMonth = 12
+        prevYear = currentYear - 1
+      }
+
+      try {
+        // Используем getStatistics для получения данных за предыдущий месяц
+        const expenseStats = await apiService.getStatistics(prevMonth, prevYear, 'expense')
+        previousMonthData.value.expense = parseFloat(expenseStats.total_amount) || 0
+
+        const incomeStats = await apiService.getStatistics(prevMonth, prevYear, 'income')
+        previousMonthData.value.income = parseFloat(incomeStats.total_amount) || 0
+
+        console.log(`Данные за прошлый месяц (${prevMonth}.${prevYear}): доходы=${previousMonthData.value.income}, расходы=${previousMonthData.value.expense}`)
+      } catch (error) {
+        console.error('Error loading previous month statistics:', error)
+        previousMonthData.value.income = 0
+        previousMonthData.value.expense = 0
+      }
+    }
+
+    // --- Расчет прогноза ---
+    const daysInMonth = computed(() => {
+      const date = new Date()
+      return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+    })
+
+    const daysPassed = computed(() => {
+      const date = new Date()
+      return date.getDate()
+    })
+
+    const daysLeftInMonth = computed(() => {
+      return daysInMonth.value - daysPassed.value
+    })
+
+    const averageDailyIncome = computed(() => {
+      if (daysPassed.value === 0) return 0
+      return monthlyIncome.value / daysPassed.value
+    })
+
+    const averageDailyExpense = computed(() => {
+      if (daysPassed.value === 0) return 0
+      return monthlyExpense.value / daysPassed.value
+    })
+
+    const dailyBudget = computed(() => {
+      if (daysLeftInMonth.value === 0) return 0
+      const currentBalance = totalBalance.value
+      return currentBalance / daysLeftInMonth.value
+    })
+
+    const forecastBalance = computed(() => {
+      const currentBalance = totalBalance.value
+      const dailyNet = averageDailyIncome.value - averageDailyExpense.value
+      const forecast = currentBalance + (dailyNet * daysLeftInMonth.value)
+      return Math.max(0, forecast)
+    })
+
+    // Статус прогноза
+    const forecastStatus = computed(() => {
+      const diff = forecastBalance.value - totalBalance.value
+      if (diff > 0) {
+        return {
+          class: 'status-positive',
+          icon: 'fas fa-arrow-up',
+          message: `Ожидается рост на ${formatCurrency(diff)}`
+        }
+      } else if (diff < 0) {
+        return {
+          class: 'status-negative',
+          icon: 'fas fa-arrow-down',
+          message: `Ожидается снижение на ${formatCurrency(Math.abs(diff))}`
+        }
+      } else {
+        return {
+          class: 'status-neutral',
+          icon: 'fas fa-minus',
+          message: 'Остаток останется без изменений'
+        }
+      }
+    })
+
+    const dailyProgress = computed(() => {
+      return Math.min(100, Math.round((daysPassed.value / daysInMonth.value) * 100))
+    })
+
+    const progressClass = computed(() => {
+      if (dailyProgress.value < 30) return 'progress-low'
+      if (dailyProgress.value < 70) return 'progress-medium'
+      return 'progress-high'
+    })
+
+    const dailyBudgetClass = computed(() => {
+      if (dailyBudget.value > 0) return 'text-success'
+      if (dailyBudget.value < 0) return 'text-danger'
+      return ''
+    })
+
+    // Сравнение с прошлым месяцем
+    const incomeChange = computed(() => {
+      if (previousMonthData.value.income === 0) return 'Нет данных'
+      const diff = monthlyIncome.value - previousMonthData.value.income
+      const percent = (diff / previousMonthData.value.income) * 100
+      return `${diff > 0 ? '+' : ''}${percent.toFixed(1)}%`
+    })
+
+    const incomeChangeClass = computed(() => {
+      if (previousMonthData.value.income === 0) return ''
+      return monthlyIncome.value > previousMonthData.value.income ? 'text-success' : 'text-danger'
+    })
+
+    const expenseChange = computed(() => {
+      if (previousMonthData.value.expense === 0) return 'Нет данных'
+      const diff = monthlyExpense.value - previousMonthData.value.expense
+      const percent = (diff / previousMonthData.value.expense) * 100
+      return `${diff > 0 ? '+' : ''}${percent.toFixed(1)}%`
+    })
+
+    const expenseChangeClass = computed(() => {
+      if (previousMonthData.value.expense === 0) return ''
+      return monthlyExpense.value < previousMonthData.value.expense ? 'text-success' : 'text-danger'
+    })
+
+    const savingsChange = computed(() => {
+      const current = monthlyIncome.value - monthlyExpense.value
+      const previous = previousMonthData.value.income - previousMonthData.value.expense
+      if (previous === 0) return 'Нет данных'
+      const diff = current - previous
+      const percent = (diff / Math.abs(previous)) * 100
+      return `${diff > 0 ? '+' : ''}${percent.toFixed(1)}%`
+    })
+
+    const savingsChangeClass = computed(() => {
+      const current = monthlyIncome.value - monthlyExpense.value
+      const previous = previousMonthData.value.income - previousMonthData.value.expense
+      if (previous === 0) return ''
+      return current > previous ? 'text-success' : 'text-danger'
+    })
+
+    const availableCategories = computed(() => {
+      const categories = newTransaction.value.type === 'income' ? incomeCategories.value : expenseCategories.value
+      return flattenCategories(categories)
+    })
+
+    const flattenCategories = (categories, level = 0) => {
+      let result = []
+      for (const cat of categories) {
+        result.push({ ...cat, level, name: cat.name })
+        if (cat.children && cat.children.length) {
+          result = result.concat(flattenCategories(cat.children, level + 1))
+        }
+      }
+      return result
+    }
+
+    // --- МЕТОДЫ ---
     const fetchExchangeRates = async () => {
       exchangeRatesLoading.value = true
       exchangeRatesError.value = false
@@ -314,6 +453,7 @@ export default {
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
         const data = await response.json()
 
+        const CURRENCIES_TO_SHOW = ['USD', 'EUR', 'CNY']
         const rates = []
         for (const code of CURRENCIES_TO_SHOW) {
           if (data.Valute[code]) {
@@ -325,8 +465,6 @@ export default {
               value: valuePerUnit.toFixed(2),
               date: data.Date.split('T')[0]
             })
-          } else {
-            console.warn(`Currency ${code} not found in response`)
           }
         }
         exchangeRates.value = rates
@@ -339,26 +477,6 @@ export default {
       }
     }
 
-    // Функции для раскрытия карточек
-    const toggleIncomeExpand = (transactionId) => {
-      if (expandedIncomes.value.has(transactionId)) {
-        expandedIncomes.value.delete(transactionId)
-      } else {
-        expandedIncomes.value.add(transactionId)
-      }
-      expandedIncomes.value = new Set(expandedIncomes.value)
-    }
-
-    const toggleExpenseExpand = (transactionId) => {
-      if (expandedExpenses.value.has(transactionId)) {
-        expandedExpenses.value.delete(transactionId)
-      } else {
-        expandedExpenses.value.add(transactionId)
-      }
-      expandedExpenses.value = new Set(expandedExpenses.value)
-    }
-
-    // --- Статистика за месяц ---
     const loadMonthlyStatistics = async () => {
       const now = new Date()
       const month = now.getMonth() + 1
@@ -398,9 +516,7 @@ export default {
         expenseCategories.value = expenseCatData.results || []
 
         await loadMonthlyStatistics()
-
-        console.log('Загружено доходов:', incomeTransactionsList.value.length)
-        console.log('Загружено расходов:', expenseTransactionsList.value.length)
+        await loadPreviousMonthStatistics()
       } catch (error) {
         console.error('Error loading data:', error)
       } finally {
@@ -437,68 +553,7 @@ export default {
       }
     }
 
-    const formatCurrency = (value) => {
-      if (!value && value !== 0) return '0 ₽'
-      return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(value)
-    }
-
-    const formatDate = (dateString) => {
-      if (!dateString) return ''
-      return new Date(dateString).toLocaleDateString('ru-RU', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      })
-    }
-
-    const formatShortDate = (dateString) => {
-      if (!dateString) return ''
-      return new Date(dateString).toLocaleDateString('ru-RU', {
-        day: '2-digit',
-        month: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    }
-
-    const totalBalance = computed(() => {
-      return accounts.value
-        .filter(acc => acc.is_active)
-        .reduce((sum, acc) => sum + parseFloat(acc.balance), 0)
-    })
-
-    const activeAccounts = computed(() => {
-      return accounts.value.filter(acc => acc.is_active)
-    })
-
-    const recentIncomes = computed(() => {
-      return [...incomeTransactionsList.value]
-        .sort((a, b) => new Date(b.create_at) - new Date(a.create_at))
-        .slice(0, 5)
-    })
-
-    const recentExpenses = computed(() => {
-      return [...expenseTransactionsList.value]
-        .sort((a, b) => new Date(b.create_at) - new Date(a.create_at))
-        .slice(0, 5)
-    })
-
-    const availableCategories = computed(() => {
-      const categories = newTransaction.value.type === 'income' ? incomeCategories.value : expenseCategories.value
-      return flattenCategories(categories)
-    })
-
-    const flattenCategories = (categories, level = 0) => {
-      let result = []
-      for (const cat of categories) {
-        result.push({ ...cat, level, name: cat.name })
-        if (cat.children && cat.children.length) {
-          result = result.concat(flattenCategories(cat.children, level + 1))
-        }
-      }
-      return result
-    }
-
+    // --- LIFECYCLE ---
     onMounted(() => {
       loadData()
       fetchExchangeRates()
@@ -520,16 +575,26 @@ export default {
       activeAccounts,
       monthlyIncome,
       monthlyExpense,
-      recentIncomes,
-      recentExpenses,
       availableCategories,
       exchangeRates,
       exchangeRatesLoading,
       exchangeRatesError,
-      expandedIncomes,
-      expandedExpenses,
-      toggleIncomeExpand,
-      toggleExpenseExpand,
+      now,
+      daysLeftInMonth,
+      averageDailyIncome,
+      averageDailyExpense,
+      dailyBudget,
+      forecastBalance,
+      forecastStatus,
+      dailyProgress,
+      progressClass,
+      dailyBudgetClass,
+      incomeChange,
+      incomeChangeClass,
+      expenseChange,
+      expenseChangeClass,
+      savingsChange,
+      savingsChangeClass,
       addTransaction,
       formatCurrency,
       formatDate,
@@ -658,178 +723,234 @@ export default {
   color: var(--danger-color);
 }
 
-.badge {
-  padding: 0.25rem 0.5rem;
-  border-radius: 9999px;
+/* Стили для нового блока */
+.insights-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+/* Карточка прогноза */
+.forecast-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.forecast-card .card-header {
+  border-bottom-color: rgba(255, 255, 255, 0.2);
+}
+
+.forecast-card .card-title {
+  color: white;
+}
+
+.forecast-date {
+  font-size: 0.875rem;
+  opacity: 0.8;
+}
+
+.forecast-content {
+  padding: 0.5rem 0;
+}
+
+.forecast-main {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.forecast-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.forecast-label {
+  font-size: 0.875rem;
+  opacity: 0.8;
+}
+
+.forecast-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.forecast-item {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.forecast-item-label {
   font-size: 0.75rem;
+  opacity: 0.8;
+  margin-bottom: 0.25rem;
+}
+
+.forecast-item-value {
+  font-size: 1.1rem;
   font-weight: 600;
-  display: inline-block;
 }
 
-.badge-success {
-  background: #d1fae5;
-  color: #065f46;
+.forecast-item-value.text-success {
+  color: #34d399;
 }
 
-.badge-danger {
-  background: #fee2e2;
-  color: #991b1b;
+.forecast-item-value.text-danger {
+  color: #f87171;
 }
 
-/* Мобильные карточки с раскрытием */
-.mobile-transactions {
-  display: none;
+.daily-progress {
+  margin-bottom: 1rem;
 }
 
-.transaction-card {
-  background: var(--white);
-  border: 1px solid var(--light-color);
-  border-radius: var(--radius);
-  margin-bottom: 0.5rem;
-  overflow: hidden;
-  transition: all 0.3s ease;
-}
-
-.transaction-compact {
+.progress-label {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 1rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
 }
 
-.transaction-compact:hover {
-  background-color: #f9fafb;
+.progress-bar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+  overflow: hidden;
 }
 
-.compact-left {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex: 1;
+.progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.6s ease;
 }
 
-.transaction-date-compact {
-  font-size: 0.75rem;
-  color: var(--gray-color);
-  min-width: 65px;
+.progress-fill.progress-low {
+  background: #34d399;
 }
 
-.compact-right {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+.progress-fill.progress-medium {
+  background: #fbbf24;
 }
 
-.transaction-amount-compact {
-  font-size: 1rem;
-  font-weight: 700;
+.progress-fill.progress-high {
+  background: #f87171;
 }
 
-.expand-icon {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0.25rem;
-  color: var(--gray-color);
-  transition: color 0.3s;
-  width: 32px;
-  height: 32px;
+.forecast-status {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  text-align: center;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  gap: 0.5rem;
+  font-weight: 500;
 }
 
-.expand-icon:hover {
-  background-color: var(--light-color);
-  color: var(--primary-color);
+.forecast-status.status-positive {
+  background: rgba(52, 211, 153, 0.2);
+  color: #34d399;
 }
 
-.transaction-expanded {
-  padding: 1rem;
-  border-top: 1px solid var(--light-color);
-  background-color: #fafafa;
-  animation: slideDown 0.3s ease;
+.forecast-status.status-negative {
+  background: rgba(248, 113, 113, 0.2);
+  color: #f87171;
 }
 
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.forecast-status.status-neutral {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fbbf24;
 }
 
-.transaction-details-expanded {
+/* Карточка сравнения */
+.comparison-card {
+  background: var(--white);
+}
+
+.comparison-content {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
-.detail-item {
+.comparison-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.875rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: var(--light-color);
 }
 
-.detail-label {
-  color: var(--gray-color);
-  font-weight: 500;
+.comparison-item.highlight {
+  background: #f3f4f6;
+  border: 2px solid var(--primary-color);
+}
+
+.comparison-label {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-weight: 500;
 }
 
-.detail-value {
-  color: var(--dark-color);
-  text-align: right;
-  word-break: break-word;
-  max-width: 60%;
+.comparison-values {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
-.empty-state {
-  text-align: center;
-  padding: 2rem;
-  color: var(--gray-color);
-}
-
-.empty-state i {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-  opacity: 0.5;
-}
-
-.empty-state p {
-  margin: 0;
-}
-
-/* Десктопная таблица */
-.desktop-table {
-  display: block;
-  overflow-x: auto;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.table th,
-.table td {
-  padding: 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid var(--light-color);
-}
-
-.table th {
+.comparison-current {
   font-weight: 600;
-  color: var(--gray-color);
+}
+
+.comparison-change {
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Модалка */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: var(--radius);
+  padding: 2rem;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
 }
 
 .modal-footer {
@@ -841,18 +962,76 @@ export default {
   border-top: 1px solid var(--light-color);
 }
 
-.text-center {
-  text-align: center;
+.form-group {
+  margin-bottom: 1rem;
 }
 
-/* Адаптивные стили */
+.form-label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--light-color);
+  border-radius: var(--radius);
+  font-size: 1rem;
+}
+
+.btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.btn-primary {
+  background: var(--primary-color);
+  color: white;
+}
+
+.btn-secondary {
+  background: var(--light-color);
+  color: var(--dark-color);
+}
+
+.btn-success {
+  background: var(--secondary-color);
+  color: white;
+}
+
+/* Адаптивность */
 @media (max-width: 1024px) {
-  .desktop-table {
-    display: none;
+  .insights-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .forecast-details {
+    grid-template-columns: 1fr 1fr;
   }
 
-  .mobile-transactions {
-    display: block;
+  .dashboard-title {
+    text-align: center;
+  }
+
+  .forecast-value {
+    font-size: 2rem;
+  }
+  
+  .comparison-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  
+  .comparison-values {
+    justify-content: space-between;
   }
 
   .stats-grid {
@@ -862,174 +1041,24 @@ export default {
   .stat-value {
     font-size: 1.5rem;
   }
+}
 
-  .card {
-    padding: 1rem;
+@media (max-width: 480px) {
+  .forecast-details {
+    grid-template-columns: 1fr;
   }
-
-  .card-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .card-header .btn {
-    width: 100%;
-    text-align: center;
-  }
-
-  .card-title {
-    text-align: center;
+  
+  .forecast-value {
+    font-size: 1.5rem;
   }
 
   .actions-panel {
     flex-direction: column;
     align-items: stretch;
-    gap: 1rem;
   }
 
   .exchange-rates {
     justify-content: center;
-  }
-}
-
-@media (max-width: 768px) {
-  .dashboard-container {
-    padding-top: 0;
-  }
-
-  .dashboard-title {
-    font-size: 1.5rem;
-    margin-bottom: 1rem;
-    text-align: center;
-  }
-
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .stat-card {
-    padding: 1rem;
-  }
-
-  .stat-title {
-    font-size: 0.75rem;
-  }
-
-  .stat-value {
-    font-size: 1.25rem;
-  }
-
-  .compact-left {
-    gap: 0.5rem;
-  }
-
-  .transaction-date-compact {
-    min-width: 55px;
-    font-size: 0.7rem;
-  }
-
-  .transaction-amount-compact {
-    font-size: 0.9rem;
-  }
-
-  .badge {
-    font-size: 0.7rem;
-  }
-
-  .modal-content {
-    width: 95%;
-    margin: 1rem;
-    max-height: 85vh;
-  }
-
-  .modal-header h3 {
-    font-size: 1.1rem;
-  }
-
-  .form-group {
-    margin-bottom: 0.75rem;
-  }
-
-  .form-label {
-    font-size: 0.8rem;
-  }
-
-  .form-control {
-    font-size: 16px;
-    padding: 0.5rem;
-  }
-
-  .modal-footer {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .modal-footer .btn {
-    width: 100%;
-  }
-}
-
-@media (max-width: 480px) {
-  .dashboard-title {
-    font-size: 1.25rem;
-  }
-
-  .stat-value {
-    font-size: 1rem;
-  }
-
-  .transaction-compact {
-    padding: 0.6rem 0.75rem;
-  }
-
-  .compact-left {
-    gap: 0.4rem;
-    flex-wrap: wrap;
-  }
-
-  .transaction-date-compact {
-    min-width: 50px;
-  }
-
-  .detail-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
-  }
-
-  .detail-value {
-    max-width: 100%;
-    text-align: left;
-  }
-
-  .exchange-rates {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .rate-item {
-    font-size: 0.75rem;
-  }
-
-  .expand-icon {
-    width: 36px;
-    height: 36px;
-  }
-}
-
-@media (min-width: 1025px) and (max-width: 1280px) {
-  .desktop-table {
-    display: block;
-  }
-  
-  .mobile-transactions {
-    display: none;
-  }
-  
-  .table th,
-  .table td {
-    padding: 0.5rem;
-    font-size: 0.875rem;
   }
 }
 </style>
