@@ -1052,6 +1052,10 @@ export default {
     grid-template-columns: 1fr 1fr;
   }
 
+  .dashboard-title {
+    text-align: center;
+  }
+
   .forecast-value {
     font-size: 2rem;
   }
