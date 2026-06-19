@@ -107,6 +107,9 @@
       <div class="card comparison-card">
         <div class="card-header">
           <h3 class="card-title">📊 Сравнение с прошлым месяцем</h3>
+          <span class="comparison-period">
+            {{ formatMonthYear(previousMonth) }}
+          </span>
         </div>
 
         <div class="comparison-content">
@@ -115,7 +118,7 @@
               <i class="fas fa-arrow-up text-success"></i> Доходы
             </div>
             <div class="comparison-values">
-              <span class="comparison-current">{{ formatCurrency(monthlyIncome) }}</span>
+              <span class="comparison-current">{{ formatCurrency(previousMonthData.income) }}</span>
               <span class="comparison-change" :class="incomeChangeClass">
                 {{ incomeChange }}
               </span>
@@ -127,7 +130,7 @@
               <i class="fas fa-arrow-down text-danger"></i> Расходы
             </div>
             <div class="comparison-values">
-              <span class="comparison-current">{{ formatCurrency(monthlyExpense) }}</span>
+              <span class="comparison-current">{{ formatCurrency(previousMonthData.expense) }}</span>
               <span class="comparison-change" :class="expenseChangeClass">
                 {{ expenseChange }}
               </span>
@@ -139,7 +142,7 @@
               <i class="fas fa-wallet"></i> Остаток
             </div>
             <div class="comparison-values">
-              <span class="comparison-current">{{ formatCurrency(monthlyIncome - monthlyExpense) }}</span>
+              <span class="comparison-current">{{ formatCurrency(previousMonthData.income - previousMonthData.expense) }}</span>
               <span class="comparison-change" :class="savingsChangeClass">
                 {{ savingsChange }}
               </span>
@@ -268,6 +271,32 @@ export default {
       })
     }
 
+    // --- Вычисление предыдущего месяца для отображения ---
+    const previousMonth = computed(() => {
+      const nowDate = new Date()
+      const currentMonth = nowDate.getMonth() + 1
+      const currentYear = nowDate.getFullYear()
+
+      let prevMonth = currentMonth - 1
+      let prevYear = currentYear
+      if (prevMonth === 0) {
+        prevMonth = 12
+        prevYear = currentYear - 1
+      }
+
+      return {
+        month: prevMonth,
+        year: prevYear
+      }
+    })
+
+    // --- Форматирование месяца и года ---
+    const formatMonthYear = (date) => {
+      const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                          'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
+      return `${monthNames[date.month - 1]} ${date.year}`
+    }
+
     // --- ОСНОВНЫЕ COMPUTED ---
     const totalBalance = computed(() => {
       return accounts.value
@@ -279,13 +308,12 @@ export default {
       return accounts.value.filter(acc => acc.is_active)
     })
 
-    // --- Загрузка данных за прошлый месяц через API (как в Statistics) ---
+    // --- Загрузка данных за прошлый месяц через API ---
     const loadPreviousMonthStatistics = async () => {
       const nowDate = new Date()
       const currentMonth = nowDate.getMonth() + 1
       const currentYear = nowDate.getFullYear()
-      
-      // Вычисляем предыдущий месяц
+
       let prevMonth = currentMonth - 1
       let prevYear = currentYear
       if (prevMonth === 0) {
@@ -294,7 +322,6 @@ export default {
       }
 
       try {
-        // Используем getStatistics для получения данных за предыдущий месяц
         const expenseStats = await apiService.getStatistics(prevMonth, prevYear, 'expense')
         previousMonthData.value.expense = parseFloat(expenseStats.total_amount) || 0
 
@@ -387,7 +414,7 @@ export default {
       return ''
     })
 
-    // Сравнение с прошлым месяцем
+    // Сравнение с прошлым месяцем (показываем изменение)
     const incomeChange = computed(() => {
       if (previousMonthData.value.income === 0) return 'Нет данных'
       const diff = monthlyIncome.value - previousMonthData.value.income
@@ -580,6 +607,8 @@ export default {
       exchangeRatesLoading,
       exchangeRatesError,
       now,
+      previousMonth,
+      previousMonthData,
       daysLeftInMonth,
       averageDailyIncome,
       averageDailyExpense,
@@ -598,7 +627,8 @@ export default {
       addTransaction,
       formatCurrency,
       formatDate,
-      formatShortDate
+      formatShortDate,
+      formatMonthYear
     }
   }
 }
@@ -687,6 +717,12 @@ export default {
   font-size: 1.25rem;
   font-weight: 600;
   margin: 0;
+}
+
+.comparison-period {
+  font-size: 0.875rem;
+  color: var(--gray-color);
+  font-weight: 500;
 }
 
 .stats-grid {
@@ -1014,10 +1050,6 @@ export default {
 @media (max-width: 768px) {
   .forecast-details {
     grid-template-columns: 1fr 1fr;
-  }
-
-  .dashboard-title {
-    text-align: center;
   }
 
   .forecast-value {
