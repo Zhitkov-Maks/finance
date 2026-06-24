@@ -2,6 +2,7 @@ import asyncio
 from datetime import datetime, UTC
 
 from fastapi import HTTPException
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from starlette import status
 
 from crud.many import add_many_shifts
@@ -13,14 +14,15 @@ from utils.valute import get_valute_info
 from utils.calculate import calc_valute
 
 
-async def get_settings(user_id: int) -> tuple:
+async def get_settings(user_id: int, db: AsyncIOMotorDatabase) -> tuple:
     """
     Return the basic user settings.
 
+    :param db: Database.
     :param user_id: The user's ID.
     :return tuple: The tuple and the user's settings.
     """
-    settings: dict = await get_settings_user_by_id(user_id)
+    settings: dict = await get_settings_user_by_id(user_id, db)
     if not settings:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -60,12 +62,18 @@ async def calculation_overtime(
 
 
 async def earned_calculation(
-    settings: tuple, time: float, user_id: int, date: datetime, total_hours=None
+    settings: tuple,
+    time: float,
+    user_id: int,
+    db: AsyncIOMotorDatabase,
+    date: datetime,
+    total_hours=None,
 ) -> dict:
     """
     Calculation of earnings per shift, taking into account
     all the input data.
 
+    :param db: Database.
     :param total_hours: Total hours worked in a month.
     :param settings: The user's settings.
     :param time: Time worked.
@@ -76,7 +84,7 @@ async def earned_calculation(
     configuration: dict[str, float] = dict()
     year, month = date.year, date.month
     if total_hours is None:
-        total_hours: float = await get_hours_for_month(user_id, year, month)
+        total_hours: float = await get_hours_for_month(user_id, year, month, db)
     norm_hours = 180 if month == 2 else 190
 
     earned_time = time * settings[0]  # Hourly payment.
@@ -102,23 +110,26 @@ async def earned_calculation(
     return configuration
 
 
-async def earned_per_shift(time: float, user_id: int, date: str) -> None:
+async def earned_per_shift(
+    time: float, user_id: int, date: str, db: AsyncIOMotorDatabase
+) -> None:
     """
     Generate the amount earned per shift.
 
+    :param db: Database.
     :param time: Hours worked.
     :param user_id: The user's ID.
     :param date: The date for recording.
     :return: The earned amount for the month.
     """
     parse_date = datetime.strptime(date, "%Y-%m-%d")
-    settings = await get_settings(user_id)
+    settings = await get_settings(user_id, db)
     valute_data = await get_valute_info()
-    salary = await earned_calculation(settings, time, user_id, parse_date)
+    salary = await earned_calculation(settings, time, user_id, db, parse_date)
     await asyncio.gather(
-        write_salary(salary, user_id, parse_date, valute_data),
+        write_salary(salary, user_id, parse_date, valute_data, db),
         normalization_salary_for_month(
-            user_id, settings, {"year": parse_date.year, "month": parse_date.month}
+            user_id, settings, {"year": parse_date.year, "month": parse_date.month}, db
         ),
     )
 
@@ -136,23 +147,24 @@ async def critical_data(data: dict) -> tuple:
             award_amount=data.get("award_amount"),
             count_operations=data.get("count_operations"),
         )
-    return (data.get("base_hours"), data.get("_id"), data.get("date"), old_need_data)
+    return data.get("base_hours"), data.get("_id"), data.get("date"), old_need_data
 
 
 async def normalization_salary_for_month(
-    user_id: int, settings: tuple, data: dict
+    user_id: int, settings: tuple, data: dict, db: AsyncIOMotorDatabase
 ) -> None:
     """
     Recalculation of monthly salary as the hours may be
     changed and the calculation may be incorrect.
 
+    :param db: Database.
     :param user_id: The user's ID.
     :param settings: User settings.
     :param data: Year and month data.
     """
     year = data.get("year", datetime.now(UTC).year)
     month = data.get("month", datetime.now(UTC).month)
-    result: list[dict] = await get_information_for_month(user_id, year, month)
+    result: list[dict] = await get_information_for_month(user_id, year, month, db)
     sorted_result: list[dict] = sorted(result, key=lambda x: x["date"])
     valute_data: dict[str, tuple[int, float]] = await get_valute_info()
 
@@ -161,7 +173,7 @@ async def normalization_salary_for_month(
 
     for item in sorted_result:
         time, day_id, date, old_data = await critical_data(item)
-        await delete_record(day_id)
+        await delete_record(day_id, db)
         salary = await recalculation_salary(
             time=time,
             user_id=user_id,
@@ -170,11 +182,12 @@ async def normalization_salary_for_month(
             settings=settings,
             total_hours=total_hours,
             old_data=old_data,
+            db=db,
         )
         total_hours += float(time)
         salaries.append(salary)
 
-    await add_many_shifts(salaries)
+    await add_many_shifts(salaries, db)
 
 
 async def recalculation_salary(
@@ -185,10 +198,12 @@ async def recalculation_salary(
     settings: tuple,
     total_hours: float,
     old_data: dict,
+    db: AsyncIOMotorDatabase,
 ) -> dict:
     """
     Recalculate the salary so that there are no errors in the calculations.
 
+    :param db: Database.
     :param valute_data: Information about the ruble exchange rate.
     :param time: Hours worked.
     :param user_id: The user's ID.
@@ -197,7 +212,9 @@ async def recalculation_salary(
     :param total_hours: The number of hours worked per month.
     :param old_data: If there is information about the premium.
     """
-    salary: dict = await earned_calculation(settings, time, user_id, date, total_hours)
+    salary: dict = await earned_calculation(
+        settings, time, user_id, db, date, total_hours
+    )
     if old_data:
         salary.update(earned=(salary.get("earned") + old_data.get("award_amount")))
     salary.update(
@@ -223,25 +240,24 @@ async def calc_in_currency(earned: float) -> dict:
 
 
 async def earned_for_award(
-    count_operations: int,
-    user_id: int,
-    day_id: str,
+    count_operations: int, user_id: int, day_id: str, db: AsyncIOMotorDatabase
 ) -> dict:
     """
     Calculate the bonus and update the salary record.
 
+    :param db: Database.
     :param count_operations: The number of operations performed by the user.
     :param user_id: The user's ID.
     :param day_id: ID of the day.
     :return dict: Dictionary with shift data.
     """
-    settings: dict = await get_settings_user_by_id(user_id)
+    settings: dict = await get_settings_user_by_id(user_id, db)
     cost_award = settings.get("price_award")
     if cost_award is None:
         raise ValueError("Нет данных о стоимости операции!")
 
     earned_award: float = round(count_operations * float(cost_award), 2)
-    current_day: dict = await get_salary_for_day(day_id)
+    current_day: dict = await get_salary_for_day(day_id, db)
 
     if current_day.get("award_amount"):
         earned = current_day["earned"] - current_day["award_amount"] + earned_award
@@ -255,7 +271,7 @@ async def earned_for_award(
         earned=earned,
         valute=currency,
     )
-    await update_salary(day_id, current_day)
+    await update_salary(day_id, current_day, db)
     current_day.update(
         date=str(current_day.get("date")), day_id=str(current_day.get("_id"))
     )

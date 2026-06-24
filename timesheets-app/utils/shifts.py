@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from fastapi import HTTPException, status
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from crud.many import add_many_shifts
 from crud.statistics import get_information_for_month, get_info_by_date
@@ -14,18 +15,19 @@ from utils.valute import get_valute_info
 
 
 async def get_shifts_for_month(
-    user_id: int, year: int, month: int
+    user_id: int, year: int, month: int, db: AsyncIOMotorDatabase
 ) -> list[dict[str, str]]:
     """
     Collect information about shifts for the selected month.
 
+    :param db: Database.
     :param user_id: The user's ID.
     :param year: The year for the database query.
     :param month: The month for the database query.
     :return: A list with brief information about shifts.
     """
     returned_shifts: list[dict[str, str]] = []
-    shifts: list[dict] = await get_information_for_month(user_id, year, month)
+    shifts: list[dict] = await get_information_for_month(user_id, year, month, db)
 
     for shift in shifts:
         returned_shifts.append(
@@ -62,15 +64,18 @@ async def dictionary_formation(shift: dict) -> dict:
     }
 
 
-async def get_shift_data_for_specific_date(user_id: int, date: str) -> dict:
+async def get_shift_data_for_specific_date(
+    user_id: int, date: str, db: AsyncIOMotorDatabase
+) -> dict:
     """
     Requesting and processing information about a shift by user and date.
 
+    :param db: Database.
     :param user_id: The user's ID.
     :param date: The date for which the information is requested.
     :return: Dictionary with information about the shift.
     """
-    shift: dict = await get_info_by_date(user_id, date)
+    shift: dict = await get_info_by_date(user_id, date, db)
     if shift:
         return await dictionary_formation(shift)
     raise HTTPException(
@@ -79,14 +84,15 @@ async def get_shift_data_for_specific_date(user_id: int, date: str) -> dict:
     )
 
 
-async def get_shift_data_by_day_id(day_id: str) -> dict:
+async def get_shift_data_by_day_id(day_id: str, db: AsyncIOMotorDatabase) -> dict:
     """
     Get shift data by ID.
 
+    :param db: Database.
     :param day_id: The day's ID.
     :return: Dictionary with information about the shift.
     """
-    shift: dict = await get_salary_for_day(day_id)
+    shift: dict = await get_salary_for_day(day_id, db)
     if shift:
         return await dictionary_formation(shift)
     raise HTTPException(
@@ -96,12 +102,13 @@ async def get_shift_data_by_day_id(day_id: str) -> dict:
 
 
 async def add_shifts_for_month(
-    user_id: int, time: float, list_dates: list[str]
+    user_id: int, time: float, list_dates: list[str], db: AsyncIOMotorDatabase
 ) -> None:
     """
     Form a list of sorted dates from the transmitted dates as a
     string and send the data for saving.
 
+    :param db: Database.
     :param user_id: The user's ID.
     :param time: The number of hours worked to calculate.
     :param list_dates: A list of string dates in the "YYYY-MM-DD"
@@ -111,16 +118,17 @@ async def add_shifts_for_month(
     date_objects: list = [datetime.strptime(d, "%Y-%m-%d") for d in list_dates]
     data = {"year": date_objects[0].year, "month": date_objects[0].month}
     sorted_dates = sorted(date_objects)
-    await save_shifts_all(user_id, time, sorted_dates, data)
+    await save_shifts_all(user_id, time, sorted_dates, data, db)
 
 
 async def save_shifts_all(
-    user_id: int, time: float, sorted_dates: list, data: dict
+    user_id: int, time: float, sorted_dates: list, data: dict, db: AsyncIOMotorDatabase
 ) -> None:
     """
     Calculation of salary based on the provided data and
     sending it for saving in the database.
 
+    :param db: Database.
     :param data: A dictionary with information about the year and month.
     :param user_id: The user's ID.
     :param time: The number of hours.
@@ -128,7 +136,7 @@ async def save_shifts_all(
     """
     try:
         valute_data: dict[str, tuple[int, float]] = await get_valute_info()
-        settings: tuple[float] = await get_settings(user_id)
+        settings: tuple[float] = await get_settings(user_id, db)
 
         total_hours = 0
         salaries: list[dict] = []
@@ -142,12 +150,13 @@ async def save_shifts_all(
                 settings=settings,
                 total_hours=total_hours,
                 old_data={},
+                db=db,
             )
             total_hours += float(time)
             salaries.append(salary)
 
-        await add_many_shifts(salaries)
-        await normalization_salary_for_month(user_id, settings, data)
+        await add_many_shifts(salaries, db)
+        await normalization_salary_for_month(user_id, settings, data, db)
 
     except Exception as e:
         raise HTTPException(
