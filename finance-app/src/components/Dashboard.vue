@@ -336,7 +336,7 @@ export default {
       }
     }
 
-    // --- Расчет прогноза ---
+    // --- УЛУЧШЕННЫЙ РАСЧЕТ ПРОГНОЗА ---
     const daysInMonth = computed(() => {
       const date = new Date()
       return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
@@ -367,33 +367,85 @@ export default {
       return currentBalance / daysLeftInMonth.value
     })
 
+    // 🔥 НОВЫЙ РАСЧЕТ ПРОГНОЗА
+    // Используем текущий баланс и вычитаем только прогнозируемые расходы
+    // Доходы считаем уже полученными (они уже учтены в балансе)
     const forecastBalance = computed(() => {
       const currentBalance = totalBalance.value
-      const dailyNet = averageDailyIncome.value - averageDailyExpense.value
-      const forecast = currentBalance + (dailyNet * daysLeftInMonth.value)
-      return Math.max(0, forecast)
+      // Прогнозируем только будущие расходы
+      const projectedExpenses = averageDailyExpense.value * daysLeftInMonth.value
+      const forecast = currentBalance - projectedExpenses
+
+      // Округляем до 2 знаков и не даем уйти в сильный минус (показываем 0, если баланс отрицательный)
+      return Math.max(0, Math.round(forecast * 100) / 100)
     })
 
-    // Статус прогноза
+    // Альтернативный прогноз с учетом оставшихся доходов (если известны)
+    // Можно добавить дополнительную информацию о планируемых доходах
+    const forecastWithExpectedIncome = computed(() => {
+      const currentBalance = totalBalance.value
+      // Предполагаем, что оставшиеся доходы будут такими же, как средние за день
+      const projectedIncome = averageDailyIncome.value * daysLeftInMonth.value
+      const projectedExpenses = averageDailyExpense.value * daysLeftInMonth.value
+      const forecast = currentBalance + projectedIncome - projectedExpenses
+      return Math.max(0, Math.round(forecast * 100) / 100)
+    })
+
+    // Статус прогноза (на основе основного прогноза)
     const forecastStatus = computed(() => {
       const diff = forecastBalance.value - totalBalance.value
-      if (diff > 0) {
-        return {
-          class: 'status-positive',
-          icon: 'fas fa-arrow-up',
-          message: `Ожидается рост на ${formatCurrency(diff)}`
-        }
-      } else if (diff < 0) {
-        return {
-          class: 'status-negative',
-          icon: 'fas fa-arrow-down',
-          message: `Ожидается снижение на ${formatCurrency(Math.abs(diff))}`
-        }
-      } else {
+
+      // Если дней осталось мало или расходы нулевые
+      if (daysLeftInMonth.value === 0) {
         return {
           class: 'status-neutral',
           icon: 'fas fa-minus',
-          message: 'Остаток останется без изменений'
+          message: 'Месяц завершен'
+        }
+      }
+
+      // Если средний расход равен 0, прогноз стабилен
+      if (averageDailyExpense.value === 0) {
+        return {
+          class: 'status-neutral',
+          icon: 'fas fa-minus',
+          message: 'Расходы не зафиксированы'
+        }
+      }
+
+      // Прогнозируемое изменение
+      const percentChange = ((forecastBalance.value - totalBalance.value) / totalBalance.value * 100)
+
+      if (percentChange > 5) {
+        return {
+          class: 'status-positive',
+          icon: 'fas fa-arrow-up',
+          message: `Ожидается рост на ${formatCurrency(diff)} (${percentChange.toFixed(1)}%)`
+        }
+      } else if (percentChange < -5) {
+        return {
+          class: 'status-negative',
+          icon: 'fas fa-arrow-down',
+          message: `Ожидается снижение на ${formatCurrency(Math.abs(diff))} (${Math.abs(percentChange).toFixed(1)}%)`
+        }
+      } else {
+        // Показываем более детальный статус
+        const dailyCost = averageDailyExpense.value
+        const daysLeft = daysLeftInMonth.value
+        const totalProjectedCost = dailyCost * daysLeft
+
+        if (totalProjectedCost > totalBalance.value) {
+          return {
+            class: 'status-negative',
+            icon: 'fas fa-exclamation-triangle',
+            message: `Бюджет превышен на ${formatCurrency(totalProjectedCost - totalBalance.value)}`
+          }
+        } else {
+          return {
+            class: 'status-positive',
+            icon: 'fas fa-check-circle',
+            message: `Денег хватит на ${Math.floor(totalBalance.value / dailyCost)} дней`
+          }
         }
       }
     })
@@ -614,6 +666,7 @@ export default {
       averageDailyExpense,
       dailyBudget,
       forecastBalance,
+      forecastWithExpectedIncome,
       forecastStatus,
       dailyProgress,
       progressClass,
