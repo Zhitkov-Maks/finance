@@ -8,15 +8,13 @@ from crud.get_data import get_salary_for_day
 from utils.salary import (
     get_settings,
     normalization_salary_for_month,
-    recalculation_salary
+    recalculation_salary,
 )
 from utils.valute import get_valute_info
 
 
 async def get_shifts_for_month(
-    user_id: int,
-    year: int,
-    month: int
+    user_id: int, year: int, month: int
 ) -> list[dict[str, str]]:
     """
     Collect information about shifts for the selected month.
@@ -36,7 +34,7 @@ async def get_shifts_for_month(
                 "base_hours": shift.get("base_hours"),
                 "date": str(shift.get("date")),
                 "earned": shift.get("earned"),
-                "count_operations": shift.get("count_operations", 0)
+                "count_operations": shift.get("count_operations", 0),
             }
         )
     return returned_shifts
@@ -60,7 +58,7 @@ async def dictionary_formation(shift: dict) -> dict:
         "valute": shift.get("valute"),
         "award_amount": shift.get("award_amount", 0),
         "count_operations": shift.get("count_operations", 0),
-        "earned_overtime": shift.get("earned_overtime", 0)
+        "earned_overtime": shift.get("earned_overtime", 0),
     }
 
 
@@ -77,11 +75,9 @@ async def get_shift_data_for_specific_date(user_id: int, date: str) -> dict:
         return await dictionary_formation(shift)
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
-        detail={
-            "result": False,
-            "description": "Запись о смене не найдена."
-        }
+        detail={"result": False, "description": "Запись о смене не найдена."},
     )
+
 
 async def get_shift_data_by_day_id(day_id: str) -> dict:
     """
@@ -95,17 +91,12 @@ async def get_shift_data_by_day_id(day_id: str) -> dict:
         return await dictionary_formation(shift)
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
-        detail={
-            "result": False,
-            "description": "Запись о смене не найдена."
-        }
+        detail={"result": False, "description": "Запись о смене не найдена."},
     )
 
 
 async def add_shifts_for_month(
-    user_id: int,
-    time: float,
-    list_dates: list[str]
+    user_id: int, time: float, list_dates: list[str]
 ) -> None:
     """
     Form a list of sorted dates from the transmitted dates as a
@@ -124,10 +115,7 @@ async def add_shifts_for_month(
 
 
 async def save_shifts_all(
-    user_id: int,
-    time: float,
-    sorted_dates: list,
-    data: dict
+    user_id: int, time: float, sorted_dates: list, data: dict
 ) -> None:
     """
     Calculation of salary based on the provided data and
@@ -153,7 +141,7 @@ async def save_shifts_all(
                 valute_data=valute_data,
                 settings=settings,
                 total_hours=total_hours,
-                old_data={}
+                old_data={},
             )
             total_hours += float(time)
             salaries.append(salary)
@@ -164,8 +152,5 @@ async def save_shifts_all(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "result": False,
-                "description": "Ошибка при сохранении."
-            }
+            detail={"result": False, "description": "Ошибка при сохранении."},
         )

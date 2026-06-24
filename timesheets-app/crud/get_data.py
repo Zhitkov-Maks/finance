@@ -24,9 +24,7 @@ async def get_salary_for_day(day_id: str) -> dict | None:
         client.close()
 
 
-async def get_hours_for_month(
-    user_id: int, year: int, month: int
-) -> float:
+async def get_hours_for_month(user_id: int, year: int, month: int) -> float:
     """
     Aggregate the hours for the month.
 
@@ -46,17 +44,8 @@ async def get_hours_for_month(
                     "date": {"$gte": start_date, "$lt": end_date},
                 }
             },
-            {
-                "$group": {
-                    "_id": None,
-                    "total_hours": {"$sum": "$base_hours"}
-                }
-            },
-            {
-                "$project": {
-                    "total_hours": {"$round": ["$total_hours", 1]}
-                }
-            }
+            {"$group": {"_id": None, "total_hours": {"$sum": "$base_hours"}}},
+            {"$project": {"total_hours": {"$round": ["$total_hours", 1]}}},
         ]
 
         result = collection.aggregate(pipeline).to_list()
@@ -78,11 +67,7 @@ async def update_salary(day_id: str, data: dict) -> None:
     collection = client.get_collection("salaries")
     try:
         object_id = ObjectId(day_id)
-        collection.update_one(
-            {"_id": object_id},
-            {"$set": data},
-            upsert=True
-        )
+        collection.update_one({"_id": object_id}, {"$set": data}, upsert=True)
     except (DuplicateKeyError, InvalidId):
         pass
     finally:

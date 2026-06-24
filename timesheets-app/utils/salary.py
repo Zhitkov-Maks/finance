@@ -26,8 +26,8 @@ async def get_settings(user_id: int) -> tuple:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
                 "result": False,
-                "description": "Нет настроек для создания записи."
-            }
+                "description": "Нет настроек для создания записи.",
+            },
         )
 
     price: float = float(settings.get("price_time", 0))
@@ -38,10 +38,7 @@ async def get_settings(user_id: int) -> tuple:
 
 
 async def calculation_overtime(
-    settings: tuple,
-    time: float,
-    norm: int,
-    total_hours: float
+    settings: tuple, time: float, norm: int, total_hours: float
 ) -> tuple:
     """
     Calculate how much the user earned per shift
@@ -56,18 +53,14 @@ async def calculation_overtime(
     price, _, overtime, _ = settings  # Unpack the settings into variables
     time_over = (time + total_hours) - norm
     earned = round(
-        min(time_over, time) * (price + overtime) +
-        max((time - time_over), 0) * price, 2
+        min(time_over, time) * (price + overtime) + max((time - time_over), 0) * price,
+        2,
     )
     return earned, min(time_over, time), overtime * min(time_over, time)
 
 
 async def earned_calculation(
-    settings: tuple,
-    time: float,
-    user_id: int,
-    date: datetime,
-    total_hours=None
+    settings: tuple, time: float, user_id: int, date: datetime, total_hours=None
 ) -> dict:
     """
     Calculation of earnings per shift, taking into account
@@ -92,15 +85,13 @@ async def earned_calculation(
         base_hours=time,
         earned_cold=earned_cold,
         earned=(earned_time + earned_cold),
-        earned_hours=earned_time
+        earned_hours=earned_time,
     )
 
     if settings[2] > 0 and (time + total_hours) > norm_hours:
-        (
-            earned_time,
-            hours_overtime,
-            earned_overtime
-        ) = await calculation_overtime(settings, time, norm_hours, total_hours)
+        (earned_time, hours_overtime, earned_overtime) = await calculation_overtime(
+            settings, time, norm_hours, total_hours
+        )
 
         configuration.update(
             hours_overtime=hours_overtime,
@@ -111,11 +102,7 @@ async def earned_calculation(
     return configuration
 
 
-async def earned_per_shift(
-    time: float,
-    user_id: int,
-    date: str
-) -> None:
+async def earned_per_shift(time: float, user_id: int, date: str) -> None:
     """
     Generate the amount earned per shift.
 
@@ -131,10 +118,8 @@ async def earned_per_shift(
     await asyncio.gather(
         write_salary(salary, user_id, parse_date, valute_data),
         normalization_salary_for_month(
-            user_id,
-            settings,
-            {"year": parse_date.year, "month": parse_date.month}
-        )
+            user_id, settings, {"year": parse_date.year, "month": parse_date.month}
+        ),
     )
 
 
@@ -149,20 +134,13 @@ async def critical_data(data: dict) -> tuple:
     if data.get("count_operations", 0) > 0:
         old_need_data.update(
             award_amount=data.get("award_amount"),
-            count_operations=data.get("count_operations")
+            count_operations=data.get("count_operations"),
         )
-    return (
-        data.get("base_hours"),
-        data.get("_id"),
-        data.get("date"),
-        old_need_data
-    )
+    return (data.get("base_hours"), data.get("_id"), data.get("date"), old_need_data)
 
 
 async def normalization_salary_for_month(
-    user_id: int,
-    settings: tuple,
-    data: dict
+    user_id: int, settings: tuple, data: dict
 ) -> None:
     """
     Recalculation of monthly salary as the hours may be
@@ -191,7 +169,7 @@ async def normalization_salary_for_month(
             valute_data=valute_data,
             settings=settings,
             total_hours=total_hours,
-            old_data=old_data
+            old_data=old_data,
         )
         total_hours += float(time)
         salaries.append(salary)
@@ -206,7 +184,7 @@ async def recalculation_salary(
     valute_data: dict,
     settings: tuple,
     total_hours: float,
-    old_data: dict
+    old_data: dict,
 ) -> dict:
     """
     Recalculate the salary so that there are no errors in the calculations.
@@ -219,13 +197,9 @@ async def recalculation_salary(
     :param total_hours: The number of hours worked per month.
     :param old_data: If there is information about the premium.
     """
-    salary: dict = await earned_calculation(
-        settings, time, user_id, date, total_hours
-    )
+    salary: dict = await earned_calculation(settings, time, user_id, date, total_hours)
     if old_data:
-        salary.update(
-            earned=(salary.get("earned") + old_data.get("award_amount"))
-        )
+        salary.update(earned=(salary.get("earned") + old_data.get("award_amount")))
     salary.update(
         user_id=user_id,
         date=date,
@@ -270,11 +244,7 @@ async def earned_for_award(
     current_day: dict = await get_salary_for_day(day_id)
 
     if current_day.get("award_amount"):
-        earned = (
-                current_day["earned"] -
-                current_day["award_amount"] +
-                earned_award
-        )
+        earned = current_day["earned"] - current_day["award_amount"] + earned_award
     else:
         earned = earned_award + current_day["earned"]
 
@@ -283,11 +253,10 @@ async def earned_for_award(
         award_amount=earned_award,
         count_operations=count_operations,
         earned=earned,
-        valute=currency
+        valute=currency,
     )
     await update_salary(day_id, current_day)
     current_day.update(
-        date=str(current_day.get("date")),
-        day_id=str(current_day.get("_id"))
+        date=str(current_day.get("date")), day_id=str(current_day.get("_id"))
     )
     return current_day

@@ -6,11 +6,7 @@ from starlette import status
 from database.db_conf import MongoDB
 
 
-async def get_information_for_month(
-    user_id: int,
-    year: int,
-    month: int
-) -> list:
+async def get_information_for_month(user_id: int, year: int, month: int) -> list:
     """
     Get the data for the selected month.
 
@@ -46,9 +42,7 @@ async def get_info_by_date(user_id: int, date: str) -> dict:
     try:
         parse_date = datetime.strptime(date, "%Y-%m-%d")
         collection = client.get_collection("salaries")
-        data: dict = collection.find_one(
-            {"user_id": user_id, "date": parse_date}
-        )
+        data: dict = collection.find_one({"user_id": user_id, "date": parse_date})
         return data or {}
     finally:
         client.close()
@@ -71,7 +65,7 @@ async def statistics_for_year(year: int, user_id: int) -> dict:
             {
                 "$match": {
                     "user_id": user_id,
-                    "date": {"$gte": start_date, "$lt": end_date}
+                    "date": {"$gte": start_date, "$lt": end_date},
                 }
             },
             {
@@ -83,7 +77,7 @@ async def statistics_for_year(year: int, user_id: int) -> dict:
                     "dollar": {"$sum": "$valute.dollar"},
                     "euro": {"$sum": "$valute.euro"},
                     "yena": {"$sum": "$valute.yena"},
-                    "som": {"$sum": "$valute.som"}
+                    "som": {"$sum": "$valute.som"},
                 }
             },
             {
@@ -94,9 +88,9 @@ async def statistics_for_year(year: int, user_id: int) -> dict:
                     "dollar": {"$round": ["$dollar", 2]},
                     "euro": {"$round": ["$euro", 2]},
                     "yena": {"$round": ["$yena", 2]},
-                    "som": {"$round": ["$som", 2]}
+                    "som": {"$round": ["$som", 2]},
                 }
-            }
+            },
         ]
 
         result = collection.aggregate(pipeline).to_list()
@@ -104,20 +98,14 @@ async def statistics_for_year(year: int, user_id: int) -> dict:
             return result[0]
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "result": False,
-                "description": "Нет данных за выбранный год."
-            }
+            detail={"result": False, "description": "Нет данных за выбранный год."},
         )
     finally:
         client.close()
 
 
 async def aggregate_data(
-    year: int,
-    month: int,
-    user_id: int,
-    period: int | None = None
+    year: int, month: int, user_id: int, period: int | None = None
 ) -> dict | None:
     """
     Calculate the amount of hours worked for the period
@@ -138,7 +126,7 @@ async def aggregate_data(
         match_stage = {
             "$match": {
                 "user_id": user_id,
-                "date": {"$gte": start_date, "$lt": end_date}
+                "date": {"$gte": start_date, "$lt": end_date},
             }
         }
 
@@ -162,9 +150,9 @@ async def aggregate_data(
                     "dollar": {"$sum": "$valute.dollar"},
                     "euro": {"$sum": "$valute.euro"},
                     "yena": {"$sum": "$valute.yena"},
-                    "som": {"$sum": "$valute.som"}
+                    "som": {"$sum": "$valute.som"},
                 }
-            }
+            },
         ]
 
         result = collection.aggregate(pipeline).to_list()

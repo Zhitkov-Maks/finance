@@ -19,10 +19,9 @@ async def request_valute_info() -> dict:
     if current_date in cashed_currency:
         return cashed_currency[current_date]
 
-    async with aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(60)) as client:
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(60)) as client:
         async with client.get(
-                url=URL, headers={'Accept': 'application/json'}
+            url=URL, headers={"Accept": "application/json"}
         ) as response:
             if response.status == 200:
                 currency: dict = json.loads(await response.text())
@@ -42,19 +41,19 @@ async def get_valute_info() -> dict[str, tuple[int, float]]:
     data = await request_valute_info()
     return {
         "dollar": (
-            int(data['Valute']['USD']['Nominal']),
-            float(data["Valute"]["USD"]["Value"])
+            int(data["Valute"]["USD"]["Nominal"]),
+            float(data["Valute"]["USD"]["Value"]),
         ),
         "euro": (
-            int(data['Valute']['EUR']['Nominal']),
-            float(data["Valute"]["EUR"]["Value"])
+            int(data["Valute"]["EUR"]["Nominal"]),
+            float(data["Valute"]["EUR"]["Value"]),
         ),
         "yena": (
-            int(data['Valute']['CNY']['Nominal']),
-            float(data["Valute"]["CNY"]["Value"])
+            int(data["Valute"]["CNY"]["Nominal"]),
+            float(data["Valute"]["CNY"]["Value"]),
         ),
         "som": (
-            int(data['Valute']['UZS']['Nominal']),
-            float(data["Valute"]["UZS"]["Value"])
-        )
+            int(data["Valute"]["UZS"]["Nominal"]),
+            float(data["Valute"]["UZS"]["Value"]),
+        ),
     }

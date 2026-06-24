@@ -13,23 +13,16 @@ async def add_many_shifts(shifts: list[dict]) -> None:
     collection = client.get_collection("salaries")
     try:
         collection.create_index(
-            [("user_id", 1), ("date", 1)],
-            unique=True,
-            name="unique_user_date"
+            [("user_id", 1), ("date", 1)], unique=True, name="unique_user_date"
         )
 
         operations = []
         for shift in shifts:
             operations.append(
                 pymongo.UpdateOne(
-                    {
-                        'user_id': shift["user_id"],
-                        'date': shift["date"]
-                    },
-                    {
-                        '$set': shift
-                    },
-                    upsert=True
+                    {"user_id": shift["user_id"], "date": shift["date"]},
+                    {"$set": shift},
+                    upsert=True,
                 )
             )
 

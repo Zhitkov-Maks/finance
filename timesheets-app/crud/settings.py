@@ -14,9 +14,7 @@ async def create_settings(data: dict, user_id: int) -> None:
     client = MongoDB()
     try:
         collection = client.get_collection("users_settings")
-        collection.update_one(
-            {"user_id": user_id}, {"$set": data}, upsert=True
-        )
+        collection.update_one({"user_id": user_id}, {"$set": data}, upsert=True)
     finally:
         client.close()
 
@@ -36,10 +34,7 @@ async def get_settings_user_by_id(user_id: int) -> dict:
             return data
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "result": False,
-                "description": "Пользователь не найден."
-            }
+            detail={"result": False, "description": "Пользователь не найден."},
         )
     finally:
         client.close()
@@ -59,10 +54,7 @@ async def delete_settings(user_id) -> None:
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "result": False,
-                "description": "Пользователь не найден."
-            }
+            detail={"result": False, "description": "Пользователь не найден."},
         )
 
     finally:

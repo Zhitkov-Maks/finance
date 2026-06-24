@@ -11,10 +11,7 @@ from utils.calculate import calc_valute
 
 
 async def write_salary(
-    data: dict,
-    user_id: int,
-    date: datetime,
-    valute_data: dict[str, tuple[int, float]]
+    data: dict, user_id: int, date: datetime, valute_data: dict[str, tuple[int, float]]
 ) -> None:
     """
     Save or update the user's settings.
@@ -29,24 +26,16 @@ async def write_salary(
     earned_in_valute: dict[str, float] = await calc_valute(
         data.get("earned"), valute_data
     )
-    data.update(
-        period=period,
-        valute=earned_in_valute,
-        date_write=datetime.now(UTC)
-    )
+    data.update(period=period, valute=earned_in_valute, date_write=datetime.now(UTC))
     collection = client.get_collection("salaries")
 
     collection.create_index(
-        [("user_id", 1), ("date", 1)],
-        unique=True,
-        name="unique_user_date"
+        [("user_id", 1), ("date", 1)], unique=True, name="unique_user_date"
     )
 
     try:
         collection.update_one(
-            {"user_id": user_id, "date": date},
-            {"$set": data},
-            upsert=True
+            {"user_id": user_id, "date": date}, {"$set": data}, upsert=True
         )
     except pymongo.errors.DuplicateKeyError:
         pass
@@ -70,10 +59,7 @@ async def delete_record(day_id: str) -> dict:
     except InvalidId:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "result": False,
-                "description": "Ошибка идентификатора."
-            }
+            detail={"result": False, "description": "Ошибка идентификатора."},
         )
     finally:
         client.close()
