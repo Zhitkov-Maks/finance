@@ -93,7 +93,7 @@ async def create_award_for_day(
     db: AsyncIOMotorDatabase = Depends(get_db),
 ) -> dict:
     """Добавить данные о заработанной премии."""
-    return await earned_for_award(count_operations, user_id, day_id, db.close())
+    return await earned_for_award(count_operations, user_id, day_id, db)
 
 
 @shift_router.delete(
