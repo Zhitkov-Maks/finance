@@ -124,13 +124,21 @@ export default {
         registerError.value = 'Пароли не совпадают'
         return
       }
-      
+
       try {
         await apiService.register(registerEmail.value, registerPassword.value, registerRePassword.value)
         showRegister.value = false
+        registerError.value = ''
+
+        // Заполняем поля входа данными из регистрации
+        email.value = registerEmail.value
+        password.value = registerPassword.value
+
+        // Выполняем вход с этими данными
         await handleLogin()
+
       } catch (err) {
-        registerError.value = 'Ошибка регистрации'
+        registerError.value = err.message || 'Ошибка регистрации'
         console.error(err)
       }
     }
