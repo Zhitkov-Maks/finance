@@ -296,10 +296,16 @@ EMAIL_HOST_PASSWORD = os.getenv("MAIL_PASSWORD")
 DEFAULT_FROM_EMAIL = os.getenv("MAIL")
 
 # Логирование
+# settings.py
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
         'simple': {
             'format': '{levelname} {asctime} {message}',
             'style': '{',
@@ -308,19 +314,29 @@ LOGGING = {
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'formatter': 'simple',
+            'formatter': 'verbose',
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
         },
     },
     'root': {
         'handlers': ['console'],
-        'level': 'INFO',
+        'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
     },
     'loggers': {
         'django': {
             'handlers': ['console'],
-            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'WARN',
             'propagate': False,
         },
     },
 }
-

@@ -22,7 +22,7 @@ from .schemas import (
 
 HOST = os.getenv('FINANCE_FASTAPI_URL', 'http://fastapi:8080')
 
-BASE_URL = f"{HOST}/api/v2/"
+BASE_URL = f"{HOST}/api/v1/"
 
 
 @extend_schema(tags=["TimeSheetsSettings"])

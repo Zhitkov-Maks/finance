@@ -24,20 +24,22 @@ from drf_spectacular.views import (
 )
 from .views import health_check
 
+# Версия api
+v = "v1"
 
 urlpatterns = [
     path('health/', health_check, name='health'),
     path("admin/", admin.site.urls),
     path("api/vi/dfr_auth/", include("rest_framework.urls")),
-    path("api/v1/auth/", include("djoser.urls")),
+    path(f"api/{v}/auth/", include("djoser.urls")),
     re_path("auth/", include("djoser.urls.authtoken")),
-    path("api/v1/accounts/", include("accounts.urls")),
-    path("api/v1/transaction/", include("transactions.urls")),
-    path('api/v1/analitycs/', include('analytics.urls')),
+    path(f"api/{v}/accounts/", include("accounts.urls")),
+    path(f"api/{v}/transaction/", include("transactions.urls")),
+    path(f'api/{v}/analitycs/', include('analytics.urls')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-    path("api/v1/transfer/", include('transfer.urls')),
-    path('api/v1/debts/', include('debt.urls')),
-    path('api/v1/timesheets/', include('timesheets.urls'))
+    path(f"api/{v}/transfer/", include('transfer.urls')),
+    path(f'api/{v}/debts/', include('debt.urls')),
+    path(f'api/{v}/timesheets/', include('timesheets.urls'))
 ]
