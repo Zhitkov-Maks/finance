@@ -70,22 +70,22 @@
         <div class="day-number">{{ day.dayNumber }}</div>
         <div v-if="day.isCurrentMonth && day.isVacation" class="day-status vacation-status">
           <i class="fas fa-umbrella-beach"></i>
-          <span>Отпуск</span>
+          <span>О</span>
         </div>
         <div v-else-if="day.isCurrentMonth && day.isSick" class="day-status sick-status">
           <i class="fas fa-thermometer-half"></i>
-          <span>Б/Л</span>
+          <span>Б</span>
         </div>
         <div v-else-if="day.isCurrentMonth && day.hasShift && day.earned && day.earned > 0" class="day-earned">
           {{ formatNumberShort(day.earned) }} ₽
         </div>
         <div v-else-if="day.isCurrentMonth && day.isVacation" class="day-status vacation-status">
           <i class="fas fa-umbrella-beach"></i>
-          <span>Отпуск</span>
+          <span>О</span>
         </div>
         <div v-else-if="day.isCurrentMonth && day.isSick" class="day-status sick-status">
           <i class="fas fa-thermometer-half"></i>
-          <span>Б/Л</span>
+          <span>Б</span>
         </div>
         <div v-else-if="day.isCurrentMonth && !day.hasShift && !day.isVacation && !day.isSick" class="day-empty">
           <i class="fas fa-plus-circle"></i>
