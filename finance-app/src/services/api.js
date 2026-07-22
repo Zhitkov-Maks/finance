@@ -406,6 +406,17 @@ class ApiService {
         }
     }
 
+    // Добавление отпуска
+    async addVacation(data) {
+        try {
+            const response = await this.client.post('/timesheets/shifts/vacation/', data)
+            return response.data
+        } catch (error) {
+            console.error('Error adding vacation:', error.response?.data || error.message)
+            throw error
+        }
+    }
+
     // Создание смены за выбранный день
     async createShift(date, hours) {
         try {

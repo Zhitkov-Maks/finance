@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -163,3 +163,25 @@ async def save_shifts_all(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"result": False, "description": "Ошибка при сохранении."},
         )
+
+
+async def create_vacation_days(user_id, data, db: AsyncIOMotorDatabase):
+    date: datetime = datetime.strptime(data.get("start_date"), "%Y-%m-%d")
+    number_of_days: int = data.get("number_of_days")
+    type_days: str = data.get("type_days")
+    settings: tuple[float] = await get_settings(user_id, db)
+    salaries: list[dict] = []
+    for i in range(number_of_days):
+        date_ = date + timedelta(days=i)
+        salaries.append(
+            {
+                "user_id": user_id,
+                "base_hours": 0,
+                "date": date_,
+                "earned": -1 if "отп" in type_days.lower() else -2,
+                "count_operations": 0,
+                "period": 1 if date.day <= 15 else 2,
+            }
+        )
+    await add_many_shifts(salaries, db)
+    await normalization_salary_for_month(user_id, settings, data, db)

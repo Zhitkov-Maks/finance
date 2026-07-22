@@ -17,7 +17,7 @@ from .schemas import (
     TimeSheetsForDaySchema,
     TimeSheetsSchema,
     TimeSheetsSettingsSchema,
-    StatisticForYearSchema
+    StatisticForYearSchema, VacationAddSchemas
 )
 
 HOST = os.getenv('FINANCE_FASTAPI_URL', 'http://fastapi:8080')
@@ -88,7 +88,7 @@ class GetShifts(generics.GenericAPIView):
     )
     http_method_names = ["get", "post", "put"]
 
-    def get(self, request: HttpRequest):
+    def get(self, request):
         """Get monthly cost or income analytics."""
         user = request.user.id
         data = request.GET.dict()
@@ -145,8 +145,8 @@ class GetShiftsForDay(generics.GenericAPIView):
     def post(self, request, day_id):
         data = request.GET.dict()
         user_id = request.user.id
-        print(data)
-        url = f"{BASE_URL}shifts/{day_id}/award/?user_id={user_id}&count_operations={data['count_operations']}"
+        url = f"{BASE_URL}shifts/{day_id}/award/?user_id={user_id}"\
+              f"&count_operations={data.get('count_operations', 0)}"
         response = requests.post(url=url)
         return HttpResponse(
             response.content,
@@ -232,6 +232,35 @@ class StatisticForYear(generics.GenericAPIView):
             url=f"{BASE_URL}statistic/year/?user_id={user_id}&year={year}"
         )
 
+        return HttpResponse(
+            response.content,
+            status=response.status_code,
+            content_type='application/json',
+        )
+
+
+@extend_schema(tags=["Vacation"])
+@VacationAddSchemas
+class VacationView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = (
+        TokenAuthentication,
+        BasicAuthentication,
+        SessionAuthentication,
+    )
+    http_method_names = ["post"]
+
+    def post(self, request):
+        data, user_id = request.data, request.user.id
+        response = requests.post(
+            url=f"{BASE_URL}shifts/vacation/?user_id={user_id}",
+            json={
+                "start_date": data.get("start_date"),
+                "number_of_days": data.get("number_of_days"),
+                "type_days": data.get("type_days")
+            },
+            timeout=30
+        )
         return HttpResponse(
             response.content,
             status=response.status_code,

@@ -142,10 +142,13 @@ async def critical_data(data: dict) -> tuple:
     :return: A tuple with critical data.
     """
     old_need_data: dict[str, float] = {}
+    if data.get("earned") in (-1, -2):
+        return data.get("base_hours"), data.get("_id"), data.get("date"), data.get("earned")
+
     if data.get("count_operations", 0) > 0:
         old_need_data.update(
-            award_amount=data.get("award_amount"),
-            count_operations=data.get("count_operations"),
+            award_amount=data.get("award_amount", 0),
+            count_operations=data.get("count_operations", 0),
         )
     return data.get("base_hours"), data.get("_id"), data.get("date"), old_need_data
 
@@ -173,19 +176,20 @@ async def normalization_salary_for_month(
 
     for item in sorted_result:
         time, day_id, date, old_data = await critical_data(item)
-        await delete_record(day_id, db)
-        salary = await recalculation_salary(
-            time=time,
-            user_id=user_id,
-            date=date,
-            valute_data=valute_data,
-            settings=settings,
-            total_hours=total_hours,
-            old_data=old_data,
-            db=db,
-        )
+        if old_data not in (-1, -2):
+            await delete_record(day_id, db)
+            salary = await recalculation_salary(
+                time=time,
+                user_id=user_id,
+                date=date,
+                valute_data=valute_data,
+                settings=settings,
+                total_hours=total_hours,
+                old_data=old_data,
+                db=db,
+            )
+            salaries.append(salary)
         total_hours += float(time)
-        salaries.append(salary)
 
     await add_many_shifts(salaries, db)
 
@@ -216,7 +220,7 @@ async def recalculation_salary(
         settings, time, user_id, db, date, total_hours
     )
     if old_data:
-        salary.update(earned=(salary.get("earned") + old_data.get("award_amount")))
+        salary.update(earned=(salary.get("earned") + old_data.get("award_amount", 0)))
     salary.update(
         user_id=user_id,
         date=date,

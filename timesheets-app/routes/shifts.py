@@ -2,7 +2,7 @@ from fastapi import APIRouter, status, Depends
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from database.db_conf import get_db
-from schemas.shifts import ManyAddShifts, ShiftSchema, ListShiftSchema, SpecificShift
+from schemas.shifts import ManyAddShifts, ShiftSchema, ListShiftSchema, SpecificShift, VacationSchema
 from schemas.general import SuccessSchema, NotFoundShift
 from utils.salary import (
     earned_for_award,
@@ -14,7 +14,7 @@ from utils.shifts import (
     add_shifts_for_month,
     get_shift_data_for_specific_date,
     get_shifts_for_month,
-    get_shift_data_by_day_id,
+    get_shift_data_by_day_id, create_vacation_days,
 )
 from crud.create import delete_record
 
@@ -23,10 +23,49 @@ shift_router = APIRouter(prefix="/shifts", tags=["SHIFTS"])
 
 
 @shift_router.post(
+    path="/vacation/", status_code=status.HTTP_201_CREATED, response_model=SuccessSchema
+)
+async def create_vacation(
+        user_id: int, data: VacationSchema, db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Создать отпуск или больничный."""
+    data: dict = data.model_dump()
+    await create_vacation_days(user_id, data, db)
+    return SuccessSchema(result=True)
+
+
+@shift_router.post(
+    path="/many/", status_code=status.HTTP_201_CREATED, response_model=SuccessSchema
+)
+async def create_shifts(
+        user_id: int, data: ManyAddShifts, db: AsyncIOMotorDatabase = Depends(get_db)
+) -> SuccessSchema:
+    """Групповое добавление смен за конкретный месяц."""
+    data: dict = data.model_dump()
+    time: float = data.get("hours")
+    list_dates: list[str] = data.get("dates")
+    await add_shifts_for_month(user_id, time, list_dates, db)
+    return SuccessSchema(result=True)
+
+
+@shift_router.get(
+    path="/date/",
+    status_code=status.HTTP_200_OK,
+    response_model=SpecificShift,
+    responses={404: {"model": NotFoundShift}},
+)
+async def get_shift_by_concrete_day(
+        user_id: int, date: str, db: AsyncIOMotorDatabase = Depends(get_db)
+) -> dict:
+    """Получить данные о смене по дате."""
+    return await get_shift_data_for_specific_date(user_id, date, db)
+
+
+@shift_router.post(
     path="/", status_code=status.HTTP_201_CREATED, response_model=SuccessSchema
 )
 async def create_shift(
-    user_id: int, data: ShiftSchema, db: AsyncIOMotorDatabase = Depends(get_db)
+        user_id: int, data: ShiftSchema, db: AsyncIOMotorDatabase = Depends(get_db)
 ) -> SuccessSchema:
     """Создать запись о рабочей смене."""
     data: dict = data.model_dump()
@@ -39,7 +78,7 @@ async def create_shift(
     path="/", status_code=status.HTTP_200_OK, response_model=SuccessSchema
 )
 async def update_shift(
-    user_id: int, data: ShiftSchema, db: AsyncIOMotorDatabase = Depends(get_db)
+        user_id: int, data: ShiftSchema, db: AsyncIOMotorDatabase = Depends(get_db)
 ) -> SuccessSchema:
     """Изменить данные о рабочей смене."""
     data: dict = data.model_dump()
@@ -52,30 +91,17 @@ async def update_shift(
     path="/", status_code=status.HTTP_200_OK, response_model=ListShiftSchema
 )
 async def get_list_shifts_for_month(
-    user_id: int, year: int, month: int, db: AsyncIOMotorDatabase = Depends(get_db)
+        user_id: int, year: int, month: int, db: AsyncIOMotorDatabase = Depends(get_db)
 ) -> dict[str, list[dict]]:
     """Получить список смен за месяц, для добавления в календарь."""
     return {"result": await get_shifts_for_month(user_id, year, month, db)}
 
 
 @shift_router.get(
-    path="/date/",
-    status_code=status.HTTP_200_OK,
-    response_model=SpecificShift,
-    responses={404: {"model": NotFoundShift}},
-)
-async def get_shift_by_concrete_day(
-    user_id: int, date: str, db: AsyncIOMotorDatabase = Depends(get_db)
-) -> dict:
-    """Получить данные о смене по дате."""
-    return await get_shift_data_for_specific_date(user_id, date, db)
-
-
-@shift_router.get(
     path="/{day_id}/", status_code=status.HTTP_200_OK, response_model=SpecificShift
 )
 async def get_shift_by_day_id(
-    day_id: str, db: AsyncIOMotorDatabase = Depends(get_db)
+        day_id: str, db: AsyncIOMotorDatabase = Depends(get_db)
 ) -> dict:
     """Получить данные о смене по идентификатору смены."""
     return await get_shift_data_by_day_id(day_id, db)
@@ -87,10 +113,10 @@ async def get_shift_by_day_id(
     response_model=SpecificShift,
 )
 async def create_award_for_day(
-    day_id: str,
-    count_operations: int,
-    user_id: int,
-    db: AsyncIOMotorDatabase = Depends(get_db),
+        day_id: str,
+        count_operations: int,
+        user_id: int,
+        db: AsyncIOMotorDatabase = Depends(get_db),
 ) -> dict:
     """Добавить данные о заработанной премии."""
     return await earned_for_award(count_operations, user_id, day_id, db)
@@ -101,7 +127,7 @@ async def create_award_for_day(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_shift_by_day_id(
-    day_id: str, db: AsyncIOMotorDatabase = Depends(get_db)
+        day_id: str, db: AsyncIOMotorDatabase = Depends(get_db)
 ) -> None:
     """
     Удалить запись о смене по идентификатору,
@@ -113,17 +139,3 @@ async def delete_shift_by_day_id(
     await normalization_salary_for_month(
         user_id, settings, {"year": date.year, "month": date.month}, db
     )
-
-
-@shift_router.post(
-    path="/many/", status_code=status.HTTP_201_CREATED, response_model=SuccessSchema
-)
-async def create_shifts(
-    user_id: int, data: ManyAddShifts, db: AsyncIOMotorDatabase = Depends(get_db)
-) -> SuccessSchema:
-    """Групповое добавление смен за конкретный месяц."""
-    data: dict = data.model_dump()
-    time: float = data.get("hours")
-    list_dates: list[str] = data.get("dates")
-    await add_shifts_for_month(user_id, time, list_dates, db)
-    return SuccessSchema(result=True)

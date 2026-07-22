@@ -151,3 +151,9 @@ class FullStatsSerializer(serializers.Serializer):
     period_one = PeriodStatsSerializer()
     period_two = PeriodStatsSerializer()
     total = PeriodStatsSerializer()
+
+
+class VacationSerializer(serializers.Serializer):
+    start_date = serializers.CharField()
+    number_of_days = serializers.IntegerField()
+    type_days = serializers.CharField()

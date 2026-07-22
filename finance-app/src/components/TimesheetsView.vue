@@ -19,6 +19,10 @@
           <i class="fas fa-chart-line"></i>
           Статистика за год
         </button>
+        <button class="btn btn-vacation" @click="openVacationModal">
+          <i class="fas fa-umbrella-beach"></i>
+          Отпуск/Больничный
+        </button>
       </div>
     </div>
 
@@ -54,18 +58,36 @@
         class="calendar-day"
         :class="{
           'other-month': !day.isCurrentMonth,
-          'weekend-day': day.isCurrentMonth && day.isWeekend && !day.hasShift,
+          'weekend-day': day.isCurrentMonth && day.isWeekend && !day.hasShift && !day.isVacation && !day.isSick,
           'weekend-with-shift': day.isCurrentMonth && day.isWeekend && day.hasShift,
           'today': day.isCurrentMonth && day.isToday,
-          'has-shift': day.isCurrentMonth && day.hasShift && !day.isWeekend
+          'has-shift': day.isCurrentMonth && day.hasShift && !day.isWeekend && !day.isVacation && !day.isSick,
+          'vacation-day': day.isCurrentMonth && day.isVacation,
+          'sick-day': day.isCurrentMonth && day.isSick
         }"
         @click="openShiftModal(day)"
       >
         <div class="day-number">{{ day.dayNumber }}</div>
-        <div v-if="day.isCurrentMonth && day.hasShift && day.earned" class="day-earned">
+        <div v-if="day.isCurrentMonth && day.isVacation" class="day-status vacation-status">
+          <i class="fas fa-umbrella-beach"></i>
+          <span>Отпуск</span>
+        </div>
+        <div v-else-if="day.isCurrentMonth && day.isSick" class="day-status sick-status">
+          <i class="fas fa-thermometer-half"></i>
+          <span>Б/Л</span>
+        </div>
+        <div v-else-if="day.isCurrentMonth && day.hasShift && day.earned && day.earned > 0" class="day-earned">
           {{ formatNumberShort(day.earned) }} ₽
         </div>
-        <div v-else-if="day.isCurrentMonth && !day.hasShift" class="day-empty">
+        <div v-else-if="day.isCurrentMonth && day.isVacation" class="day-status vacation-status">
+          <i class="fas fa-umbrella-beach"></i>
+          <span>Отпуск</span>
+        </div>
+        <div v-else-if="day.isCurrentMonth && day.isSick" class="day-status sick-status">
+          <i class="fas fa-thermometer-half"></i>
+          <span>Б/Л</span>
+        </div>
+        <div v-else-if="day.isCurrentMonth && !day.hasShift && !day.isVacation && !day.isSick" class="day-empty">
           <i class="fas fa-plus-circle"></i>
         </div>
       </div>
@@ -355,7 +377,7 @@
                   class="selection-day"
                   :class="{
                     'selected': isDateSelected(date.fullDate),
-                    'has-shift': date.hasShift,
+                    'has-shift': date.hasShift || date.isVacation || date.isSick,
                     'other-month-date': !date.isCurrentMonth
                   }"
                   @click="toggleDateSelection(date.fullDate)"
@@ -363,6 +385,8 @@
                   <span class="selection-day-number">{{ date.dayNumber }}</span>
                   <i v-if="isDateSelected(date.fullDate)" class="fas fa-check-circle check-icon"></i>
                   <i v-else-if="date.hasShift" class="fas fa-calendar-check shift-icon"></i>
+                  <i v-else-if="date.isVacation" class="fas fa-umbrella-beach vacation-icon"></i>
+                  <i v-else-if="date.isSick" class="fas fa-thermometer-half sick-icon"></i>
                 </div>
               </div>
             </div>
@@ -405,7 +429,27 @@
           <button class="modal-close" @click="closeShiftModal">&times;</button>
         </div>
         <div class="modal-body">
-          <div v-if="shiftDetails" class="shift-details">
+          <div v-if="selectedDay?.isVacation || selectedDay?.isSick" class="shift-details vacation-sick-details">
+            <div class="vacation-sick-status">
+              <i :class="selectedDay.isVacation ? 'fas fa-umbrella-beach' : 'fas fa-thermometer-half'"></i>
+              <span>{{ selectedDay.isVacation ? 'Отпуск' : 'Больничный' }}</span>
+            </div>
+            <div class="stat-line">
+              <span class="stat-label">Статус:</span>
+              <span class="stat-number">{{ selectedDay.isVacation ? '📅 Отдых' : '🏥 Больничный' }}</span>
+            </div>
+            <div class="stat-line">
+              <span class="stat-label">Заработано:</span>
+              <span class="stat-number">{{ selectedDay.isVacation ? 'Отдых' : 'Больничный' }}</span>
+            </div>
+            <div class="shift-actions">
+              <button class="btn-danger" @click="deleteVacationOrSick" style="width: 100%;">
+                <i class="fas fa-trash"></i>
+                Удалить
+              </button>
+            </div>
+          </div>
+          <div v-else-if="shiftDetails" class="shift-details">
             <div class="stat-line">
               <span class="stat-label">Отработано:</span>
               <span class="stat-number">{{ shiftDetails.base_hours }} ч</span>
@@ -447,7 +491,7 @@
               </div>
             </div>
           </div>
-          <div class="shift-actions">
+          <div class="shift-actions" v-if="!selectedDay?.isVacation && !selectedDay?.isSick">
             <div class="form-group">
               <label class="form-label">Количество часов</label>
               <input type="number" v-model.number="editHours" class="form-control" min="0" step="0.5" />
@@ -464,7 +508,7 @@
             </div>
           </div>
         </div>
-        <div class="modal-footer">
+        <div class="modal-footer" v-if="!selectedDay?.isVacation && !selectedDay?.isSick">
           <div class="footer-buttons-grid three-buttons">
             <button class="btn-primary" @click="saveShift">
               <i class="fas fa-save"></i>
@@ -474,6 +518,14 @@
             </button>
             <button class="btn-secondary" @click="closeShiftModal">
               <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer" v-else>
+          <div class="footer-buttons-grid one-button">
+            <button class="btn-secondary" @click="closeShiftModal">
+              <i class="fas fa-times"></i>
+              <span>Закрыть</span>
             </button>
           </div>
         </div>
@@ -596,6 +648,51 @@
         </div>
       </div>
     </div>
+
+    <!-- Модальное окно отпуска/больничного -->
+    <div v-if="showVacationModal" class="modal" @click.self="closeVacationModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>
+            <i class="fas fa-umbrella-beach"></i>
+            Отпуск / Больничный
+          </h3>
+          <button class="modal-close" @click="closeVacationModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label required">Тип</label>
+            <select v-model="vacationData.type_days" class="form-control">
+              <option value="Отпуск">Отпуск</option>
+              <option value="Больничный">Больничный</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label required">Дата начала</label>
+            <input type="date" v-model="vacationData.start_date" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label required">Количество дней</label>
+            <input type="number" v-model.number="vacationData.number_of_days" class="form-control" min="1" required />
+          </div>
+          <div class="vacation-preview" v-if="vacationData.start_date && vacationData.number_of_days > 0">
+            <p>Будет добавлено <strong>{{ vacationData.number_of_days }}</strong> дней с <strong>{{ formatDateForDisplay(vacationData.start_date) }}</strong></p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="footer-buttons-grid three-buttons">
+            <button class="btn-primary" @click="saveVacation" :disabled="!vacationData.start_date || !vacationData.number_of_days">
+              <i class="fas fa-save"></i>
+              <span>Сохранить</span>
+            </button>
+            <button class="btn-secondary" @click="closeVacationModal">
+              <i class="fas fa-times"></i>
+              <span>Отмена</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <div v-else class="loading-container">
     <i class="fas fa-spinner fa-spin"></i>
@@ -627,12 +724,19 @@ export default {
     const showSettingsModal = ref(false)
     const showAddManyModal = ref(false)
     const showYearStatsModal = ref(false)
+    const showVacationModal = ref(false)
     const selectedDay = ref(null)
     const shiftDetails = ref(null)
     const editHours = ref(0)
     const operationsCount = ref(0)
     const showShiftCurrency = ref(false)
     const showYearCurrency = ref(false)
+
+    const vacationData = ref({
+      start_date: '',
+      number_of_days: 14,
+      type_days: 'Отпуск'
+    })
 
     const openSections = ref({
       period1: false,
@@ -656,14 +760,18 @@ export default {
 
     const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
-    // Функция для определения границ периода по дате
+    const getShiftStatus = (earned) => {
+      if (earned === -1) return 'vacation'
+      if (earned === -2) return 'sick'
+      return null
+    }
+
     const getPeriodNumber = (dateStr) => {
       if (!dateStr) return 1
       const day = parseInt(dateStr.split('-')[2])
       return isNaN(day) ? 1 : (day <= 15 ? 1 : 2)
     }
 
-    // Производительность по периодам (для динамики)
     const periodOneProductivity = computed(() => {
       if (!monthlyStats.value?.period_one?.total_operations || !monthlyStats.value?.period_one?.total_base_hours) return null
       return monthlyStats.value.period_one.total_operations / monthlyStats.value.period_one.total_base_hours
@@ -691,7 +799,6 @@ export default {
       return 'neutral'
     })
 
-    // Вычисление лучших дней по периодам
     const periodOneBestDay = computed(() => {
       if (!shifts.value || !Array.isArray(shifts.value) || shifts.value.length === 0) return null
       const daysWithOps = shifts.value.filter(day =>
@@ -699,7 +806,8 @@ export default {
         day.base_hours > 0 &&
         day.count_operations > 0 &&
         day.date &&
-        getPeriodNumber(day.date) === 1
+        getPeriodNumber(day.date) === 1 &&
+        day.earned > 0
       )
       if (daysWithOps.length === 0) return null
       const best = daysWithOps.reduce((best, current) => {
@@ -724,7 +832,8 @@ export default {
         day.base_hours > 0 &&
         day.count_operations > 0 &&
         day.date &&
-        getPeriodNumber(day.date) === 2
+        getPeriodNumber(day.date) === 2 &&
+        day.earned > 0
       )
       if (daysWithOps.length === 0) return null
       const best = daysWithOps.reduce((best, current) => {
@@ -742,10 +851,9 @@ export default {
       }
     })
 
-    // Лучший день за месяц
     const monthBestDay = computed(() => {
       if (!shifts.value || !Array.isArray(shifts.value) || shifts.value.length === 0) return null
-      const daysWithOps = shifts.value.filter(day => day && day.base_hours > 0 && day.count_operations > 0 && day.date)
+      const daysWithOps = shifts.value.filter(day => day && day.base_hours > 0 && day.count_operations > 0 && day.date && day.earned > 0)
       if (daysWithOps.length === 0) return null
       const best = daysWithOps.reduce((best, current) => {
         const currentProd = current.count_operations / current.base_hours
@@ -933,7 +1041,9 @@ export default {
           isCurrentMonth: false,
           isWeekend: isWeekendDay(fullDate),
           isToday: false,
-          hasShift: false
+          hasShift: false,
+          isVacation: false,
+          isSick: false
         })
       }
 
@@ -952,18 +1062,24 @@ export default {
           return shiftDate === dateStr
         })
 
+        const isVacation = shift && shift.earned === -1
+        const isSick = shift && shift.earned === -2
+        const hasShift = !!shift && shift.earned > 0
+
         const dayObject = {
           dayNumber: i,
           fullDate: fullDate,
           isCurrentMonth: true,
           isWeekend: isWeekendDay(fullDate),
           isToday: fullDate.toDateString() === today.toDateString(),
-          hasShift: !!shift,
-          dateStr: dateStr
-        }
-
-        if (shift) {
-          Object.assign(dayObject, shift)
+          hasShift: hasShift,
+          isVacation: isVacation,
+          isSick: isSick,
+          dateStr: dateStr,
+          day_id: shift?.day_id,
+          earned: shift?.earned || 0,
+          base_hours: shift?.base_hours || 0,
+          count_operations: shift?.count_operations || 0
         }
 
         days.push(dayObject)
@@ -978,7 +1094,9 @@ export default {
           isCurrentMonth: false,
           isWeekend: isWeekendDay(fullDate),
           isToday: false,
-          hasShift: false
+          hasShift: false,
+          isVacation: false,
+          isSick: false
         })
       }
 
@@ -1014,7 +1132,7 @@ export default {
         const dayStr = String(fullDate.getDate()).padStart(2, '0')
         const dateStr = `${yearStr}-${monthStr}-${dayStr}`
 
-        const hasShift = currentShifts.some(s => {
+        const shift = currentShifts.find(s => {
           const shiftDate = s.date ? s.date.split(' ')[0] : ''
           return shiftDate === dateStr
         })
@@ -1022,7 +1140,9 @@ export default {
         dates.push({
           dayNumber: date,
           fullDate: dateStr,
-          hasShift: hasShift,
+          hasShift: !!(shift && shift.earned > 0),
+          isVacation: !!(shift && shift.earned === -1),
+          isSick: !!(shift && shift.earned === -2),
           isCurrentMonth: false
         })
       }
@@ -1034,7 +1154,7 @@ export default {
         const dayStr = String(fullDate.getDate()).padStart(2, '0')
         const dateStr = `${yearStr}-${monthStr}-${dayStr}`
 
-        const hasShift = currentShifts.some(s => {
+        const shift = currentShifts.find(s => {
           const shiftDate = s.date ? s.date.split(' ')[0] : ''
           return shiftDate === dateStr
         })
@@ -1042,7 +1162,9 @@ export default {
         dates.push({
           dayNumber: i,
           fullDate: dateStr,
-          hasShift: hasShift,
+          hasShift: !!(shift && shift.earned > 0),
+          isVacation: !!(shift && shift.earned === -1),
+          isSick: !!(shift && shift.earned === -2),
           isCurrentMonth: true
         })
       }
@@ -1055,7 +1177,7 @@ export default {
         const dayStr = String(fullDate.getDate()).padStart(2, '0')
         const dateStr = `${yearStr}-${monthStr}-${dayStr}`
 
-        const hasShift = currentShifts.some(s => {
+        const shift = currentShifts.find(s => {
           const shiftDate = s.date ? s.date.split(' ')[0] : ''
           return shiftDate === dateStr
         })
@@ -1063,7 +1185,9 @@ export default {
         dates.push({
           dayNumber: i,
           fullDate: dateStr,
-          hasShift: hasShift,
+          hasShift: !!(shift && shift.earned > 0),
+          isVacation: !!(shift && shift.earned === -1),
+          isSick: !!(shift && shift.earned === -2),
           isCurrentMonth: false
         })
       }
@@ -1142,7 +1266,7 @@ export default {
     }
 
     const selectAllDatesInMonth = () => {
-      manyShiftsData.value.selectedDates = selectionDates.value.filter(d => d.isCurrentMonth).map(d => d.fullDate)
+      manyShiftsData.value.selectedDates = selectionDates.value.filter(d => d.isCurrentMonth && !d.hasShift && !d.isVacation && !d.isSick).map(d => d.fullDate)
     }
 
     const clearAllDates = () => {
@@ -1157,7 +1281,7 @@ export default {
       operationsCount.value = 0
       showShiftCurrency.value = false
 
-      if (day.hasShift && day.day_id) {
+      if ((day.hasShift || day.isVacation || day.isSick) && day.day_id) {
         try {
           shiftDetails.value = await apiService.getShiftById(day.day_id)
           editHours.value = shiftDetails.value.base_hours
@@ -1219,6 +1343,21 @@ export default {
           await loadData()
         } catch (error) {
           handleApiError(error, 'Ошибка при удалении смены')
+        }
+      }
+    }
+
+    const deleteVacationOrSick = async () => {
+      if (!selectedDay.value?.day_id) return
+
+      if (confirm(`Вы уверены, что хотите удалить ${selectedDay.value.isVacation ? 'отпуск' : 'больничный'} за этот день?`)) {
+        try {
+          await apiService.deleteShift(selectedDay.value.day_id)
+          showNotification(`${selectedDay.value.isVacation ? 'Отпуск' : 'Больничный'} успешно удален`, 'success')
+          closeShiftModal()
+          await loadData()
+        } catch (error) {
+          handleApiError(error, 'Ошибка при удалении')
         }
       }
     }
@@ -1308,6 +1447,43 @@ export default {
       }
     }
 
+    const openVacationModal = () => {
+      const today = new Date()
+      const year = today.getFullYear()
+      const month = String(today.getMonth() + 1).padStart(2, '0')
+      const day = String(today.getDate()).padStart(2, '0')
+      vacationData.value.start_date = `${year}-${month}-${day}`
+      vacationData.value.number_of_days = 14
+      vacationData.value.type_days = 'Отпуск'
+      showVacationModal.value = true
+    }
+
+    const closeVacationModal = () => {
+      showVacationModal.value = false
+    }
+
+    const saveVacation = async () => {
+      if (!vacationData.value.start_date || !vacationData.value.number_of_days) {
+        showNotification('Заполните все поля', 'error')
+        return
+      }
+
+      try {
+        // Используем apiService для запроса
+        const response = await apiService.addVacation({
+          start_date: vacationData.value.start_date,
+          number_of_days: vacationData.value.number_of_days,
+          type_days: vacationData.value.type_days
+        })
+
+        showNotification(`${vacationData.value.type_days} успешно добавлен`, 'success')
+        closeVacationModal()
+        await loadData()
+      } catch (error) {
+        handleApiError(error, 'Ошибка при добавлении')
+      }
+    }
+
     const closeYearStatsModal = () => {
       showYearStatsModal.value = false
       yearStats.value = null
@@ -1333,6 +1509,16 @@ export default {
     const formatDateShort = (date) => {
       if (!date) return ''
       const d = date instanceof Date ? date : new Date(date)
+      return d.toLocaleDateString('ru-RU', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      })
+    }
+
+    const formatDateForDisplay = (dateStr) => {
+      if (!dateStr) return ''
+      const d = new Date(dateStr)
       return d.toLocaleDateString('ru-RU', {
         day: 'numeric',
         month: 'long',
@@ -1467,6 +1653,7 @@ export default {
       showSettingsModal,
       showAddManyModal,
       showYearStatsModal,
+      showVacationModal,
       selectedDay,
       shiftDetails,
       editHours,
@@ -1503,6 +1690,7 @@ export default {
       closeShiftModal,
       saveShift,
       deleteShift,
+      deleteVacationOrSick,
       addAward,
       openSettingsModal,
       closeSettingsModal,
@@ -1511,11 +1699,15 @@ export default {
       openAddManyModal,
       closeAddManyModal,
       saveManyShifts,
+      openVacationModal,
+      closeVacationModal,
+      saveVacation,
       openYearStatsModal,
       closeYearStatsModal,
       formatNumber,
       formatNumberShort,
       formatDateShort,
+      formatDateForDisplay,
       hasPeriodData,
       hasCurrencyData,
       selectedYear,
@@ -1534,7 +1726,8 @@ export default {
       periodTwoProductivity,
       productivityChangePercent,
       productivityChangeSymbol,
-      productivityChangeClass
+      productivityChangeClass,
+      vacationData
     }
   }
 }
@@ -1718,6 +1911,18 @@ export default {
   box-shadow: 0 2px 8px rgba(59,130,246,0.3);
 }
 
+.calendar-day.vacation-day {
+  background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%);
+  color: #1e293b;
+  border-color: #f59e0b;
+}
+
+.calendar-day.sick-day {
+  background: linear-gradient(135deg, #fca5a5 0%, #ef4444 100%);
+  color: white;
+  border-color: #ef4444;
+}
+
 .calendar-day.today {
   border: 2px solid #f59e0b;
   box-shadow: 0 0 0 2px #fef3c7;
@@ -1734,6 +1939,25 @@ export default {
   font-weight: 500;
   text-align: right;
   margin-top: auto;
+}
+
+.day-status {
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-align: right;
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
+.vacation-status {
+  color: #92400e;
+}
+
+.sick-status {
+  color: #7f1d1d;
 }
 
 .day-empty {
@@ -1889,7 +2113,31 @@ export default {
   border-radius: var(--radius);
 }
 
-/* Стили для лучшего дня в периоде */
+/* Vacation/Sick styles */
+.vacation-sick-details {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  padding: 1rem;
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+}
+
+.vacation-sick-status {
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.vacation-preview {
+  padding: 0.75rem;
+  background: #f0fdf4;
+  border-radius: var(--radius);
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
 .best-day-period {
   margin-top: 0.75rem;
   padding: 0.5rem;
@@ -1942,7 +2190,6 @@ export default {
   font-weight: 600;
 }
 
-/* Стили для динамики производительности */
 .dynamics-line {
   margin-top: 0.75rem;
   padding: 0.5rem;
@@ -2091,7 +2338,25 @@ export default {
   color: #3b82f6;
 }
 
-.selection-day.selected .shift-icon {
+.vacation-icon {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 0.6rem;
+  color: #f59e0b;
+}
+
+.sick-icon {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 0.6rem;
+  color: #ef4444;
+}
+
+.selection-day.selected .shift-icon,
+.selection-day.selected .vacation-icon,
+.selection-day.selected .sick-icon {
   color: white;
 }
 
@@ -2319,6 +2584,16 @@ export default {
 .btn-info:hover {
   background: #0891b2;
   transform: translateY(-1px);
+}
+
+.btn-vacation {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+}
+
+.btn-vacation:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245,158,11,0.3);
 }
 
 .btn-award {

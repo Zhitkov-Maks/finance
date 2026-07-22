@@ -10,7 +10,7 @@ from .serializers import (
     SuccessResponseSerializer,
     NotFoundResponseSerializer,
     TotalStatsSerializer,
-    ValidationErrorsResponseSerializer
+    ValidationErrorsResponseSerializer, VacationSerializer
 )
 
 TimeSheetsSettingsSchema = extend_schema_view(
@@ -113,6 +113,17 @@ ManyAddSchemas = extend_schema_view(
     post=extend_schema(
         description="Запрос на добавление смен за месяц.",
         request=ShiftsRequestSerializer,
+        responses={
+            201: SuccessResponseSerializer,
+            400: ValidationErrorsResponseSerializer
+        }
+    )
+)
+
+VacationAddSchemas = extend_schema_view(
+    post=extend_schema(
+        description="Запрос на добавление отпуска или больничного.",
+        request=VacationSerializer,
         responses={
             201: SuccessResponseSerializer,
             400: ValidationErrorsResponseSerializer

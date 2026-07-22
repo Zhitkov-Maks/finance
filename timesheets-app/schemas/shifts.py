@@ -28,6 +28,25 @@ class ShiftSchema(BaseModel):
         return tm
 
 
+class VacationSchema(BaseModel):
+    """A class for requesting the addition of a work shift."""
+
+    start_date: str = Field(..., description="Start date of vacation or sick leave.")
+    number_of_days: int = Field(..., description="Duration of vacation or sick leave.")
+    type_days: str = Field(..., description="Type of non-working days.")
+
+    @field_validator("start_date")
+    @classmethod
+    def validate_date_format(cls, dt: str) -> str:
+        try:
+            datetime.strptime(dt, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError(
+                "Переданная дата не соответствует требованию формата " "YYYY-MM-DD"
+            )
+        return dt
+
+
 class SimpleShiftSchema(BaseModel):
     """
     A class for returning the minimum necessary

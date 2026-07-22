@@ -62,6 +62,7 @@ async def statistics_for_year(
             "$match": {
                 "user_id": user_id,
                 "date": {"$gte": start_date, "$lt": end_date},
+                "earned": {"$gt": 0}
             }
         },
         {
@@ -124,6 +125,7 @@ async def aggregate_data(
         "$match": {
             "user_id": user_id,
             "date": {"$gte": start_date, "$lt": end_date},
+            "earned": {"$gt": 0}
         }
     }
 
