@@ -15,6 +15,14 @@ class CustomUser(AbstractUser):
     email: EmailField = models.EmailField(
         "email address", unique=True
     )
+    yandex_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        unique=True,
+        verbose_name="Yandex ID"
+    )
+    is_verified = models.BooleanField(default=True)
 
     USERNAME_FIELD: str = "email"
     REQUIRED_FIELDS = []

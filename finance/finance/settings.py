@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'django_filters',
     'drf_spectacular',
     'corsheaders',
+    'yandex_auth.apps.YandexAuthConfig',
 ]
 
 MIDDLEWARE = [
@@ -82,34 +83,20 @@ USE_X_FORWARDED_PORT = True
 
 # В зависимости от окружения
 if DEBUG:
-    # Режим разработки - широкие разрешения
-    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOW_ALL_ORIGINS = False  # лучше явно перечислить
     CORS_ALLOW_CREDENTIALS = True
     CORS_ALLOWED_ORIGINS = [
-        "http://localhost",
-        "http://localhost:80",
-        "http://localhost:8000",
-        "http://localhost:5173",
-        "http://127.0.0.1",
-        "http://127.0.0.1:8001",
+        "http://localhost:8080",      # твой Vue
         "http://127.0.0.1:8080",
-        "http://0.0.0.0:80",
-        "http://vue_app",
-        "http://nginx_proxy",
-        "http://nginx-proxy",
-    ]
-    CORS_ALLOWED_ORIGIN_REGEXES = [
-        r"^http://localhost:\d+$",
-        r"^http://127\.0\.0\.1:\d+$",
-        r"^http://0\.0\.0\.0:\d+$",
+        "http://localhost:5173",
+        # добавь сюда тот порт, где реально крутится фронтенд
     ]
 else:
-    # Режим продакшена - строгие разрешения
     CORS_ALLOW_ALL_ORIGINS = False
     CORS_ALLOWED_ORIGINS = [
-        "https://m-zhitkov.ru",           # Ваш домен
-        "https://www.m-zhitkov.ru",       # С www
-        "https://109.248.203.36",          # IP адрес
+        "https://m-zhitkov.ru",
+        "https://www.m-zhitkov.ru",
+        "https://109.248.203.36",
     ]
     CORS_ALLOWED_ORIGIN_REGEXES = []  # Без regex в продакшене
 
@@ -151,6 +138,8 @@ else:
         "https://109.248.203.36",
     ]
 
+ROOT_URLCONF = 'finance.urls'
+
 # ========== НАСТРОЙКИ БЕЗОПАСНОСТИ ДЛЯ ПРОДАКШЕНА ==========
 # Внимание: SESSION_COOKIE_SECURE и CSRF_COOKIE_SECURE должны быть False,
 # так как HTTPS заканчивается на Nginx, а внутри Docker сети используется HTTP
@@ -168,8 +157,6 @@ if not DEBUG:
 
     # Clickjacking защита
     X_FRAME_OPTIONS = 'DENY'
-
-ROOT_URLCONF = 'finance.urls'
 
 TEMPLATES = [
     {
@@ -340,3 +327,7 @@ LOGGING = {
         },
     },
 }
+
+
+YANDEX_CLIENT_ID = os.getenv("YANDEX_CLIENT_ID_DEV", "")
+YANDEX_CLIENT_SECRET = os.getenv("YANDEX_CLIENT_SECRET_DEV", "")

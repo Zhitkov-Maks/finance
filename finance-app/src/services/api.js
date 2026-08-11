@@ -361,6 +361,7 @@ class ApiService {
             throw error
         }
     }
+
     async getTimesheetSettings() {
         try {
             const response = await this.client.get('/timesheets/settings/')
@@ -521,4 +522,5 @@ class ApiService {
         }
     }
 }
+
 export default new ApiService()

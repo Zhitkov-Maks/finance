@@ -33,6 +33,7 @@ urlpatterns = [
     path("api/vi/dfr_auth/", include("rest_framework.urls")),
     path(f"api/{v}/auth/", include("djoser.urls")),
     re_path("auth/", include("djoser.urls.authtoken")),
+    path('auth/yandex/', include('yandex_auth.urls')),
     path(f"api/{v}/accounts/", include("accounts.urls")),
     path(f"api/{v}/transaction/", include("transactions.urls")),
     path(f'api/{v}/analitycs/', include('analytics.urls')),
