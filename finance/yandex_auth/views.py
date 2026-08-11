@@ -30,7 +30,7 @@ def yandex_login(request) -> HttpResponseRedirect:
     params: dict = {
         "response_type": "code",
         "client_id": settings.YANDEX_CLIENT_ID,
-        "redirect_uri": request.build_absolute_uri("/auth/yandex/callback/"),
+        "redirect_uri": settings.YANDEX_REDIRECT_URI,
         "scope": "login:info login:email",
     }
     url = f"{YANDEX_AUTH_URL}?{urlencode(params)}"
@@ -189,7 +189,7 @@ class YandexCallbackView(APIView):
             )
 
         # Редирект на фронтенд
-        frontend_url = getattr(settings, 'FRONTEND_URL', "http://localhost")
+        frontend_url = settings.FRONTEND_URL
         redirect_url = f"{frontend_url}/oauth-callback?token={tokens.key}"
         logger.info(f"Redirecting to: {redirect_url}")
         return HttpResponseRedirect(redirect_url)
