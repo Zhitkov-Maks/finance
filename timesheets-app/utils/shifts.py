@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from pprint import pprint
 
 from fastapi import HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -94,7 +95,9 @@ async def get_shift_data_by_day_id(day_id: str, db: AsyncIOMotorDatabase) -> dic
     """
     shift: dict = await get_salary_for_day(day_id, db)
     if shift:
-        return await dictionary_formation(shift)
+        data = await dictionary_formation(shift)
+        pprint(data)
+        return data
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         detail={"result": False, "description": "Запись о смене не найдена."},

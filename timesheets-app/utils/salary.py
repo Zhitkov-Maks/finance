@@ -1,4 +1,3 @@
-import asyncio
 from datetime import datetime, UTC
 
 from fastapi import HTTPException
@@ -126,12 +125,10 @@ async def earned_per_shift(
     settings = await get_settings(user_id, db)
     valute_data = await get_valute_info()
     salary = await earned_calculation(settings, time, user_id, db, parse_date)
-    await asyncio.gather(
-        write_salary(salary, user_id, parse_date, valute_data, db),
-        normalization_salary_for_month(
-            user_id, settings, {"year": parse_date.year, "month": parse_date.month}, db
-        ),
-    )
+    await write_salary(salary, user_id, parse_date, valute_data, db)
+    await normalization_salary_for_month(
+             user_id, settings, {"year": parse_date.year, "month": parse_date.month}, db
+         )
 
 
 async def critical_data(data: dict) -> tuple:

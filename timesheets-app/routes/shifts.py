@@ -74,19 +74,6 @@ async def create_shift(
     return SuccessSchema(result=True)
 
 
-@shift_router.put(
-    path="/", status_code=status.HTTP_200_OK, response_model=SuccessSchema
-)
-async def update_shift(
-        user_id: int, data: ShiftSchema, db: AsyncIOMotorDatabase = Depends(get_db)
-) -> SuccessSchema:
-    """Изменить данные о рабочей смене."""
-    data: dict = data.model_dump()
-    time, date = data.get("time"), data.get("date")
-    await earned_per_shift(time, user_id, date, db)
-    return SuccessSchema(result=True)
-
-
 @shift_router.get(
     path="/", status_code=status.HTTP_200_OK, response_model=ListShiftSchema
 )
