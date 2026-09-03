@@ -376,8 +376,8 @@ export default {
       const projectedExpenses = averageDailyExpense.value * daysLeftInMonth.value
       const forecast = currentBalance - projectedExpenses
 
-      // Округляем до 2 знаков и не даем уйти в сильный минус (показываем 0, если баланс отрицательный)
-      return Math.max(0, Math.round(forecast * 100) / 100)
+      // Округляем до 2 знаков
+      return Math.round(forecast * 100) / 100;
     })
 
     // Альтернативный прогноз с учетом оставшихся доходов (если известны)

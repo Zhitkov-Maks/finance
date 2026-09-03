@@ -435,7 +435,7 @@ class ApiService {
     // Обновление данных смены
     async updateShift(date, hours) {
         try {
-            const response = await this.client.put('/timesheets/shifts/', {
+            const response = await this.client.post('/timesheets/shifts/', {
                 date,
                 time: hours
             })
