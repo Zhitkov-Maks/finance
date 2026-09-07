@@ -14,3 +14,5 @@ class SettingsSchema(BaseModel):
         ..., description="Additional payment for working in the cold"
     )
     price_award: float = Field(..., description="The cost of the operation")
+    price_non_productive_work: float = Field(..., description="The cost of non-production work.")
+

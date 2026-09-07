@@ -4,7 +4,6 @@ import os
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from fastapi.logger import logger as fastapi_logger
 
 from routes.settings import settings_router
 from routes.shifts import shift_router

@@ -1,4 +1,5 @@
 from datetime import datetime, UTC
+from pprint import pprint
 
 from fastapi import HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -147,6 +148,11 @@ async def critical_data(data: dict) -> tuple:
             award_amount=data.get("award_amount", 0),
             count_operations=data.get("count_operations", 0),
         )
+    if data.get("earned_for_non_productive_work"):
+        old_need_data.update(
+            earned_for_non_productive_work=data.get("earned_for_non_productive_work", 0),
+            hours_non_productive=data.get("hours_non_productive", 0)
+        )
     return data.get("base_hours"), data.get("_id"), data.get("date"), old_need_data
 
 
@@ -217,7 +223,12 @@ async def recalculation_salary(
         settings, time, user_id, db, date, total_hours
     )
     if old_data:
-        salary.update(earned=(salary.get("earned") + old_data.get("award_amount", 0)))
+        salary.update(
+            earned=(
+                salary.get("earned") +
+                old_data.get("award_amount", 0)) +
+                old_data.get("earned_for_non_productive_work", 0)
+            )
     salary.update(
         user_id=user_id,
         date=date,
@@ -226,6 +237,7 @@ async def recalculation_salary(
         date_write=datetime.now(),
         **old_data
     )
+    pprint(salary)
     return salary
 
 
@@ -269,6 +281,49 @@ async def earned_for_award(
     current_day.update(
         award_amount=earned_award,
         count_operations=count_operations,
+        earned=earned,
+        valute=currency,
+    )
+    await update_salary(day_id, current_day, db)
+    current_day.update(
+        date=str(current_day.get("date")), day_id=str(current_day.get("_id"))
+    )
+    return current_day
+
+
+async def earned_for_non_production_work(
+    hours: float, user_id: int, day_id: str, db: AsyncIOMotorDatabase
+) -> dict:
+    """
+    Calculate the bonus and update the salary record.
+
+    :param db: Database.
+    :param hours: The number of non-production hours per shift.
+    :param user_id: The user's ID.
+    :param day_id: ID of the day.
+    :return dict: Dictionary with shift data.
+    """
+    settings: dict = await get_settings_user_by_id(user_id, db)
+    base_price = settings.get("price_time")
+    non_productive_price = settings.get("price_non_productive_work")
+
+    if non_productive_price is None:
+        raise ValueError("Нет данных о стоимости непроизводственных работ!")
+
+    additional = (non_productive_price - base_price) * hours
+    current_day: dict = await get_salary_for_day(day_id, db)
+
+    if current_day.get("earned_for_non_productive_work"):
+        earned = (
+                current_day["earned"] - current_day["earned_for_non_productive_work"] + additional
+        )
+    else:
+        earned = additional + current_day["earned"]
+
+    currency: dict = await calc_in_currency(earned)
+    current_day.update(
+        earned_for_non_productive_work=additional,
+        hours_non_productive=hours,
         earned=earned,
         valute=currency,
     )

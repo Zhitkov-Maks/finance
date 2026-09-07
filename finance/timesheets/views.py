@@ -131,9 +131,9 @@ class GetShiftsForDay(generics.GenericAPIView):
         BasicAuthentication,
         SessionAuthentication,
     )
-    http_method_names = ["get", "post", "delete"]
+    http_method_names = ["get", "post", "put", "delete"]
 
-    def get(self, request,  day_id: str):
+    def get(self, request, day_id: str):
         print(f"{BASE_URL}shifts/{day_id}/")
         response = requests.get(url=f"{BASE_URL}shifts/{day_id}/")
         return HttpResponse(
@@ -148,6 +148,18 @@ class GetShiftsForDay(generics.GenericAPIView):
         url = f"{BASE_URL}shifts/{day_id}/award/?user_id={user_id}"\
               f"&count_operations={data.get('count_operations', 0)}"
         response = requests.post(url=url)
+        return HttpResponse(
+            response.content,
+            status=response.status_code,
+            content_type='application/json',
+        )
+
+    def put(self, request, day_id):
+        data = request.GET.dict()
+        user_id = request.user.id
+        url = f"{BASE_URL}shifts/{day_id}/hours/?user_id={user_id}" \
+              f"&hours={data.get('hours', 0)}"
+        response = requests.put(url=url)
         return HttpResponse(
             response.content,
             status=response.status_code,

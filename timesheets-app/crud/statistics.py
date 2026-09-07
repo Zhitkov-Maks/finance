@@ -146,6 +146,8 @@ async def aggregate_data(
                 "total_operations": {"$sum": "$count_operations"},
                 "total_overtime": {"$sum": "$earned_overtime"},
                 "total_hours_overtime": {"$sum": "$hours_overtime"},
+                "total_hours_for_non_production": {"$sum": "$hours_non_productive"},
+                "total_earned_for_non_production": {"$sum": "$earned_for_non_productive_work"},
                 "dollar": {"$sum": "$valute.dollar"},
                 "euro": {"$sum": "$valute.euro"},
                 "yena": {"$sum": "$valute.yena"},

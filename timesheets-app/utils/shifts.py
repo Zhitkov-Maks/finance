@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from pprint import pprint
 
 from fastapi import HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -62,6 +61,8 @@ async def dictionary_formation(shift: dict) -> dict:
         "award_amount": shift.get("award_amount", 0),
         "count_operations": shift.get("count_operations", 0),
         "earned_overtime": shift.get("earned_overtime", 0),
+        "earned_for_non_productive_work": shift.get("earned_for_non_productive_work", 0),
+        "hours_non_productive": shift.get("hours_non_productive", 0)
     }
 
 
@@ -96,7 +97,6 @@ async def get_shift_data_by_day_id(day_id: str, db: AsyncIOMotorDatabase) -> dic
     shift: dict = await get_salary_for_day(day_id, db)
     if shift:
         data = await dictionary_formation(shift)
-        pprint(data)
         return data
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,

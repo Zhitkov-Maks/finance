@@ -120,6 +120,20 @@
               <span class="stat-label">🏆 Мотивация:</span>
               <span class="stat-number award">{{ formatNumber(monthlyStats.period_one.total_award) }} ₽</span>
             </div>
+            <div v-if="monthlyStats.period_one.total_operations" class="stat-line">
+              <span class="stat-label">Кол-во операций:</span>
+              <span class="stat-number">{{ monthlyStats.period_one.total_operations }}</span>
+            </div>
+
+            <div v-if="monthlyStats.period_one.total_hours_for_non_production" class="stat-line">
+              <span class="stat-label">Непроиз-х часов::</span>
+              <span class="stat-number">{{ formatNumber(monthlyStats.period_one.total_hours_for_non_production) }} ₽</span>
+            </div>
+            <div v-if="monthlyStats.period_one.total_earned_for_non_production" class="stat-line">
+              <span class="stat-label">Доплата за непроиз-е работы:</span>
+              <span class="stat-number">{{ formatNumber(monthlyStats.period_one.total_earned_for_non_production) }} ₽</span>
+            </div>
+
             <div v-if="monthlyStats.period_one.total_overtime" class="stat-line">
               <span class="stat-label">Доплата за переработку:</span>
               <span class="stat-number overtime">{{ formatNumber(monthlyStats.period_one.total_overtime) }} ₽</span>
@@ -128,23 +142,10 @@
               <span class="stat-label">Часов переработки:</span>
               <span class="stat-number">{{ monthlyStats.period_one.total_hours_overtime }} ч</span>
             </div>
-            <div v-if="monthlyStats.period_one.total_operations" class="stat-line">
-              <span class="stat-label">Кол-во операций:</span>
-              <span class="stat-number">{{ monthlyStats.period_one.total_operations }}</span>
-            </div>
             <div v-if="monthlyStats.period_one.total_operations && monthlyStats.period_one.total_base_hours" class="stat-line productivity-line">
               <span class="stat-label">⚡ Производительность:</span>
               <span class="stat-number productivity">{{ getProductivity(monthlyStats.period_one.total_operations, monthlyStats.period_one.total_base_hours) }} оп/ч</span>
             </div>
-            <div v-if="monthlyStats.period_one.total_earned_cold && monthlyStats.period_one.total_earned" class="stat-line cold-percent-line">
-              <span class="stat-label">❄️ Доля доплаты за холод:</span>
-              <span class="stat-number">{{ getColdPercent(monthlyStats.period_one.total_earned_cold, monthlyStats.period_one.total_earned) }}%</span>
-            </div>
-            <div v-if="monthlyStats.period_one.total_earned_cold && monthlyStats.period_one.total_earned_hours" class="stat-line cold-boost-line">
-              <span class="stat-label">📈 Холод добавляет к ставке:</span>
-              <span class="stat-number">{{ getColdBoostPercent(monthlyStats.period_one.total_earned_cold, monthlyStats.period_one.total_earned_hours) }}%</span>
-            </div>
-
             <!-- Лучший день периода 1 -->
             <div v-if="periodOneBestDay" class="best-day-period">
               <div class="best-day-header">🏆 Лучший день периода</div>
@@ -194,6 +195,20 @@
               <span class="stat-label">🏆 Мотивация:</span>
               <span class="stat-number award">{{ formatNumber(monthlyStats.period_two.total_award) }} ₽</span>
             </div>
+            <div v-if="monthlyStats.period_two.total_operations" class="stat-line">
+              <span class="stat-label">Кол-во операций:</span>
+              <span class="stat-number">{{ monthlyStats.period_two.total_operations }}</span>
+            </div>
+
+            <div v-if="monthlyStats.period_two.total_hours_for_non_production" class="stat-line">
+              <span class="stat-label">Непроиз-х часов::</span>
+              <span class="stat-number">{{ formatNumber(monthlyStats.period_two.total_hours_for_non_production) }} ₽</span>
+            </div>
+            <div v-if="monthlyStats.period_two.total_earned_for_non_production" class="stat-line">
+              <span class="stat-label">Доплата за непроиз-е работы:</span>
+              <span class="stat-number">{{ formatNumber(monthlyStats.period_two.total_earned_for_non_production) }} ₽</span>
+            </div>
+
             <div v-if="monthlyStats.period_two.total_overtime" class="stat-line">
               <span class="stat-label">Доплата за переработку:</span>
               <span class="stat-number overtime">{{ formatNumber(monthlyStats.period_two.total_overtime) }} ₽</span>
@@ -202,23 +217,10 @@
               <span class="stat-label">Часов переработки:</span>
               <span class="stat-number">{{ monthlyStats.period_two.total_hours_overtime }} ч</span>
             </div>
-            <div v-if="monthlyStats.period_two.total_operations" class="stat-line">
-              <span class="stat-label">Кол-во операций:</span>
-              <span class="stat-number">{{ monthlyStats.period_two.total_operations }}</span>
-            </div>
             <div v-if="monthlyStats.period_two.total_operations && monthlyStats.period_two.total_base_hours" class="stat-line productivity-line">
               <span class="stat-label">⚡ Производительность:</span>
               <span class="stat-number productivity">{{ getProductivity(monthlyStats.period_two.total_operations, monthlyStats.period_two.total_base_hours) }} оп/ч</span>
             </div>
-            <div v-if="monthlyStats.period_two.total_earned_cold && monthlyStats.period_two.total_earned" class="stat-line cold-percent-line">
-              <span class="stat-label">❄️ Доля доплаты за холод:</span>
-              <span class="stat-number">{{ getColdPercent(monthlyStats.period_two.total_earned_cold, monthlyStats.period_two.total_earned) }}%</span>
-            </div>
-            <div v-if="monthlyStats.period_two.total_earned_cold && monthlyStats.period_two.total_earned_hours" class="stat-line cold-boost-line">
-              <span class="stat-label">📈 Холод добавляет к ставке:</span>
-              <span class="stat-number">{{ getColdBoostPercent(monthlyStats.period_two.total_earned_cold, monthlyStats.period_two.total_earned_hours) }}%</span>
-            </div>
-
             <!-- Лучший день периода 2 -->
             <div v-if="periodTwoBestDay" class="best-day-period">
               <div class="best-day-header">🏆 Лучший день периода</div>
@@ -268,6 +270,20 @@
               <span class="stat-label">🏆 Мотивация:</span>
               <span class="stat-number award">{{ formatNumber(monthlyStats.total.total_award) }} ₽</span>
             </div>
+            <div v-if="monthlyStats.total?.total_operations" class="stat-line">
+              <span class="stat-label">Кол-во операций:</span>
+              <span class="stat-number">{{ monthlyStats.total.total_operations }}</span>
+            </div>
+
+            <div v-if="monthlyStats.total?.total_hours_for_non_production" class="stat-line">
+              <span class="stat-label">Непроиз-х часов::</span>
+              <span class="stat-number">{{ formatNumber(monthlyStats.total?.total_hours_for_non_production) }} ₽</span>
+            </div>
+            <div v-if="monthlyStats.total?.total_earned_for_non_production" class="stat-line">
+              <span class="stat-label">Доплата за непроиз-е работы:</span>
+              <span class="stat-number">{{ formatNumber(monthlyStats.total?.total_earned_for_non_production) }} ₽</span>
+            </div>
+
             <div v-if="monthlyStats.total?.total_overtime" class="stat-line">
               <span class="stat-label">Доплата за переработку:</span>
               <span class="stat-number overtime">{{ formatNumber(monthlyStats.total.total_overtime) }} ₽</span>
@@ -276,22 +292,34 @@
               <span class="stat-label">Часов переработки:</span>
               <span class="stat-number">{{ monthlyStats.total.total_hours_overtime }} ч</span>
             </div>
-            <div v-if="monthlyStats.total?.total_operations" class="stat-line">
-              <span class="stat-label">Кол-во операций:</span>
-              <span class="stat-number">{{ monthlyStats.total.total_operations }}</span>
-            </div>
             <div v-if="monthlyStats.total?.total_operations && monthlyStats.total?.total_base_hours" class="stat-line productivity-line">
               <span class="stat-label">⚡ Производительность:</span>
               <span class="stat-number productivity">{{ getProductivity(monthlyStats.total.total_operations, monthlyStats.total.total_base_hours) }} оп/ч</span>
             </div>
+
+            <div v-if="monthlyStats.total?.total_earned_hours && monthlyStats.total?.total_earned" class="stat-line hours-percent-line">
+              <span class="stat-label">⏳ Доля оплаты за часы:</span>
+              <span class="stat-number">{{ getHoursPercent(monthlyStats.total.total_earned_hours, monthlyStats.total.total_earned) }}%</span>
+            </div>
+
             <div v-if="monthlyStats.total?.total_earned_cold && monthlyStats.total?.total_earned" class="stat-line cold-percent-line">
               <span class="stat-label">❄️ Доля доплаты за холод:</span>
               <span class="stat-number">{{ getColdPercent(monthlyStats.total.total_earned_cold, monthlyStats.total.total_earned) }}%</span>
             </div>
-            <div v-if="monthlyStats.total?.total_earned_cold && monthlyStats.total?.total_earned_hours" class="stat-line cold-boost-line">
-              <span class="stat-label">📈 Холод добавляет к ставке:</span>
-              <span class="stat-number">{{ getColdBoostPercent(monthlyStats.total.total_earned_cold, monthlyStats.total.total_earned_hours) }}%</span>
+
+
+            <div v-if="monthlyStats.total?.total_award && monthlyStats.total?.total_earned" class="stat-line award-percent-line">
+              <span class="stat-label">🏆 Доля мотивации:</span>
+              <span class="stat-number">{{ getAwardPercent(monthlyStats.total.total_award, monthlyStats.total.total_earned) }}%</span>
             </div>
+
+
+            <div v-if="monthlyStats.total?.total_earned_for_non_production && monthlyStats.total?.total_earned" class="stat-line non-productive-percent-line">
+              <span class="stat-label">🪏 Доля непроиз-х работ:</span>
+              <span class="stat-number">{{ getNonProductivePercent(monthlyStats.total.total_earned_for_non_production, monthlyStats.total.total_earned) }}%</span>
+            </div>
+
+
             <div v-if="monthlyStats.total?.total_overtime && monthlyStats.total?.total_earned" class="stat-line overtime-percent-line">
               <span class="stat-label">⏱️ Доля доплаты за переработку:</span>
               <span class="stat-number overtime">{{ getOvertimePercent(monthlyStats.total.total_overtime, monthlyStats.total.total_earned) }}%</span>
@@ -349,7 +377,7 @@
         </div>
         <div class="modal-body">
           <div class="form-group">
-            <label class="form-label required">Количество часов</label>
+            <label class="form-label required">Кол-во часов</label>
             <input type="number" v-model.number="manyShiftsData.hours" class="form-control" step="0.5" required />
           </div>
           <div class="form-group">
@@ -470,6 +498,14 @@
               <span class="stat-label">🏆 Мотивация:</span>
               <span class="stat-number award">{{ formatNumber(shiftDetails.award_amount) }} ₽</span>
             </div>
+            <div v-if="shiftDetails.hours_non_productive" class="stat-line award-line">
+              <span class="stat-label">Непроизв-х часов:</span>
+              <span class="stat-number">{{ formatNumber(shiftDetails.hours_non_productive) }} ₽</span>
+            </div>
+            <div v-if="shiftDetails.earned_for_non_productive_work" class="stat-line award-line">
+              <span class="stat-label">Доп. за непроизв. работы:</span>
+              <span class="stat-number">{{ formatNumber(shiftDetails.earned_for_non_productive_work) }} ₽</span>
+            </div>
             <div v-if="shiftDetails.count_operations" class="stat-line">
               <span class="stat-label">Кол-во операций:</span>
               <span class="stat-number">{{ shiftDetails.count_operations }}</span>
@@ -498,13 +534,26 @@
             </div>
             <div v-if="selectedDay?.hasShift" class="award-section">
               <div class="award-divider"></div>
-              <div class="form-group">
-                <label class="form-label">Количество операций:</label>
-                <input type="number" v-model.number="operationsCount" class="form-control" min="0" placeholder="Введите количество операций" />
+              <!-- Поля ввода под каждой кнопкой -->
+              <div class="award-inputs-row">
+                <div class="form-group">
+                  <label class="form-label">Кол-во операций:</label>
+                  <input type="number" v-model.number="operationsCount" class="form-control" min="0" placeholder="Введите количество" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Кол-во непр. ч.:</label>
+                  <input type="number" v-model.number="hoursCount" class="form-control" min="0" placeholder="Введите количество" />
+                </div>
               </div>
-              <button class="btn-award" @click="addAward" :disabled="!operationsCount">
-                Добавить
-              </button>
+                <!-- Ряд с двумя кнопками -->
+                <div class="award-buttons-row">
+                  <button class="btn-award" @click="addAward" :disabled="!operationsCount">
+                    Save
+                  </button>
+                  <button class="btn-award" @click="addHours" :disabled="!hoursCount">
+                    Save
+                  </button>
+                </div>
             </div>
           </div>
         </div>
@@ -558,6 +607,10 @@
           <div class="form-group">
             <label class="form-label">Стоимость операции</label>
             <input type="number" v-model.number="settings.price_award" class="form-control" step="0.1" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Час непроизводственных работ.</label>
+            <input type="number" v-model.number="settings.price_non_productive_work" class="form-control" step="0.1" />
           </div>
         </div>
         <div class="modal-footer">
@@ -716,7 +769,8 @@ export default {
       price_time: 0,
       price_overtime: 0,
       price_cold: 0,
-      price_award: 0
+      price_award: 0,
+      price_non_productive_work: 0
     })
     const hasSettings = ref(false)
 
@@ -729,6 +783,7 @@ export default {
     const shiftDetails = ref(null)
     const editHours = ref(0)
     const operationsCount = ref(0)
+    const hoursCount = ref(0)
     const showShiftCurrency = ref(false)
     const showYearCurrency = ref(false)
 
@@ -967,7 +1022,8 @@ export default {
           price_time: response.price_time || 0,
           price_overtime: response.price_overtime || 0,
           price_cold: response.price_cold || 0,
-          price_award: response.price_award || 0
+          price_award: response.price_award || 0,
+          price_non_productive_work: response.price_non_productive_work || 0
         }
         hasSettings.value = true
       } catch (error) {
@@ -1279,6 +1335,7 @@ export default {
       selectedDay.value = day
       editHours.value = day.base_hours || 0
       operationsCount.value = 0
+      hoursCount.value = 0
       showShiftCurrency.value = false
 
       if ((day.hasShift || day.isVacation || day.isSick) && day.day_id) {
@@ -1302,6 +1359,7 @@ export default {
       shiftDetails.value = null
       editHours.value = 0
       operationsCount.value = 0
+      hoursCount.value = 0
     }
 
     const saveShift = async () => {
@@ -1376,6 +1434,23 @@ export default {
         showNotification('Премия успешно добавлена', 'success')
       } catch (error) {
         handleApiError(error, 'Ошибка при добавлении премии')
+      }
+    }
+
+    const addHours = async () => {
+      if (!selectedDay.value?.day_id || !hoursCount.value) {
+        showNotification('Введите количество часов', 'error')
+        return
+      }
+
+      try {
+        await apiService.addNonProductiveWork(selectedDay.value.day_id, hoursCount.value)
+        const updatedShift = await apiService.getShiftById(selectedDay.value.day_id)
+        shiftDetails.value = updatedShift
+        await loadData()
+        showNotification('Непроизводственные работы добавлены', 'success')
+      } catch (error) {
+        handleApiError(error, 'Ошибка при добавлении непроизводственных работ')
       }
     }
 
@@ -1536,9 +1611,19 @@ export default {
       return ((coldEarned / totalEarned) * 100).toFixed(1)
     }
 
-    const getColdBoostPercent = (coldEarned, earnedHours) => {
-      if (!coldEarned || !earnedHours || earnedHours === 0) return '0'
-      return ((coldEarned / earnedHours) * 100).toFixed(1)
+    const getHoursPercent = (hoursEarned, totalEarned) => {
+      if (!hoursEarned || !totalEarned || totalEarned === 0) return '0'
+      return ((hoursEarned / totalEarned) * 100).toFixed(1)
+    }
+
+    const getNonProductivePercent = (nonProductiveEarned, totalEarned) => {
+      if (!nonProductiveEarned || !totalEarned || totalEarned === 0) return '0'
+      return ((nonProductiveEarned / totalEarned) * 100).toFixed(1)
+    }
+
+    const getAwardPercent = (award, totalEarned) => {
+      if (!award || !totalEarned || totalEarned === 0) return '0'
+      return ((award / totalEarned) * 100).toFixed(1)
     }
 
     const getOvertimePercent = (overtimeEarned, totalEarned) => {
@@ -1658,6 +1743,7 @@ export default {
       shiftDetails,
       editHours,
       operationsCount,
+      hoursCount,
       showShiftCurrency,
       showYearCurrency,
       openSections,
@@ -1692,6 +1778,7 @@ export default {
       deleteShift,
       deleteVacationOrSick,
       addAward,
+      addHours,
       openSettingsModal,
       closeSettingsModal,
       saveSettings,
@@ -1717,7 +1804,9 @@ export default {
       onYearChange,
       getProductivity,
       getColdPercent,
-      getColdBoostPercent,
+      getHoursPercent,
+      getNonProductivePercent,
+      getAwardPercent,
       getOvertimePercent,
       periodOneBestDay,
       periodTwoBestDay,
@@ -1736,6 +1825,25 @@ export default {
 <style scoped>
 :root {
   --radius: 8px;
+}
+
+.award-buttons-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.award-buttons-row .btn-award {
+  flex: 1;
+}
+
+.award-inputs-row {
+  display: flex;
+  gap: 12px;
+}
+
+.award-inputs-row .form-group {
+  flex: 1;
 }
 
 .timesheets-container {
@@ -2034,7 +2142,7 @@ export default {
 
 .stat-label {
   font-size: 0.8rem;
-  color: #64748b;
+  color: #02214c;
 }
 
 .stat-number {
@@ -2770,12 +2878,33 @@ button:disabled {
 
 .productivity {
   font-weight: 700;
-  color: #0284c7;
+  color: #0a0b0b;
   font-size: 1rem;
 }
 
 .cold-percent-line {
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  background: linear-gradient(135deg, #dbeafe 0%, #0170f8 100%);
+  margin: 0.25rem 0;
+  padding: 0.5rem;
+  border-radius: var(--radius);
+}
+
+.award-percent-line {
+  background: linear-gradient(135deg, #eee7e7 0%, #00b418 100%);
+  margin: 0.25rem 0;
+  padding: 0.5rem;
+  border-radius: var(--radius);
+}
+
+.hours-percent-line {
+  background: linear-gradient(135deg, #9cdb9f 0%, #80b7f1 100%);
+  margin: 0.25rem 0;
+  padding: 0.5rem;
+  border-radius: var(--radius);
+}
+
+.non-productive-percent-line {
+  background: linear-gradient(135deg, #eee7e7 0%, #dcf118 100%);
   margin: 0.25rem 0;
   padding: 0.5rem;
   border-radius: var(--radius);
@@ -2789,7 +2918,7 @@ button:disabled {
 }
 
 .overtime-percent-line {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  background: linear-gradient(135deg, #fee2e2 0%, #f64ee5 100%);
   margin: 0.25rem 0;
   padding: 0.5rem;
   border-radius: var(--radius);
@@ -2866,7 +2995,7 @@ button:disabled {
   }
 
   .footer-buttons-grid.three-buttons button {
-    width: 15%;
+    width: 33%;
   }
 
   .footer-buttons-grid.four-buttons {

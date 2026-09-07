@@ -8,7 +8,7 @@ from utils.salary import (
     earned_for_award,
     earned_per_shift,
     get_settings,
-    normalization_salary_for_month,
+    normalization_salary_for_month, earned_for_non_production_work,
 )
 from utils.shifts import (
     add_shifts_for_month,
@@ -92,6 +92,20 @@ async def get_shift_by_day_id(
 ) -> dict:
     """Получить данные о смене по идентификатору смены."""
     return await get_shift_data_by_day_id(day_id, db)
+
+
+@shift_router.put(
+    path="/{day_id}/hours/", status_code=status.HTTP_201_CREATED, response_model=SuccessSchema
+)
+async def earned_non_production_work(
+        day_id: str,
+        hours: float,
+        user_id: int,
+        db: AsyncIOMotorDatabase = Depends(get_db),
+) -> SuccessSchema:
+    """Создать запись о непроизводственных работах."""
+    await earned_for_non_production_work(hours, user_id, day_id, db)
+    return SuccessSchema(result=True)
 
 
 @shift_router.post(

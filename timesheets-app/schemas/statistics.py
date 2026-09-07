@@ -38,6 +38,13 @@ class AggregateSchema(BaseModel):
     total_hours_overtime: float | None = Field(
         None, description="How many hours of overtime."
     )
+    total_hours_for_non_production: float | None = Field(
+        None, description="How many hours of non-production work."
+    )
+    total_earned_for_non_production: float = Field(
+        None, description="How much is earned for non-productive work."
+    )
+
     dollar: float
     euro: float
     yena: float

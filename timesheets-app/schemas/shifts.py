@@ -122,6 +122,12 @@ class SpecificShift(BaseModel):
     count_operations: float | None = Field(
         None, description="How many operations the user performed per shift."
     )
+    earned_for_non_productive_work: float | None = Field(
+        None, description="How much is earned for non-productive work."
+    )
+    hours_non_productive: float | None = Field(
+        None, description="Hours of non-production work."
+    )
 
 
 class ManyAddShifts(BaseModel):

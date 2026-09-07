@@ -471,6 +471,20 @@ class ApiService {
         }
     }
 
+    // Добавление непроизводственных работ.
+    async addNonProductiveWork(dayId, countHours) {
+        try {
+            const response = await this.client.put(
+                `/timesheets/shifts/${dayId}/?hours=${countHours}`,
+                {}
+            )
+            return response.data
+        } catch (error) {
+            console.error('Error adding non productive work:', error.response?.data || error.message)
+            throw error
+        }
+    }
+
     // Удаление смены
     async deleteShift(dayId) {
         try {
