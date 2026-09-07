@@ -699,7 +699,7 @@ export default {
 
 .modal-footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 1rem;
   margin-top: 1.5rem;
   padding-top: 1rem;
@@ -781,15 +781,7 @@ export default {
   .card {
     padding: 1rem;
   }
-  
-  .modal-footer {
-    flex-direction: column;
-  }
-  
-  .modal-footer .btn {
-    width: 100%;
-  }
-  
+
   .success-toast,
   .error-toast {
     bottom: 1rem;

@@ -1000,7 +1000,7 @@ export default {
 /* Модальные окна */
 .modal-footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 1rem;
   margin-top: 1.5rem;
   padding-top: 1rem;
@@ -1139,14 +1139,6 @@ export default {
     width: 95%;
     margin: 1rem;
     max-height: 85vh;
-  }
-
-  .modal-footer {
-    flex-direction: column;
-  }
-
-  .modal-footer .btn {
-    width: 100%;
   }
 
   .pagination {

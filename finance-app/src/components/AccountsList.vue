@@ -810,7 +810,7 @@ export default {
 /* Модальные окна */
 .modal-footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 1rem;
   margin-top: 1.5rem;
   padding-top: 1rem;
@@ -950,12 +950,7 @@ export default {
   }
 
   .modal-footer {
-    flex-direction: column;
     gap: 0.5rem;
-  }
-
-  .modal-footer .btn {
-    width: 100%;
   }
 }
 

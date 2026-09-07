@@ -805,6 +805,14 @@ export default {
     text-align: center;
   }
 
+  .pagination {
+    flex-direction: row;
+  }
+
+  .pagination button {
+    width: auto;
+  }
+
   .compact-left {
     gap: 0.5rem;
   }
@@ -892,10 +900,6 @@ export default {
   .modal-footer {
     flex-direction: column;
     gap: 0.5rem;
-  }
-
-  .modal-footer .btn {
-    width: 100%;
   }
 }
 

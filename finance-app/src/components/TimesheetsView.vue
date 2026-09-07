@@ -435,7 +435,7 @@
             </button>
             <button class="btn-primary" @click="saveManyShifts" :disabled="!manyShiftsData.hours || manyShiftsData.selectedDates.length === 0">
               <i class="fas fa-save"></i>
-              <span>Добавить ({{ manyShiftsData.selectedDates.length }})</span>
+              <span>Save ({{ manyShiftsData.selectedDates.length }})</span>
             </button>
             <button class="btn-secondary" @click="closeAddManyModal">
               <i class="fas fa-times"></i>
@@ -537,12 +537,10 @@
               <!-- Поля ввода под каждой кнопкой -->
               <div class="award-inputs-row">
                 <div class="form-group">
-                  <label class="form-label">Кол-во операций:</label>
-                  <input type="number" v-model.number="operationsCount" class="form-control" min="0" placeholder="Введите количество" />
+                  <input type="number" v-model.number="operationsCount" class="form-control" min="0" placeholder="Кол-во операций" />
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Кол-во непр. ч.:</label>
-                  <input type="number" v-model.number="hoursCount" class="form-control" min="0" placeholder="Введите количество" />
+                  <input type="number" v-model.number="hoursCount" class="form-control" min="0" max="24" placeholder="Непроиз. часов" />
                 </div>
               </div>
                 <!-- Ряд с двумя кнопками -->
@@ -782,8 +780,8 @@ export default {
     const selectedDay = ref(null)
     const shiftDetails = ref(null)
     const editHours = ref(0)
-    const operationsCount = ref(0)
-    const hoursCount = ref(0)
+    const operationsCount = ref(null)
+    const hoursCount = ref(null)
     const showShiftCurrency = ref(false)
     const showYearCurrency = ref(false)
 
@@ -1334,8 +1332,8 @@ export default {
 
       selectedDay.value = day
       editHours.value = day.base_hours || 0
-      operationsCount.value = 0
-      hoursCount.value = 0
+      operationsCount.value = null
+      hoursCount.value = null
       showShiftCurrency.value = false
 
       if ((day.hasShift || day.isVacation || day.isSick) && day.day_id) {
@@ -2600,14 +2598,12 @@ export default {
 
 .footer-buttons-grid.three-buttons {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: inherit;
   justify-content: center;
   gap: 0.75rem;
+  width: 100%;
 }
 
-.footer-buttons-grid.three-buttons button {
-  min-width: 30px;
-}
 
 .footer-buttons-grid.four-buttons {
   display: grid;
@@ -2924,6 +2920,10 @@ button:disabled {
   border-radius: var(--radius);
 }
 
+.footer-buttons-grid.three-buttons button {
+    width: 33%;
+  }
+
 @keyframes slideIn {
   from {
     transform: translateX(100%);
@@ -2994,19 +2994,24 @@ button:disabled {
     width: 100%;
   }
 
-  .footer-buttons-grid.three-buttons button {
-    width: 33%;
-  }
-
   .footer-buttons-grid.four-buttons {
     gap: 0.5rem;
   }
 }
 
 @media (max-width: 480px) {
+
   .calendar-day {
     min-height: 55px;
     padding: 0.25rem;
+  }
+
+  .selection-calendar {
+    padding: 0;
+  }
+
+  .selection-day {
+    aspect-ratio: 0;
   }
 
   .day-earned {
