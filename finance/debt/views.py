@@ -1,38 +1,34 @@
+from accounts.models import Account
+from accounts.views import AccountPagination
+from app_user.models import CustomUser
 from django.db import transaction
 from django.db.models.query_utils import Q
 from rest_framework.authentication import (
-    TokenAuthentication,
     BasicAuthentication,
     SessionAuthentication,
+    TokenAuthentication,
 )
+from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.generics import ListAPIView, GenericAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Debt
 from debt.schemas import (
-    DebtListSchema,
+    DebtCreateAccountsSchema,
     DebtDetailSchema,
+    DebtListSchema,
     DebtRepaySchema,
-    DebtCreateSchema,
-    DebtCreateAccountsSchema
 )
+from debt.util import create_debt_accounts, create_debt_or_lend_transfer, repay_debt
+
+from .models import Debt
 from .serializers import (
+    AccountDebtSerializer,
     DebtCreateSerializer,
-    DebtRepaymentSerializer,
     DebtDetailSerializer,
     DebtListSerializer,
-    AccountDebtSerializer
+    DebtRepaymentSerializer,
 )
-from debt.util import (
-    create_debt_accounts,
-    create_debt_or_lend_transfer,
-    repay_debt
-)
-from accounts.views import AccountPagination
-from app_user.models import CustomUser
-from accounts.models import Account
 
 
 @DebtCreateAccountsSchema
