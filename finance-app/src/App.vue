@@ -9,7 +9,7 @@
       <div class="sidebar-header">
         <h2>💰 Финансы</h2>
       </div>
-      
+
       <nav class="nav-menu">
         <router-link to="/" class="nav-item" @click="closeMobileMenu">
           <i class="fas fa-tachometer-alt"></i>
@@ -20,42 +20,42 @@
           <i class="fas fa-calendar-alt"></i>
           <span>Мой график</span>
         </router-link>
-        
+
         <router-link to="/accounts" class="nav-item" @click="closeMobileMenu">
           <i class="fas fa-credit-card"></i>
           <span>Счета</span>
         </router-link>
-        
+
         <router-link to="/categories" class="nav-item" @click="closeMobileMenu">
           <i class="fas fa-tags"></i>
           <span>Категории</span>
         </router-link>
-        
+
         <router-link to="/transactions" class="nav-item" @click="closeMobileMenu">
           <i class="fas fa-exchange-alt"></i>
           <span>Транзакции</span>
         </router-link>
 
-        <router-link to="/transfers" class="nav-item" @click="closeMobileMenu">
-          <i class="fas fa-money-bill-transfer"></i>
-          <span>Переводы</span>
-        </router-link>
-        
         <router-link to="/debts" class="nav-item" @click="closeMobileMenu">
           <i class="fas fa-hand-holding-usd"></i>
           <span>Долги</span>
         </router-link>
-        
+
         <router-link to="/statistics" class="nav-item" @click="closeMobileMenu">
           <i class="fas fa-chart-line"></i>
           <span>Статистика</span>
         </router-link>
-        
+
         <router-link to="/profile" class="nav-item" @click="closeMobileMenu">
           <i class="fas fa-user-circle"></i>
           <span>Профиль</span>
         </router-link>
-        
+
+        <router-link to="/about" class="nav-item" @click="closeMobileMenu">
+          <i class="fas fa-info-circle"></i>
+          <span>О приложении</span>
+        </router-link>
+
         <button @click="logout" class="nav-item logout-btn">
           <i class="fas fa-sign-out-alt"></i>
           <span>Выйти</span>
@@ -65,7 +65,7 @@
 
     <!-- Оверлей для мобильного меню -->
     <div v-if="mobileMenuOpen" class="mobile-overlay" @click="closeMobileMenu"></div>
-    
+
     <div class="main-content">
       <div class="top-bar" v-if="!isMobile">
         <div class="user-menu" @click="goToProfile">
@@ -89,7 +89,7 @@ export default {
     const router = useRouter()
     const mobileMenuOpen = ref(false)
     const isMobile = ref(window.innerWidth <= 768)
-    
+
     const toggleMobileMenu = () => {
       mobileMenuOpen.value = !mobileMenuOpen.value
       if (mobileMenuOpen.value) {
@@ -98,12 +98,12 @@ export default {
         document.body.style.overflow = ''
       }
     }
-    
+
     const closeMobileMenu = () => {
       mobileMenuOpen.value = false
       document.body.style.overflow = ''
     }
-    
+
     const handleResize = () => {
       isMobile.value = window.innerWidth <= 768
       if (!isMobile.value) {
@@ -120,14 +120,14 @@ export default {
       try {
         // Очищаем все данные
         await apiService.logout()
-        
+
         // Принудительно очищаем localStorage
         localStorage.clear()
         sessionStorage.clear()
-        
+
         // Перенаправляем на страницу логина
         await router.push('/login')
-        
+
         // Перезагружаем страницу для полной очистки состояния
         window.location.href = '/login'
       } catch (error) {
@@ -138,16 +138,16 @@ export default {
         window.location.href = '/login'
       }
     }
-    
+
     onMounted(() => {
       window.addEventListener('resize', handleResize)
     })
-    
+
     onUnmounted(() => {
       window.removeEventListener('resize', handleResize)
       document.body.style.overflow = ''
     })
-    
+
     return {
       mobileMenuOpen,
       isMobile,
@@ -290,23 +290,23 @@ body {
   .mobile-menu-btn {
     display: flex;
   }
-  
+
   .sidebar {
     transform: translateX(-100%);
     width: 280px;
   }
-  
+
   .sidebar.mobile-open {
     transform: translateX(0);
   }
-  
+
   .main-content {
     margin-left: 0;
     padding: 1rem;
     padding-top: 4rem;
     width: 100%;
   }
-  
+
   .mobile-overlay {
     position: fixed;
     top: 0;
@@ -325,151 +325,151 @@ body {
     grid-template-columns: 1fr !important;
     gap: 1rem;
   }
-  
+
   .stat-card {
     padding: 1rem;
   }
-  
+
   .stat-value {
     font-size: 1.5rem;
   }
-  
+
   /* Быстрые действия */
   .quick-actions {
     flex-direction: column;
   }
-  
+
   .quick-actions .btn {
     width: 100%;
     justify-content: center;
   }
-  
+
   /* Таблицы */
   .table-responsive {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
-  
+
   .table {
     min-width: 600px;
   }
-  
+
   /* Карточки */
   .card {
     padding: 1rem;
   }
-  
+
   .card-header {
     flex-direction: column;
     gap: 1rem;
     align-items: flex-start;
   }
-  
+
   .card-header .btn {
     width: 100%;
   }
-  
+
   /* Модальные окна */
   .modal-content {
     width: 95%;
     margin: 1rem;
     max-height: 85vh;
   }
-  
+
   /* Формы */
   .form-group select,
   .form-group input,
   .form-group textarea {
     font-size: 16px; /* Предотвращает зумирование на iOS */
   }
-  
+
   /* Фильтры */
   .filters {
     grid-template-columns: 1fr !important;
     gap: 1rem;
   }
-  
+
   /* Категории */
   .category-stat {
     padding: 0.75rem;
   }
-  
+
   .subcategories {
     padding-left: 0.5rem;
   }
-  
+
   .subcategory {
     padding: 0.5rem;
   }
-  
+
   /* Заголовки */
   .page-header {
     flex-direction: column;
     gap: 1rem;
     align-items: flex-start;
   }
-  
+
   .page-header h1 {
     font-size: 1.5rem;
   }
-  
+
   .page-header .btn {
     width: 100%;
   }
-  
+
   /* Вкладки */
   .type-tabs {
     flex-direction: column;
   }
-  
+
   .tab-btn {
     width: 100%;
   }
-  
+
   /* Таблица долгов */
   .action-buttons {
     flex-direction: column;
   }
-  
+
   .action-buttons .btn-sm {
     width: 100%;
   }
-  
+
   /* Детали долга */
   .debt-details {
     padding: 0.5rem;
   }
-  
+
   .detail-row {
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   /* Пагинация */
   .pagination {
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   .pagination button {
     width: 100%;
   }
-  
+
   /* Категории дерево */
   .category-item {
     flex-direction: column;
     gap: 0.75rem;
   }
-  
+
   .category-info {
     width: 100%;
   }
-  
+
   .category-actions {
     width: 100%;
     justify-content: flex-end;
   }
-  
+
   .category-children {
     margin-left: 0.5rem;
     padding-left: 0.5rem;
@@ -482,16 +482,16 @@ body {
     padding: 0.75rem;
     padding-top: 4rem;
   }
-  
+
   .stat-value {
     font-size: 1.25rem;
   }
-  
+
   .btn {
     padding: 0.5rem 0.75rem;
     font-size: 0.8rem;
   }
-  
+
   .modal-header h3 {
     font-size: 1.1rem;
   }

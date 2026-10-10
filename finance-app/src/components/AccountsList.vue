@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="page-header">
-      <h1>Счета</h1>
+      <h1>Счета и переводы</h1>
       <button @click="openCreateModal" class="btn btn-primary">
         <i class="fas fa-plus"></i> Создать счет
       </button>
@@ -55,6 +55,9 @@
           <!-- Раскрывающаяся часть с кнопками -->
           <div v-if="expandedAccounts.has(account.id)" class="account-expanded">
             <div class="account-actions-expanded">
+              <button @click="openTransferFor(account)" class="btn btn-sm btn-primary">
+                <i class="fas fa-exchange-alt"></i> Перевести
+              </button>
               <button @click="editAccount(account)" class="btn btn-sm btn-info">
                 <i class="fas fa-edit"></i> Редактировать
               </button>
@@ -96,6 +99,9 @@
               </td>
               <td>
                 <div class="action-buttons">
+                  <button @click="openTransferFor(account)" class="btn btn-sm btn-primary" title="Перевести">
+                    <i class="fas fa-exchange-alt"></i>
+                  </button>
                   <button @click="editAccount(account)" class="btn btn-sm btn-info" title="Редактировать">
                     <i class="fas fa-edit"></i>
                   </button>
@@ -149,6 +155,9 @@
 
           <div v-if="expandedAccounts.has(account.id)" class="account-expanded">
             <div class="account-actions-expanded">
+              <button @click="openTransferFor(account)" class="btn btn-sm btn-primary">
+                <i class="fas fa-exchange-alt"></i> Перевести
+              </button>
               <button @click="editAccount(account)" class="btn btn-sm btn-info">
                 <i class="fas fa-edit"></i> Редактировать
               </button>
@@ -189,6 +198,9 @@
               </td>
               <td>
                 <div class="action-buttons">
+                  <button @click="openTransferFor(account)" class="btn btn-sm btn-primary" title="Перевести">
+                    <i class="fas fa-exchange-alt"></i>
+                  </button>
                   <button @click="editAccount(account)" class="btn btn-sm btn-info" title="Редактировать">
                     <i class="fas fa-edit"></i>
                   </button>
@@ -209,6 +221,165 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Переводы между счетами -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-exchange-alt"></i> Переводы между счетами
+        </h3>
+      </div>
+
+      <!-- Форма нового перевода -->
+      <form @submit.prevent="createTransfer" class="transfer-form">
+        <div class="transfer-form-grid">
+          <div class="form-group">
+            <label class="form-label required">Счет списания</label>
+            <select v-model="transferData.source_account" class="form-control" required>
+              <option value="">Выберите счет</option>
+              <option v-for="account in allAccounts" :key="account.id" :value="account.id">
+                {{ account.name }} ({{ formatCurrency(account.balance) }})
+                <template v-if="!account.is_active"> — неактивен</template>
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label required">Счет зачисления</label>
+            <select v-model="transferData.destination_account" class="form-control" required>
+              <option value="">Выберите счет</option>
+              <option v-for="account in otherAccounts" :key="account.id" :value="account.id">
+                {{ account.name }} ({{ formatCurrency(account.balance) }})
+                <template v-if="!account.is_active"> — неактивен</template>
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label required">Сумма перевода</label>
+            <input type="number" v-model="transferData.amount" class="form-control" step="0.01" required placeholder="0.00">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label required">Дата и время</label>
+            <input type="datetime-local" v-model="transferData.timestamp" class="form-control" required>
+          </div>
+        </div>
+
+        <div class="transfer-form-actions">
+          <button type="submit" class="btn btn-primary" :disabled="transferLoading">
+            <i class="fas fa-exchange-alt"></i>
+            {{ transferLoading ? 'Выполняется...' : 'Выполнить перевод' }}
+          </button>
+        </div>
+      </form>
+
+      <!-- История переводов -->
+      <div class="card-header" style="margin-top: 1.5rem;">
+        <h3 class="card-title">История переводов</h3>
+      </div>
+
+      <!-- Desktop Table -->
+      <div class="desktop-table">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Дата</th>
+              <th>Со счета</th>
+              <th>На счет</th>
+              <th>Сумма</th>
+              <th>Действия</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="transfer in transfers" :key="transfer.id">
+              <td>{{ formatDate(transfer.timestamp) }}</td>
+              <td>{{ transfer.source_account_name }}</td>
+              <td>{{ transfer.destination_account_name }}</td>
+              <td class="text-warning">{{ formatCurrency(transfer.amount) }}</td>
+              <td>
+                <div class="action-buttons">
+                  <button @click="editTransfer(transfer)" class="btn btn-secondary btn-sm" title="Редактировать">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button @click="confirmDeleteTransfer(transfer)" class="btn btn-danger btn-sm" title="Удалить">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="transfers.length === 0">
+              <td colspan="5" style="text-align: center;">Нет переводов</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile Cards with Expand -->
+      <div class="mobile-cards">
+        <div v-for="transfer in transfers" :key="transfer.id" class="transfer-card">
+          <div class="transfer-compact" @click="toggleExpandTransfer(transfer.id)">
+            <div class="compact-left">
+              <div class="transfer-date-compact">{{ formatShortDate(transfer.timestamp) }}</div>
+              <div class="transfer-amount-compact text-warning">
+                {{ formatCurrency(transfer.amount) }}
+              </div>
+            </div>
+            <div class="compact-right">
+              <button class="expand-icon" @click.stop="toggleExpandTransfer(transfer.id)">
+                <i :class="expandedTransfers.has(transfer.id) ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
+              </button>
+            </div>
+          </div>
+
+          <div v-if="expandedTransfers.has(transfer.id)" class="transfer-expanded">
+            <div class="transfer-details">
+              <div class="detail-item">
+                <span class="detail-label">
+                  <i class="fas fa-calendar"></i> Полная дата:
+                </span>
+                <span class="detail-value">{{ formatDate(transfer.timestamp) }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">
+                  <i class="fas fa-arrow-right"></i> Со счета:
+                </span>
+                <span class="detail-value">{{ transfer.source_account_name }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">
+                  <i class="fas fa-arrow-left"></i> На счет:
+                </span>
+                <span class="detail-value">{{ transfer.destination_account_name }}</span>
+              </div>
+            </div>
+            <div class="transfer-actions-expanded">
+              <button @click="editTransfer(transfer)" class="btn btn-sm btn-info">
+                <i class="fas fa-edit"></i> Редактировать
+              </button>
+              <button @click="confirmDeleteTransfer(transfer)" class="btn btn-sm btn-danger">
+                <i class="fas fa-trash"></i> Удалить
+              </button>
+            </div>
+          </div>
+        </div>
+        <div v-if="transfers.length === 0" class="empty-state">
+          <i class="fas fa-exchange-alt"></i>
+          <p>Нет переводов</p>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination" v-if="totalPages > 1">
+        <button @click="prevPage" :disabled="currentPage === 1" class="btn btn-secondary">
+          <i class="fas fa-chevron-left"></i> <span class="btn-text">Назад</span>
+        </button>
+        <span class="page-info">Страница {{ currentPage }} из {{ totalPages }}</span>
+        <button @click="nextPage" :disabled="currentPage === totalPages" class="btn btn-secondary">
+          <span class="btn-text">Вперед</span> <i class="fas fa-chevron-right"></i>
+        </button>
       </div>
     </div>
 
@@ -298,7 +469,56 @@
       </div>
     </div>
 
-    <!-- Модальное окно подтверждения удаления -->
+    <!-- Модальное окно редактирования перевода -->
+    <div v-if="showEditTransferModal" class="modal" @click.self="closeEditTransferModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Редактировать перевод</h3>
+          <button class="modal-close" @click="closeEditTransferModal">&times;</button>
+        </div>
+
+        <form @submit.prevent="updateTransfer">
+          <div class="form-group">
+            <label class="form-label required">Счет списания</label>
+            <select v-model="editTransferData.source_account" class="form-control" required>
+              <option value="">Выберите счет</option>
+              <option v-for="account in allAccounts" :key="account.id" :value="account.id">
+                {{ account.name }} ({{ formatCurrency(account.balance) }})
+                <template v-if="!account.is_active"> — неактивен</template>
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label required">Счет зачисления</label>
+            <select v-model="editTransferData.destination_account" class="form-control" required>
+              <option value="">Выберите счет</option>
+              <option v-for="account in editOtherAccounts" :key="account.id" :value="account.id">
+                {{ account.name }} ({{ formatCurrency(account.balance) }})
+                <template v-if="!account.is_active"> — неактивен</template>
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label required">Сумма перевода</label>
+            <input type="number" v-model="editTransferData.amount" class="form-control" step="0.01" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label required">Дата и время</label>
+            <input type="datetime-local" v-model="editTransferData.timestamp" class="form-control" required>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" @click="closeEditTransferModal" class="btn btn-secondary">Отмена</button>
+            <button type="submit" class="btn btn-primary">Обновить</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Модальное окно подтверждения удаления счета -->
     <div v-if="showDeleteModal" class="modal" @click.self="showDeleteModal = false">
       <div class="modal-content">
         <div class="modal-header">
@@ -320,6 +540,22 @@
         </div>
       </div>
     </div>
+
+    <!-- Модальное окно подтверждения удаления перевода -->
+    <div v-if="showDeleteTransferModal" class="modal" @click.self="showDeleteTransferModal = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Подтверждение удаления</h3>
+          <button class="modal-close" @click="showDeleteTransferModal = false">&times;</button>
+        </div>
+        <p>Вы уверены, что хотите удалить этот перевод?</p>
+        <p class="text-muted">Сумма: {{ formatCurrency(transferToDelete?.amount) }}</p>
+        <div class="modal-footer">
+          <button @click="showDeleteTransferModal = false" class="btn btn-secondary">Отмена</button>
+          <button @click="deleteTransfer" class="btn btn-danger">Да, удалить</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -328,8 +564,9 @@ import { ref, computed, onMounted } from 'vue'
 import apiService from '../services/api.js'
 
 export default {
-  name: 'AccountsList',
+  name: 'AccountsAndTransfers',
   setup() {
+    // --- Счета ---
     const accounts = ref([])
     const loading = ref(false)
     const showAccountModal = ref(false)
@@ -355,14 +592,55 @@ export default {
       return accounts.value.filter(acc => !acc.is_active)
     })
 
+    const allAccounts = computed(() => accounts.value)
+
     const totalBalance = computed(() => {
-      return activeAccounts.value.reduce((sum, acc) => sum + parseFloat(acc.balance), 0)
+      return activeAccounts.value.reduce((sum, acc) => sum + parseFloat(acc.balance || 0), 0)
     })
 
     const activeAccountsCount = computed(() => {
       return activeAccounts.value.length
     })
 
+    // --- Переводы ---
+    const transfers = ref([])
+    const currentPage = ref(1)
+    const pageSize = ref(10)
+    const totalCount = ref(0)
+    const transferLoading = ref(false)
+    const showEditTransferModal = ref(false)
+    const showDeleteTransferModal = ref(false)
+    const editingTransfer = ref(null)
+    const transferToDelete = ref(null)
+    const expandedTransfers = ref(new Set())
+
+    const transferData = ref({
+      source_account: '',
+      destination_account: '',
+      amount: '',
+      timestamp: new Date().toISOString().slice(0, 16)
+    })
+
+    const editTransferData = ref({
+      source_account: '',
+      destination_account: '',
+      amount: '',
+      timestamp: ''
+    })
+
+    const otherAccounts = computed(() => {
+      if (!transferData.value.source_account) return allAccounts.value
+      return allAccounts.value.filter(acc => acc.id !== transferData.value.source_account)
+    })
+
+    const editOtherAccounts = computed(() => {
+      if (!editTransferData.value.source_account) return allAccounts.value
+      return allAccounts.value.filter(acc => acc.id !== editTransferData.value.source_account)
+    })
+
+    const totalPages = computed(() => Math.ceil(totalCount.value / pageSize.value))
+
+    // --- Общие функции ---
     const toggleExpand = (accountId) => {
       if (expandedAccounts.value.has(accountId)) {
         expandedAccounts.value.delete(accountId)
@@ -372,12 +650,22 @@ export default {
       expandedAccounts.value = new Set(expandedAccounts.value)
     }
 
+    const toggleExpandTransfer = (transferId) => {
+      if (expandedTransfers.value.has(transferId)) {
+        expandedTransfers.value.delete(transferId)
+      } else {
+        expandedTransfers.value.add(transferId)
+      }
+      expandedTransfers.value = new Set(expandedTransfers.value)
+    }
+
     const truncateText = (text, maxLength) => {
       if (!text) return ''
       if (text.length <= maxLength) return text
       return text.substring(0, maxLength) + '...'
     }
 
+    // --- Загрузка данных ---
     const loadAccounts = async () => {
       loading.value = true
       try {
@@ -407,6 +695,20 @@ export default {
       }
     }
 
+    const loadTransfers = async () => {
+      try {
+        const data = await apiService.getTransferHistory(currentPage.value, pageSize.value)
+        console.log('Загружены переводы:', data)
+        transfers.value = data.results || []
+        totalCount.value = data.count || 0
+      } catch (error) {
+        console.error('Error loading transfers:', error)
+        transfers.value = []
+        totalCount.value = 0
+      }
+    }
+
+    // --- Действия со счетами ---
     const openCreateModal = () => {
       editingAccount.value = null
       formData.value = {
@@ -501,6 +803,170 @@ export default {
       }
     }
 
+    // --- Действия с переводами ---
+    const openTransferFor = (account) => {
+      transferData.value = {
+        source_account: account.id,
+        destination_account: '',
+        amount: '',
+        timestamp: new Date().toISOString().slice(0, 16)
+      }
+      // Прокручиваем к форме переводов
+      setTimeout(() => {
+        const transferForm = document.querySelector('.transfer-form')
+        if (transferForm) {
+          transferForm.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }, 100)
+    }
+
+    const createTransfer = async () => {
+      if (!transferData.value.source_account || !transferData.value.destination_account) {
+        alert('Выберите счета для перевода')
+        return
+      }
+
+      if (transferData.value.source_account === transferData.value.destination_account) {
+        alert('Счета списания и зачисления должны быть разными')
+        return
+      }
+
+      transferLoading.value = true
+      try {
+        await apiService.createTransfer(
+          transferData.value.source_account,
+          transferData.value.destination_account,
+          parseFloat(transferData.value.amount),
+          new Date(transferData.value.timestamp).toISOString()
+        )
+
+        transferData.value = {
+          source_account: '',
+          destination_account: '',
+          amount: '',
+          timestamp: new Date().toISOString().slice(0, 16)
+        }
+
+        await loadAccounts()
+        await loadTransfers()
+      } catch (error) {
+        console.error('Error creating transfer:', error)
+        alert('Ошибка при создании перевода: ' + (error.message || 'Неизвестная ошибка'))
+      } finally {
+        transferLoading.value = false
+      }
+    }
+
+    const editTransfer = (transfer) => {
+      editingTransfer.value = transfer
+
+      let sourceAccountId = null
+      let destinationAccountId = null
+
+      if (transfer.source_account_name) {
+        const foundSource = accounts.value.find(acc => acc.name === transfer.source_account_name)
+        if (foundSource) {
+          sourceAccountId = foundSource.id
+        } else {
+          console.warn('Счет списания не найден:', transfer.source_account_name)
+        }
+      }
+
+      if (transfer.destination_account_name) {
+        const foundDest = accounts.value.find(acc => acc.name === transfer.destination_account_name)
+        if (foundDest) {
+          destinationAccountId = foundDest.id
+        } else {
+          console.warn('Счет зачисления не найден:', transfer.destination_account_name)
+        }
+      }
+
+      editTransferData.value = {
+        source_account: sourceAccountId || '',
+        destination_account: destinationAccountId || '',
+        amount: transfer.amount,
+        timestamp: transfer.timestamp ? transfer.timestamp.slice(0, 16) : new Date().toISOString().slice(0, 16)
+      }
+
+      showEditTransferModal.value = true
+    }
+
+    const updateTransfer = async () => {
+      if (!editTransferData.value.source_account || !editTransferData.value.destination_account) {
+        alert('Выберите счета для перевода')
+        return
+      }
+
+      if (editTransferData.value.source_account === editTransferData.value.destination_account) {
+        alert('Счета списания и зачисления должны быть разными')
+        return
+      }
+
+      try {
+        await apiService.updateTransfer(editingTransfer.value.id, {
+          source_account: parseInt(editTransferData.value.source_account),
+          destination_account: parseInt(editTransferData.value.destination_account),
+          amount: parseFloat(editTransferData.value.amount),
+          timestamp: new Date(editTransferData.value.timestamp).toISOString()
+        })
+
+        closeEditTransferModal()
+        await loadAccounts()
+        await loadTransfers()
+      } catch (error) {
+        console.error('Error updating transfer:', error)
+        alert('Ошибка при обновлении перевода: ' + (error.message || 'Неизвестная ошибка'))
+      }
+    }
+
+    const confirmDeleteTransfer = (transfer) => {
+      transferToDelete.value = transfer
+      showDeleteTransferModal.value = true
+    }
+
+    const deleteTransfer = async () => {
+      try {
+        await apiService.deleteTransfer(transferToDelete.value.id)
+        showDeleteTransferModal.value = false
+
+        if (transfers.value.length === 1 && currentPage.value > 1) {
+          currentPage.value--
+        }
+
+        await loadAccounts()
+        await loadTransfers()
+      } catch (error) {
+        console.error('Error deleting transfer:', error)
+        alert('Ошибка при удалении перевода')
+      }
+    }
+
+    const closeEditTransferModal = () => {
+      showEditTransferModal.value = false
+      editingTransfer.value = null
+      editTransferData.value = {
+        source_account: '',
+        destination_account: '',
+        amount: '',
+        timestamp: ''
+      }
+    }
+
+    const prevPage = () => {
+      if (currentPage.value > 1) {
+        currentPage.value--
+        loadTransfers()
+      }
+    }
+
+    const nextPage = () => {
+      if (currentPage.value < totalPages.value) {
+        currentPage.value++
+        loadTransfers()
+      }
+    }
+
+    // --- Форматирование ---
     const formatCurrency = (value) => {
       if (!value && value !== 0) return '0 ₽'
       return new Intl.NumberFormat('ru-RU', {
@@ -511,14 +977,38 @@ export default {
       }).format(value)
     }
 
-    onMounted(() => {
-      loadAccounts()
+    const formatDate = (dateString) => {
+      if (!dateString) return ''
+      return new Date(dateString).toLocaleString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }
+
+    const formatShortDate = (dateString) => {
+      if (!dateString) return ''
+      return new Date(dateString).toLocaleString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }
+
+    onMounted(async () => {
+      await loadAccounts()
+      await loadTransfers()
     })
 
     return {
+      // Счета
       accounts,
       activeAccounts,
       inactiveAccounts,
+      allAccounts,
       loading,
       showAccountModal,
       showBalanceModal,
@@ -531,7 +1021,24 @@ export default {
       totalBalance,
       activeAccountsCount,
       expandedAccounts,
+      // Переводы
+      transfers,
+      currentPage,
+      totalPages,
+      totalCount,
+      transferLoading,
+      showEditTransferModal,
+      showDeleteTransferModal,
+      editingTransfer,
+      transferToDelete,
+      transferData,
+      editTransferData,
+      otherAccounts,
+      editOtherAccounts,
+      expandedTransfers,
+      // Методы
       toggleExpand,
+      toggleExpandTransfer,
       truncateText,
       openCreateModal,
       editAccount,
@@ -542,7 +1049,18 @@ export default {
       confirmDelete,
       deleteAccount,
       closeModal,
-      formatCurrency
+      openTransferFor,
+      createTransfer,
+      editTransfer,
+      updateTransfer,
+      confirmDeleteTransfer,
+      deleteTransfer,
+      closeEditTransferModal,
+      prevPage,
+      nextPage,
+      formatCurrency,
+      formatDate,
+      formatShortDate
     }
   }
 }
@@ -679,6 +1197,11 @@ export default {
   color: var(--gray-color);
 }
 
+.text-warning {
+  color: var(--warning-color);
+  font-weight: 600;
+}
+
 /* Мобильные карточки */
 .mobile-accounts {
   display: none;
@@ -698,7 +1221,6 @@ export default {
   background: #f9fafb;
 }
 
-/* Компактный заголовок */
 .account-compact {
   display: flex;
   justify-content: space-between;
@@ -754,7 +1276,6 @@ export default {
   color: var(--primary-color);
 }
 
-/* Раскрывающаяся часть */
 .account-expanded {
   padding: 1rem;
   border-top: 1px solid var(--light-color);
@@ -805,6 +1326,123 @@ export default {
 .table th {
   font-weight: 600;
   color: var(--gray-color);
+}
+
+/* Форма переводов */
+.transfer-form {
+  padding: 1rem 0;
+}
+
+.transfer-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.transfer-form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Мобильные карточки переводов */
+.mobile-cards {
+  display: none;
+}
+
+.transfer-card {
+  background: var(--white);
+  border: 1px solid var(--light-color);
+  border-radius: var(--radius);
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.transfer-compact {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.transfer-compact:hover {
+  background-color: #f9fafb;
+}
+
+.transfer-date-compact {
+  font-size: 0.75rem;
+  color: var(--gray-color);
+  min-width: 70px;
+}
+
+.transfer-amount-compact {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.transfer-expanded {
+  padding: 1rem;
+  border-top: 1px solid var(--light-color);
+  background-color: #fafafa;
+  animation: slideDown 0.3s ease;
+}
+
+.transfer-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.detail-label {
+  color: var(--gray-color);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.detail-value {
+  color: var(--dark-color);
+  text-align: right;
+  word-break: break-word;
+  max-width: 60%;
+}
+
+.transfer-actions-expanded {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.transfer-actions-expanded .btn-sm {
+  padding: 0.5rem 1rem;
+}
+
+/* Пагинация */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--light-color);
+  flex-wrap: wrap;
+}
+
+.page-info {
+  font-size: 0.875rem;
 }
 
 /* Модальные окна */
@@ -863,7 +1501,8 @@ export default {
     display: none;
   }
 
-  .mobile-accounts {
+  .mobile-accounts,
+  .mobile-cards {
     display: block;
   }
 
@@ -877,6 +1516,35 @@ export default {
 
   .card {
     padding: 1rem;
+  }
+
+  .transfer-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .transfer-form-actions {
+    justify-content: stretch;
+  }
+
+  .transfer-form-actions .btn {
+    width: 100%;
+  }
+}
+
+@media (min-width: 1025px) and (max-width: 1280px) {
+  .desktop-table {
+    display: block;
+  }
+
+  .mobile-accounts,
+  .mobile-cards {
+    display: none;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.5rem;
+    font-size: 0.875rem;
   }
 }
 
@@ -952,6 +1620,23 @@ export default {
   .modal-footer {
     gap: 0.5rem;
   }
+
+  .pagination {
+    flex-direction: row;
+  }
+
+  .pagination button {
+    width: auto;
+  }
+
+  .transfer-date-compact {
+    min-width: 60px;
+    font-size: 0.7rem;
+  }
+
+  .transfer-amount-compact {
+    font-size: 0.9rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -981,22 +1666,42 @@ export default {
     width: 36px;
     height: 36px;
   }
-}
 
-/* Планшеты в горизонтальной ориентации */
-@media (min-width: 1025px) and (max-width: 1280px) {
-  .desktop-table {
-    display: block;
+  .pagination {
+    gap: 0.5rem;
   }
 
-  .mobile-accounts {
+  .btn-text {
     display: none;
   }
 
-  .table th,
-  .table td {
-    padding: 0.5rem;
-    font-size: 0.875rem;
+  .pagination .btn {
+    padding: 10px 12px;
+  }
+
+  .detail-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .detail-value {
+    max-width: 100%;
+    text-align: left;
+  }
+
+  .transfer-actions-expanded {
+    flex-direction: column;
+  }
+
+  .transfer-actions-expanded .btn-sm {
+    width: 100%;
+    margin: 0;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+    gap: 0.5rem;
   }
 }
 </style>

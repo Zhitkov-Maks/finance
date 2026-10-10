@@ -13,7 +13,7 @@
         <h3>Фильтры</h3>
         <i :class="showFilters ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
       </div>
-      
+
       <div class="filters" :class="{ 'filters-hidden': !showFilters }">
         <div class="filter-group">
           <label>Тип:</label>
@@ -70,71 +70,89 @@
     <!-- Transactions Table / Mobile Cards -->
     <div v-else class="card">
       <div class="mobile-transactions">
-        <div v-for="transaction in transactions" :key="transaction.id" class="transaction-card">
-          <!-- Компактный заголовок -->
-          <div class="transaction-compact" @click="toggleExpand(transaction.id)">
-            <div class="compact-left">
-              <div class="transaction-date-compact">{{ formatShortDate(transaction.create_at) }}</div>
-              <span class="badge" :class="getTransactionType(transaction) === 'income' ? 'badge-success' : 'badge-danger'">
-                {{ getTransactionType(transaction) === 'income' ? 'Доход' : 'Расход' }}
-              </span>
+        <div v-for="group in groupedTransactions" :key="group.dateKey" class="day-group">
+          <!-- Заголовок дня -->
+          <div class="day-header">
+            <div class="day-header-date">
+              <i class="fas fa-calendar-day"></i>
+              {{ group.dateLabel }}
             </div>
-            <div class="compact-right">
-              <div class="transaction-amount-compact" :class="getTransactionType(transaction) === 'income' ? 'text-success' : 'text-danger'">
-                {{ formatCurrency(transaction.amount) }}
-              </div>
-              <button class="expand-icon" @click.stop="toggleExpand(transaction.id)">
-                <i :class="expandedTransactions.has(transaction.id) ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
-              </button>
+            <div class="day-header-total" :class="group.total >= 0 ? 'text-success' : 'text-danger'">
+              {{ group.total >= 0 ? '+' : '' }}{{ formatCurrency(group.total) }}
             </div>
           </div>
 
-          <!-- Раскрывающаяся детальная информация -->
-          <div v-if="expandedTransactions.has(transaction.id)" class="transaction-expanded">
-            <div class="transaction-details">
-              <div class="detail-item">
-                <span class="detail-label">
-                  <i class="fas fa-tag"></i> Тип:
-                </span>
+          <!-- Транзакции дня -->
+          <div
+            v-for="transaction in group.items"
+            :key="transaction.id"
+            class="transaction-card"
+          >
+            <div class="transaction-compact" @click="toggleExpand(transaction.id)">
+              <div class="compact-left">
+                <div class="transaction-date-compact">{{ formatShortDate(transaction.create_at) }}</div>
                 <span class="badge" :class="getTransactionType(transaction) === 'income' ? 'badge-success' : 'badge-danger'">
                   {{ getTransactionType(transaction) === 'income' ? 'Доход' : 'Расход' }}
                 </span>
               </div>
-              <div class="detail-item">
-                <span class="detail-label">
-                  <i class="fas fa-folder"></i> Категория:
-                </span>
-                <span class="detail-value">{{ transaction.category?.name || '—' }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">
-                  <i class="fas fa-credit-card"></i> Счет:
-                </span>
-                <span class="detail-value">{{ transaction.account?.name || '—' }}</span>
-              </div>
-              <div v-if="transaction.comment" class="detail-item">
-                <span class="detail-label">
-                  <i class="fas fa-comment"></i> Комментарий:
-                </span>
-                <span class="detail-value">{{ transaction.comment }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">
-                  <i class="fas fa-clock"></i> Полная дата:
-                </span>
-                <span class="detail-value">{{ formatDate(transaction.create_at) }}</span>
+              <div class="compact-right">
+                <div class="transaction-amount-compact" :class="getTransactionType(transaction) === 'income' ? 'text-success' : 'text-danger'">
+                  {{ formatCurrency(transaction.amount) }}
+                </div>
+                <button class="expand-icon" @click.stop="toggleExpand(transaction.id)">
+                  <i :class="expandedTransactions.has(transaction.id) ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
+                </button>
               </div>
             </div>
-            <div class="transaction-actions-expanded">
-              <button @click="editTransaction(transaction)" class="btn btn-sm btn-info">
-                <i class="fas fa-edit"></i> Редактировать
-              </button>
-              <button @click="confirmDelete(transaction)" class="btn btn-sm btn-danger">
-                <i class="fas fa-trash"></i> Удалить
-              </button>
+
+            <!-- Раскрывающаяся детальная информация -->
+            <div v-if="expandedTransactions.has(transaction.id)" class="transaction-expanded">
+              <div class="transaction-details">
+                <div class="detail-item">
+                  <span class="detail-label">
+                    <i class="fas fa-tag"></i> Тип:
+                  </span>
+                  <span class="badge" :class="getTransactionType(transaction) === 'income' ? 'badge-success' : 'badge-danger'">
+                    {{ getTransactionType(transaction) === 'income' ? 'Доход' : 'Расход' }}
+                  </span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">
+                    <i class="fas fa-folder"></i> Категория:
+                  </span>
+                  <span class="detail-value">{{ transaction.category?.name || '—' }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">
+                    <i class="fas fa-credit-card"></i> Счет:
+                  </span>
+                  <span class="detail-value">{{ transaction.account?.name || '—' }}</span>
+                </div>
+                <div v-if="transaction.comment" class="detail-item">
+                  <span class="detail-label">
+                    <i class="fas fa-comment"></i> Комментарий:
+                  </span>
+                  <span class="detail-value">{{ transaction.comment }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">
+                    <i class="fas fa-clock"></i> Полная дата:
+                  </span>
+                  <span class="detail-value">{{ formatDate(transaction.create_at) }}</span>
+                </div>
+              </div>
+              <div class="transaction-actions-expanded">
+                <button @click="editTransaction(transaction)" class="btn btn-sm btn-info">
+                  <i class="fas fa-edit"></i> Редактировать
+                </button>
+                <button @click="confirmDelete(transaction)" class="btn btn-sm btn-danger">
+                  <i class="fas fa-trash"></i> Удалить
+                </button>
+              </div>
             </div>
           </div>
         </div>
+
         <div v-if="transactions.length === 0" class="empty-state">
           <i class="fas fa-receipt"></i>
           <p>Нет транзакций</p>
@@ -156,29 +174,43 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="transaction in transactions" :key="transaction.id">
-              <td>{{ transaction.id }}</td>
-              <td>{{ formatDate(transaction.create_at) }}</td>
-              <td :class="getTransactionType(transaction) === 'income' ? 'text-success' : 'text-danger'">
-                <strong>{{ formatCurrency(transaction.amount) }}</strong>
-              </td>
-              <td>
-                <span class="badge" :class="getTransactionType(transaction) === 'income' ? 'badge-success' : 'badge-danger'">
-                  {{ getTransactionType(transaction) === 'income' ? 'Доход' : 'Расход' }}
-                </span>
-              </td>
-              <td>{{ transaction.category?.name || '—' }}</td>
-              <td>{{ transaction.account?.name || '—' }}</td>
-              <td>{{ transaction.comment || '—' }}</td>
-              <td>
-                <button @click="editTransaction(transaction)" class="btn btn-sm btn-info" title="Редактировать">
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button @click="confirmDelete(transaction)" class="btn btn-sm btn-danger" title="Удалить">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </td>
-            </tr>
+            <template v-for="group in groupedTransactions" :key="group.dateKey">
+              <!-- Строка-разделитель дня -->
+              <tr class="day-separator">
+                <td colspan="8">
+                  <span class="day-separator-date">
+                    <i class="fas fa-calendar-day"></i>
+                    {{ group.dateLabel }}
+                  </span>
+                  <span class="day-separator-total" :class="group.total >= 0 ? 'text-success' : 'text-danger'">
+                    Итого: {{ group.total >= 0 ? '+' : '' }}{{ formatCurrency(group.total) }}
+                  </span>
+                </td>
+              </tr>
+              <tr v-for="transaction in group.items" :key="transaction.id">
+                <td>{{ transaction.id }}</td>
+                <td>{{ formatDate(transaction.create_at) }}</td>
+                <td :class="getTransactionType(transaction) === 'income' ? 'text-success' : 'text-danger'">
+                  <strong>{{ formatCurrency(transaction.amount) }}</strong>
+                </td>
+                <td>
+                  <span class="badge" :class="getTransactionType(transaction) === 'income' ? 'badge-success' : 'badge-danger'">
+                    {{ getTransactionType(transaction) === 'income' ? 'Доход' : 'Расход' }}
+                  </span>
+                </td>
+                <td>{{ transaction.category?.name || '—' }}</td>
+                <td>{{ transaction.account?.name || '—' }}</td>
+                <td>{{ transaction.comment || '—' }}</td>
+                <td>
+                  <button @click="editTransaction(transaction)" class="btn btn-sm btn-info" title="Редактировать">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button @click="confirmDelete(transaction)" class="btn btn-sm btn-danger" title="Удалить">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            </template>
             <tr v-if="transactions.length === 0">
               <td colspan="8" class="text-center">Нет транзакций</td>
             </tr>
@@ -333,22 +365,18 @@ export default {
     const getTransactionType = (transaction) => {
       if (!transaction) return 'expense'
 
-      // 1. Прямое поле transaction_type
       if (transaction.transaction_type) {
         return transaction.transaction_type
       }
 
-      // 2. Поле type
       if (transaction.type) {
         return transaction.type
       }
 
-      // 3. Определяем по типу категории (самый надежный способ для вашего API)
       if (transaction.category && transaction.category.type_transaction) {
         return transaction.category.type_transaction
       }
 
-      // 4. Если есть ID категории, но нет объекта, пробуем найти категорию в загруженных списках
       if (transaction.category_id) {
         const allCategories = [...incomeCategories.value, ...expenseCategories.value]
         const foundCategory = findCategoryById(allCategories, transaction.category_id)
@@ -357,7 +385,6 @@ export default {
         }
       }
 
-      // 5. По умолчанию расход
       console.warn('Не удалось определить тип транзакции:', transaction)
       return 'expense'
     }
@@ -382,7 +409,6 @@ export default {
     })
 
     const availableCategories = computed(() => {
-      // Используем тип из формы для фильтрации категорий
       const categories = formData.value.type === 'income' ? incomeCategories.value : expenseCategories.value
       return flattenCategories(categories)
     })
@@ -397,7 +423,7 @@ export default {
             ...cat,
             level,
             name: cat.name,
-            type_transaction: cat.type_transaction // Сохраняем тип категории
+            type_transaction: cat.type_transaction
           })
           if (cat.children && cat.children.length) {
             result = result.concat(flattenCategories(cat.children, level + 1))
@@ -407,13 +433,47 @@ export default {
       return result
     }
 
+    // Группировка транзакций по дням
+    const groupedTransactions = computed(() => {
+      const groups = new Map()
+
+      for (const transaction of transactions.value) {
+        const date = new Date(transaction.create_at)
+        if (isNaN(date.getTime())) continue
+
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        const dateKey = `${year}-${month}-${day}`
+        const dateLabel = `${day}.${month}.${year}`
+
+        if (!groups.has(dateKey)) {
+          groups.set(dateKey, {
+            dateKey,
+            dateLabel,
+            items: [],
+            total: 0
+          })
+        }
+
+        const group = groups.get(dateKey)
+        group.items.push(transaction)
+
+        const type = getTransactionType(transaction)
+        const amount = Number(transaction.amount) || 0
+        group.total += type === 'income' ? amount : -amount
+      }
+
+      // Сортируем группы по дате (от новых к старым)
+      return Array.from(groups.values()).sort((a, b) => b.dateKey.localeCompare(a.dateKey))
+    })
+
     const toggleExpand = (transactionId) => {
       if (expandedTransactions.value.has(transactionId)) {
         expandedTransactions.value.delete(transactionId)
       } else {
         expandedTransactions.value.add(transactionId)
       }
-      // Создаем новый Set для триггера реактивности
       expandedTransactions.value = new Set(expandedTransactions.value)
     }
 
@@ -436,9 +496,7 @@ export default {
         const response = await apiService.getTransactions(params)
         console.log('Получен ответ:', response)
 
-        // Обрабатываем транзакции, добавляя информацию о типе из категории
         const processedTransactions = (response.results || []).map(transaction => {
-          // Если у транзакции нет типа, но есть категория, добавляем тип из категории
           if (!transaction.transaction_type && transaction.category && transaction.category.type_transaction) {
             transaction.transaction_type = transaction.category.type_transaction
           }
@@ -450,11 +508,6 @@ export default {
         totalPages.value = Math.ceil(totalItems.value / pageSize.value)
 
         console.log(`Загружено ${transactions.value.length} транзакций`)
-        // Выводим первую транзакцию для отладки
-        if (transactions.value.length > 0) {
-          console.log('Пример транзакции:', transactions.value[0])
-          console.log('Тип первой транзакции:', getTransactionType(transactions.value[0]))
-        }
       } catch (error) {
         console.error('Error loading transactions:', error)
         transactions.value = []
@@ -475,7 +528,6 @@ export default {
 
         if (response.results && response.results.length > 0 && response.results[0].accounts) {
           accountsData = response.results[0].accounts
-          console.log('Счета из response.results[0].accounts:', accountsData)
         } else if (response.results && Array.isArray(response.results)) {
           accountsData = response.results
         } else if (response.accounts && Array.isArray(response.accounts)) {
@@ -483,17 +535,11 @@ export default {
         } else if (Array.isArray(response)) {
           accountsData = response
         } else {
-          console.log('Неизвестная структура ответа:', response)
           accountsData = []
         }
 
         accounts.value = accountsData
         console.log(`Загружено ${accounts.value.length} счетов`)
-
-        accounts.value.forEach((acc, index) => {
-          console.log(`Счет ${index + 1}: ${acc.name} (ID: ${acc.id}), баланс: ${acc.balance}, активен: ${acc.is_active}`)
-        })
-
       } catch (error) {
         console.error('Ошибка при загрузке счетов:', error)
         accounts.value = []
@@ -504,7 +550,6 @@ export default {
     const loadCategories = async () => {
       console.log('Загрузка категорий...')
       try {
-        // Загружаем все категории без фильтрации по типу
         const allCategoriesResponse = await apiService.getCategories('', 1, 100, true)
         console.log('Все категории:', allCategoriesResponse)
 
@@ -517,7 +562,6 @@ export default {
           allCategories = allCategoriesResponse.data
         }
 
-        // Разделяем категории по типу
         incomeCategories.value = allCategories.filter(cat => cat.type_transaction === 'income')
         expenseCategories.value = allCategories.filter(cat => cat.type_transaction === 'expense')
 
@@ -690,11 +734,11 @@ export default {
       console.log('=== КОМПОНЕНТ СМОНТИРОВАН ===')
       await Promise.all([loadTransactions(), loadAccounts(), loadCategories()])
       console.log('=== ВСЕ ДАННЫЕ ЗАГРУЖЕНЫ ===')
-      console.log('Доступные счета для выбора:', activeAccounts.value)
     })
 
     return {
       transactions,
+      groupedTransactions,
       activeAccounts,
       availableCategories,
       loading,
@@ -731,7 +775,6 @@ export default {
 </script>
 
 <style scoped>
-/* ... все стили остаются без изменений ... */
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -869,6 +912,35 @@ export default {
 /* Компактные карточки для мобильных устройств */
 .mobile-transactions {
   display: none;
+}
+
+/* Группа дня */
+.day-group {
+  margin-bottom: 1.25rem;
+}
+
+.day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  border-radius: var(--radius);
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--dark-color);
+  border-left: 3px solid var(--primary-color, #3b82f6);
+}
+
+.day-header-date {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.day-header-total {
+  font-size: 0.95rem;
 }
 
 .transaction-card {
@@ -1026,6 +1098,25 @@ export default {
 .table th {
   font-weight: 600;
   color: var(--gray-color);
+}
+
+/* Строка-разделитель дня в таблице */
+.day-separator td {
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-left: 3px solid var(--primary-color, #3b82f6);
+}
+
+.day-separator-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--dark-color);
+}
+
+.day-separator-total {
+  float: right;
 }
 
 @media (max-width: 1024px) {
