@@ -1,24 +1,31 @@
+from asgiref.sync import async_to_sync
+from django.core.cache import cache
 from django.db.models import QuerySet, Sum
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.authentication import (
-    TokenAuthentication,
     BasicAuthentication,
     SessionAuthentication,
+    TokenAuthentication,
 )
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from accounts.models import Account
-from accounts.schemas import (
-    listAccountSchema,
-    RetrieveUpdateDeleteAccountSchema
+from accounts.balance_history.service import build_balance_history
+from accounts.cache import (
+    BALANCE_HISTORY_CACHE_TTL,
+    invalidate_balance_history_cache,
+    make_balance_history_cache_key,
 )
+from accounts.models import Account
+from accounts.schemas import RetrieveUpdateDeleteAccountSchema, listAccountSchema
 from accounts.serializers import (
     AccountSerializer,
     AccountToggleStatusSerializer,
+    BalanceHistoryQuerySerializer,
     BaseAccountSerializer,
 )
 
@@ -65,6 +72,8 @@ class ListAccounts(generics.ListCreateAPIView):
         в качестве дополнительного аргумента при сохранении сериализатора
         """
         serializer.save(user=self.request.user)
+        # Создание счёта влияет на историю баланса
+        invalidate_balance_history_cache(self.request.user.pk)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -135,6 +144,17 @@ class RetrieveUpdateDeleteAccount(generics.RetrieveUpdateDestroyAPIView):
         """
         return Account.objects.filter(user=self.request.user)
 
+    def perform_update(self, serializer):
+        """Сброс кэша при изменении счёта (в т.ч. баланса)."""
+        serializer.save()
+        invalidate_balance_history_cache(self.request.user.pk)
+
+    def perform_destroy(self, instance):
+        """Сброс кэша при удалении счёта."""
+        user_id = instance.user_id
+        instance.delete()
+        invalidate_balance_history_cache(user_id)
+
 
 @extend_schema(tags=["Accounts"])
 class ToggleAccountActiveStatusView(generics.UpdateAPIView):
@@ -173,7 +193,67 @@ class ToggleAccountActiveStatusView(generics.UpdateAPIView):
         account.is_active = not account.is_active
         account.save()
 
+        # Активность счёта влияет на историю баланса
+        invalidate_balance_history_cache(request.user.pk)
+
         return Response(
             AccountToggleStatusSerializer(account).data,
             status=status.HTTP_200_OK
         )
+
+
+class BalanceHistoryView(APIView):
+    """
+    Возвращает ежедневный баланс счетов пользователя за указанный период.
+
+    Баланс восстанавливается от текущего баланса счёта путём отката
+    всех операций (транзакций и переводов) после указанной даты.
+
+    Результат кэшируется на 1 час. Ключ кэша включает user_id,
+    параметры запроса и версию. Заголовок X-Cache показывает HIT/MISS.
+    """
+
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (
+        TokenAuthentication,
+        BasicAuthentication,
+        SessionAuthentication,
+    )
+
+    def get(self, request):
+        query = BalanceHistoryQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        data = query.validated_data
+
+        date_from = data["date_from"]
+        date_to = data["date_to"]
+        account_id = data.get("account_id")
+        include_inactive = data.get("include_inactive", False)
+
+        cache_key = make_balance_history_cache_key(
+            user_id=request.user.pk,
+            date_from=date_from,
+            date_to=date_to,
+            account_id=account_id,
+            include_inactive=include_inactive,
+        )
+
+        cached = cache.get(cache_key)
+        if cached is not None:
+            response = Response(cached)
+            response["X-Cache"] = "HIT"
+            return response
+
+        result = async_to_sync(build_balance_history)(
+            user=request.user,
+            date_from=date_from,
+            date_to=date_to,
+            account_id=account_id,
+            include_inactive=include_inactive,
+        )
+
+        cache.set(cache_key, result, timeout=BALANCE_HISTORY_CACHE_TTL)
+
+        response = Response(result)
+        response["X-Cache"] = "MISS"
+        return response

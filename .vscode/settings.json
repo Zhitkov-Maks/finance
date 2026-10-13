@@ -1,0 +1,62 @@
+{
+  "editor.inlayHints.enabled": "on",
+  "editor.occurrencesHighlight": "singleFile",
+  "editor.foldingStrategy": "indentation",
+  "editor.stickyScroll.enabled": true,
+  "editor.formatOnSaveMode": "modificationsIfAvailable",
+  "python.terminal.activateEnvironment": true,
+  "python.analysis.typeCheckingMode": "off",
+  "python.analysis.diagnosticMode": "openFilesOnly",
+  "python.analysis.ignore": [
+    "*"
+  ],
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.venv": true,
+    "**/dist": true,
+    "**/__pycache__": true,
+    "**/.ruff_cache": true
+  },
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/.venv": true,
+    "**/dist": true,
+    "**/__pycache__": true,
+    "**/.ruff_cache": true
+  },
+  "editor.formatOnSave": true,
+  "editor.formatOnType": false,
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    }
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[vue]": {
+    "editor.defaultFormatter": "Vue.volar",
+    "editor.formatOnSave": false
+  },
+  "pylint.enabled": false,
+  "flake8.enabled": false,
+  "mypy-type-checker.enabled": false,
+  "ruff.lint.enable": true,
+  "ruff.lint.select": [
+    "E",
+    "F",
+    "W"
+  ],
+  "ruff.lineLength": 88,
+  "workbench.tree.indent": 24,
+  "workbench.tree.renderIndentGuides": "always",
+  "workbench.colorCustomizations": {
+    "tree.indentGuidesStroke": "#555555"
+  },
+  "files.trimTrailingWhitespace": true,
+  "editor.rulers": [
+    88
+  ],
+}

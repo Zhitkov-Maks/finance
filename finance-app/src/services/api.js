@@ -46,6 +46,18 @@ class ApiService {
         }
     }
 
+    async getBalanceHistory(dateFrom, dateTo, accountId = null, includeInactive = false) {
+        const response = await this.client.get('/accounts/balance-history/', {
+            params: {
+                date_from: dateFrom,
+                date_to: dateTo,
+                ...(accountId ? { account_id: accountId } : {}),
+                ...(includeInactive ? { include_inactive: 'true' } : {})
+            }
+        })
+        return response.data
+    }
+
     // Аутентификация
     async register(email, password, rePassword) {
         const response = await this.client.post('/auth/users/', {

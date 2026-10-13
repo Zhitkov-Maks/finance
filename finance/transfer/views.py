@@ -1,35 +1,32 @@
 import decimal
 
-from django.db.models import QuerySet, Q
+from accounts.cache import invalidate_balance_history_cache
+from accounts.models import Account
+from app_user.models import CustomUser
+from django.db.models import Q, QuerySet
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.authentication import (
-    TokenAuthentication,
     BasicAuthentication,
     SessionAuthentication,
+    TokenAuthentication,
 )
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from accounts.models import Account
+from .models import Transfer
 from .schemas import (
-    TransferSchema,
     TransferHistoryViewSchema,
     TransferRetrieveViewSchema,
+    TransferSchema,
 )
-from .models import Transfer
 from .serializers import TransferSerializer
-from app_user.models import CustomUser
 
 
 @extend_schema(tags=["Transfer"])
 @TransferSchema
 class TransferFundsView(generics.CreateAPIView):
-    """
-    Класс для создания нового перевода между своими счетами.
-    """
-
     serializer_class = TransferSerializer
     permission_classes = (IsAuthenticated,)
     authentication_classes = (
@@ -39,13 +36,8 @@ class TransferFundsView(generics.CreateAPIView):
     )
 
     def perform_create(self, serializer):
-        """
-        Переопределяем метод для перевода баланса между счетами.
-        """
         source_account: Account = serializer.validated_data["source_account"]
-        destination_account: Account = serializer.validated_data[
-            "destination_account"
-        ]
+        destination_account: Account = serializer.validated_data["destination_account"]
         amount = serializer.validated_data["amount"]
 
         source_account.balance -= amount
@@ -55,13 +47,12 @@ class TransferFundsView(generics.CreateAPIView):
         destination_account.save()
 
         transfer = serializer.save()
+
+        invalidate_balance_history_cache(source_account.user_id)
+
         return transfer
 
     def post(self, request, *args, **kwargs):
-        """
-        Переопределяем метод для вызова валидации,
-        сохранения и возврата ответа.
-        """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -70,10 +61,6 @@ class TransferFundsView(generics.CreateAPIView):
 
 
 class TransferPagination(PageNumberPagination):
-    """
-    Класс для создания пагинации.
-    """
-
     page_size: int = 10
     page_size_query_param: str = "page_size"
     max_page_size: int = 100
@@ -82,10 +69,6 @@ class TransferPagination(PageNumberPagination):
 @extend_schema(tags=["Transfer"])
 @TransferHistoryViewSchema
 class TransferHistoryView(generics.ListAPIView):
-    """
-    Класс для получения списка переводов между счетами.
-    """
-
     pagination_class = TransferPagination
     serializer_class = TransferSerializer
     permission_classes = (IsAuthenticated,)
@@ -96,9 +79,6 @@ class TransferHistoryView(generics.ListAPIView):
     )
 
     def get_queryset(self) -> QuerySet:
-        """
-        Переопределяем, чтобы вернуть данные по конкретному пользователю.
-        """
         user: CustomUser = self.request.user
         return Transfer.objects.filter(
             Q(source_account__user=user) | Q(destination_account__user=user),
@@ -110,11 +90,6 @@ class TransferHistoryView(generics.ListAPIView):
 @extend_schema(tags=["Transfer"])
 @TransferRetrieveViewSchema
 class TransferDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    Класс для редактирования удаления и получения подробной
-    информации о переводе.
-    """
-
     serializer_class = TransferSerializer
     permission_classes = (IsAuthenticated,)
     authentication_classes = (
@@ -132,10 +107,6 @@ class TransferDetailView(generics.RetrieveUpdateDestroyAPIView):
         )
 
     def perform_update(self, serializer):
-        """
-        Изменяем балансы счетов при редактировании.
-        :param serializer: Сериализатор для обновления.
-        """
         transfer: Transfer = self.get_object()
 
         old_amount: decimal = transfer.amount
@@ -150,13 +121,12 @@ class TransferDetailView(generics.RetrieveUpdateDestroyAPIView):
 
             source_account.save()
             destination_account.save()
+
         serializer.save()
 
+        invalidate_balance_history_cache(source_account.user_id)
+
     def perform_destroy(self, instance):
-        """
-        Откат баланса счетов при удалении перевода.
-        :param instance: Объект Transfer
-        """
         source_account: Account = instance.source_account
         destination_account: Account = instance.destination_account
 
@@ -165,4 +135,8 @@ class TransferDetailView(generics.RetrieveUpdateDestroyAPIView):
 
         source_account.save()
         destination_account.save()
+
+        user_id = source_account.user_id
         instance.delete()
+
+        invalidate_balance_history_cache(user_id)

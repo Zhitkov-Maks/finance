@@ -1,40 +1,41 @@
 import decimal
-from datetime import datetime as dt, UTC
+from datetime import UTC
+from datetime import datetime as dt
 
-from django.db.models import QuerySet, Count
-from rest_framework import serializers
+from accounts.cache import invalidate_balance_history_cache
+from accounts.models import Account
+from app_user.models import CustomUser
+from django.db.models import Count, QuerySet
 from django_filters.rest_framework.backends import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
-from rest_framework import generics, status
+from rest_framework import generics, serializers, status
 from rest_framework.authentication import (
+    BasicAuthentication,
     SessionAuthentication,
     TokenAuthentication,
-    BasicAuthentication,
 )
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from accounts.models import Account
-from app_user.models import CustomUser
 from .filter import TransactionFilter, get_category_statistics
-from .models import Transaction, Category
+from .models import Category, Transaction
 from .schemas import (
-    TtransactionViewSchema,
-    RetrieveUpdateDeleteTransactionSchema,
     ListCategoryTransactionSchema,
     RetrieveUpdateDeleteCategoryTransactionSchema,
+    RetrieveUpdateDeleteTransactionSchema,
+    TtransactionViewSchema,
     transaction_statistic_schema,
 )
 from .serializers import (
-    TransactionSerializer,
-    CategorySerializer,
+    CategoryCreateSerializer,
     CategoryIDSerializers,
-    TransactionSerializersAdd,
-    TransactionSerializerGet,
-    TransactionSerializersPatch,
+    CategorySerializer,
     StatisticsResponseSerializer,
-    CategoryCreateSerializer
+    TransactionSerializer,
+    TransactionSerializerGet,
+    TransactionSerializersAdd,
+    TransactionSerializersPatch,
 )
 
 
@@ -94,6 +95,9 @@ class TransactionView(generics.ListCreateAPIView):
         else:
             account.balance -= transaction.amount
         account.save()
+
+        # Сбрасываем кэш истории баланса
+        invalidate_balance_history_cache(self.request.user.pk)
 
     def create(self, request, *args, **kwargs):
         """
@@ -165,6 +169,9 @@ class RetrieveUpdateDeleteTransaction(generics.RetrieveUpdateDestroyAPIView):
         account.save()
         instance.delete()
 
+        # Сбрасываем кэш истории баланса
+        invalidate_balance_history_cache(self.request.user.pk)
+
     def perform_update(self, serializer: TransactionSerializer) -> None:
         """
         Переопределяем метод для обновления дохода и корректировки
@@ -201,6 +208,9 @@ class RetrieveUpdateDeleteTransaction(generics.RetrieveUpdateDestroyAPIView):
             else:
                 old_account.balance += old_amount - new_amount
             old_account.save()
+
+        # Сбрасываем кэш истории баланса
+        invalidate_balance_history_cache(self.request.user.pk)
 
 
 @extend_schema(tags=["TransactionCategory"])
@@ -310,7 +320,7 @@ class RetrieveUpdateDeleteCategory(generics.RetrieveUpdateDestroyAPIView):
 @transaction_statistic_schema
 class CategoryTransactionStatisticsView(generics.GenericAPIView):
     """
-    Класс для получения статистики по переданному году и 
+    Класс для получения статистики по переданному году и
     месяцу и типу транзакции.
     """
 

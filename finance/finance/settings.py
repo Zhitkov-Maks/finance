@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -333,3 +334,22 @@ YANDEX_CLIENT_ID = os.getenv("YANDEX_CLIENT_ID_DEV", "")
 YANDEX_CLIENT_SECRET = os.getenv("YANDEX_CLIENT_SECRET_DEV", "")
 YANDEX_REDIRECT_URI = os.getenv("REDIRECT_URL", "")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "")
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": os.environ.get("REDIS_URL", "redis://redis:6379/1"),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "SOCKET_CONNECT_TIMEOUT": 5,
+            "SOCKET_TIMEOUT": 5,
+            "CONNECTION_POOL_KWARGS": {
+                "max_connections": 50,
+                "retry_on_timeout": True,
+            },
+            "IGNORE_EXCEPTIONS": True,
+        },
+        "KEY_PREFIX": "finance",
+        "TIMEOUT": 300,
+    }
+}

@@ -57,6 +57,37 @@ services:
     expose:
       - "27017"
 
+  redis:
+    image: redis:7-alpine
+    container_name: finance-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --appendonly yes
+      --appendfsync everysec
+      --save 60 1
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --loglevel warning
+    volumes:
+      - redis_data:/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    expose:
+      - "6379"
+
   # ========== БЭКЕНДЫ ==========
 
   django_app:
@@ -68,8 +99,12 @@ services:
       - "8001"
     env_file:
       - .env
+    environment:
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
     depends_on:
       finance_db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - app_network
@@ -176,7 +211,6 @@ services:
         max-size: "10m"
         max-file: "3"
 
-
 networks:
   app_network:
     driver: bridge
@@ -184,3 +218,4 @@ networks:
 volumes:
   postgres_data:
   mongodb_data:
+  redis_data:

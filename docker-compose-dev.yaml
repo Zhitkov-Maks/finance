@@ -1,6 +1,6 @@
 services:
   # ========== БАЗЫ ДАННЫХ ==========
-  
+
   finance_db:
     image: postgres:15-alpine
     container_name: finance-db
@@ -56,6 +56,29 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  redis:
+    image: redis:7-alpine
+    container_name: finance-redis
+    restart: always
+    command: redis-server --appendonly yes --save 60 1 --loglevel warning
+    ports:
+      - '127.0.0.1:6379:6379'
+    volumes:
+      - redis_data:/data
+    networks:
+      - finance_app_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   # ========== БЭКЕНДЫ ==========
 
   django_app:
@@ -70,6 +93,8 @@ services:
     depends_on:
       finance_db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - finance_app_network
     volumes:
@@ -81,7 +106,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    # Логи пишутся в stdout, Promtail их подхватит
     logging:
       driver: "json-file"
       options:
@@ -173,3 +197,4 @@ networks:
 volumes:
   postgres_data:
   mongodb_data:
+  redis_data:

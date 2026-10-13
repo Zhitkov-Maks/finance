@@ -1,11 +1,11 @@
 from django.urls import path
 
 from accounts.views import (
+    BalanceHistoryView,
     ListAccounts,
     RetrieveUpdateDeleteAccount,
     ToggleAccountActiveStatusView,
 )
-
 
 urlpatterns = [
     path("", ListAccounts.as_view(), name="accounts"),
@@ -18,5 +18,10 @@ urlpatterns = [
         "<int:pk>/toggle-active/",
         ToggleAccountActiveStatusView.as_view(),
         name="toggle-account-active",
+    ),
+    path(
+        "balance-history/",
+        BalanceHistoryView.as_view(),
+        name="balance-history",
     ),
 ]

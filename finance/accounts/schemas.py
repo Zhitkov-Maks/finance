@@ -1,15 +1,13 @@
-from drf_spectacular.utils import extend_schema_view, extend_schema
-from accounts.serializers import (
-    AccountSerializer,
-    AccountPutSerializer,
-    AccountPatchSerializer,
-    AccountListResponseSerializer,
-)
-from transfer.serializers import (
-    IsNotAuthentication,
-    ValidationError, NotFoundError
-)
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
+from transfer.serializers import IsNotAuthentication, NotFoundError, ValidationError
 
+from accounts.serializers import (
+    AccountListResponseSerializer,
+    AccountPatchSerializer,
+    AccountPutSerializer,
+    AccountSerializer,
+    BalanceHistoryResponseSerializer,
+)
 
 # Assuming AccountSerializer is defined correctly elsewhere
 listAccountSchema = extend_schema_view(
@@ -80,4 +78,42 @@ RetrieveUpdateDeleteAccountSchema = extend_schema_view(
             404: NotFoundError,
         },
     ),
+)
+
+
+extend_schema_view(
+    get=extend_schema(
+        tags=["Accounts"],
+        parameters=[
+            OpenApiParameter(
+                name="date_from",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                required=True,
+                description="Начало периода, YYYY-MM-DD",
+            ),
+            OpenApiParameter(
+                name="date_to",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                required=True,
+                description="Конец периода, YYYY-MM-DD",
+            ),
+            OpenApiParameter(
+                name="account_id",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="ID конкретного счёта (опционально)",
+            ),
+            OpenApiParameter(
+                name="include_inactive",
+                type=bool,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="Включать неактивные счета",
+            ),
+        ],
+        responses={200: BalanceHistoryResponseSerializer},
+    )
 )

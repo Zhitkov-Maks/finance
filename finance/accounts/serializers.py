@@ -1,6 +1,6 @@
 from rest_framework import serializers
-
 from transactions.models import Transaction
+
 from accounts.models import Account
 
 
@@ -71,3 +71,49 @@ class AccountToggleStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = Account
         fields = ['is_active']
+
+
+class BalanceHistoryQuerySerializer(serializers.Serializer):
+    """
+    Сериализатор для валидации query-параметров эндпоинта
+    /accounts/balance-history.
+    """
+
+    date_from = serializers.DateField(required=True)
+    date_to = serializers.DateField(required=True)
+    account_id = serializers.IntegerField(required=False, allow_null=True)
+    include_inactive = serializers.BooleanField(required=False, default=False)
+
+    def validate(self, attrs):
+        if attrs["date_from"] > attrs["date_to"]:
+            raise serializers.ValidationError("date_from не может быть больше date_to")
+        # Ограничим максимальный период — полгода
+        delta = (attrs["date_to"] - attrs["date_from"]).days
+        if delta > 366:
+            raise serializers.ValidationError("Максимальный период — 366 дней")
+        return attrs
+
+
+class BalanceHistoryAccountSerializer(serializers.Serializer):
+    """Информация о счёте в ответе."""
+
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+
+
+class BalanceHistoryPointSerializer(serializers.Serializer):
+    """Одна точка на графике."""
+
+    date = serializers.DateField()
+    accounts = serializers.DictField(
+        child=serializers.FloatField(),
+        help_text="Словарь account_id -> баланс на дату",
+    )
+    total = serializers.FloatField()
+
+
+class BalanceHistoryResponseSerializer(serializers.Serializer):
+    """Полный ответ эндпоинта."""
+
+    accounts = BalanceHistoryAccountSerializer(many=True)
+    results = BalanceHistoryPointSerializer(many=True)
