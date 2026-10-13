@@ -2,7 +2,7 @@
   <div>
     <div class="page-header">
       <h1>Счета и переводы</h1>
-      <button @click="openCreateModal" class="btn btn-primary">
+      <button class="btn btn-primary" @click="openCreateModal">
         <i class="fas fa-plus"></i> Создать счет
       </button>
     </div>
@@ -24,7 +24,7 @@
     </div>
 
     <!-- 2.1 Динамика баланса по дням -->
-    <div class="card balance-history-card" v-if="activeAccounts.length > 0">
+    <div v-if="activeAccounts.length > 0" class="card balance-history-card">
       <div class="card-header">
         <h3 class="card-title">
           <i class="fas fa-chart-line"></i> Динамика баланса
@@ -108,8 +108,7 @@
             </div>
           </div>
 
-          <!-- Легенда с чекбоксами -->
-          <div class="history-legend" v-if="historyMode === 'all' && historyAccounts.length > 0">
+          <div v-if="historyMode === 'all' && historyAccounts.length > 0" class="history-legend">
             <button
               v-for="acc in historyAccounts"
               :key="acc.id"
@@ -125,15 +124,11 @@
             </button>
           </div>
 
-          <!-- Сводка -->
           <div class="history-footer">
             <div class="history-stats">
               <div class="history-stat">
                 <span class="history-stat-label">Изменение за период</span>
-                <span
-                  class="history-stat-value"
-                  :class="historyChangeClass"
-                >
+                <span class="history-stat-value" :class="historyChangeClass">
                   {{ historyChange >= 0 ? '+' : '' }}{{ formatCurrency(historyChange) }}
                   <small>({{ historyChangePercent > 0 ? '+' : '' }}{{ historyChangePercent }}%)</small>
                 </span>
@@ -164,7 +159,7 @@
 
     <!-- Распределение баланса по счетам + Соотношение активных/неактивных -->
     <div class="analytics-row">
-      <div class="card distribution-card" v-if="activeAccounts.length > 0">
+      <div v-if="activeAccounts.length > 0" class="card distribution-card">
         <div class="card-header">
           <h3 class="card-title">
             <i class="fas fa-chart-pie"></i> Распределение баланса
@@ -174,7 +169,7 @@
           </span>
         </div>
 
-        <div class="distribution-body" v-if="distributionData.length > 0">
+        <div v-if="distributionData.length > 0" class="distribution-body">
           <div class="distribution-chart-wrapper">
             <canvas ref="distributionCanvas" class="distribution-canvas"></canvas>
           </div>
@@ -199,7 +194,7 @@
         </div>
       </div>
 
-      <div class="card accounts-ratio-card" v-if="accounts.length > 0">
+      <div v-if="accounts.length > 0" class="card accounts-ratio-card">
         <div class="card-header">
           <h3 class="card-title">
             <i class="fas fa-toggle-on"></i> Активные и неактивные
@@ -237,7 +232,7 @@
     </div>
 
     <!-- 1.4 Метрики переводов -->
-    <div class="card transfer-metrics-card" v-if="transfers.length > 0">
+    <div v-if="transfers.length > 0" class="card transfer-metrics-card">
       <div class="card-header">
         <h3 class="card-title">
           <i class="fas fa-calculator"></i> Метрики переводов
@@ -291,7 +286,7 @@
     </div>
 
     <!-- 1.2 Топ счетов по обороту -->
-    <div class="card top-accounts-card" v-if="topAccountsByTurnover.length > 0">
+    <div v-if="topAccountsByTurnover.length > 0" class="card top-accounts-card">
       <div class="card-header">
         <h3 class="card-title">
           <i class="fas fa-trophy"></i> Топ счетов по обороту
@@ -319,22 +314,15 @@
                   {{ index + 1 }}
                 </span>
               </td>
-              <td>
-                <strong>{{ item.name }}</strong>
-              </td>
+              <td><strong>{{ item.name }}</strong></td>
               <td class="text-success">{{ formatCurrency(item.incoming) }}</td>
               <td class="text-danger">{{ formatCurrency(item.outgoing) }}</td>
-              <td>
-                <strong>{{ formatCurrency(item.turnover) }}</strong>
-              </td>
+              <td><strong>{{ formatCurrency(item.turnover) }}</strong></td>
               <td>{{ item.count }}</td>
               <td>
                 <div class="turnover-progress">
                   <div class="turnover-bar">
-                    <div
-                      class="turnover-fill"
-                      :style="{ width: item.turnoverPercent + '%' }"
-                    ></div>
+                    <div class="turnover-fill" :style="{ width: item.turnoverPercent + '%' }"></div>
                   </div>
                   <span class="turnover-percent">{{ item.turnoverPercent }}%</span>
                 </div>
@@ -376,17 +364,14 @@
             </div>
           </div>
           <div class="turnover-bar mobile">
-            <div
-              class="turnover-fill"
-              :style="{ width: item.turnoverPercent + '%' }"
-            ></div>
+            <div class="turnover-fill" :style="{ width: item.turnoverPercent + '%' }"></div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- 1.8 Топ контрагентов (пар) -->
-    <div class="card top-pairs-card" v-if="topAccountPairs.length > 0">
+    <div v-if="topAccountPairs.length > 0" class="card top-pairs-card">
       <div class="card-header">
         <h3 class="card-title">
           <i class="fas fa-people-arrows"></i> Топ контрагентов
@@ -415,21 +400,14 @@
                 </span>
               </td>
               <td>{{ pair.source }}</td>
-              <td class="pair-arrow">
-                <i class="fas fa-arrow-right"></i>
-              </td>
+              <td class="pair-arrow"><i class="fas fa-arrow-right"></i></td>
               <td>{{ pair.destination }}</td>
-              <td>
-                <strong>{{ formatCurrency(pair.amount) }}</strong>
-              </td>
+              <td><strong>{{ formatCurrency(pair.amount) }}</strong></td>
               <td>{{ pair.count }}</td>
               <td>
                 <div class="turnover-progress">
                   <div class="turnover-bar">
-                    <div
-                      class="turnover-fill"
-                      :style="{ width: pair.percent + '%' }"
-                    ></div>
+                    <div class="turnover-fill" :style="{ width: pair.percent + '%' }"></div>
                   </div>
                   <span class="turnover-percent">{{ pair.percent }}%</span>
                 </div>
@@ -440,11 +418,7 @@
       </div>
 
       <div class="mobile-cards">
-        <div
-          v-for="(pair, index) in topAccountPairs"
-          :key="pair.key"
-          class="pair-card"
-        >
+        <div v-for="(pair, index) in topAccountPairs" :key="pair.key" class="pair-card">
           <div class="pair-header">
             <span class="rank-badge" :class="'rank-' + Math.min(index + 1, 3)">
               {{ index + 1 }}
@@ -461,17 +435,17 @@
             <span class="pair-percent">{{ pair.percent }}%</span>
           </div>
           <div class="turnover-bar mobile">
-            <div
-              class="turnover-fill"
-              :style="{ width: pair.percent + '%' }"
-            ></div>
+            <div class="turnover-fill" :style="{ width: pair.percent + '%' }"></div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 1.9 Диаграмма Санкей -->
-    <div class="card sankey-card" v-if="transfers.length > 0 && sankeyData.nodes.length > 1">
+    <!-- 1.9 Диаграмма Санкей — вариант C + горизонтальный скролл на мобильных -->
+    <div
+      v-if="transfers.length > 0 && sankeyData.nodes.length > 1"
+      class="card sankey-card"
+    >
       <div class="card-header">
         <h3 class="card-title">
           <i class="fas fa-diagram-project"></i> Потоки между счетами
@@ -486,23 +460,23 @@
       <div class="sankey-footer">
         <div class="sankey-legend">
           <span class="sankey-legend-item">
-            <span class="sankey-legend-color" style="background: #10b981;"></span>
-            Входящие
+            <span class="sankey-legend-color" style="background: #ef4444;"></span>
+            Исходящие (слева)
           </span>
           <span class="sankey-legend-item">
-            <span class="sankey-legend-color" style="background: #ef4444;"></span>
-            Исходящие
+            <span class="sankey-legend-color" style="background: #10b981;"></span>
+            Входящие (справа)
           </span>
         </div>
         <div class="sankey-summary">
-          <span>Всего узлов: <strong>{{ sankeyData.nodes.length }}</strong></span>
+          <span>Счетов: <strong>{{ sankeyData.nodes.length }}</strong></span>
           <span>Связей: <strong>{{ sankeyData.links.length }}</strong></span>
         </div>
       </div>
     </div>
 
     <!-- 1.3 Активность переводов по дням -->
-    <div class="card activity-card" v-if="transfers.length > 0">
+    <div v-if="transfers.length > 0" class="card activity-card">
       <div class="card-header">
         <h3 class="card-title">
           <i class="fas fa-chart-column"></i> Активность переводов
@@ -532,61 +506,10 @@
           <span class="activity-summary-item">
             на сумму <strong>{{ formatCurrency(activityTotalAmount) }}</strong>
           </span>
-          <span class="activity-summary-item" v-if="activityBusiestDay">
+          <span v-if="activityBusiestDay" class="activity-summary-item">
             пик: <strong>{{ activityBusiestDay.label }}</strong>
             ({{ activityBusiestDay.count }} переводов)
           </span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 1.7 Heatmap активности переводов -->
-    <div class="card heatmap-card" v-if="transfers.length > 0">
-      <div class="card-header">
-        <h3 class="card-title">
-          <i class="fas fa-fire"></i> Тепловая карта переводов
-        </h3>
-        <div class="heatmap-mode">
-          <button
-            class="range-btn"
-            :class="{ active: heatmapMode === 'count' }"
-            @click="heatmapMode = 'count'"
-          >
-            По количеству
-          </button>
-          <button
-            class="range-btn"
-            :class="{ active: heatmapMode === 'amount' }"
-            @click="heatmapMode = 'amount'"
-          >
-            По сумме
-          </button>
-        </div>
-      </div>
-
-      <div class="heatmap-body">
-        <canvas ref="heatmapCanvas" class="heatmap-canvas"></canvas>
-      </div>
-
-      <div class="heatmap-footer">
-        <div class="heatmap-stats">
-          <span>
-            <strong>{{ heatmapActiveDays }}</strong> активных дней
-            из <strong>{{ heatmapTotalDays }}</strong>
-          </span>
-          <span v-if="heatmapMaxDay">
-            самый активный: <strong>{{ heatmapMaxDay.label }}</strong>
-            ({{ heatmapMaxDay.count }} переводов, {{ formatCurrency(heatmapMaxDay.amount) }})
-          </span>
-        </div>
-        <div class="heatmap-legend">
-          <span class="heatmap-legend-label">Меньше</span>
-          <span class="heatmap-cell heatmap-level-0"></span>
-          <span class="heatmap-cell heatmap-level-1"></span>
-          <span class="heatmap-cell heatmap-level-2"></span>
-          <span class="heatmap-cell heatmap-level-3"></span>
-          <span class="heatmap-cell heatmap-level-4"></span>
-          <span class="heatmap-legend-label">Больше</span>
         </div>
       </div>
     </div>
@@ -628,19 +551,19 @@
               </strong>
             </div>
             <div class="account-actions-expanded">
-              <button @click="openTransferFor(account)" class="btn btn-sm btn-primary">
+              <button class="btn btn-sm btn-primary" @click="openTransferFor(account)">
                 <i class="fas fa-exchange-alt"></i> Перевести
               </button>
-              <button @click="editAccount(account)" class="btn btn-sm btn-info">
+              <button class="btn btn-sm btn-info" @click="editAccount(account)">
                 <i class="fas fa-edit"></i> Редактировать
               </button>
-              <button @click="toggleVisibility(account)" class="btn btn-sm btn-warning">
+              <button class="btn btn-sm btn-warning" @click="toggleVisibility(account)">
                 <i class="fas fa-eye-slash"></i> Скрыть
               </button>
-              <button @click="openBalanceModal(account)" class="btn btn-sm btn-primary">
+              <button class="btn btn-sm btn-primary" @click="openBalanceModal(account)">
                 <i class="fas fa-chart-line"></i> Баланс
               </button>
-              <button @click="confirmDelete(account)" class="btn btn-sm btn-danger">
+              <button class="btn btn-sm btn-danger" @click="confirmDelete(account)">
                 <i class="fas fa-trash"></i> Удалить
               </button>
             </div>
@@ -664,9 +587,7 @@
           </thead>
           <tbody>
             <tr v-for="account in activeAccounts" :key="account.id">
-              <td>
-                <strong>{{ account.name }}</strong>
-              </td>
+              <td><strong>{{ account.name }}</strong></td>
               <td class="text-success">
                 <strong>{{ formatCurrency(account.balance) }}</strong>
               </td>
@@ -678,19 +599,19 @@
               </td>
               <td>
                 <div class="action-buttons">
-                  <button @click="openTransferFor(account)" class="btn btn-sm btn-primary" title="Перевести">
+                  <button class="btn btn-sm btn-primary" title="Перевести" @click="openTransferFor(account)">
                     <i class="fas fa-exchange-alt"></i>
                   </button>
-                  <button @click="editAccount(account)" class="btn btn-sm btn-info" title="Редактировать">
+                  <button class="btn btn-sm btn-info" title="Редактировать" @click="editAccount(account)">
                     <i class="fas fa-edit"></i>
                   </button>
-                  <button @click="toggleVisibility(account)" class="btn btn-sm btn-warning" title="Скрыть счет">
+                  <button class="btn btn-sm btn-warning" title="Скрыть счет" @click="toggleVisibility(account)">
                     <i class="fas fa-eye-slash"></i>
                   </button>
-                  <button @click="openBalanceModal(account)" class="btn btn-sm btn-primary" title="Изменить баланс">
+                  <button class="btn btn-sm btn-primary" title="Изменить баланс" @click="openBalanceModal(account)">
                     <i class="fas fa-chart-line"></i>
                   </button>
-                  <button @click="confirmDelete(account)" class="btn btn-sm btn-danger" title="Удалить">
+                  <button class="btn btn-sm btn-danger" title="Удалить" @click="confirmDelete(account)">
                     <i class="fas fa-trash"></i>
                   </button>
                 </div>
@@ -741,19 +662,19 @@
               </strong>
             </div>
             <div class="account-actions-expanded">
-              <button @click="openTransferFor(account)" class="btn btn-sm btn-primary">
+              <button class="btn btn-sm btn-primary" @click="openTransferFor(account)">
                 <i class="fas fa-exchange-alt"></i> Перевести
               </button>
-              <button @click="editAccount(account)" class="btn btn-sm btn-info">
+              <button class="btn btn-sm btn-info" @click="editAccount(account)">
                 <i class="fas fa-edit"></i> Редактировать
               </button>
-              <button @click="toggleVisibility(account)" class="btn btn-sm btn-success">
+              <button class="btn btn-sm btn-success" @click="toggleVisibility(account)">
                 <i class="fas fa-eye"></i> Показать
               </button>
-              <button @click="openBalanceModal(account)" class="btn btn-sm btn-primary">
+              <button class="btn btn-sm btn-primary" @click="openBalanceModal(account)">
                 <i class="fas fa-chart-line"></i> Баланс
               </button>
-              <button @click="confirmDelete(account)" class="btn btn-sm btn-danger">
+              <button class="btn btn-sm btn-danger" @click="confirmDelete(account)">
                 <i class="fas fa-trash"></i> Удалить
               </button>
             </div>
@@ -777,9 +698,7 @@
           </thead>
           <tbody>
             <tr v-for="account in inactiveAccounts" :key="account.id">
-              <td>
-                <strong>{{ account.name }}</strong>
-              </td>
+              <td><strong>{{ account.name }}</strong></td>
               <td class="text-muted">
                 <strong>{{ formatCurrency(account.balance) }}</strong>
               </td>
@@ -791,19 +710,19 @@
               </td>
               <td>
                 <div class="action-buttons">
-                  <button @click="openTransferFor(account)" class="btn btn-sm btn-primary" title="Перевести">
+                  <button class="btn btn-sm btn-primary" title="Перевести" @click="openTransferFor(account)">
                     <i class="fas fa-exchange-alt"></i>
                   </button>
-                  <button @click="editAccount(account)" class="btn btn-sm btn-info" title="Редактировать">
+                  <button class="btn btn-sm btn-info" title="Редактировать" @click="editAccount(account)">
                     <i class="fas fa-edit"></i>
                   </button>
-                  <button @click="toggleVisibility(account)" class="btn btn-sm btn-success" title="Показать счет">
+                  <button class="btn btn-sm btn-success" title="Показать счет" @click="toggleVisibility(account)">
                     <i class="fas fa-eye"></i>
                   </button>
-                  <button @click="openBalanceModal(account)" class="btn btn-sm btn-primary" title="Изменить баланс">
+                  <button class="btn btn-sm btn-primary" title="Изменить баланс" @click="openBalanceModal(account)">
                     <i class="fas fa-chart-line"></i>
                   </button>
-                  <button @click="confirmDelete(account)" class="btn btn-sm btn-danger" title="Удалить">
+                  <button class="btn btn-sm btn-danger" title="Удалить" @click="confirmDelete(account)">
                     <i class="fas fa-trash"></i>
                   </button>
                 </div>
@@ -825,7 +744,7 @@
         </h3>
       </div>
 
-      <form @submit.prevent="createTransfer" class="transfer-form">
+      <form class="transfer-form" @submit.prevent="createTransfer">
         <div class="transfer-form-grid">
           <div class="form-group">
             <label class="form-label required">Счет списания</label>
@@ -851,12 +770,24 @@
 
           <div class="form-group">
             <label class="form-label required">Сумма перевода</label>
-            <input type="number" v-model="transferData.amount" class="form-control" step="0.01" required placeholder="0.00">
+            <input
+              v-model="transferData.amount"
+              type="number"
+              class="form-control"
+              step="0.01"
+              required
+              placeholder="0.00"
+            >
           </div>
 
           <div class="form-group">
             <label class="form-label required">Дата и время</label>
-            <input type="datetime-local" v-model="transferData.timestamp" class="form-control" required>
+            <input
+              v-model="transferData.timestamp"
+              type="datetime-local"
+              class="form-control"
+              required
+            >
           </div>
         </div>
 
@@ -891,10 +822,10 @@
               <td class="text-warning">{{ formatCurrency(transfer.amount) }}</td>
               <td>
                 <div class="action-buttons">
-                  <button @click="editTransfer(transfer)" class="btn btn-secondary btn-sm" title="Редактировать">
+                  <button class="btn btn-secondary btn-sm" title="Редактировать" @click="editTransfer(transfer)">
                     <i class="fas fa-edit"></i>
                   </button>
-                  <button @click="confirmDeleteTransfer(transfer)" class="btn btn-danger btn-sm" title="Удалить">
+                  <button class="btn btn-danger btn-sm" title="Удалить" @click="confirmDeleteTransfer(transfer)">
                     <i class="fas fa-trash"></i>
                   </button>
                 </div>
@@ -945,10 +876,10 @@
               </div>
             </div>
             <div class="transfer-actions-expanded">
-              <button @click="editTransfer(transfer)" class="btn btn-sm btn-info">
+              <button class="btn btn-sm btn-info" @click="editTransfer(transfer)">
                 <i class="fas fa-edit"></i> Редактировать
               </button>
-              <button @click="confirmDeleteTransfer(transfer)" class="btn btn-sm btn-danger">
+              <button class="btn btn-sm btn-danger" @click="confirmDeleteTransfer(transfer)">
                 <i class="fas fa-trash"></i> Удалить
               </button>
             </div>
@@ -960,12 +891,12 @@
         </div>
       </div>
 
-      <div class="pagination" v-if="totalPages > 1">
-        <button @click="prevPage" :disabled="currentPage === 1" class="btn btn-secondary">
+      <div v-if="totalPages > 1" class="pagination">
+        <button class="btn btn-secondary" :disabled="currentPage === 1" @click="prevPage">
           <i class="fas fa-chevron-left"></i> <span class="btn-text">Назад</span>
         </button>
         <span class="page-info">Страница {{ currentPage }} из {{ totalPages }}</span>
-        <button @click="nextPage" :disabled="currentPage === totalPages" class="btn btn-secondary">
+        <button class="btn btn-secondary" :disabled="currentPage === totalPages" @click="nextPage">
           <span class="btn-text">Вперед</span> <i class="fas fa-chevron-right"></i>
         </button>
       </div>
@@ -983,8 +914,8 @@
           <div class="form-group">
             <label class="form-label required">Название счета</label>
             <input
-              type="text"
               v-model="formData.name"
+              type="text"
               class="form-control"
               required
               placeholder="Например: Сбербанк, Наличные, Тинькофф"
@@ -994,8 +925,8 @@
           <div class="form-group">
             <label class="form-label required">Начальный баланс</label>
             <input
-              type="number"
               v-model="formData.balance"
+              type="number"
               class="form-control"
               step="0.01"
               required
@@ -1004,7 +935,7 @@
           </div>
 
           <div class="modal-footer">
-            <button type="button" @click="closeModal" class="btn btn-secondary">Отмена</button>
+            <button type="button" class="btn btn-secondary" @click="closeModal">Отмена</button>
             <button type="submit" class="btn btn-primary">
               {{ editingAccount ? 'Обновить' : 'Создать' }}
             </button>
@@ -1035,8 +966,8 @@
           <div class="form-group">
             <label class="form-label required">Новый баланс</label>
             <input
-              type="number"
               v-model="newBalance"
+              type="number"
               class="form-control"
               step="0.01"
               required
@@ -1044,13 +975,13 @@
             >
           </div>
 
-          <div class="alert alert-info" v-if="balanceAccount && !balanceAccount.is_active">
+          <div v-if="balanceAccount && !balanceAccount.is_active" class="alert alert-info">
             <i class="fas fa-info-circle"></i>
             Этот счет неактивен и не учитывается в общем балансе.
           </div>
 
           <div class="modal-footer">
-            <button type="button" @click="showBalanceModal = false" class="btn btn-secondary">Отмена</button>
+            <button type="button" class="btn btn-secondary" @click="showBalanceModal = false">Отмена</button>
             <button type="submit" class="btn btn-primary">Сохранить</button>
           </div>
         </form>
@@ -1090,16 +1021,27 @@
 
           <div class="form-group">
             <label class="form-label required">Сумма перевода</label>
-            <input type="number" v-model="editTransferData.amount" class="form-control" step="0.01" required>
+            <input
+              v-model="editTransferData.amount"
+              type="number"
+              class="form-control"
+              step="0.01"
+              required
+            >
           </div>
 
           <div class="form-group">
             <label class="form-label required">Дата и время</label>
-            <input type="datetime-local" v-model="editTransferData.timestamp" class="form-control" required>
+            <input
+              v-model="editTransferData.timestamp"
+              type="datetime-local"
+              class="form-control"
+              required
+            >
           </div>
 
           <div class="modal-footer">
-            <button type="button" @click="closeEditTransferModal" class="btn btn-secondary">Отмена</button>
+            <button type="button" class="btn btn-secondary" @click="closeEditTransferModal">Отмена</button>
             <button type="submit" class="btn btn-primary">Обновить</button>
           </div>
         </form>
@@ -1123,8 +1065,8 @@
         <p class="text-muted">Баланс счета: {{ formatCurrency(accountToDelete?.balance) }}</p>
 
         <div class="modal-footer">
-          <button @click="showDeleteModal = false" class="btn btn-secondary">Отмена</button>
-          <button @click="deleteAccount" class="btn btn-danger">Да, удалить</button>
+          <button class="btn btn-secondary" @click="showDeleteModal = false">Отмена</button>
+          <button class="btn btn-danger" @click="deleteAccount">Да, удалить</button>
         </div>
       </div>
     </div>
@@ -1139,8 +1081,8 @@
         <p>Вы уверены, что хотите удалить этот перевод?</p>
         <p class="text-muted">Сумма: {{ formatCurrency(transferToDelete?.amount) }}</p>
         <div class="modal-footer">
-          <button @click="showDeleteTransferModal = false" class="btn btn-secondary">Отмена</button>
-          <button @click="deleteTransfer" class="btn btn-danger">Да, удалить</button>
+          <button class="btn btn-secondary" @click="showDeleteTransferModal = false">Отмена</button>
+          <button class="btn btn-danger" @click="deleteTransfer">Да, удалить</button>
         </div>
       </div>
     </div>
@@ -1151,10 +1093,99 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import apiService from '../services/api.js'
 
+// =============================================================================
+// Константы Sankey (виртуальная система координат + минимальная ширина canvas)
+// =============================================================================
+const SANKEY_VIRTUAL_W = 900
+const SANKEY_MIN_CANVAS_WIDTH = 560
+
+// =============================================================================
+// Утилиты (чистые функции, вне setup)
+// =============================================================================
+const DISTRIBUTION_COLORS = [
+  '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+  '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#6366f1',
+  '#14b8a6', '#a855f7'
+]
+
+/** Возвращает ключ даты в формате YYYY-MM-DD (локальное время). */
+const formatDateKey = (d) => {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/** Безопасный parseFloat: null/undefined/NaN → 0. */
+const toNumber = (value) => {
+  const n = parseFloat(value)
+  return Number.isFinite(n) ? n : 0
+}
+
+/**
+ * Настраивает canvas под Retina и возвращает { ctx, cssWidth, cssHeight }.
+ * Централизует boilerplate dpr/scale/clearRect.
+ */
+const setupCanvas = (canvas, cssWidth, cssHeight) => {
+  const dpr = window.devicePixelRatio || 1
+  canvas.width = cssWidth * dpr
+  canvas.height = cssHeight * dpr
+  canvas.style.width = `${cssWidth}px`
+  canvas.style.height = `${cssHeight}px`
+  const ctx = canvas.getContext('2d')
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+  ctx.scale(dpr, dpr)
+  ctx.clearRect(0, 0, cssWidth, cssHeight)
+  return { ctx, cssWidth, cssHeight }
+}
+
+/**
+ * Вариант C: canvas с виртуальной системой координат + минимальной шириной.
+ *
+ * Рисуем в VIRTUAL_W × VIRTUAL_H, а через ctx.scale() подгоняем под факт.
+ * Плюс: если родитель уже minWidth, canvas не сжимается меньше minWidth —
+ * тогда `.sankey-body` с `overflow-x: auto` даёт горизонтальный скролл.
+ *
+ * @param {HTMLCanvasElement} canvas
+ * @param {number} virtualW  — виртуальная ширина (логические пиксели)
+ * @param {number} virtualH  — виртуальная высота (логические пиксели)
+ * @param {number} minScale  — минимальный масштаб (защита от слишком мелкого шрифта)
+ * @param {number} minWidth  — минимальная фактическая ширина canvas в CSS-пикселях
+ * @returns {{ ctx, scale, cssWidth, cssHeight }}
+ */
+const setupCanvasVirtual = (canvas, virtualW, virtualH, minScale = 0.6, minWidth = 0) => {
+  const measuredWidth = parentWidth(canvas, virtualW)
+  // ✅ Не даём canvas стать уже, чем minWidth — иначе не будет скролла до конца
+  const cssWidth = Math.max(measuredWidth, minWidth)
+  const scale = Math.max(minScale, Math.min(1, cssWidth / virtualW))
+  const cssHeight = virtualH * scale
+
+  const dpr = window.devicePixelRatio || 1
+  canvas.width = cssWidth * dpr
+  canvas.height = cssHeight * dpr
+  canvas.style.width = `${cssWidth}px`
+  canvas.style.height = `${cssHeight}px`
+
+  const ctx = canvas.getContext('2d')
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+  ctx.scale(dpr * scale, dpr * scale)
+  ctx.clearRect(0, 0, virtualW, virtualH)
+  return { ctx, scale, cssWidth, cssHeight }
+}
+
+/** Ширина родителя canvas или fallback. */
+const parentWidth = (canvas, fallback = 800) => {
+  const wrapper = canvas.parentElement
+  return wrapper ? wrapper.clientWidth : fallback
+}
+
 export default {
   name: 'AccountsAndTransfers',
+
   setup() {
-    // --- Счета ---
+    // =========================================================================
+    // Состояние — счета
+    // =========================================================================
     const accounts = ref([])
     const loading = ref(false)
     const showAccountModal = ref(false)
@@ -1166,23 +1197,23 @@ export default {
     const newBalance = ref(0)
     const expandedAccounts = ref(new Set())
 
-    const formData = ref({
-      name: '',
-      balance: 0,
-      is_active: true
-    })
+    const formData = ref({ name: '', balance: 0, is_active: true })
 
-    const activeAccounts = computed(() => accounts.value.filter(acc => acc.is_active))
-    const inactiveAccounts = computed(() => accounts.value.filter(acc => !acc.is_active))
+    // =========================================================================
+    // Computed — счета
+    // =========================================================================
+    const activeAccounts = computed(() => accounts.value.filter((a) => a.is_active))
+    const inactiveAccounts = computed(() => accounts.value.filter((a) => !a.is_active))
     const allAccounts = computed(() => accounts.value)
-
-    const totalBalance = computed(() => {
-      return activeAccounts.value.reduce((sum, acc) => sum + parseFloat(acc.balance || 0), 0)
-    })
-
     const activeAccountsCount = computed(() => activeAccounts.value.length)
 
-    // --- 2.1 Динамика баланса ---
+    const totalBalance = computed(() =>
+      activeAccounts.value.reduce((sum, a) => sum + toNumber(a.balance), 0)
+    )
+
+    // =========================================================================
+    // Состояние — динамика баланса (2.1)
+    // =========================================================================
     const historyCanvas = ref(null)
     const historyRange = ref(30)
     const historyRanges = [
@@ -1196,57 +1227,39 @@ export default {
     const historyError = ref('')
     const historyRawData = ref(null)
     const visibleHistoryAccounts = ref(new Set())
-
-    const historyTooltip = ref({
-      visible: false,
-      x: 0,
-      y: 0,
-      date: '',
-      rows: [],
-      total: 0
+    const historyChartMetrics = ref({
+      paddingLeft: 60, paddingRight: 20, paddingTop: 20, paddingBottom: 40
     })
 
-    // Готовим список счетов с цветами
+    const historyTooltip = ref({
+      visible: false, x: 0, y: 0, date: '', rows: [], total: 0
+    })
+
     const historyAccounts = computed(() => {
-      if (!historyRawData.value || !historyRawData.value.accounts) return []
+      if (!historyRawData.value?.accounts) return []
       return historyRawData.value.accounts.map((acc, index) => {
-        const series = historyRawData.value.results.map(r => ({
+        const series = historyRawData.value.results.map((r) => ({
           date: r.date,
-          value: parseFloat(r.accounts[String(acc.id)] || 0)
+          value: toNumber(r.accounts[String(acc.id)])
         }))
-        const last = series.length > 0 ? series[series.length - 1].value : 0
         return {
           id: acc.id,
           name: acc.name,
-          color: distributionColors[index % distributionColors.length],
+          color: DISTRIBUTION_COLORS[index % DISTRIBUTION_COLORS.length],
           series,
-          lastBalance: last
+          lastBalance: series.length > 0 ? series[series.length - 1].value : 0
         }
       })
     })
 
-    // Видимые счета — по умолчанию все
-    watch(historyAccounts, (list) => {
-      if (list.length === 0) return
-      // Если изменился набор счетов — пересобираем Set
-      const ids = list.map(a => a.id)
-      const currentIds = Array.from(visibleHistoryAccounts.value)
-      const sameSet = currentIds.length === ids.length && ids.every(id => currentIds.includes(id))
-      if (!sameSet) {
-        visibleHistoryAccounts.value = new Set(ids)
-      }
-    }, { immediate: true })
-
-    // Суммарный ряд (итог)
     const historyTotalSeries = computed(() => {
-      if (!historyRawData.value || !historyRawData.value.results) return []
-      return historyRawData.value.results.map(r => ({
+      if (!historyRawData.value?.results) return []
+      return historyRawData.value.results.map((r) => ({
         date: r.date,
-        value: parseFloat(r.total || 0)
+        value: toNumber(r.total)
       }))
     })
 
-    // Метрики по итогу
     const historyStartBalance = computed(() => {
       const s = historyTotalSeries.value
       return s.length > 0 ? s[0].value : 0
@@ -1272,91 +1285,363 @@ export default {
 
     const historyMinTotal = computed(() => {
       const s = historyTotalSeries.value
-      if (s.length === 0) return 0
-      return Math.min(...s.map(p => p.value))
+      return s.length === 0 ? 0 : Math.min(...s.map((p) => p.value))
     })
 
     const historyMaxTotal = computed(() => {
       const s = historyTotalSeries.value
-      if (s.length === 0) return 0
-      return Math.max(...s.map(p => p.value))
+      return s.length === 0 ? 0 : Math.max(...s.map((p) => p.value))
     })
 
     const historyPeriodLabel = computed(() => {
-      if (!historyRawData.value || historyRawData.value.results.length === 0) return ''
-      const first = historyRawData.value.results[0].date
-      const last = historyRawData.value.results[historyRawData.value.results.length - 1].date
+      const results = historyRawData.value?.results
+      if (!results?.length) return ''
+      const first = results[0].date
+      const last = results[results.length - 1].date
       return `${formatDateShortLabel(first)} — ${formatDateShortLabel(last)}`
     })
 
     const formatDateShortLabel = (iso) => {
       if (!iso) return ''
-      const d = new Date(iso)
-      return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      return new Date(iso).toLocaleDateString('ru-RU', {
+        day: '2-digit', month: '2-digit', year: 'numeric'
+      })
     }
 
-    const loadBalanceHistory = async () => {
-      historyLoading.value = true
-      historyError.value = ''
-      try {
-        const dateTo = new Date()
-        const dateFrom = new Date()
-        dateFrom.setDate(dateFrom.getDate() - historyRange.value + 1)
+    // =========================================================================
+    // Состояние — распределение (1.1) и соотношение (1.5)
+    // =========================================================================
+    const distributionCanvas = ref(null)
+    const ratioCanvas = ref(null)
 
-        const dateFromStr = formatDateKey(dateFrom)
-        const dateToStr = formatDateKey(dateTo)
+    const distributionData = computed(() => {
+      const active = activeAccounts.value.filter((a) => toNumber(a.balance) > 0)
+      const total = active.reduce((sum, a) => sum + toNumber(a.balance), 0)
+      if (total === 0) return []
+      return active
+        .map((acc, index) => {
+          const balance = toNumber(acc.balance)
+          return {
+            id: acc.id,
+            name: acc.name,
+            balance,
+            percent: ((balance / total) * 100).toFixed(1),
+            color: DISTRIBUTION_COLORS[index % DISTRIBUTION_COLORS.length]
+          }
+        })
+        .sort((a, b) => b.balance - a.balance)
+    })
 
-        const data = await apiService.getBalanceHistory(dateFromStr, dateToStr)
-        historyRawData.value = data
-        scheduleHistoryDraw()
-      } catch (error) {
-        console.error('Error loading balance history:', error)
-        historyError.value = 'Не удалось загрузить историю баланса. Проверьте соединение.'
-        historyRawData.value = null
-      } finally {
-        historyLoading.value = false
+    const activeRatioPercent = computed(() => {
+      if (accounts.value.length === 0) return 0
+      return ((activeAccounts.value.length / accounts.value.length) * 100).toFixed(0)
+    })
+
+    // =========================================================================
+    // Состояние — переводы
+    // =========================================================================
+    const transfers = ref([])
+    const currentPage = ref(1)
+    const pageSize = ref(10)
+    const totalCount = ref(0)
+    const transferLoading = ref(false)
+    const showEditTransferModal = ref(false)
+    const showDeleteTransferModal = ref(false)
+    const editingTransfer = ref(null)
+    const transferToDelete = ref(null)
+    const expandedTransfers = ref(new Set())
+
+    const transferData = ref({
+      source_account: '',
+      destination_account: '',
+      amount: '',
+      timestamp: new Date().toISOString().slice(0, 16)
+    })
+
+    const editTransferData = ref({
+      source_account: '',
+      destination_account: '',
+      amount: '',
+      timestamp: ''
+    })
+
+    const otherAccounts = computed(() => {
+      if (!transferData.value.source_account) return allAccounts.value
+      return allAccounts.value.filter((a) => a.id !== transferData.value.source_account)
+    })
+
+    const editOtherAccounts = computed(() => {
+      if (!editTransferData.value.source_account) return allAccounts.value
+      return allAccounts.value.filter((a) => a.id !== editTransferData.value.source_account)
+    })
+
+    const totalPages = computed(() => Math.ceil(totalCount.value / pageSize.value))
+
+    // =========================================================================
+    // Computed — метрики переводов (1.4)
+    // =========================================================================
+    const transfersCount = computed(() => transfers.value.length)
+
+    const totalTransfersAmount = computed(() =>
+      transfers.value.reduce((sum, t) => sum + toNumber(t.amount), 0)
+    )
+
+    const averageTransfer = computed(() =>
+      transfersCount.value === 0 ? 0 : totalTransfersAmount.value / transfersCount.value
+    )
+
+    const maxTransfer = computed(() => {
+      if (transfersCount.value === 0) return 0
+      return Math.max(...transfers.value.map((t) => toNumber(t.amount)))
+    })
+
+    const minTransfer = computed(() => {
+      if (transfersCount.value === 0) return 0
+      return Math.min(...transfers.value.map((t) => toNumber(t.amount)))
+    })
+
+    const medianTransfer = computed(() => {
+      if (transfersCount.value === 0) return 0
+      const amounts = transfers.value.map((t) => toNumber(t.amount)).sort((a, b) => a - b)
+      const mid = Math.floor(amounts.length / 2)
+      return amounts.length % 2 === 0
+        ? (amounts[mid - 1] + amounts[mid]) / 2
+        : amounts[mid]
+    })
+
+    // =========================================================================
+    // Computed — последняя активность (1.6)
+    // =========================================================================
+    const accountLastActivity = computed(() => {
+      const map = new Map()
+      transfers.value.forEach((t) => {
+        if (!t.timestamp) return
+        const time = new Date(t.timestamp).getTime()
+        if (Number.isNaN(time)) return
+        const names = [t.source_account_name, t.destination_account_name]
+        names.forEach((name) => {
+          if (!name) return
+          if (!map.has(name) || map.get(name) < time) map.set(name, time)
+        })
+      })
+      return map
+    })
+
+    const getLastActivityTime = (accountId) => {
+      const account = accounts.value.find((a) => a.id === accountId)
+      if (!account) return null
+      return accountLastActivity.value.get(account.name) || null
+    }
+
+    const getLastActivityLabel = (accountId) => {
+      const time = getLastActivityTime(accountId)
+      if (!time) return 'Никогда'
+      const days = Math.floor((Date.now() - time) / (1000 * 60 * 60 * 24))
+      if (days === 0) return 'Сегодня'
+      if (days === 1) return 'Вчера'
+      if (days < 7) return `${days} дн. назад`
+      if (days < 30) return `${Math.floor(days / 7)} нед. назад`
+      if (days < 365) return `${Math.floor(days / 30)} мес. назад`
+      return `${Math.floor(days / 365)} г. назад`
+    }
+
+    const getActivityClass = (accountId) => {
+      const time = getLastActivityTime(accountId)
+      if (!time) return 'activity-never'
+      const days = (Date.now() - time) / (1000 * 60 * 60 * 24)
+      if (days <= 7) return 'activity-recent'
+      if (days <= 30) return 'activity-medium'
+      return 'activity-old'
+    }
+
+    const getActivityIcon = (accountId) => {
+      const time = getLastActivityTime(accountId)
+      if (!time) return 'fas fa-circle-xmark'
+      const days = (Date.now() - time) / (1000 * 60 * 60 * 24)
+      if (days <= 7) return 'fas fa-circle-check'
+      if (days <= 30) return 'fas fa-clock'
+      return 'fas fa-triangle-exclamation'
+    }
+
+    // =========================================================================
+    // Computed — топ счетов (1.2), топ пар (1.8), санкей (1.9)
+    // =========================================================================
+    const topAccountsByTurnover = computed(() => {
+      if (transfers.value.length === 0) return []
+      const map = new Map()
+      const ensure = (name) => {
+        if (!name) return null
+        if (!map.has(name)) map.set(name, { name, incoming: 0, outgoing: 0, count: 0 })
+        return map.get(name)
       }
-    }
+      transfers.value.forEach((t) => {
+        const amount = toNumber(t.amount)
+        const src = ensure(t.source_account_name)
+        const dst = ensure(t.destination_account_name)
+        if (src) { src.outgoing += amount; src.count += 1 }
+        if (dst) { dst.incoming += amount; dst.count += 1 }
+      })
+      const list = Array.from(map.values()).map((item) => ({
+        ...item,
+        turnover: item.incoming + item.outgoing
+      }))
+      const totalTurnover = list.reduce((sum, i) => sum + i.turnover, 0)
+      return list
+        .map((item) => ({
+          ...item,
+          turnoverPercent: totalTurnover > 0
+            ? ((item.turnover / totalTurnover) * 100).toFixed(1)
+            : '0.0'
+        }))
+        .sort((a, b) => b.turnover - a.turnover)
+    })
 
-    const toggleHistoryAccount = (accountId) => {
-      const s = new Set(visibleHistoryAccounts.value)
-      if (s.has(accountId)) s.delete(accountId)
-      else s.add(accountId)
-      visibleHistoryAccounts.value = s
-      scheduleHistoryDraw()
-    }
+    const topAccountPairs = computed(() => {
+      if (transfers.value.length === 0) return []
+      const map = new Map()
+      transfers.value.forEach((t) => {
+        const s = t.source_account_name
+        const d = t.destination_account_name
+        if (!s || !d) return
+        const key = `${s}→${d}`
+        const amount = toNumber(t.amount)
+        if (!map.has(key)) {
+          map.set(key, { key, source: s, destination: d, amount: 0, count: 0 })
+        }
+        const entry = map.get(key)
+        entry.amount += amount
+        entry.count += 1
+      })
+      const list = Array.from(map.values())
+      const totalAmount = list.reduce((sum, i) => sum + i.amount, 0)
+      return list
+        .map((item) => ({
+          ...item,
+          percent: totalAmount > 0
+            ? ((item.amount / totalAmount) * 100).toFixed(1)
+            : '0.0'
+        }))
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 10)
+    })
 
-    // --- Отрисовка графика динамики ---
-    const historyChartMetrics = ref({ paddingLeft: 60, paddingRight: 20, paddingTop: 20, paddingBottom: 40 })
+    const sankeyCanvas = ref(null)
 
+    const sankeyData = computed(() => {
+      if (transfers.value.length === 0) return { nodes: [], links: [] }
+
+      const nodeTotals = new Map()
+      const linkMap = new Map()
+
+      transfers.value.forEach((t) => {
+        const s = t.source_account_name
+        const d = t.destination_account_name
+        if (!s || !d) return
+        const amount = toNumber(t.amount)
+
+        if (!nodeTotals.has(s)) nodeTotals.set(s, { name: s, incoming: 0, outgoing: 0 })
+        if (!nodeTotals.has(d)) nodeTotals.set(d, { name: d, incoming: 0, outgoing: 0 })
+
+        nodeTotals.get(s).outgoing += amount
+        nodeTotals.get(d).incoming += amount
+
+        const key = `${s}→${d}`
+        if (!linkMap.has(key)) linkMap.set(key, { source: s, destination: d, amount: 0 })
+        linkMap.get(key).amount += amount
+      })
+
+      const nodes = Array.from(nodeTotals.values())
+        .map((n) => ({ ...n, total: n.incoming + n.outgoing }))
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 8)
+
+      const nodeNames = new Set(nodes.map((n) => n.name))
+      const links = Array.from(linkMap.values())
+        .filter((l) => nodeNames.has(l.source) && nodeNames.has(l.destination))
+        .sort((a, b) => b.amount - a.amount)
+
+      return { nodes, links }
+    })
+
+    // =========================================================================
+    // Состояние — активность (1.3)
+    // =========================================================================
+    const activityCanvas = ref(null)
+    const activityRange = ref(30)
+    const activityRanges = [
+      { value: 7, label: '7 дней' },
+      { value: 14, label: '14 дней' },
+      { value: 30, label: '30 дней' },
+      { value: 90, label: '90 дней' }
+    ]
+
+    const activityData = computed(() => {
+      const days = activityRange.value
+      const now = new Date()
+      now.setHours(23, 59, 59, 999)
+      const result = []
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date(now)
+        d.setDate(d.getDate() - i)
+        d.setHours(0, 0, 0, 0)
+        result.push({
+          date: new Date(d),
+          dateKey: formatDateKey(d),
+          count: 0,
+          amount: 0
+        })
+      }
+      const map = new Map(result.map((r) => [r.dateKey, r]))
+      transfers.value.forEach((t) => {
+        if (!t.timestamp) return
+        const d = new Date(t.timestamp)
+        if (Number.isNaN(d.getTime())) return
+        const entry = map.get(formatDateKey(d))
+        if (entry) {
+          entry.count += 1
+          entry.amount += toNumber(t.amount)
+        }
+      })
+      return result
+    })
+
+    const activityTotalCount = computed(() =>
+      activityData.value.reduce((s, d) => s + d.count, 0)
+    )
+
+    const activityTotalAmount = computed(() =>
+      activityData.value.reduce((s, d) => s + d.amount, 0)
+    )
+
+    const activityBusiestDay = computed(() => {
+      if (activityData.value.length === 0) return null
+      const max = activityData.value.reduce(
+        (best, d) => (d.count > best.count ? d : best),
+        activityData.value[0]
+      )
+      if (max.count === 0) return null
+      const label = max.date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
+      return { ...max, label }
+    })
+
+    // =========================================================================
+    // Отрисовка графиков
+    // =========================================================================
+
+    // --- 2.1 Динамика баланса ---
     const drawHistoryChart = () => {
       const canvas = historyCanvas.value
       if (!canvas) return
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
-
       const totalSeries = historyTotalSeries.value
+
       if (totalSeries.length === 0) {
-        const wrapper = canvas.parentElement
-        if (wrapper) {
-          canvas.width = wrapper.clientWidth
-          canvas.height = 100
-        }
+        setupCanvas(canvas, parentWidth(canvas, 900), 100)
         return
       }
 
-      const wrapper = canvas.parentElement
-      const cssWidth = wrapper ? wrapper.clientWidth : 900
+      const cssWidth = parentWidth(canvas, 900)
       const cssHeight = 320
-
-      const dpr = window.devicePixelRatio || 1
-      canvas.width = cssWidth * dpr
-      canvas.height = cssHeight * dpr
-      canvas.style.width = `${cssWidth}px`
-      canvas.style.height = `${cssHeight}px`
-      ctx.setTransform(1, 0, 0, 1, 0, 0)
-      ctx.scale(dpr, dpr)
-      ctx.clearRect(0, 0, cssWidth, cssHeight)
+      const { ctx } = setupCanvas(canvas, cssWidth, cssHeight)
 
       const paddingLeft = 60
       const paddingRight = 20
@@ -1367,51 +1652,38 @@ export default {
       const chartWidth = cssWidth - paddingLeft - paddingRight
       const chartHeight = cssHeight - paddingTop - paddingBottom
 
-      // Собираем все видимые серии
       const visibleSeries = []
       if (historyMode.value === 'total') {
         visibleSeries.push({
-          id: 'total',
-          name: 'Итого',
-          color: '#3b82f6',
-          series: totalSeries,
-          isTotal: true
+          id: 'total', name: 'Итого', color: '#3b82f6',
+          series: totalSeries, isTotal: true
         })
       } else {
-        historyAccounts.value.forEach(acc => {
+        historyAccounts.value.forEach((acc) => {
           if (visibleHistoryAccounts.value.has(acc.id)) {
             visibleSeries.push({
-              id: acc.id,
-              name: acc.name,
-              color: acc.color,
-              series: acc.series,
-              isTotal: false
+              id: acc.id, name: acc.name, color: acc.color,
+              series: acc.series, isTotal: false
             })
           }
         })
-        // Жирная линия итога поверх
         visibleSeries.push({
-          id: 'total',
-          name: 'Итого',
-          color: '#111827',
-          series: totalSeries,
-          isTotal: true
+          id: 'total', name: 'Итого', color: '#111827',
+          series: totalSeries, isTotal: true
         })
       }
 
-      // Диапазон значений
-      const allValues = visibleSeries.flatMap(s => s.series.map(p => p.value))
+      const allValues = visibleSeries.flatMap((s) => s.series.map((p) => p.value))
       let minValue = Math.min(...allValues, 0)
       let maxValue = Math.max(...allValues, 0)
-      // Немного расширим диапазон
       const range = maxValue - minValue || 1
       minValue -= range * 0.05
       maxValue += range * 0.05
 
       const xStep = totalSeries.length > 1 ? chartWidth / (totalSeries.length - 1) : 0
-      const yScale = (v) => paddingTop + chartHeight - ((v - minValue) / (maxValue - minValue)) * chartHeight
+      const yScale = (v) =>
+        paddingTop + chartHeight - ((v - minValue) / (maxValue - minValue)) * chartHeight
 
-      // Сетка
       ctx.strokeStyle = '#e5e7eb'
       ctx.lineWidth = 1
       ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
@@ -1420,16 +1692,14 @@ export default {
       ctx.textBaseline = 'middle'
 
       for (let i = 0; i <= 5; i++) {
-        const value = minValue + ((maxValue - minValue) / 5) * i
         const y = paddingTop + chartHeight - (i / 5) * chartHeight
         ctx.beginPath()
         ctx.moveTo(paddingLeft, y)
         ctx.lineTo(cssWidth - paddingRight, y)
         ctx.stroke()
-        ctx.fillText(formatCompactCurrency(value), paddingLeft - 6, y)
+        ctx.fillText(formatCompactCurrency(minValue + ((maxValue - minValue) / 5) * i), paddingLeft - 6, y)
       }
 
-      // Нулевая линия — если диапазон пересекает 0
       if (minValue < 0 && maxValue > 0) {
         const y0 = yScale(0)
         ctx.strokeStyle = '#9ca3af'
@@ -1441,8 +1711,7 @@ export default {
         ctx.setLineDash([])
       }
 
-      // Рисуем серии
-      visibleSeries.forEach(s => {
+      visibleSeries.forEach((s) => {
         if (s.series.length === 0) return
         ctx.beginPath()
         ctx.strokeStyle = s.color
@@ -1458,7 +1727,6 @@ export default {
         })
         ctx.stroke()
 
-        // Точки — только если точек мало
         if (s.series.length <= 40) {
           s.series.forEach((p, i) => {
             const x = paddingLeft + i * xStep
@@ -1471,18 +1739,33 @@ export default {
         }
       })
 
-      // Подписи X
+      // Подписи по оси X с защитой от наложения
       ctx.fillStyle = '#6b7280'
       ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'top'
-      const labelStep = Math.max(1, Math.ceil(totalSeries.length / 8))
+
+      const MIN_LABEL_SPACING = 36
+      const maxLabels = Math.max(2, Math.floor(chartWidth / MIN_LABEL_SPACING))
+      const step = Math.max(1, Math.ceil(totalSeries.length / maxLabels))
+
+      let lastLabelX = -Infinity
       totalSeries.forEach((p, i) => {
-        if (i % labelStep !== 0 && i !== totalSeries.length - 1) return
+        const isFirst = i === 0
+        const isLast = i === totalSeries.length - 1
+        const showByStep = i % step === 0
+        if (!isFirst && !isLast && !showByStep) return
+
         const x = paddingLeft + i * xStep
-        const d = new Date(p.date)
-        const label = d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
+        if (x - lastLabelX < MIN_LABEL_SPACING * 0.9) {
+          if (!isFirst) return
+        }
+
+        const label = new Date(p.date).toLocaleDateString('ru-RU', {
+          day: '2-digit', month: '2-digit'
+        })
         ctx.fillText(label, x, paddingTop + chartHeight + 8)
+        lastLabelX = x
       })
     }
 
@@ -1496,11 +1779,10 @@ export default {
       const x = event.clientX - rect.left
       const y = event.clientY - rect.top
 
-      const { paddingLeft, paddingRight, paddingTop, paddingBottom } = historyChartMetrics.value
-      const cssWidth = rect.width
-      const chartWidth = cssWidth - paddingLeft - paddingRight
+      const { paddingLeft, paddingRight } = historyChartMetrics.value
+      const chartWidth = rect.width - paddingLeft - paddingRight
 
-      if (x < paddingLeft || x > cssWidth - paddingRight) {
+      if (x < paddingLeft || x > rect.width - paddingRight) {
         historyTooltip.value.visible = false
         return
       }
@@ -1510,38 +1792,25 @@ export default {
       const clampedIdx = Math.max(0, Math.min(totalSeries.length - 1, idx))
       const point = totalSeries[clampedIdx]
 
-      // Собираем строки для тултипа
       const rows = []
       if (historyMode.value === 'total') {
-        rows.push({
-          id: 'total',
-          name: 'Итого',
-          color: '#3b82f6',
-          value: point.value
-        })
+        rows.push({ id: 'total', name: 'Итого', color: '#3b82f6', value: point.value })
       } else {
-        historyAccounts.value.forEach(acc => {
+        historyAccounts.value.forEach((acc) => {
           if (!visibleHistoryAccounts.value.has(acc.id)) return
           const p = acc.series[clampedIdx]
           if (p) {
-            rows.push({
-              id: acc.id,
-              name: acc.name,
-              color: acc.color,
-              value: p.value
-            })
+            rows.push({ id: acc.id, name: acc.name, color: acc.color, value: p.value })
           }
         })
       }
 
       historyTooltip.value = {
         visible: true,
-        x: x,
-        y: y,
+        x,
+        y,
         date: new Date(point.date).toLocaleDateString('ru-RU', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric'
+          day: '2-digit', month: '2-digit', year: 'numeric'
         }),
         rows,
         total: point.value
@@ -1552,64 +1821,24 @@ export default {
       historyTooltip.value.visible = false
     }
 
-    const scheduleHistoryDraw = () => {
-      nextTick(() => {
-        setTimeout(drawHistoryChart, 50)
-      })
-    }
-
-    // --- 1.1 Распределение баланса ---
-    const distributionCanvas = ref(null)
-    const distributionColors = [
-      '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
-      '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#6366f1',
-      '#14b8a6', '#a855f7'
-    ]
-
-    const distributionData = computed(() => {
-      const active = activeAccounts.value.filter(acc => parseFloat(acc.balance) > 0)
-      const total = active.reduce((sum, acc) => sum + parseFloat(acc.balance || 0), 0)
-      if (total === 0) return []
-      return active
-        .map((acc, index) => {
-          const balance = parseFloat(acc.balance) || 0
-          return {
-            id: acc.id,
-            name: acc.name,
-            balance,
-            percent: ((balance / total) * 100).toFixed(1),
-            color: distributionColors[index % distributionColors.length]
-          }
-        })
-        .sort((a, b) => b.balance - a.balance)
-    })
-
+    // --- 1.1 Распределение ---
     const drawDistributionChart = () => {
       const canvas = distributionCanvas.value
       if (!canvas) return
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
       const data = distributionData.value
+      const wrapper = canvas.parentElement
+      const size = wrapper ? Math.min(wrapper.clientWidth, 320) : 280
+
       if (data.length === 0) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        setupCanvas(canvas, size, size)
         return
       }
 
-      const wrapper = canvas.parentElement
-      const size = wrapper ? Math.min(wrapper.clientWidth, 320) : 280
-      const dpr = window.devicePixelRatio || 1
-      canvas.width = size * dpr
-      canvas.height = size * dpr
-      canvas.style.width = `${size}px`
-      canvas.style.height = `${size}px`
-      ctx.setTransform(1, 0, 0, 1, 0, 0)
-      ctx.scale(dpr, dpr)
+      const { ctx } = setupCanvas(canvas, size, size)
 
       const centerX = size / 2
       const centerY = size / 2
       const radius = size / 2 - 20
-
-      ctx.clearRect(0, 0, size, size)
 
       let startAngle = -Math.PI / 2
       data.forEach((item) => {
@@ -1648,41 +1877,24 @@ export default {
       })
     }
 
-    // --- 1.5 Соотношение активных/неактивных ---
-    const ratioCanvas = ref(null)
-
-    const activeRatioPercent = computed(() => {
-      if (accounts.value.length === 0) return 0
-      return ((activeAccounts.value.length / accounts.value.length) * 100).toFixed(0)
-    })
-
+    // --- 1.5 Соотношение ---
     const drawRatioChart = () => {
       const canvas = ratioCanvas.value
       if (!canvas) return
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
       const total = accounts.value.length
+      const wrapper = canvas.parentElement
+      const size = wrapper ? Math.min(wrapper.clientWidth, 200) : 180
+
       if (total === 0) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        setupCanvas(canvas, size, size)
         return
       }
 
-      const wrapper = canvas.parentElement
-      const size = wrapper ? Math.min(wrapper.clientWidth, 200) : 180
-      const dpr = window.devicePixelRatio || 1
-      canvas.width = size * dpr
-      canvas.height = size * dpr
-      canvas.style.width = `${size}px`
-      canvas.style.height = `${size}px`
-      ctx.setTransform(1, 0, 0, 1, 0, 0)
-      ctx.scale(dpr, dpr)
+      const { ctx } = setupCanvas(canvas, size, size)
 
       const centerX = size / 2
       const centerY = size / 2
       const radius = size / 2 - 15
-      const innerRadius = radius * 0.6
-
-      ctx.clearRect(0, 0, size, size)
 
       const activePercent = activeAccounts.value.length / total
       const inactivePercent = inactiveAccounts.value.length / total
@@ -1699,7 +1911,11 @@ export default {
       ctx.beginPath()
       ctx.fillStyle = '#9ca3af'
       ctx.moveTo(centerX, centerY)
-      ctx.arc(centerX, centerY, radius, -Math.PI / 2 + activeAngle, -Math.PI / 2 + activeAngle + inactiveAngle)
+      ctx.arc(
+        centerX, centerY, radius,
+        -Math.PI / 2 + activeAngle,
+        -Math.PI / 2 + activeAngle + inactiveAngle
+      )
       ctx.closePath()
       ctx.fill()
 
@@ -1709,279 +1925,85 @@ export default {
       ctx.fill()
     }
 
-    // --- Переводы ---
-    const transfers = ref([])
-    const currentPage = ref(1)
-    const pageSize = ref(10)
-    const totalCount = ref(0)
-    const transferLoading = ref(false)
-    const showEditTransferModal = ref(false)
-    const showDeleteTransferModal = ref(false)
-    const editingTransfer = ref(null)
-    const transferToDelete = ref(null)
-    const expandedTransfers = ref(new Set())
-
-    const transferData = ref({
-      source_account: '',
-      destination_account: '',
-      amount: '',
-      timestamp: new Date().toISOString().slice(0, 16)
-    })
-
-    const editTransferData = ref({
-      source_account: '',
-      destination_account: '',
-      amount: '',
-      timestamp: ''
-    })
-
-    const otherAccounts = computed(() => {
-      if (!transferData.value.source_account) return allAccounts.value
-      return allAccounts.value.filter(acc => acc.id !== transferData.value.source_account)
-    })
-
-    const editOtherAccounts = computed(() => {
-      if (!editTransferData.value.source_account) return allAccounts.value
-      return allAccounts.value.filter(acc => acc.id !== editTransferData.value.source_account)
-    })
-
-    const totalPages = computed(() => Math.ceil(totalCount.value / pageSize.value))
-
-    // --- 1.6 Последняя активность ---
-    const accountLastActivity = computed(() => {
-      const map = new Map()
-      transfers.value.forEach(t => {
-        if (!t.timestamp) return
-        const time = new Date(t.timestamp).getTime()
-        if (isNaN(time)) return
-        const s = t.source_account_name
-        const d = t.destination_account_name
-        if (s) {
-          if (!map.has(s) || map.get(s) < time) map.set(s, time)
-        }
-        if (d) {
-          if (!map.has(d) || map.get(d) < time) map.set(d, time)
-        }
-      })
-      return map
-    })
-
-    const getLastActivityTime = (accountId) => {
-      const account = accounts.value.find(a => a.id === accountId)
-      if (!account) return null
-      return accountLastActivity.value.get(account.name) || null
-    }
-
-    const getLastActivityLabel = (accountId) => {
-      const time = getLastActivityTime(accountId)
-      if (!time) return 'Никогда'
-      const diff = Date.now() - time
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-      if (days === 0) return 'Сегодня'
-      if (days === 1) return 'Вчера'
-      if (days < 7) return `${days} дн. назад`
-      if (days < 30) return `${Math.floor(days / 7)} нед. назад`
-      if (days < 365) return `${Math.floor(days / 30)} мес. назад`
-      return `${Math.floor(days / 365)} г. назад`
-    }
-
-    const getActivityClass = (accountId) => {
-      const time = getLastActivityTime(accountId)
-      if (!time) return 'activity-never'
-      const days = (Date.now() - time) / (1000 * 60 * 60 * 24)
-      if (days <= 7) return 'activity-recent'
-      if (days <= 30) return 'activity-medium'
-      return 'activity-old'
-    }
-
-    const getActivityIcon = (accountId) => {
-      const time = getLastActivityTime(accountId)
-      if (!time) return 'fas fa-circle-xmark'
-      const days = (Date.now() - time) / (1000 * 60 * 60 * 24)
-      if (days <= 7) return 'fas fa-circle-check'
-      if (days <= 30) return 'fas fa-clock'
-      return 'fas fa-triangle-exclamation'
-    }
-
-    // --- 1.2 Топ счетов по обороту ---
-    const topAccountsByTurnover = computed(() => {
-      if (transfers.value.length === 0) return []
-      const map = new Map()
-      const ensure = (name) => {
-        if (!name) return null
-        if (!map.has(name)) map.set(name, { name, incoming: 0, outgoing: 0, count: 0 })
-        return map.get(name)
-      }
-      transfers.value.forEach(t => {
-        const amount = parseFloat(t.amount) || 0
-        const src = ensure(t.source_account_name)
-        const dst = ensure(t.destination_account_name)
-        if (src) { src.outgoing += amount; src.count += 1 }
-        if (dst) { dst.incoming += amount; dst.count += 1 }
-      })
-      const list = Array.from(map.values()).map(item => ({
-        ...item,
-        turnover: item.incoming + item.outgoing
-      }))
-      const totalTurnover = list.reduce((sum, i) => sum + i.turnover, 0)
-      return list
-        .map(item => ({
-          ...item,
-          turnoverPercent: totalTurnover > 0
-            ? ((item.turnover / totalTurnover) * 100).toFixed(1)
-            : '0.0'
-        }))
-        .sort((a, b) => b.turnover - a.turnover)
-    })
-
-    // --- 1.8 Топ контрагентов (пар счёт→счёт) ---
-    const topAccountPairs = computed(() => {
-      if (transfers.value.length === 0) return []
-      const map = new Map()
-      transfers.value.forEach(t => {
-        const s = t.source_account_name
-        const d = t.destination_account_name
-        if (!s || !d) return
-        const key = `${s}→${d}`
-        const amount = parseFloat(t.amount) || 0
-        if (!map.has(key)) {
-          map.set(key, { key, source: s, destination: d, amount: 0, count: 0 })
-        }
-        const entry = map.get(key)
-        entry.amount += amount
-        entry.count += 1
-      })
-      const list = Array.from(map.values())
-      const totalAmount = list.reduce((sum, i) => sum + i.amount, 0)
-      return list
-        .map(item => ({
-          ...item,
-          percent: totalAmount > 0
-            ? ((item.amount / totalAmount) * 100).toFixed(1)
-            : '0.0'
-        }))
-        .sort((a, b) => b.amount - a.amount)
-        .slice(0, 10)
-    })
-
-    // --- 1.9 Санкей ---
-    const sankeyCanvas = ref(null)
-
-    const sankeyData = computed(() => {
-      if (transfers.value.length === 0) return { nodes: [], links: [] }
-
-      const nodeTotals = new Map()
-      const linkMap = new Map()
-
-      transfers.value.forEach(t => {
-        const s = t.source_account_name
-        const d = t.destination_account_name
-        if (!s || !d) return
-        const amount = parseFloat(t.amount) || 0
-
-        if (!nodeTotals.has(s)) nodeTotals.set(s, { name: s, incoming: 0, outgoing: 0 })
-        if (!nodeTotals.has(d)) nodeTotals.set(d, { name: d, incoming: 0, outgoing: 0 })
-
-        nodeTotals.get(s).outgoing += amount
-        nodeTotals.get(d).incoming += amount
-
-        const key = `${s}→${d}`
-        if (!linkMap.has(key)) {
-          linkMap.set(key, { source: s, destination: d, amount: 0 })
-        }
-        linkMap.get(key).amount += amount
-      })
-
-      const nodes = Array.from(nodeTotals.values())
-        .map(n => ({ ...n, total: n.incoming + n.outgoing }))
-        .sort((a, b) => b.total - a.total)
-        .slice(0, 8)
-
-      const nodeNames = new Set(nodes.map(n => n.name))
-      const links = Array.from(linkMap.values())
-        .filter(l => nodeNames.has(l.source) && nodeNames.has(l.destination))
-        .sort((a, b) => b.amount - a.amount)
-
-      return { nodes, links }
-    })
-
+    // --- 1.9 Санкей (вариант C + min-width для горизонтального скролла) ---
     const drawSankey = () => {
       const canvas = sankeyCanvas.value
       if (!canvas) return
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
-
       const { nodes, links } = sankeyData.value
+
       if (nodes.length < 2) {
-        const wrapper = canvas.parentElement
-        if (wrapper) {
-          canvas.width = wrapper.clientWidth
-          canvas.height = 100
-        }
+        setupCanvas(canvas, parentWidth(canvas, 900), 100)
         return
       }
 
-      const wrapper = canvas.parentElement
-      const cssWidth = wrapper ? wrapper.clientWidth : 900
-      const cssHeight = Math.max(320, nodes.length * 60)
+      const VIRTUAL_W = SANKEY_VIRTUAL_W
+      const VIRTUAL_H = Math.max(520, nodes.length * 90)
 
-      const dpr = window.devicePixelRatio || 1
-      canvas.width = cssWidth * dpr
-      canvas.height = cssHeight * dpr
-      canvas.style.width = `${cssWidth}px`
-      canvas.style.height = `${cssHeight}px`
-      ctx.setTransform(1, 0, 0, 1, 0, 0)
-      ctx.scale(dpr, dpr)
-      ctx.clearRect(0, 0, cssWidth, cssHeight)
+      // ✅ Передаём minWidth — setupCanvasVirtual не даст canvas стать уже,
+      // иначе скролл не дойдёт до правого края (пустое место справа).
+      const { ctx } = setupCanvasVirtual(
+        canvas,
+        VIRTUAL_W,
+        VIRTUAL_H,
+        0.6,
+        SANKEY_MIN_CANVAS_WIDTH
+      )
 
-      const paddingX = 100
-      const paddingY = 20
-      const nodeWidth = 16
-      const chartHeight = cssHeight - paddingY * 2
+      // Все размеры ниже — в виртуальных пикселях, масштабируются через ctx.scale()
+      const paddingX = 130
+      const paddingY = 30
+      const nodeWidth = 22
+      const nodeGap = 18
+      const chartHeight = VIRTUAL_H - paddingY * 2
 
-      const sources = nodes.filter(n => n.outgoing > 0)
-      const destinations = nodes.filter(n => n.incoming > 0)
+      const sources = nodes.filter((n) => n.outgoing > 0)
+      const destinations = nodes.filter((n) => n.incoming > 0)
 
       const totalOutgoing = sources.reduce((s, n) => s + n.outgoing, 0) || 1
       const totalIncoming = destinations.reduce((s, n) => s + n.incoming, 0) || 1
 
+      const sourcesGaps = Math.max(0, sources.length - 1) * nodeGap
+      const destsGaps = Math.max(0, destinations.length - 1) * nodeGap
+      const sourceScale = (chartHeight - sourcesGaps) / totalOutgoing
+      const destScale = (chartHeight - destsGaps) / totalIncoming
+
+      const MIN_NODE_H = 36
+
       const sourcePositions = new Map()
       let yOffset = paddingY
-      sources.forEach(n => {
-        const h = Math.max(20, (n.outgoing / totalOutgoing) * chartHeight)
+      sources.forEach((n) => {
+        const h = Math.max(MIN_NODE_H, n.outgoing * sourceScale)
         sourcePositions.set(n.name, { x: paddingX, y: yOffset, h, node: n })
-        yOffset += h + 8
+        yOffset += h + nodeGap
       })
 
       const destPositions = new Map()
       yOffset = paddingY
-      destinations.forEach(n => {
-        const h = Math.max(20, (n.incoming / totalIncoming) * chartHeight)
-        destPositions.set(n.name, { x: cssWidth - paddingX - nodeWidth, y: yOffset, h, node: n })
-        yOffset += h + 8
+      destinations.forEach((n) => {
+        const h = Math.max(MIN_NODE_H, n.incoming * destScale)
+        destPositions.set(n.name, { x: VIRTUAL_W - paddingX - nodeWidth, y: yOffset, h, node: n })
+        yOffset += h + nodeGap
       })
 
       const sourceOffsets = new Map()
-      sources.forEach(s => sourceOffsets.set(s.name, 0))
+      sources.forEach((s) => sourceOffsets.set(s.name, 0))
       const destOffsets = new Map()
-      destinations.forEach(d => destOffsets.set(d.name, 0))
+      destinations.forEach((d) => destOffsets.set(d.name, 0))
 
       const sortedLinks = [...links].sort((a, b) => {
-        const aSrcIdx = sources.findIndex(s => s.name === a.source)
-        const bSrcIdx = sources.findIndex(s => s.name === b.source)
+        const aSrcIdx = sources.findIndex((s) => s.name === a.source)
+        const bSrcIdx = sources.findIndex((s) => s.name === b.source)
         if (aSrcIdx !== bSrcIdx) return aSrcIdx - bSrcIdx
         return b.amount - a.amount
       })
 
-      sortedLinks.forEach(link => {
+      sortedLinks.forEach((link) => {
         const srcPos = sourcePositions.get(link.source)
         const dstPos = destPositions.get(link.destination)
         if (!srcPos || !dstPos) return
 
-        const srcNode = srcPos.node
-        const dstNode = dstPos.node
-        const srcH = (link.amount / srcNode.outgoing) * srcPos.h
-        const dstH = (link.amount / dstNode.incoming) * dstPos.h
+        const srcH = (link.amount / srcPos.node.outgoing) * srcPos.h
+        const dstH = (link.amount / dstPos.node.incoming) * dstPos.h
 
         const srcY = srcPos.y + sourceOffsets.get(link.source)
         const dstY = dstPos.y + destOffsets.get(link.destination)
@@ -2001,154 +2023,82 @@ export default {
         ctx.closePath()
 
         const gradient = ctx.createLinearGradient(x1, 0, x2, 0)
-        gradient.addColorStop(0, 'rgba(239, 68, 68, 0.35)')
-        gradient.addColorStop(1, 'rgba(16, 185, 129, 0.35)')
+        gradient.addColorStop(0, 'rgba(239, 68, 68, 0.55)')
+        gradient.addColorStop(1, 'rgba(16, 185, 129, 0.55)')
         ctx.fillStyle = gradient
         ctx.fill()
 
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'
-        ctx.lineWidth = 0.5
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'
+        ctx.lineWidth = 0.75
         ctx.stroke()
       })
 
-      sources.forEach(n => {
-        const pos = sourcePositions.get(n.name)
-        ctx.fillStyle = '#ef4444'
+      const drawNode = (name, pos, color, sign, value) => {
+        const isSource = sign === '−'
+
+        ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        const label = name.length > 16 ? name.slice(0, 15) + '…' : name
+        const labelW = ctx.measureText(label).width
+
+        ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        const subLabel = `${sign}${formatCompactCurrency(value)} ₽`
+        const subLabelW = ctx.measureText(subLabel).width
+        const maxLabelW = Math.max(labelW, subLabelW)
+
+        const padding = 6
+        const bgW = maxLabelW + padding * 2
+        const bgH = 34
+        const bgX = isSource
+          ? pos.x - nodeWidth - 8 - bgW
+          : pos.x + nodeWidth + 8
+        const bgY = pos.y + pos.h / 2 - bgH / 2
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.92)'
+        ctx.beginPath()
+        const r = 6
+        ctx.moveTo(bgX + r, bgY)
+        ctx.arcTo(bgX + bgW, bgY, bgX + bgW, bgY + bgH, r)
+        ctx.arcTo(bgX + bgW, bgY + bgH, bgX, bgY + bgH, r)
+        ctx.arcTo(bgX, bgY + bgH, bgX, bgY, r)
+        ctx.arcTo(bgX, bgY, bgX + bgW, bgY, r)
+        ctx.closePath()
+        ctx.fill()
+
+        ctx.fillStyle = color
         ctx.fillRect(pos.x, pos.y, nodeWidth, pos.h)
 
         ctx.fillStyle = '#1f2937'
         ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-        ctx.textAlign = 'right'
+        ctx.textAlign = isSource ? 'right' : 'left'
         ctx.textBaseline = 'middle'
-        const label = n.name.length > 14 ? n.name.slice(0, 13) + '…' : n.name
-        ctx.fillText(label, pos.x - 8, pos.y + pos.h / 2)
+        const labelX = isSource
+          ? pos.x - nodeWidth - 8 - padding
+          : pos.x + nodeWidth + 8 + padding
+        ctx.fillText(label, labelX, pos.y + pos.h / 2 - 6)
 
         ctx.fillStyle = '#6b7280'
-        ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-        ctx.fillText(`−${formatCompactCurrency(n.outgoing)} ₽`, pos.x - 8, pos.y + pos.h / 2 + 14)
+        ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        ctx.fillText(subLabel, labelX, pos.y + pos.h / 2 + 8)
+      }
+
+      sources.forEach((n) => {
+        drawNode(n.name, sourcePositions.get(n.name), '#ef4444', '−', n.outgoing)
       })
-
-      destinations.forEach(n => {
-        const pos = destPositions.get(n.name)
-        ctx.fillStyle = '#10b981'
-        ctx.fillRect(pos.x, pos.y, nodeWidth, pos.h)
-
-        ctx.fillStyle = '#1f2937'
-        ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-        ctx.textAlign = 'left'
-        ctx.textBaseline = 'middle'
-        const label = n.name.length > 14 ? n.name.slice(0, 13) + '…' : n.name
-        ctx.fillText(label, pos.x + nodeWidth + 8, pos.y + pos.h / 2)
-
-        ctx.fillStyle = '#6b7280'
-        ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-        ctx.fillText(`+${formatCompactCurrency(n.incoming)} ₽`, pos.x + nodeWidth + 8, pos.y + pos.h / 2 + 14)
+      destinations.forEach((n) => {
+        drawNode(n.name, destPositions.get(n.name), '#10b981', '+', n.incoming)
       })
     }
-
-    // --- 1.4 Метрики ---
-    const transfersCount = computed(() => transfers.value.length)
-    const totalTransfersAmount = computed(() =>
-      transfers.value.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
-    )
-    const averageTransfer = computed(() =>
-      transfersCount.value === 0 ? 0 : totalTransfersAmount.value / transfersCount.value
-    )
-    const maxTransfer = computed(() =>
-      transfersCount.value === 0 ? 0 : Math.max(...transfers.value.map(t => parseFloat(t.amount) || 0))
-    )
-    const minTransfer = computed(() =>
-      transfersCount.value === 0 ? 0 : Math.min(...transfers.value.map(t => parseFloat(t.amount) || 0))
-    )
-    const medianTransfer = computed(() => {
-      if (transfersCount.value === 0) return 0
-      const amounts = transfers.value.map(t => parseFloat(t.amount) || 0).sort((a, b) => a - b)
-      const mid = Math.floor(amounts.length / 2)
-      return amounts.length % 2 === 0
-        ? (amounts[mid - 1] + amounts[mid]) / 2
-        : amounts[mid]
-    })
 
     // --- 1.3 Активность ---
-    const activityCanvas = ref(null)
-    const activityRange = ref(30)
-    const activityRanges = [
-      { value: 7, label: '7 дней' },
-      { value: 14, label: '14 дней' },
-      { value: 30, label: '30 дней' },
-      { value: 90, label: '90 дней' }
-    ]
-
-    const formatDateKey = (d) => {
-      const year = d.getFullYear()
-      const month = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
-    }
-
-    const activityData = computed(() => {
-      const days = activityRange.value
-      const now = new Date()
-      now.setHours(23, 59, 59, 999)
-      const result = []
-      for (let i = days - 1; i >= 0; i--) {
-        const d = new Date(now)
-        d.setDate(d.getDate() - i)
-        d.setHours(0, 0, 0, 0)
-        result.push({
-          date: new Date(d),
-          dateKey: formatDateKey(d),
-          count: 0,
-          amount: 0
-        })
-      }
-      const map = new Map(result.map(r => [r.dateKey, r]))
-      transfers.value.forEach(t => {
-        if (!t.timestamp) return
-        const d = new Date(t.timestamp)
-        if (isNaN(d.getTime())) return
-        const entry = map.get(formatDateKey(d))
-        if (entry) {
-          entry.count += 1
-          entry.amount += parseFloat(t.amount) || 0
-        }
-      })
-      return result
-    })
-
-    const activityTotalCount = computed(() => activityData.value.reduce((s, d) => s + d.count, 0))
-    const activityTotalAmount = computed(() => activityData.value.reduce((s, d) => s + d.amount, 0))
-
-    const activityBusiestDay = computed(() => {
-      if (activityData.value.length === 0) return null
-      const max = activityData.value.reduce((best, d) => d.count > best.count ? d : best, activityData.value[0])
-      if (max.count === 0) return null
-      const label = max.date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
-      return { ...max, label }
-    })
-
     const drawActivityChart = () => {
       const canvas = activityCanvas.value
       if (!canvas) return
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
       const data = activityData.value
-      if (data.length === 0) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height)
-        return
-      }
-
-      const wrapper = canvas.parentElement
-      const cssWidth = wrapper ? wrapper.clientWidth : 800
+      const cssWidth = parentWidth(canvas, 800)
       const cssHeight = 260
-      const dpr = window.devicePixelRatio || 1
-      canvas.width = cssWidth * dpr
-      canvas.height = cssHeight * dpr
-      canvas.style.width = `${cssWidth}px`
-      canvas.style.height = `${cssHeight}px`
-      ctx.setTransform(1, 0, 0, 1, 0, 0)
-      ctx.scale(dpr, dpr)
-      ctx.clearRect(0, 0, cssWidth, cssHeight)
+      const { ctx } = setupCanvas(canvas, cssWidth, cssHeight)
+
+      if (data.length === 0) return
 
       const paddingLeft = 50
       const paddingRight = 20
@@ -2156,7 +2106,7 @@ export default {
       const paddingBottom = 40
       const chartWidth = cssWidth - paddingLeft - paddingRight
       const chartHeight = cssHeight - paddingTop - paddingBottom
-      const maxAmount = Math.max(...data.map(d => d.amount), 1)
+      const maxAmount = Math.max(...data.map((d) => d.amount), 1)
       const barWidth = chartWidth / data.length
       const barGap = Math.min(4, barWidth * 0.2)
 
@@ -2168,13 +2118,12 @@ export default {
       ctx.textBaseline = 'middle'
 
       for (let i = 0; i <= 4; i++) {
-        const value = (maxAmount / 4) * i
         const y = paddingTop + chartHeight - (i / 4) * chartHeight
         ctx.beginPath()
         ctx.moveTo(paddingLeft, y)
         ctx.lineTo(cssWidth - paddingRight, y)
         ctx.stroke()
-        ctx.fillText(formatCompactCurrency(value), paddingLeft - 6, y)
+        ctx.fillText(formatCompactCurrency((maxAmount / 4) * i), paddingLeft - 6, y)
       }
 
       data.forEach((d, i) => {
@@ -2227,175 +2176,11 @@ export default {
       })
     }
 
-    // --- 1.7 Heatmap ---
-    const heatmapCanvas = ref(null)
-    const heatmapMode = ref('count')
-    const heatmapWeeks = 26
-
-    const heatmapData = computed(() => {
-      const now = new Date()
-      now.setHours(23, 59, 59, 999)
-
-      const end = new Date(now)
-      const dayOfWeek = (end.getDay() + 6) % 7
-      end.setDate(end.getDate() + (6 - dayOfWeek))
-      end.setHours(23, 59, 59, 999)
-
-      const totalDays = heatmapWeeks * 7
-      const start = new Date(end)
-      start.setDate(start.getDate() - totalDays + 1)
-      start.setHours(0, 0, 0, 0)
-
-      const cells = []
-      const map = new Map()
-
-      for (let i = 0; i < totalDays; i++) {
-        const d = new Date(start)
-        d.setDate(d.getDate() + i)
-        const key = formatDateKey(d)
-        const cell = { date: new Date(d), key, count: 0, amount: 0 }
-        cells.push(cell)
-        map.set(key, cell)
-      }
-
-      transfers.value.forEach(t => {
-        if (!t.timestamp) return
-        const d = new Date(t.timestamp)
-        if (isNaN(d.getTime())) return
-        const cell = map.get(formatDateKey(d))
-        if (cell) {
-          cell.count += 1
-          cell.amount += parseFloat(t.amount) || 0
-        }
-      })
-
-      const values = cells.map(c => heatmapMode.value === 'count' ? c.count : c.amount)
-      const maxValue = Math.max(...values, 1)
-      const activeDays = cells.filter(c => (heatmapMode.value === 'count' ? c.count : c.amount) > 0).length
-
-      return { cells, maxValue, activeDays, totalDays, start, end }
-    })
-
-    const heatmapActiveDays = computed(() => heatmapData.value.activeDays)
-    const heatmapTotalDays = computed(() => heatmapData.value.totalDays)
-    const heatmapMaxDay = computed(() => {
-      if (heatmapData.value.cells.length === 0) return null
-      const max = heatmapData.value.cells.reduce((best, c) => {
-        const val = heatmapMode.value === 'count' ? c.count : c.amount
-        const bestVal = heatmapMode.value === 'count' ? best.count : best.amount
-        return val > bestVal ? c : best
-      }, heatmapData.value.cells[0])
-      if (max.count === 0) return null
-      return {
-        ...max,
-        label: max.date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
-      }
-    })
-
-    const drawHeatmap = () => {
-      const canvas = heatmapCanvas.value
-      if (!canvas) return
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
-
-      const { cells, maxValue } = heatmapData.value
-      if (cells.length === 0) return
-
-      const wrapper = canvas.parentElement
-      const cssWidth = wrapper ? wrapper.clientWidth : 800
-
-      const cellSize = 13
-      const cellGap = 3
-      const leftPadding = 40
-      const topPadding = 24
-      const bottomPadding = 30
-
-      const cssHeight = topPadding + 7 * (cellSize + cellGap) + bottomPadding
-
-      const dpr = window.devicePixelRatio || 1
-      canvas.width = cssWidth * dpr
-      canvas.height = cssHeight * dpr
-      canvas.style.width = `${cssWidth}px`
-      canvas.style.height = `${cssHeight}px`
-      ctx.setTransform(1, 0, 0, 1, 0, 0)
-      ctx.scale(dpr, dpr)
-      ctx.clearRect(0, 0, cssWidth, cssHeight)
-
-      const levels = ['#ebedf0', '#c6e48b', '#7bc96f', '#239a3b', '#196127']
-
-      const dayLabels = ['Пн', 'Ср', 'Пт']
-      ctx.fillStyle = '#6b7280'
-      ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      ctx.textAlign = 'right'
-      ctx.textBaseline = 'middle'
-      ;[0, 2, 4].forEach((dayIdx) => {
-        const y = topPadding + dayIdx * (cellSize + cellGap) + cellSize / 2
-        ctx.fillText(dayLabels[dayIdx / 2], leftPadding - 6, y)
-      })
-
-      ctx.textAlign = 'left'
-      ctx.textBaseline = 'bottom'
-      let lastMonth = -1
-      cells.forEach((cell, i) => {
-        const weekIdx = Math.floor(i / 7)
-        const dayIdx = i % 7
-        if (dayIdx === 0) {
-          const month = cell.date.getMonth()
-          if (month !== lastMonth) {
-            lastMonth = month
-            const x = leftPadding + weekIdx * (cellSize + cellGap)
-            const monthLabel = cell.date.toLocaleDateString('ru-RU', { month: 'short' })
-            ctx.fillText(monthLabel, x, topPadding - 6)
-          }
-        }
-      })
-
-      cells.forEach((cell, i) => {
-        const weekIdx = Math.floor(i / 7)
-        const dayIdx = i % 7
-        const x = leftPadding + weekIdx * (cellSize + cellGap)
-        const y = topPadding + dayIdx * (cellSize + cellGap)
-
-        const value = heatmapMode.value === 'count' ? cell.count : cell.amount
-        let level = 0
-        if (value > 0) {
-          const ratio = value / maxValue
-          if (ratio <= 0.25) level = 1
-          else if (ratio <= 0.5) level = 2
-          else if (ratio <= 0.75) level = 3
-          else level = 4
-        }
-
-        ctx.fillStyle = levels[level]
-        ctx.beginPath()
-        const r = 2
-        ctx.moveTo(x + r, y)
-        ctx.arcTo(x + cellSize, y, x + cellSize, y + cellSize, r)
-        ctx.arcTo(x + cellSize, y + cellSize, x, y + cellSize, r)
-        ctx.arcTo(x, y + cellSize, x, y, r)
-        ctx.arcTo(x, y, x + cellSize, y, r)
-        ctx.closePath()
-        ctx.fill()
-      })
-    }
-
-    // --- Общие функции ---
-    const toggleExpand = (accountId) => {
-      if (expandedAccounts.value.has(accountId)) expandedAccounts.value.delete(accountId)
-      else expandedAccounts.value.add(accountId)
-      expandedAccounts.value = new Set(expandedAccounts.value)
-    }
-
-    const toggleExpandTransfer = (transferId) => {
-      if (expandedTransfers.value.has(transferId)) expandedTransfers.value.delete(transferId)
-      else expandedTransfers.value.add(transferId)
-      expandedTransfers.value = new Set(expandedTransfers.value)
-    }
-
-    const truncateText = (text, maxLength) => {
-      if (!text) return ''
-      if (text.length <= maxLength) return text
-      return text.substring(0, maxLength) + '...'
+    // =========================================================================
+    // Расписание перерисовок
+    // =========================================================================
+    const scheduleHistoryDraw = () => {
+      nextTick(() => setTimeout(drawHistoryChart, 50))
     }
 
     const scheduleAllDraws = () => {
@@ -2404,24 +2189,44 @@ export default {
           drawDistributionChart()
           drawRatioChart()
           drawActivityChart()
-          drawHeatmap()
           drawSankey()
           drawHistoryChart()
         }, 50)
       })
     }
 
-    // --- Загрузка ---
+    // =========================================================================
+    // Загрузка данных
+    // =========================================================================
+    const loadBalanceHistory = async () => {
+      historyLoading.value = true
+      historyError.value = ''
+      try {
+        const dateTo = new Date()
+        const dateFrom = new Date()
+        dateFrom.setDate(dateFrom.getDate() - historyRange.value + 1)
+
+        const data = await apiService.getBalanceHistory(
+          formatDateKey(dateFrom),
+          formatDateKey(dateTo)
+        )
+        historyRawData.value = data
+        scheduleHistoryDraw()
+      } catch (error) {
+        console.error('Error loading balance history:', error)
+        historyError.value = 'Не удалось загрузить историю баланса. Проверьте соединение.'
+        historyRawData.value = null
+      } finally {
+        historyLoading.value = false
+      }
+    }
+
     const loadAccounts = async () => {
       loading.value = true
       try {
         const data = await apiService.getAccounts(1, 100)
         if (data.results && Array.isArray(data.results)) {
-          if (data.results.length > 0 && data.results[0].accounts) {
-            accounts.value = data.results[0].accounts
-          } else {
-            accounts.value = data.results
-          }
+          accounts.value = data.results[0]?.accounts || data.results
         } else if (Array.isArray(data)) {
           accounts.value = data
         } else if (data.accounts) {
@@ -2452,7 +2257,34 @@ export default {
       }
     }
 
-    // --- Действия со счетами ---
+    // =========================================================================
+    // Переключения видимости
+    // =========================================================================
+    const toggleHistoryAccount = (accountId) => {
+      const s = new Set(visibleHistoryAccounts.value)
+      if (s.has(accountId)) s.delete(accountId)
+      else s.add(accountId)
+      visibleHistoryAccounts.value = s
+      scheduleHistoryDraw()
+    }
+
+    const toggleExpand = (accountId) => {
+      const s = new Set(expandedAccounts.value)
+      if (s.has(accountId)) s.delete(accountId)
+      else s.add(accountId)
+      expandedAccounts.value = s
+    }
+
+    const toggleExpandTransfer = (transferId) => {
+      const s = new Set(expandedTransfers.value)
+      if (s.has(transferId)) s.delete(transferId)
+      else s.add(transferId)
+      expandedTransfers.value = s
+    }
+
+    // =========================================================================
+    // Действия со счетами
+    // =========================================================================
     const openCreateModal = () => {
       editingAccount.value = null
       formData.value = { name: '', balance: 0, is_active: true }
@@ -2463,10 +2295,16 @@ export default {
       editingAccount.value = account
       formData.value = {
         name: account.name,
-        balance: parseFloat(account.balance),
+        balance: toNumber(account.balance),
         is_active: account.is_active
       }
       showAccountModal.value = true
+    }
+
+    const closeModal = () => {
+      showAccountModal.value = false
+      editingAccount.value = null
+      formData.value = { name: '', balance: 0, is_active: true }
     }
 
     const saveAccount = async () => {
@@ -2502,7 +2340,7 @@ export default {
 
     const openBalanceModal = (account) => {
       balanceAccount.value = account
-      newBalance.value = parseFloat(account.balance)
+      newBalance.value = toNumber(account.balance)
       showBalanceModal.value = true
     }
 
@@ -2535,13 +2373,9 @@ export default {
       }
     }
 
-    const closeModal = () => {
-      showAccountModal.value = false
-      editingAccount.value = null
-      formData.value = { name: '', balance: 0, is_active: true }
-    }
-
-    // --- Действия с переводами ---
+    // =========================================================================
+    // Действия с переводами
+    // =========================================================================
     const openTransferFor = (account) => {
       transferData.value = {
         source_account: account.id,
@@ -2550,8 +2384,10 @@ export default {
         timestamp: new Date().toISOString().slice(0, 16)
       }
       setTimeout(() => {
-        const transferForm = document.querySelector('.transfer-form')
-        if (transferForm) transferForm.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        document.querySelector('.transfer-form')?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        })
       }, 100)
     }
 
@@ -2591,21 +2427,19 @@ export default {
 
     const editTransfer = (transfer) => {
       editingTransfer.value = transfer
-      let sourceAccountId = null
-      let destinationAccountId = null
-      if (transfer.source_account_name) {
-        const foundSource = accounts.value.find(acc => acc.name === transfer.source_account_name)
-        if (foundSource) sourceAccountId = foundSource.id
-      }
-      if (transfer.destination_account_name) {
-        const foundDest = accounts.value.find(acc => acc.name === transfer.destination_account_name)
-        if (foundDest) destinationAccountId = foundDest.id
-      }
+      const sourceAccount = accounts.value.find(
+        (acc) => acc.name === transfer.source_account_name
+      )
+      const destinationAccount = accounts.value.find(
+        (acc) => acc.name === transfer.destination_account_name
+      )
       editTransferData.value = {
-        source_account: sourceAccountId || '',
-        destination_account: destinationAccountId || '',
+        source_account: sourceAccount?.id || '',
+        destination_account: destinationAccount?.id || '',
         amount: transfer.amount,
-        timestamp: transfer.timestamp ? transfer.timestamp.slice(0, 16) : new Date().toISOString().slice(0, 16)
+        timestamp: transfer.timestamp
+          ? transfer.timestamp.slice(0, 16)
+          : new Date().toISOString().slice(0, 16)
       }
       showEditTransferModal.value = true
     }
@@ -2658,7 +2492,9 @@ export default {
     const closeEditTransferModal = () => {
       showEditTransferModal.value = false
       editingTransfer.value = null
-      editTransferData.value = { source_account: '', destination_account: '', amount: '', timestamp: '' }
+      editTransferData.value = {
+        source_account: '', destination_account: '', amount: '', timestamp: ''
+      }
     }
 
     const prevPage = () => {
@@ -2675,9 +2511,11 @@ export default {
       }
     }
 
-    // --- Форматирование ---
+    // =========================================================================
+    // Форматирование
+    // =========================================================================
     const formatCurrency = (value) => {
-      if (!value && value !== 0) return '0 ₽'
+      if (value === null || value === undefined || value === '') return '0 ₽'
       return new Intl.NumberFormat('ru-RU', {
         style: 'currency',
         currency: 'RUB',
@@ -2687,51 +2525,69 @@ export default {
     }
 
     const formatCompactCurrency = (value) => {
-      if (!value && value !== 0) return '0'
+      if (value === null || value === undefined || value === '') return '0'
       const abs = Math.abs(value)
-      if (abs >= 1000000) return (value / 1000000).toFixed(1) + 'M'
-      if (abs >= 1000) return (value / 1000).toFixed(0) + 'k'
+      if (abs >= 1_000_000) return (value / 1_000_000).toFixed(1) + 'M'
+      if (abs >= 1_000) return (value / 1_000).toFixed(0) + 'k'
       return String(Math.round(value))
     }
 
     const formatDate = (dateString) => {
       if (!dateString) return ''
       return new Date(dateString).toLocaleString('ru-RU', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
       })
     }
 
     const formatShortDate = (dateString) => {
       if (!dateString) return ''
       return new Date(dateString).toLocaleString('ru-RU', {
-        day: '2-digit',
-        month: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
+        day: '2-digit', month: '2-digit',
+        hour: '2-digit', minute: '2-digit'
       })
     }
 
-    // --- Watchers ---
+    const truncateText = (text, maxLength) => {
+      if (!text) return ''
+      if (text.length <= maxLength) return text
+      return text.substring(0, maxLength) + '...'
+    }
+
+    // =========================================================================
+    // Watchers
+    // =========================================================================
+    watch(
+      historyAccounts,
+      (list) => {
+        if (list.length === 0) return
+        const ids = list.map((a) => a.id)
+        const currentIds = Array.from(visibleHistoryAccounts.value)
+        const sameSet =
+          currentIds.length === ids.length && ids.every((id) => currentIds.includes(id))
+        if (!sameSet) visibleHistoryAccounts.value = new Set(ids)
+      },
+      { immediate: true }
+    )
+
     watch(distributionData, () => scheduleAllDraws())
     watch(activityRange, () => scheduleAllDraws())
-    watch(heatmapMode, () => scheduleAllDraws())
     watch([sankeyData, topAccountPairs], () => scheduleAllDraws())
-    watch(historyRange, () => {
-      loadBalanceHistory()
-    })
+    watch(historyRange, () => loadBalanceHistory())
     watch(historyMode, () => scheduleHistoryDraw())
     watch(visibleHistoryAccounts, () => scheduleHistoryDraw(), { deep: true })
 
     const handleResize = () => scheduleAllDraws()
 
+    // =========================================================================
+    // Lifecycle
+    // =========================================================================
     onMounted(async () => {
-      await loadAccounts()
-      await loadTransfers()
-      await loadBalanceHistory()
+      await Promise.all([
+        loadAccounts(),
+        loadTransfers(),
+        loadBalanceHistory()
+      ])
       window.addEventListener('resize', handleResize)
       scheduleAllDraws()
     })
@@ -2740,126 +2596,65 @@ export default {
       window.removeEventListener('resize', handleResize)
     })
 
+    // =========================================================================
+    // Публичный API
+    // =========================================================================
     return {
       // Счета
-      accounts,
-      activeAccounts,
-      inactiveAccounts,
-      allAccounts,
-      loading,
-      showAccountModal,
-      showBalanceModal,
-      showDeleteModal,
-      editingAccount,
-      balanceAccount,
-      accountToDelete,
-      newBalance,
-      formData,
-      totalBalance,
-      activeAccountsCount,
-      expandedAccounts,
-      // 2.1
-      historyCanvas,
-      historyRange,
-      historyRanges,
-      historyMode,
-      historyLoading,
-      historyError,
-      historyAccounts,
-      visibleHistoryAccounts,
-      historyTotalSeries,
-      historyStartBalance,
-      historyEndBalance,
-      historyChange,
-      historyChangePercent,
-      historyChangeClass,
-      historyMinTotal,
-      historyMaxTotal,
-      historyPeriodLabel,
-      historyTooltip,
-      loadBalanceHistory,
-      toggleHistoryAccount,
-      onHistoryMouseMove,
-      onHistoryMouseLeave,
-      // 1.1
-      distributionCanvas,
-      distributionData,
-      // 1.5
-      ratioCanvas,
-      activeRatioPercent,
-      // 1.6
-      getLastActivityLabel,
-      getActivityClass,
-      getActivityIcon,
-      // 1.2
+      accounts, activeAccounts, inactiveAccounts, allAccounts, loading,
+      showAccountModal, showBalanceModal, showDeleteModal,
+      editingAccount, balanceAccount, accountToDelete, newBalance,
+      formData, totalBalance, activeAccountsCount, expandedAccounts,
+
+      // 2.1 Динамика баланса
+      historyCanvas, historyRange, historyRanges, historyMode,
+      historyLoading, historyError, historyAccounts, visibleHistoryAccounts,
+      historyTotalSeries, historyStartBalance, historyEndBalance,
+      historyChange, historyChangePercent, historyChangeClass,
+      historyMinTotal, historyMaxTotal, historyPeriodLabel, historyTooltip,
+      loadBalanceHistory, toggleHistoryAccount,
+      onHistoryMouseMove, onHistoryMouseLeave,
+
+      // 1.1 Распределение
+      distributionCanvas, distributionData,
+
+      // 1.5 Соотношение
+      ratioCanvas, activeRatioPercent,
+
+      // 1.6 Активность аккаунта
+      getLastActivityLabel, getActivityClass, getActivityIcon,
+
+      // 1.2 Топ счетов
       topAccountsByTurnover,
-      // 1.8
+
+      // 1.8 Топ пар
       topAccountPairs,
-      // 1.9
-      sankeyCanvas,
-      sankeyData,
-      // 1.3
-      activityCanvas,
-      activityRange,
-      activityRanges,
-      activityData,
-      activityTotalCount,
-      activityTotalAmount,
-      activityBusiestDay,
-      // 1.7
-      heatmapCanvas,
-      heatmapMode,
-      heatmapActiveDays,
-      heatmapTotalDays,
-      heatmapMaxDay,
-      // 1.4
-      transfersCount,
-      totalTransfersAmount,
-      averageTransfer,
-      maxTransfer,
-      minTransfer,
-      medianTransfer,
+
+      // 1.9 Санкей
+      sankeyCanvas, sankeyData,
+
+      // 1.3 Активность
+      activityCanvas, activityRange, activityRanges, activityData,
+      activityTotalCount, activityTotalAmount, activityBusiestDay,
+
+      // 1.4 Метрики
+      transfersCount, totalTransfersAmount, averageTransfer,
+      maxTransfer, minTransfer, medianTransfer,
+
       // Переводы
-      transfers,
-      currentPage,
-      totalPages,
-      totalCount,
-      transferLoading,
-      showEditTransferModal,
-      showDeleteTransferModal,
-      editingTransfer,
-      transferToDelete,
-      transferData,
-      editTransferData,
-      otherAccounts,
-      editOtherAccounts,
-      expandedTransfers,
+      transfers, currentPage, totalPages, totalCount, transferLoading,
+      showEditTransferModal, showDeleteTransferModal,
+      editingTransfer, transferToDelete, transferData, editTransferData,
+      otherAccounts, editOtherAccounts, expandedTransfers,
+
       // Методы
-      toggleExpand,
-      toggleExpandTransfer,
-      truncateText,
-      openCreateModal,
-      editAccount,
-      saveAccount,
-      toggleVisibility,
-      openBalanceModal,
-      updateBalance,
-      confirmDelete,
-      deleteAccount,
-      closeModal,
-      openTransferFor,
-      createTransfer,
-      editTransfer,
-      updateTransfer,
-      confirmDeleteTransfer,
-      deleteTransfer,
-      closeEditTransferModal,
-      prevPage,
-      nextPage,
-      formatCurrency,
-      formatCompactCurrency,
-      formatDate,
-      formatShortDate
+      toggleExpand, toggleExpandTransfer, truncateText,
+      openCreateModal, editAccount, saveAccount, toggleVisibility,
+      openBalanceModal, updateBalance, confirmDelete, deleteAccount, closeModal,
+      openTransferFor, createTransfer, editTransfer, updateTransfer,
+      confirmDeleteTransfer, deleteTransfer, closeEditTransferModal,
+      prevPage, nextPage,
+      formatCurrency, formatCompactCurrency, formatDate, formatShortDate
     }
   }
 }
@@ -3579,14 +3374,19 @@ export default {
 
 .pair-percent { font-weight: 700; color: var(--dark-color); }
 
-/* Санкей */
+/* Санкей — горизонтальный скролл на мобильных */
 .sankey-body {
   width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;  /* плавный скролл на iOS */
   padding: 0.5rem 0;
 }
 
-.sankey-canvas { display: block; width: 100%; }
+/* Размер canvas (включая min-width) задаёт JS через setupCanvasVirtual.
+   Здесь только display: block — без width: 100% и min-width, чтобы
+   не конфликтовать с инлайн-стилями. */
+.sankey-canvas { display: block; }
 
 .sankey-footer {
   display: flex;
@@ -3671,71 +3471,6 @@ export default {
   color: var(--dark-color);
   font-weight: 700;
 }
-
-/* Heatmap */
-.heatmap-card { margin-bottom: 1.5rem; }
-
-.heatmap-mode {
-  display: flex;
-  gap: 0.25rem;
-  background: var(--light-color);
-  padding: 0.25rem;
-  border-radius: var(--radius);
-}
-
-.heatmap-body {
-  width: 100%;
-  overflow-x: auto;
-  padding: 0.5rem 0;
-}
-
-.heatmap-canvas { display: block; }
-
-.heatmap-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--light-color);
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  font-size: 0.8rem;
-  color: var(--gray-color);
-}
-
-.heatmap-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.heatmap-stats strong { color: var(--dark-color); }
-
-.heatmap-legend {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-.heatmap-legend-label {
-  font-size: 0.7rem;
-  color: var(--gray-color);
-  margin: 0 0.25rem;
-}
-
-.heatmap-cell {
-  width: 13px;
-  height: 13px;
-  border-radius: 3px;
-  display: inline-block;
-}
-
-.heatmap-level-0 { background: #ebedf0; }
-.heatmap-level-1 { background: #c6e48b; }
-.heatmap-level-2 { background: #7bc96f; }
-.heatmap-level-3 { background: #239a3b; }
-.heatmap-level-4 { background: #196127; }
 
 /* 1.6 Последняя активность */
 .activity-cell {
@@ -4095,8 +3830,6 @@ export default {
   .activity-range { width: 100%; }
   .range-btn { flex: 1; font-size: 0.7rem; padding: 0.375rem 0.25rem; }
   .activity-summary { gap: 0.75rem; font-size: 0.75rem; }
-  .heatmap-mode { width: 100%; }
-  .heatmap-footer { flex-direction: column; align-items: flex-start; }
   .history-stats { gap: 1rem; }
   .history-stat-value { font-size: 0.85rem; }
   .history-footer { flex-direction: column; align-items: flex-start; }
@@ -4131,7 +3864,6 @@ export default {
   .ratio-center-percent { font-size: 1.35rem; }
   .pair-route { font-size: 0.75rem; }
   .sankey-footer { flex-direction: column; align-items: flex-start; }
-  .sankey-canvas { min-width: 500px; }
   .history-legend { gap: 0.375rem; }
   .history-legend-item { font-size: 0.7rem; padding: 0.25rem 0.5rem; }
   .history-stats { flex-direction: column; gap: 0.5rem; }
