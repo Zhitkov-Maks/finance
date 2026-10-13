@@ -58,6 +58,17 @@ class ApiService {
         return response.data
     }
 
+    // Аналитика переводов
+    async getTransferAnalytics(dateFrom, dateTo) {
+        const response = await this.client.get('/transfer/analytics/', {
+            params: {
+                date_from: dateFrom,
+                date_to: dateTo,
+            }
+        })
+        return response.data
+    }
+
     // Аутентификация
     async register(email, password, rePassword) {
         const response = await this.client.post('/auth/users/', {

@@ -23,498 +23,9 @@
       </div>
     </div>
 
-    <!-- 2.1 Динамика баланса по дням -->
-    <div v-if="activeAccounts.length > 0" class="card balance-history-card">
-      <div class="card-header">
-        <h3 class="card-title">
-          <i class="fas fa-chart-line"></i> Динамика баланса
-        </h3>
-        <div class="history-controls">
-          <div class="history-range">
-            <button
-              v-for="range in historyRanges"
-              :key="range.value"
-              class="range-btn"
-              :class="{ active: historyRange === range.value }"
-              @click="historyRange = range.value"
-            >
-              {{ range.label }}
-            </button>
-          </div>
-          <div class="history-mode">
-            <button
-              class="range-btn"
-              :class="{ active: historyMode === 'all' }"
-              @click="historyMode = 'all'"
-            >
-              Все счета
-            </button>
-            <button
-              class="range-btn"
-              :class="{ active: historyMode === 'total' }"
-              @click="historyMode = 'total'"
-            >
-              Только итог
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div class="history-body">
-        <div v-if="historyLoading" class="history-loading">
-          <i class="fas fa-spinner fa-spin"></i>
-          <span>Загрузка истории...</span>
-        </div>
-
-        <div v-else-if="historyError" class="history-error">
-          <i class="fas fa-exclamation-triangle"></i>
-          <span>{{ historyError }}</span>
-          <button class="btn btn-sm btn-primary" @click="loadBalanceHistory">
-            <i class="fas fa-redo"></i> Повторить
-          </button>
-        </div>
-
-        <template v-else>
-          <div class="history-chart-wrapper">
-            <canvas
-              ref="historyCanvas"
-              class="history-canvas"
-              @mousemove="onHistoryMouseMove"
-              @mouseleave="onHistoryMouseLeave"
-            ></canvas>
-
-            <div
-              v-if="historyTooltip.visible"
-              class="history-tooltip"
-              :style="{
-                left: historyTooltip.x + 'px',
-                top: historyTooltip.y + 'px'
-              }"
-            >
-              <div class="history-tooltip-date">{{ historyTooltip.date }}</div>
-              <div
-                v-for="row in historyTooltip.rows"
-                :key="row.id"
-                class="history-tooltip-row"
-              >
-                <span class="history-tooltip-color" :style="{ background: row.color }"></span>
-                <span class="history-tooltip-name">{{ row.name }}</span>
-                <span class="history-tooltip-value">{{ formatCurrency(row.value) }}</span>
-              </div>
-              <div class="history-tooltip-total">
-                <span>Итого:</span>
-                <strong>{{ formatCurrency(historyTooltip.total) }}</strong>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="historyMode === 'all' && historyAccounts.length > 0" class="history-legend">
-            <button
-              v-for="acc in historyAccounts"
-              :key="acc.id"
-              class="history-legend-item"
-              :class="{ 'is-off': !visibleHistoryAccounts.has(acc.id) }"
-              @click="toggleHistoryAccount(acc.id)"
-            >
-              <span class="history-legend-color" :style="{ background: acc.color }"></span>
-              <span class="history-legend-name">{{ acc.name }}</span>
-              <span class="history-legend-value">
-                {{ formatCompactCurrency(acc.lastBalance) }}
-              </span>
-            </button>
-          </div>
-
-          <div class="history-footer">
-            <div class="history-stats">
-              <div class="history-stat">
-                <span class="history-stat-label">Изменение за период</span>
-                <span class="history-stat-value" :class="historyChangeClass">
-                  {{ historyChange >= 0 ? '+' : '' }}{{ formatCurrency(historyChange) }}
-                  <small>({{ historyChangePercent > 0 ? '+' : '' }}{{ historyChangePercent }}%)</small>
-                </span>
-              </div>
-              <div class="history-stat">
-                <span class="history-stat-label">Начало периода</span>
-                <span class="history-stat-value">{{ formatCurrency(historyStartBalance) }}</span>
-              </div>
-              <div class="history-stat">
-                <span class="history-stat-label">Конец периода</span>
-                <span class="history-stat-value">{{ formatCurrency(historyEndBalance) }}</span>
-              </div>
-              <div class="history-stat">
-                <span class="history-stat-label">Минимум / Максимум</span>
-                <span class="history-stat-value">
-                  {{ formatCompactCurrency(historyMinTotal) }} /
-                  {{ formatCompactCurrency(historyMaxTotal) }}
-                </span>
-              </div>
-            </div>
-            <div class="history-period-label">
-              {{ historyPeriodLabel }}
-            </div>
-          </div>
-        </template>
-      </div>
-    </div>
-
-    <!-- Распределение баланса по счетам + Соотношение активных/неактивных -->
-    <div class="analytics-row">
-      <div v-if="activeAccounts.length > 0" class="card distribution-card">
-        <div class="card-header">
-          <h3 class="card-title">
-            <i class="fas fa-chart-pie"></i> Распределение баланса
-          </h3>
-          <span class="distribution-total">
-            Всего: <strong>{{ formatCurrency(totalBalance) }}</strong>
-          </span>
-        </div>
-
-        <div v-if="distributionData.length > 0" class="distribution-body">
-          <div class="distribution-chart-wrapper">
-            <canvas ref="distributionCanvas" class="distribution-canvas"></canvas>
-          </div>
-
-          <div class="distribution-legend">
-            <div
-              v-for="item in distributionData"
-              :key="item.id"
-              class="legend-row"
-            >
-              <span class="legend-color" :style="{ backgroundColor: item.color }"></span>
-              <span class="legend-name" :title="item.name">{{ item.name }}</span>
-              <span class="legend-value">{{ formatCurrency(item.balance) }}</span>
-              <span class="legend-percent">{{ item.percent }}%</span>
-            </div>
-          </div>
-        </div>
-
-        <div v-else class="distribution-empty">
-          <i class="fas fa-chart-pie"></i>
-          <p>Нет активных счетов с положительным балансом</p>
-        </div>
-      </div>
-
-      <div v-if="accounts.length > 0" class="card accounts-ratio-card">
-        <div class="card-header">
-          <h3 class="card-title">
-            <i class="fas fa-toggle-on"></i> Активные и неактивные
-          </h3>
-        </div>
-
-        <div class="accounts-ratio-body">
-          <div class="ratio-chart-wrapper">
-            <canvas ref="ratioCanvas" class="ratio-canvas"></canvas>
-            <div class="ratio-center-label">
-              <div class="ratio-center-percent">{{ activeRatioPercent }}%</div>
-              <div class="ratio-center-caption">активных</div>
-            </div>
-          </div>
-
-          <div class="ratio-stats">
-            <div class="ratio-stat-row">
-              <span class="ratio-color" style="background: #10b981;"></span>
-              <span class="ratio-label">Активные</span>
-              <span class="ratio-value">{{ activeAccounts.length }}</span>
-            </div>
-            <div class="ratio-stat-row">
-              <span class="ratio-color" style="background: #9ca3af;"></span>
-              <span class="ratio-label">Неактивные</span>
-              <span class="ratio-value">{{ inactiveAccounts.length }}</span>
-            </div>
-            <div class="ratio-stat-row total">
-              <span class="ratio-color" style="background: transparent;"></span>
-              <span class="ratio-label">Всего</span>
-              <span class="ratio-value">{{ accounts.length }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 1.4 Метрики переводов -->
-    <div v-if="transfers.length > 0" class="card transfer-metrics-card">
-      <div class="card-header">
-        <h3 class="card-title">
-          <i class="fas fa-calculator"></i> Метрики переводов
-        </h3>
-        <span class="metrics-period">по загруженным переводам</span>
-      </div>
-
-      <div class="metrics-grid">
-        <div class="metric-card">
-          <div class="metric-label">
-            <i class="fas fa-ruble-sign"></i> Средний перевод
-          </div>
-          <div class="metric-value">{{ formatCurrency(averageTransfer) }}</div>
-        </div>
-
-        <div class="metric-card">
-          <div class="metric-label">
-            <i class="fas fa-sort-amount-up"></i> Максимальный
-          </div>
-          <div class="metric-value text-warning">{{ formatCurrency(maxTransfer) }}</div>
-        </div>
-
-        <div class="metric-card">
-          <div class="metric-label">
-            <i class="fas fa-sort-amount-down"></i> Минимальный
-          </div>
-          <div class="metric-value">{{ formatCurrency(minTransfer) }}</div>
-        </div>
-
-        <div class="metric-card">
-          <div class="metric-label">
-            <i class="fas fa-chart-bar"></i> Медиана
-          </div>
-          <div class="metric-value">{{ formatCurrency(medianTransfer) }}</div>
-        </div>
-
-        <div class="metric-card">
-          <div class="metric-label">
-            <i class="fas fa-hashtag"></i> Количество
-          </div>
-          <div class="metric-value">{{ transfersCount }}</div>
-        </div>
-
-        <div class="metric-card">
-          <div class="metric-label">
-            <i class="fas fa-coins"></i> Общий оборот
-          </div>
-          <div class="metric-value text-success">{{ formatCurrency(totalTransfersAmount) }}</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 1.2 Топ счетов по обороту -->
-    <div v-if="topAccountsByTurnover.length > 0" class="card top-accounts-card">
-      <div class="card-header">
-        <h3 class="card-title">
-          <i class="fas fa-trophy"></i> Топ счетов по обороту
-        </h3>
-        <span class="metrics-period">входящие + исходящие переводы</span>
-      </div>
-
-      <div class="desktop-table">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Счёт</th>
-              <th>Входящие</th>
-              <th>Исходящие</th>
-              <th>Оборот</th>
-              <th>Переводов</th>
-              <th>Доля</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(item, index) in topAccountsByTurnover" :key="item.name">
-              <td>
-                <span class="rank-badge" :class="'rank-' + Math.min(index + 1, 3)">
-                  {{ index + 1 }}
-                </span>
-              </td>
-              <td><strong>{{ item.name }}</strong></td>
-              <td class="text-success">{{ formatCurrency(item.incoming) }}</td>
-              <td class="text-danger">{{ formatCurrency(item.outgoing) }}</td>
-              <td><strong>{{ formatCurrency(item.turnover) }}</strong></td>
-              <td>{{ item.count }}</td>
-              <td>
-                <div class="turnover-progress">
-                  <div class="turnover-bar">
-                    <div class="turnover-fill" :style="{ width: item.turnoverPercent + '%' }"></div>
-                  </div>
-                  <span class="turnover-percent">{{ item.turnoverPercent }}%</span>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="mobile-cards">
-        <div
-          v-for="(item, index) in topAccountsByTurnover"
-          :key="item.name"
-          class="top-account-card"
-        >
-          <div class="top-account-header">
-            <span class="rank-badge" :class="'rank-' + Math.min(index + 1, 3)">
-              {{ index + 1 }}
-            </span>
-            <span class="top-account-name">{{ item.name }}</span>
-            <span class="top-account-turnover">{{ formatCurrency(item.turnover) }}</span>
-          </div>
-          <div class="top-account-details">
-            <div class="top-detail">
-              <span class="top-detail-label">Входящие</span>
-              <span class="top-detail-value text-success">{{ formatCurrency(item.incoming) }}</span>
-            </div>
-            <div class="top-detail">
-              <span class="top-detail-label">Исходящие</span>
-              <span class="top-detail-value text-danger">{{ formatCurrency(item.outgoing) }}</span>
-            </div>
-            <div class="top-detail">
-              <span class="top-detail-label">Переводов</span>
-              <span class="top-detail-value">{{ item.count }}</span>
-            </div>
-            <div class="top-detail">
-              <span class="top-detail-label">Доля</span>
-              <span class="top-detail-value">{{ item.turnoverPercent }}%</span>
-            </div>
-          </div>
-          <div class="turnover-bar mobile">
-            <div class="turnover-fill" :style="{ width: item.turnoverPercent + '%' }"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 1.8 Топ контрагентов (пар) -->
-    <div v-if="topAccountPairs.length > 0" class="card top-pairs-card">
-      <div class="card-header">
-        <h3 class="card-title">
-          <i class="fas fa-people-arrows"></i> Топ контрагентов
-        </h3>
-        <span class="metrics-period">самые активные пары счёт → счёт</span>
-      </div>
-
-      <div class="desktop-table">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Откуда</th>
-              <th></th>
-              <th>Куда</th>
-              <th>Сумма</th>
-              <th>Переводов</th>
-              <th>Доля</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(pair, index) in topAccountPairs" :key="pair.key">
-              <td>
-                <span class="rank-badge" :class="'rank-' + Math.min(index + 1, 3)">
-                  {{ index + 1 }}
-                </span>
-              </td>
-              <td>{{ pair.source }}</td>
-              <td class="pair-arrow"><i class="fas fa-arrow-right"></i></td>
-              <td>{{ pair.destination }}</td>
-              <td><strong>{{ formatCurrency(pair.amount) }}</strong></td>
-              <td>{{ pair.count }}</td>
-              <td>
-                <div class="turnover-progress">
-                  <div class="turnover-bar">
-                    <div class="turnover-fill" :style="{ width: pair.percent + '%' }"></div>
-                  </div>
-                  <span class="turnover-percent">{{ pair.percent }}%</span>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="mobile-cards">
-        <div v-for="(pair, index) in topAccountPairs" :key="pair.key" class="pair-card">
-          <div class="pair-header">
-            <span class="rank-badge" :class="'rank-' + Math.min(index + 1, 3)">
-              {{ index + 1 }}
-            </span>
-            <span class="pair-amount">{{ formatCurrency(pair.amount) }}</span>
-          </div>
-          <div class="pair-route">
-            <span class="pair-account">{{ pair.source }}</span>
-            <i class="fas fa-arrow-right pair-arrow-icon"></i>
-            <span class="pair-account">{{ pair.destination }}</span>
-          </div>
-          <div class="pair-footer">
-            <span>{{ pair.count }} переводов</span>
-            <span class="pair-percent">{{ pair.percent }}%</span>
-          </div>
-          <div class="turnover-bar mobile">
-            <div class="turnover-fill" :style="{ width: pair.percent + '%' }"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 1.9 Диаграмма Санкей — вариант C + горизонтальный скролл на мобильных -->
-    <div
-      v-if="transfers.length > 0 && sankeyData.nodes.length > 1"
-      class="card sankey-card"
-    >
-      <div class="card-header">
-        <h3 class="card-title">
-          <i class="fas fa-diagram-project"></i> Потоки между счетами
-        </h3>
-        <span class="metrics-period">кто кому сколько перевёл</span>
-      </div>
-
-      <div class="sankey-body">
-        <canvas ref="sankeyCanvas" class="sankey-canvas"></canvas>
-      </div>
-
-      <div class="sankey-footer">
-        <div class="sankey-legend">
-          <span class="sankey-legend-item">
-            <span class="sankey-legend-color" style="background: #ef4444;"></span>
-            Исходящие (слева)
-          </span>
-          <span class="sankey-legend-item">
-            <span class="sankey-legend-color" style="background: #10b981;"></span>
-            Входящие (справа)
-          </span>
-        </div>
-        <div class="sankey-summary">
-          <span>Счетов: <strong>{{ sankeyData.nodes.length }}</strong></span>
-          <span>Связей: <strong>{{ sankeyData.links.length }}</strong></span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 1.3 Активность переводов по дням -->
-    <div v-if="transfers.length > 0" class="card activity-card">
-      <div class="card-header">
-        <h3 class="card-title">
-          <i class="fas fa-chart-column"></i> Активность переводов
-        </h3>
-        <div class="activity-range">
-          <button
-            v-for="range in activityRanges"
-            :key="range.value"
-            class="range-btn"
-            :class="{ active: activityRange === range.value }"
-            @click="activityRange = range.value"
-          >
-            {{ range.label }}
-          </button>
-        </div>
-      </div>
-
-      <div class="activity-body">
-        <canvas ref="activityCanvas" class="activity-canvas"></canvas>
-      </div>
-
-      <div class="activity-footer">
-        <div class="activity-summary">
-          <span class="activity-summary-item">
-            <strong>{{ activityTotalCount }}</strong> переводов
-          </span>
-          <span class="activity-summary-item">
-            на сумму <strong>{{ formatCurrency(activityTotalAmount) }}</strong>
-          </span>
-          <span v-if="activityBusiestDay" class="activity-summary-item">
-            пик: <strong>{{ activityBusiestDay.label }}</strong>
-            ({{ activityBusiestDay.count }} переводов)
-          </span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Активные счета -->
+    <!-- ============================================================ -->
+    <!-- 1. АКТИВНЫЕ СЧЕТА                                            -->
+    <!-- ============================================================ -->
     <div class="card">
       <div class="card-header">
         <h3 class="card-title">
@@ -625,7 +136,9 @@
       </div>
     </div>
 
-    <!-- Неактивные счета -->
+    <!-- ============================================================ -->
+    <!-- 2. НЕАКТИВНЫЕ СЧЕТА                                          -->
+    <!-- ============================================================ -->
     <div class="card">
       <div class="card-header">
         <h3 class="card-title">
@@ -736,7 +249,543 @@
       </div>
     </div>
 
-    <!-- Переводы между счетами -->
+    <!-- ============================================================ -->
+    <!-- 3. АНАЛИТИКА (сворачиваемая)                                 -->
+    <!-- ============================================================ -->
+    <section class="analytics-section">
+      <div
+        class="analytics-section-header"
+        @click="toggleAnalytics"
+      >
+        <div class="analytics-section-title">
+          <i class="fas fa-chart-line"></i>
+          <span>Аналитика</span>
+          <small v-if="!analyticsExpanded" class="analytics-section-hint">
+            {{ analyticsPeriodLabel }}
+          </small>
+        </div>
+        <button
+          type="button"
+          class="analytics-toggle-btn"
+          :aria-expanded="analyticsExpanded"
+          @click.stop="toggleAnalytics"
+        >
+          <span>{{ analyticsExpanded ? 'Свернуть' : 'Развернуть' }}</span>
+          <i :class="analyticsExpanded ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
+        </button>
+      </div>
+
+      <div v-show="analyticsExpanded" class="analytics-section-body">
+        <!-- 3.1 Метрики переводов -->
+        <div v-if="analyticsLoading" class="card">
+          <div class="history-loading">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>Загрузка аналитики...</span>
+          </div>
+        </div>
+
+        <div
+          v-else-if="analyticsRaw && analyticsMetrics.count > 0"
+          class="card transfer-metrics-card"
+        >
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="fas fa-calculator"></i> Метрики переводов
+            </h3>
+            <span class="metrics-period">
+              {{ analyticsPeriodLabel }}
+            </span>
+          </div>
+
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-label">
+                <i class="fas fa-ruble-sign"></i> Средний перевод
+              </div>
+              <div class="metric-value">{{ formatCurrency(analyticsMetrics.average) }}</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-label">
+                <i class="fas fa-sort-amount-up"></i> Максимальный
+              </div>
+              <div class="metric-value text-warning">{{ formatCurrency(analyticsMetrics.max) }}</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-label">
+                <i class="fas fa-sort-amount-down"></i> Минимальный
+              </div>
+              <div class="metric-value">{{ formatCurrency(analyticsMetrics.min) }}</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-label">
+                <i class="fas fa-chart-bar"></i> Медиана
+              </div>
+              <div class="metric-value">{{ formatCurrency(analyticsMetrics.median) }}</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-label">
+                <i class="fas fa-hashtag"></i> Количество
+              </div>
+              <div class="metric-value">{{ analyticsMetrics.count }}</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-label">
+                <i class="fas fa-coins"></i> Общий оборот
+              </div>
+              <div class="metric-value text-success">
+                {{ formatCurrency(analyticsMetrics.total_amount) }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3.2 Динамика баланса -->
+        <div v-if="activeAccounts.length > 0" class="card balance-history-card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="fas fa-chart-line"></i> Динамика баланса
+            </h3>
+            <div class="history-controls">
+              <div class="history-range">
+                <button
+                  v-for="range in historyRanges"
+                  :key="range.value"
+                  class="range-btn"
+                  :class="{ active: historyRange === range.value }"
+                  @click.stop="historyRange = range.value"
+                >
+                  {{ range.label }}
+                </button>
+              </div>
+              <div class="history-mode">
+                <button
+                  class="range-btn"
+                  :class="{ active: historyMode === 'all' }"
+                  @click.stop="historyMode = 'all'"
+                >
+                  Все счета
+                </button>
+                <button
+                  class="range-btn"
+                  :class="{ active: historyMode === 'total' }"
+                  @click.stop="historyMode = 'total'"
+                >
+                  Только итог
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="history-body">
+            <div v-if="historyLoading" class="history-loading">
+              <i class="fas fa-spinner fa-spin"></i>
+              <span>Загрузка истории...</span>
+            </div>
+
+            <div v-else-if="historyError" class="history-error">
+              <i class="fas fa-exclamation-triangle"></i>
+              <span>{{ historyError }}</span>
+              <button class="btn btn-sm btn-primary" @click.stop="loadBalanceHistory">
+                <i class="fas fa-redo"></i> Повторить
+              </button>
+            </div>
+
+            <template v-else>
+              <div class="history-chart-wrapper">
+                <canvas
+                  ref="historyCanvas"
+                  class="history-canvas"
+                  @mousemove="onHistoryMouseMove"
+                  @mouseleave="onHistoryMouseLeave"
+                ></canvas>
+
+                <div
+                  v-if="historyTooltip.visible"
+                  class="history-tooltip"
+                  :style="{
+                    left: historyTooltip.x + 'px',
+                    top: historyTooltip.y + 'px'
+                  }"
+                >
+                  <div class="history-tooltip-date">{{ historyTooltip.date }}</div>
+                  <div
+                    v-for="row in historyTooltip.rows"
+                    :key="row.id"
+                    class="history-tooltip-row"
+                  >
+                    <span class="history-tooltip-color" :style="{ background: row.color }"></span>
+                    <span class="history-tooltip-name">{{ row.name }}</span>
+                    <span class="history-tooltip-value">{{ formatCurrency(row.value) }}</span>
+                  </div>
+                  <div class="history-tooltip-total">
+                    <span>Итого:</span>
+                    <strong>{{ formatCurrency(historyTooltip.total) }}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="historyMode === 'all' && historyAccounts.length > 0" class="history-legend">
+                <button
+                  v-for="acc in historyAccounts"
+                  :key="acc.id"
+                  class="history-legend-item"
+                  :class="{ 'is-off': !visibleHistoryAccounts.has(acc.id) }"
+                  @click="toggleHistoryAccount(acc.id)"
+                >
+                  <span class="history-legend-color" :style="{ background: acc.color }"></span>
+                  <span class="history-legend-name">{{ acc.name }}</span>
+                  <span class="history-legend-value">
+                    {{ formatCompactCurrency(acc.lastBalance) }}
+                  </span>
+                </button>
+              </div>
+
+              <div class="history-footer">
+                <div class="history-stats">
+                  <div class="history-stat">
+                    <span class="history-stat-label">Изменение за период</span>
+                    <span class="history-stat-value" :class="historyChangeClass">
+                      {{ historyChange >= 0 ? '+' : '' }}{{ formatCurrency(historyChange) }}
+                      <small>({{ historyChangePercent > 0 ? '+' : '' }}{{ historyChangePercent }}%)</small>
+                    </span>
+                  </div>
+                  <div class="history-stat">
+                    <span class="history-stat-label">Начало периода</span>
+                    <span class="history-stat-value">{{ formatCurrency(historyStartBalance) }}</span>
+                  </div>
+                  <div class="history-stat">
+                    <span class="history-stat-label">Конец периода</span>
+                    <span class="history-stat-value">{{ formatCurrency(historyEndBalance) }}</span>
+                  </div>
+                  <div class="history-stat">
+                    <span class="history-stat-label">Минимум / Максимум</span>
+                    <span class="history-stat-value">
+                      {{ formatCompactCurrency(historyMinTotal) }} /
+                      {{ formatCompactCurrency(historyMaxTotal) }}
+                    </span>
+                  </div>
+                </div>
+                <div class="history-period-label">
+                  {{ historyPeriodLabel }}
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- 3.3 Распределение + Активные/неактивные -->
+        <div class="analytics-row">
+          <div v-if="activeAccounts.length > 0" class="card distribution-card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <i class="fas fa-chart-pie"></i> Распределение баланса
+              </h3>
+              <span class="distribution-total">
+                Всего: <strong>{{ formatCurrency(totalBalance) }}</strong>
+              </span>
+            </div>
+
+            <div v-if="distributionData.length > 0" class="distribution-body">
+              <div class="distribution-chart-wrapper">
+                <canvas ref="distributionCanvas" class="distribution-canvas"></canvas>
+              </div>
+
+              <div class="distribution-legend">
+                <div
+                  v-for="item in distributionData"
+                  :key="item.id"
+                  class="legend-row"
+                >
+                  <span class="legend-color" :style="{ backgroundColor: item.color }"></span>
+                  <span class="legend-name" :title="item.name">{{ item.name }}</span>
+                  <span class="legend-value">{{ formatCurrency(item.balance) }}</span>
+                  <span class="legend-percent">{{ item.percent }}%</span>
+                </div>
+              </div>
+            </div>
+
+            <div v-else class="distribution-empty">
+              <i class="fas fa-chart-pie"></i>
+              <p>Нет активных счетов с положительным балансом</p>
+            </div>
+          </div>
+
+          <div v-if="accounts.length > 0" class="card accounts-ratio-card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <i class="fas fa-toggle-on"></i> Активные и неактивные
+              </h3>
+            </div>
+
+            <div class="accounts-ratio-body">
+              <div class="ratio-chart-wrapper">
+                <canvas ref="ratioCanvas" class="ratio-canvas"></canvas>
+                <div class="ratio-center-label">
+                  <div class="ratio-center-percent">{{ activeRatioPercent }}%</div>
+                  <div class="ratio-center-caption">активных</div>
+                </div>
+              </div>
+
+              <div class="ratio-stats">
+                <div class="ratio-stat-row">
+                  <span class="ratio-color" style="background: #10b981;"></span>
+                  <span class="ratio-label">Активные</span>
+                  <span class="ratio-value">{{ activeAccounts.length }}</span>
+                </div>
+                <div class="ratio-stat-row">
+                  <span class="ratio-color" style="background: #9ca3af;"></span>
+                  <span class="ratio-label">Неактивные</span>
+                  <span class="ratio-value">{{ inactiveAccounts.length }}</span>
+                </div>
+                <div class="ratio-stat-row total">
+                  <span class="ratio-color" style="background: transparent;"></span>
+                  <span class="ratio-label">Всего</span>
+                  <span class="ratio-value">{{ accounts.length }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3.4 Топ счетов по обороту -->
+        <div v-if="topAccountsByTurnover.length > 0" class="card top-accounts-card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="fas fa-trophy"></i> Топ счетов по обороту
+            </h3>
+            <span class="metrics-period">входящие + исходящие переводы</span>
+          </div>
+
+          <div class="desktop-table">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Счёт</th>
+                  <th>Входящие</th>
+                  <th>Исходящие</th>
+                  <th>Оборот</th>
+                  <th>Переводов</th>
+                  <th>Доля</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(item, index) in topAccountsByTurnover" :key="item.name">
+                  <td>
+                    <span class="rank-badge" :class="'rank-' + Math.min(index + 1, 3)">
+                      {{ index + 1 }}
+                    </span>
+                  </td>
+                  <td><strong>{{ item.name }}</strong></td>
+                  <td class="text-success">{{ formatCurrency(item.incoming) }}</td>
+                  <td class="text-danger">{{ formatCurrency(item.outgoing) }}</td>
+                  <td><strong>{{ formatCurrency(item.turnover) }}</strong></td>
+                  <td>{{ item.count }}</td>
+                  <td>
+                    <div class="turnover-progress">
+                      <div class="turnover-bar">
+                        <div class="turnover-fill" :style="{ width: item.turnoverPercent + '%' }"></div>
+                      </div>
+                      <span class="turnover-percent">{{ item.turnoverPercent }}%</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mobile-cards">
+            <div
+              v-for="(item, index) in topAccountsByTurnover"
+              :key="item.name"
+              class="top-account-card"
+            >
+              <div class="top-account-header">
+                <span class="rank-badge" :class="'rank-' + Math.min(index + 1, 3)">
+                  {{ index + 1 }}
+                </span>
+                <span class="top-account-name">{{ item.name }}</span>
+                <span class="top-account-turnover">{{ formatCurrency(item.turnover) }}</span>
+              </div>
+              <div class="top-account-details">
+                <div class="top-detail">
+                  <span class="top-detail-label">Входящие</span>
+                  <span class="top-detail-value text-success">{{ formatCurrency(item.incoming) }}</span>
+                </div>
+                <div class="top-detail">
+                  <span class="top-detail-label">Исходящие</span>
+                  <span class="top-detail-value text-danger">{{ formatCurrency(item.outgoing) }}</span>
+                </div>
+                <div class="top-detail">
+                  <span class="top-detail-label">Переводов</span>
+                  <span class="top-detail-value">{{ item.count }}</span>
+                </div>
+                <div class="top-detail">
+                  <span class="top-detail-label">Доля</span>
+                  <span class="top-detail-value">{{ item.turnoverPercent }}%</span>
+                </div>
+              </div>
+              <div class="turnover-bar mobile">
+                <div class="turnover-fill" :style="{ width: item.turnoverPercent + '%' }"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3.5 Топ контрагентов -->
+        <div v-if="topAccountPairs.length > 0" class="card top-pairs-card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="fas fa-people-arrows"></i> Топ контрагентов
+            </h3>
+            <span class="metrics-period">самые активные пары счёт → счёт</span>
+          </div>
+
+          <div class="desktop-table">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Откуда</th>
+                  <th></th>
+                  <th>Куда</th>
+                  <th>Сумма</th>
+                  <th>Переводов</th>
+                  <th>Доля</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(pair, index) in topAccountPairs" :key="pair.key">
+                  <td>
+                    <span class="rank-badge" :class="'rank-' + Math.min(index + 1, 3)">
+                      {{ index + 1 }}
+                    </span>
+                  </td>
+                  <td>{{ pair.source }}</td>
+                  <td class="pair-arrow"><i class="fas fa-arrow-right"></i></td>
+                  <td>{{ pair.destination }}</td>
+                  <td><strong>{{ formatCurrency(pair.amount) }}</strong></td>
+                  <td>{{ pair.count }}</td>
+                  <td>
+                    <div class="turnover-progress">
+                      <div class="turnover-bar">
+                        <div class="turnover-fill" :style="{ width: pair.percent + '%' }"></div>
+                      </div>
+                      <span class="turnover-percent">{{ pair.percent }}%</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mobile-cards">
+            <div v-for="(pair, index) in topAccountPairs" :key="pair.key" class="pair-card">
+              <div class="pair-header">
+                <span class="rank-badge" :class="'rank-' + Math.min(index + 1, 3)">
+                  {{ index + 1 }}
+                </span>
+                <span class="pair-amount">{{ formatCurrency(pair.amount) }}</span>
+              </div>
+              <div class="pair-route">
+                <span class="pair-account">{{ pair.source }}</span>
+                <i class="fas fa-arrow-right pair-arrow-icon"></i>
+                <span class="pair-account">{{ pair.destination }}</span>
+              </div>
+              <div class="pair-footer">
+                <span>{{ pair.count }} переводов</span>
+                <span class="pair-percent">{{ pair.percent }}%</span>
+              </div>
+              <div class="turnover-bar mobile">
+                <div class="turnover-fill" :style="{ width: pair.percent + '%' }"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3.6 Санкей -->
+        <div
+          v-if="sankeyData.nodes.length > 1"
+          class="card sankey-card"
+        >
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="fas fa-diagram-project"></i> Потоки между счетами
+            </h3>
+            <span class="metrics-period">кто кому сколько перевёл</span>
+          </div>
+
+          <div class="sankey-body">
+            <canvas ref="sankeyCanvas" class="sankey-canvas"></canvas>
+          </div>
+
+          <div class="sankey-footer">
+            <div class="sankey-legend">
+              <span class="sankey-legend-item">
+                <span class="sankey-legend-color" style="background: #ef4444;"></span>
+                Исходящие (слева)
+              </span>
+              <span class="sankey-legend-item">
+                <span class="sankey-legend-color" style="background: #10b981;"></span>
+                Входящие (справа)
+              </span>
+            </div>
+            <div class="sankey-summary">
+              <span>Счетов: <strong>{{ sankeyData.nodes.length }}</strong></span>
+              <span>Связей: <strong>{{ sankeyData.links.length }}</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3.7 Активность переводов -->
+        <div v-if="activityData.length > 0" class="card activity-card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="fas fa-chart-column"></i> Активность переводов
+            </h3>
+            <div class="activity-range">
+              <button
+                v-for="range in activityRanges"
+                :key="range.value"
+                class="range-btn"
+                :class="{ active: activityRange === range.value }"
+                @click.stop="activityRange = range.value"
+              >
+                {{ range.label }}
+              </button>
+            </div>
+          </div>
+
+          <div class="activity-body">
+            <canvas ref="activityCanvas" class="activity-canvas"></canvas>
+          </div>
+
+          <div class="activity-footer">
+            <div class="activity-summary">
+              <span class="activity-summary-item">
+                <strong>{{ activityTotalCount }}</strong> переводов
+              </span>
+              <span class="activity-summary-item">
+                на сумму <strong>{{ formatCurrency(activityTotalAmount) }}</strong>
+              </span>
+              <span v-if="activityBusiestDay" class="activity-summary-item">
+                пик: <strong>{{ activityBusiestDay.label }}</strong>
+                ({{ activityBusiestDay.count }} переводов)
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 4. ПЕРЕВОДЫ                                                  -->
+    <!-- ============================================================ -->
     <div class="card">
       <div class="card-header">
         <h3 class="card-title">
@@ -1094,21 +1143,22 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import apiService from '../services/api.js'
 
 // =============================================================================
-// Константы Sankey (виртуальная система координат + минимальная ширина canvas)
+// Константы
 // =============================================================================
 const SANKEY_VIRTUAL_W = 900
 const SANKEY_MIN_CANVAS_WIDTH = 560
+const ANALYTICS_RANGE_DAYS = 90
+const ANALYTICS_EXPANDED_KEY = 'accounts:analyticsExpanded'
 
-// =============================================================================
-// Утилиты (чистые функции, вне setup)
-// =============================================================================
 const DISTRIBUTION_COLORS = [
   '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
   '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#6366f1',
   '#14b8a6', '#a855f7'
 ]
 
-/** Возвращает ключ даты в формате YYYY-MM-DD (локальное время). */
+// =============================================================================
+// Утилиты
+// =============================================================================
 const formatDateKey = (d) => {
   const year = d.getFullYear()
   const month = String(d.getMonth() + 1).padStart(2, '0')
@@ -1116,16 +1166,16 @@ const formatDateKey = (d) => {
   return `${year}-${month}-${day}`
 }
 
-/** Безопасный parseFloat: null/undefined/NaN → 0. */
 const toNumber = (value) => {
   const n = parseFloat(value)
   return Number.isFinite(n) ? n : 0
 }
 
-/**
- * Настраивает canvas под Retina и возвращает { ctx, cssWidth, cssHeight }.
- * Централизует boilerplate dpr/scale/clearRect.
- */
+const parentWidth = (canvas, fallback = 800) => {
+  const wrapper = canvas.parentElement
+  return wrapper ? wrapper.clientWidth : fallback
+}
+
 const setupCanvas = (canvas, cssWidth, cssHeight) => {
   const dpr = window.devicePixelRatio || 1
   canvas.width = cssWidth * dpr
@@ -1139,23 +1189,8 @@ const setupCanvas = (canvas, cssWidth, cssHeight) => {
   return { ctx, cssWidth, cssHeight }
 }
 
-/**
- * Вариант C: canvas с виртуальной системой координат + минимальной шириной.
- *
- * Рисуем в VIRTUAL_W × VIRTUAL_H, а через ctx.scale() подгоняем под факт.
- * Плюс: если родитель уже minWidth, canvas не сжимается меньше minWidth —
- * тогда `.sankey-body` с `overflow-x: auto` даёт горизонтальный скролл.
- *
- * @param {HTMLCanvasElement} canvas
- * @param {number} virtualW  — виртуальная ширина (логические пиксели)
- * @param {number} virtualH  — виртуальная высота (логические пиксели)
- * @param {number} minScale  — минимальный масштаб (защита от слишком мелкого шрифта)
- * @param {number} minWidth  — минимальная фактическая ширина canvas в CSS-пикселях
- * @returns {{ ctx, scale, cssWidth, cssHeight }}
- */
 const setupCanvasVirtual = (canvas, virtualW, virtualH, minScale = 0.6, minWidth = 0) => {
   const measuredWidth = parentWidth(canvas, virtualW)
-  // ✅ Не даём canvas стать уже, чем minWidth — иначе не будет скролла до конца
   const cssWidth = Math.max(measuredWidth, minWidth)
   const scale = Math.max(minScale, Math.min(1, cssWidth / virtualW))
   const cssHeight = virtualH * scale
@@ -1173,10 +1208,20 @@ const setupCanvasVirtual = (canvas, virtualW, virtualH, minScale = 0.6, minWidth
   return { ctx, scale, cssWidth, cssHeight }
 }
 
-/** Ширина родителя canvas или fallback. */
-const parentWidth = (canvas, fallback = 800) => {
-  const wrapper = canvas.parentElement
-  return wrapper ? wrapper.clientWidth : fallback
+const readAnalyticsExpanded = () => {
+  try {
+    return localStorage.getItem(ANALYTICS_EXPANDED_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+const writeAnalyticsExpanded = (value) => {
+  try {
+    localStorage.setItem(ANALYTICS_EXPANDED_KEY, value ? 'true' : 'false')
+  } catch {
+    /* no-op */
+  }
 }
 
 export default {
@@ -1210,6 +1255,20 @@ export default {
     const totalBalance = computed(() =>
       activeAccounts.value.reduce((sum, a) => sum + toNumber(a.balance), 0)
     )
+
+    // =========================================================================
+    // Состояние — сворачивание аналитики
+    // =========================================================================
+    const analyticsExpanded = ref(readAnalyticsExpanded())
+
+    const toggleAnalytics = () => {
+      analyticsExpanded.value = !analyticsExpanded.value
+      writeAnalyticsExpanded(analyticsExpanded.value)
+      if (analyticsExpanded.value) {
+        // Перерисовываем canvas'ы после того, как Vue отрендерит блок
+        scheduleAllDraws()
+      }
+    }
 
     // =========================================================================
     // Состояние — динамика баланса (2.1)
@@ -1338,7 +1397,7 @@ export default {
     })
 
     // =========================================================================
-    // Состояние — переводы
+    // Состояние — переводы (только для таблицы истории)
     // =========================================================================
     const transfers = ref([])
     const currentPage = ref(1)
@@ -1378,39 +1437,127 @@ export default {
     const totalPages = computed(() => Math.ceil(totalCount.value / pageSize.value))
 
     // =========================================================================
-    // Computed — метрики переводов (1.4)
+    // Состояние — аналитика переводов (с бэкенда)
     // =========================================================================
-    const transfersCount = computed(() => transfers.value.length)
+    const analyticsRaw = ref(null)
+    const analyticsLoading = ref(false)
+    const analyticsError = ref('')
 
-    const totalTransfersAmount = computed(() =>
-      transfers.value.reduce((sum, t) => sum + toNumber(t.amount), 0)
+    const analyticsMetrics = computed(() => {
+      return analyticsRaw.value?.metrics || {
+        count: 0,
+        total_amount: 0,
+        average: 0,
+        median: 0,
+        max: 0,
+        min: 0,
+      }
+    })
+
+    const analyticsPeriodLabel = computed(() => {
+      const period = analyticsRaw.value?.period
+      if (!period) return `за последние ${ANALYTICS_RANGE_DAYS} дней`
+      const from = new Date(period.date_from).toLocaleDateString('ru-RU', {
+        day: '2-digit', month: '2-digit', year: 'numeric'
+      })
+      const to = new Date(period.date_to).toLocaleDateString('ru-RU', {
+        day: '2-digit', month: '2-digit', year: 'numeric'
+      })
+      return `за период ${from} — ${to}`
+    })
+
+    const topAccountsByTurnover = computed(() => {
+      const list = analyticsRaw.value?.top_accounts || []
+      return list.map((item) => ({
+        name: item.name,
+        incoming: item.incoming,
+        outgoing: item.outgoing,
+        turnover: item.turnover,
+        count: item.count,
+        turnoverPercent: item.turnover_percent.toFixed(1),
+      }))
+    })
+
+    const topAccountPairs = computed(() => {
+      const list = analyticsRaw.value?.top_pairs || []
+      return list.map((item) => ({
+        key: item.key,
+        source: item.source,
+        destination: item.destination,
+        amount: item.amount,
+        count: item.count,
+        percent: item.percent.toFixed(1),
+      }))
+    })
+
+    const sankeyCanvas = ref(null)
+
+    const sankeyData = computed(() => {
+      const raw = analyticsRaw.value?.sankey
+      if (!raw || raw.nodes.length < 2) return { nodes: [], links: [] }
+
+      const idToName = new Map(raw.nodes.map((n) => [n.id, n.name]))
+
+      return {
+        nodes: raw.nodes.map((n) => ({
+          name: n.name,
+          incoming: n.incoming,
+          outgoing: n.outgoing,
+          total: n.total,
+        })),
+        links: raw.links.map((l) => ({
+          source: idToName.get(l.source) || '',
+          destination: idToName.get(l.destination) || '',
+          amount: l.amount,
+        })),
+      }
+    })
+
+    // =========================================================================
+    // Состояние — активность (1.3)
+    // =========================================================================
+    const activityCanvas = ref(null)
+    const activityRange = ref(30)
+    const activityRanges = [
+      { value: 7, label: '7 дней' },
+      { value: 14, label: '14 дней' },
+      { value: 30, label: '30 дней' },
+      { value: 90, label: '90 дней' }
+    ]
+
+    const activityData = computed(() => {
+      const raw = analyticsRaw.value?.daily_activity || []
+      const days = activityRange.value
+      const sliced = raw.slice(-days)
+      return sliced.map((d) => ({
+        date: new Date(d.date),
+        dateKey: d.date,
+        count: d.count,
+        amount: d.amount,
+      }))
+    })
+
+    const activityTotalCount = computed(() =>
+      activityData.value.reduce((s, d) => s + d.count, 0)
     )
 
-    const averageTransfer = computed(() =>
-      transfersCount.value === 0 ? 0 : totalTransfersAmount.value / transfersCount.value
+    const activityTotalAmount = computed(() =>
+      activityData.value.reduce((s, d) => s + d.amount, 0)
     )
 
-    const maxTransfer = computed(() => {
-      if (transfersCount.value === 0) return 0
-      return Math.max(...transfers.value.map((t) => toNumber(t.amount)))
-    })
-
-    const minTransfer = computed(() => {
-      if (transfersCount.value === 0) return 0
-      return Math.min(...transfers.value.map((t) => toNumber(t.amount)))
-    })
-
-    const medianTransfer = computed(() => {
-      if (transfersCount.value === 0) return 0
-      const amounts = transfers.value.map((t) => toNumber(t.amount)).sort((a, b) => a - b)
-      const mid = Math.floor(amounts.length / 2)
-      return amounts.length % 2 === 0
-        ? (amounts[mid - 1] + amounts[mid]) / 2
-        : amounts[mid]
+    const activityBusiestDay = computed(() => {
+      if (activityData.value.length === 0) return null
+      const max = activityData.value.reduce(
+        (best, d) => (d.count > best.count ? d : best),
+        activityData.value[0]
+      )
+      if (max.count === 0) return null
+      const label = max.date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
+      return { ...max, label }
     })
 
     // =========================================================================
-    // Computed — последняя активность (1.6)
+    // Последняя активность по счетам — из таблицы истории
     // =========================================================================
     const accountLastActivity = computed(() => {
       const map = new Map()
@@ -1464,171 +1611,9 @@ export default {
     }
 
     // =========================================================================
-    // Computed — топ счетов (1.2), топ пар (1.8), санкей (1.9)
-    // =========================================================================
-    const topAccountsByTurnover = computed(() => {
-      if (transfers.value.length === 0) return []
-      const map = new Map()
-      const ensure = (name) => {
-        if (!name) return null
-        if (!map.has(name)) map.set(name, { name, incoming: 0, outgoing: 0, count: 0 })
-        return map.get(name)
-      }
-      transfers.value.forEach((t) => {
-        const amount = toNumber(t.amount)
-        const src = ensure(t.source_account_name)
-        const dst = ensure(t.destination_account_name)
-        if (src) { src.outgoing += amount; src.count += 1 }
-        if (dst) { dst.incoming += amount; dst.count += 1 }
-      })
-      const list = Array.from(map.values()).map((item) => ({
-        ...item,
-        turnover: item.incoming + item.outgoing
-      }))
-      const totalTurnover = list.reduce((sum, i) => sum + i.turnover, 0)
-      return list
-        .map((item) => ({
-          ...item,
-          turnoverPercent: totalTurnover > 0
-            ? ((item.turnover / totalTurnover) * 100).toFixed(1)
-            : '0.0'
-        }))
-        .sort((a, b) => b.turnover - a.turnover)
-    })
-
-    const topAccountPairs = computed(() => {
-      if (transfers.value.length === 0) return []
-      const map = new Map()
-      transfers.value.forEach((t) => {
-        const s = t.source_account_name
-        const d = t.destination_account_name
-        if (!s || !d) return
-        const key = `${s}→${d}`
-        const amount = toNumber(t.amount)
-        if (!map.has(key)) {
-          map.set(key, { key, source: s, destination: d, amount: 0, count: 0 })
-        }
-        const entry = map.get(key)
-        entry.amount += amount
-        entry.count += 1
-      })
-      const list = Array.from(map.values())
-      const totalAmount = list.reduce((sum, i) => sum + i.amount, 0)
-      return list
-        .map((item) => ({
-          ...item,
-          percent: totalAmount > 0
-            ? ((item.amount / totalAmount) * 100).toFixed(1)
-            : '0.0'
-        }))
-        .sort((a, b) => b.amount - a.amount)
-        .slice(0, 10)
-    })
-
-    const sankeyCanvas = ref(null)
-
-    const sankeyData = computed(() => {
-      if (transfers.value.length === 0) return { nodes: [], links: [] }
-
-      const nodeTotals = new Map()
-      const linkMap = new Map()
-
-      transfers.value.forEach((t) => {
-        const s = t.source_account_name
-        const d = t.destination_account_name
-        if (!s || !d) return
-        const amount = toNumber(t.amount)
-
-        if (!nodeTotals.has(s)) nodeTotals.set(s, { name: s, incoming: 0, outgoing: 0 })
-        if (!nodeTotals.has(d)) nodeTotals.set(d, { name: d, incoming: 0, outgoing: 0 })
-
-        nodeTotals.get(s).outgoing += amount
-        nodeTotals.get(d).incoming += amount
-
-        const key = `${s}→${d}`
-        if (!linkMap.has(key)) linkMap.set(key, { source: s, destination: d, amount: 0 })
-        linkMap.get(key).amount += amount
-      })
-
-      const nodes = Array.from(nodeTotals.values())
-        .map((n) => ({ ...n, total: n.incoming + n.outgoing }))
-        .sort((a, b) => b.total - a.total)
-        .slice(0, 8)
-
-      const nodeNames = new Set(nodes.map((n) => n.name))
-      const links = Array.from(linkMap.values())
-        .filter((l) => nodeNames.has(l.source) && nodeNames.has(l.destination))
-        .sort((a, b) => b.amount - a.amount)
-
-      return { nodes, links }
-    })
-
-    // =========================================================================
-    // Состояние — активность (1.3)
-    // =========================================================================
-    const activityCanvas = ref(null)
-    const activityRange = ref(30)
-    const activityRanges = [
-      { value: 7, label: '7 дней' },
-      { value: 14, label: '14 дней' },
-      { value: 30, label: '30 дней' },
-      { value: 90, label: '90 дней' }
-    ]
-
-    const activityData = computed(() => {
-      const days = activityRange.value
-      const now = new Date()
-      now.setHours(23, 59, 59, 999)
-      const result = []
-      for (let i = days - 1; i >= 0; i--) {
-        const d = new Date(now)
-        d.setDate(d.getDate() - i)
-        d.setHours(0, 0, 0, 0)
-        result.push({
-          date: new Date(d),
-          dateKey: formatDateKey(d),
-          count: 0,
-          amount: 0
-        })
-      }
-      const map = new Map(result.map((r) => [r.dateKey, r]))
-      transfers.value.forEach((t) => {
-        if (!t.timestamp) return
-        const d = new Date(t.timestamp)
-        if (Number.isNaN(d.getTime())) return
-        const entry = map.get(formatDateKey(d))
-        if (entry) {
-          entry.count += 1
-          entry.amount += toNumber(t.amount)
-        }
-      })
-      return result
-    })
-
-    const activityTotalCount = computed(() =>
-      activityData.value.reduce((s, d) => s + d.count, 0)
-    )
-
-    const activityTotalAmount = computed(() =>
-      activityData.value.reduce((s, d) => s + d.amount, 0)
-    )
-
-    const activityBusiestDay = computed(() => {
-      if (activityData.value.length === 0) return null
-      const max = activityData.value.reduce(
-        (best, d) => (d.count > best.count ? d : best),
-        activityData.value[0]
-      )
-      if (max.count === 0) return null
-      const label = max.date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
-      return { ...max, label }
-    })
-
-    // =========================================================================
     // Отрисовка графиков
     // =========================================================================
 
-    // --- 2.1 Динамика баланса ---
     const drawHistoryChart = () => {
       const canvas = historyCanvas.value
       if (!canvas) return
@@ -1739,7 +1724,6 @@ export default {
         }
       })
 
-      // Подписи по оси X с защитой от наложения
       ctx.fillStyle = '#6b7280'
       ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       ctx.textAlign = 'center'
@@ -1821,7 +1805,6 @@ export default {
       historyTooltip.value.visible = false
     }
 
-    // --- 1.1 Распределение ---
     const drawDistributionChart = () => {
       const canvas = distributionCanvas.value
       if (!canvas) return
@@ -1877,7 +1860,6 @@ export default {
       })
     }
 
-    // --- 1.5 Соотношение ---
     const drawRatioChart = () => {
       const canvas = ratioCanvas.value
       if (!canvas) return
@@ -1925,7 +1907,6 @@ export default {
       ctx.fill()
     }
 
-    // --- 1.9 Санкей (вариант C + min-width для горизонтального скролла) ---
     const drawSankey = () => {
       const canvas = sankeyCanvas.value
       if (!canvas) return
@@ -1939,8 +1920,6 @@ export default {
       const VIRTUAL_W = SANKEY_VIRTUAL_W
       const VIRTUAL_H = Math.max(520, nodes.length * 90)
 
-      // ✅ Передаём minWidth — setupCanvasVirtual не даст canvas стать уже,
-      // иначе скролл не дойдёт до правого края (пустое место справа).
       const { ctx } = setupCanvasVirtual(
         canvas,
         VIRTUAL_W,
@@ -1949,7 +1928,6 @@ export default {
         SANKEY_MIN_CANVAS_WIDTH
       )
 
-      // Все размеры ниже — в виртуальных пикселях, масштабируются через ctx.scale()
       const paddingX = 130
       const paddingY = 30
       const nodeWidth = 22
@@ -2089,7 +2067,6 @@ export default {
       })
     }
 
-    // --- 1.3 Активность ---
     const drawActivityChart = () => {
       const canvas = activityCanvas.value
       if (!canvas) return
@@ -2257,6 +2234,29 @@ export default {
       }
     }
 
+    const loadTransferAnalytics = async () => {
+      analyticsLoading.value = true
+      analyticsError.value = ''
+      try {
+        const dateTo = new Date()
+        const dateFrom = new Date()
+        dateFrom.setDate(dateFrom.getDate() - ANALYTICS_RANGE_DAYS + 1)
+
+        const data = await apiService.getTransferAnalytics(
+          formatDateKey(dateFrom),
+          formatDateKey(dateTo)
+        )
+        analyticsRaw.value = data
+        scheduleAllDraws()
+      } catch (error) {
+        console.error('Error loading transfer analytics:', error)
+        analyticsError.value = 'Не удалось загрузить аналитику переводов'
+        analyticsRaw.value = null
+      } finally {
+        analyticsLoading.value = false
+      }
+    }
+
     // =========================================================================
     // Переключения видимости
     // =========================================================================
@@ -2416,6 +2416,7 @@ export default {
         }
         await loadAccounts()
         await loadTransfers()
+        await loadTransferAnalytics()
         await loadBalanceHistory()
       } catch (error) {
         console.error('Error creating transfer:', error)
@@ -2463,6 +2464,7 @@ export default {
         closeEditTransferModal()
         await loadAccounts()
         await loadTransfers()
+        await loadTransferAnalytics()
         await loadBalanceHistory()
       } catch (error) {
         console.error('Error updating transfer:', error)
@@ -2482,6 +2484,7 @@ export default {
         if (transfers.value.length === 1 && currentPage.value > 1) currentPage.value--
         await loadAccounts()
         await loadTransfers()
+        await loadTransferAnalytics()
         await loadBalanceHistory()
       } catch (error) {
         console.error('Error deleting transfer:', error)
@@ -2570,14 +2573,26 @@ export default {
       { immediate: true }
     )
 
-    watch(distributionData, () => scheduleAllDraws())
-    watch(activityRange, () => scheduleAllDraws())
-    watch([sankeyData, topAccountPairs], () => scheduleAllDraws())
+    watch(distributionData, () => {
+      if (analyticsExpanded.value) scheduleAllDraws()
+    })
+    watch(activityRange, () => {
+      if (analyticsExpanded.value) scheduleAllDraws()
+    })
+    watch([sankeyData, topAccountPairs], () => {
+      if (analyticsExpanded.value) scheduleAllDraws()
+    })
     watch(historyRange, () => loadBalanceHistory())
-    watch(historyMode, () => scheduleHistoryDraw())
-    watch(visibleHistoryAccounts, () => scheduleHistoryDraw(), { deep: true })
+    watch(historyMode, () => {
+      if (analyticsExpanded.value) scheduleHistoryDraw()
+    })
+    watch(visibleHistoryAccounts, () => {
+      if (analyticsExpanded.value) scheduleHistoryDraw()
+    }, { deep: true })
 
-    const handleResize = () => scheduleAllDraws()
+    const handleResize = () => {
+      if (analyticsExpanded.value) scheduleAllDraws()
+    }
 
     // =========================================================================
     // Lifecycle
@@ -2586,10 +2601,13 @@ export default {
       await Promise.all([
         loadAccounts(),
         loadTransfers(),
-        loadBalanceHistory()
+        loadBalanceHistory(),
+        loadTransferAnalytics()
       ])
       window.addEventListener('resize', handleResize)
-      scheduleAllDraws()
+      if (analyticsExpanded.value) {
+        scheduleAllDraws()
+      }
     })
 
     onBeforeUnmount(() => {
@@ -2605,6 +2623,9 @@ export default {
       showAccountModal, showBalanceModal, showDeleteModal,
       editingAccount, balanceAccount, accountToDelete, newBalance,
       formData, totalBalance, activeAccountsCount, expandedAccounts,
+
+      // Сворачивание аналитики
+      analyticsExpanded, toggleAnalytics,
 
       // 2.1 Динамика баланса
       historyCanvas, historyRange, historyRanges, historyMode,
@@ -2624,24 +2645,24 @@ export default {
       // 1.6 Активность аккаунта
       getLastActivityLabel, getActivityClass, getActivityIcon,
 
-      // 1.2 Топ счетов
+      // 1.4 Метрики (из бэкенда)
+      analyticsRaw, analyticsLoading, analyticsError,
+      analyticsMetrics, analyticsPeriodLabel,
+
+      // 1.2 Топ счетов (из бэкенда)
       topAccountsByTurnover,
 
-      // 1.8 Топ пар
+      // 1.8 Топ пар (из бэкенда)
       topAccountPairs,
 
-      // 1.9 Санкей
+      // 1.9 Санкей (из бэкенда)
       sankeyCanvas, sankeyData,
 
-      // 1.3 Активность
+      // 1.3 Активность (из бэкенда)
       activityCanvas, activityRange, activityRanges, activityData,
       activityTotalCount, activityTotalAmount, activityBusiestDay,
 
-      // 1.4 Метрики
-      transfersCount, totalTransfersAmount, averageTransfer,
-      maxTransfer, minTransfer, medianTransfer,
-
-      // Переводы
+      // Переводы (только для таблицы истории)
       transfers, currentPage, totalPages, totalCount, transferLoading,
       showEditTransferModal, showDeleteTransferModal,
       editingTransfer, transferToDelete, transferData, editTransferData,
@@ -2764,6 +2785,83 @@ export default {
 .text-danger { color: var(--danger-color); }
 .text-muted { color: var(--gray-color); }
 .text-warning { color: var(--warning-color); font-weight: 600; }
+
+/* ===== Аналитика — сворачиваемый блок ===== */
+.analytics-section {
+  margin-bottom: 1.5rem;
+}
+
+.analytics-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.analytics-section-header:hover {
+  background: #f9fafb;
+}
+
+.analytics-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--dark-color);
+  min-width: 0;
+}
+
+.analytics-section-title i {
+  color: var(--primary-color);
+}
+
+.analytics-section-hint {
+  font-size: 0.8rem;
+  color: var(--gray-color);
+  font-weight: 400;
+  font-style: italic;
+  margin-left: 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.analytics-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--light-color);
+  background: var(--white);
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--primary-color);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.analytics-toggle-btn:hover {
+  background: var(--light-color);
+  border-color: var(--primary-color);
+}
+
+.analytics-toggle-btn i {
+  font-size: 0.75rem;
+}
+
+.analytics-section-body {
+  margin-top: 1.5rem;
+}
 
 /* ===== 2.1 Динамика баланса ===== */
 .balance-history-card {
@@ -3379,13 +3477,10 @@ export default {
   width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;  /* плавный скролл на iOS */
+  -webkit-overflow-scrolling: touch;
   padding: 0.5rem 0;
 }
 
-/* Размер canvas (включая min-width) задаёт JS через setupCanvasVirtual.
-   Здесь только display: block — без width: 100% и min-width, чтобы
-   не конфликтовать с инлайн-стилями. */
 .sankey-canvas { display: block; }
 
 .sankey-footer {
@@ -3833,6 +3928,8 @@ export default {
   .history-stats { gap: 1rem; }
   .history-stat-value { font-size: 0.85rem; }
   .history-footer { flex-direction: column; align-items: flex-start; }
+  .analytics-section-title { font-size: 1.1rem; }
+  .analytics-section-hint { display: none; }
 }
 
 @media (max-width: 480px) {
@@ -3868,5 +3965,8 @@ export default {
   .history-legend-item { font-size: 0.7rem; padding: 0.25rem 0.5rem; }
   .history-stats { flex-direction: column; gap: 0.5rem; }
   .history-tooltip { min-width: 150px; font-size: 0.7rem; }
+  .analytics-section-header { padding: 0.875rem 1rem; }
+  .analytics-section-title { font-size: 1rem; }
+  .analytics-toggle-btn { font-size: 0.75rem; padding: 0.375rem 0.625rem; }
 }
 </style>
