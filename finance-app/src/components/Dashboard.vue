@@ -185,6 +185,142 @@
       </div>
     </div>
 
+    <!-- ============================================================ -->
+    <!-- ДИНАМИКА БАЛАНСА                                              -->
+    <!-- ============================================================ -->
+    <div v-if="activeAccounts.length > 0" class="card balance-history-card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-chart-line"></i> Динамика баланса
+        </h3>
+        <div class="history-controls">
+          <div class="history-range">
+            <button
+              v-for="range in historyRanges"
+              :key="range.value"
+              class="range-btn"
+              :class="{ active: historyRange === range.value }"
+              @click="historyRange = range.value"
+            >
+              {{ range.label }}
+            </button>
+          </div>
+          <div class="history-mode">
+            <button
+              class="range-btn"
+              :class="{ active: historyMode === 'all' }"
+              @click="historyMode = 'all'"
+            >
+              Все счета
+            </button>
+            <button
+              class="range-btn"
+              :class="{ active: historyMode === 'total' }"
+              @click="historyMode = 'total'"
+            >
+              Только итог
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="history-body">
+        <div v-if="historyLoading" class="history-loading">
+          <i class="fas fa-spinner fa-spin"></i>
+          <span>Загрузка истории...</span>
+        </div>
+
+        <div v-else-if="historyError" class="history-error">
+          <i class="fas fa-exclamation-triangle"></i>
+          <span>{{ historyError }}</span>
+          <button class="btn btn-sm btn-primary" @click="loadBalanceHistory">
+            <i class="fas fa-redo"></i> Повторить
+          </button>
+        </div>
+
+        <template v-else>
+          <div class="history-chart-wrapper">
+            <canvas
+              ref="historyCanvas"
+              class="history-canvas"
+              @mousemove="onHistoryMouseMove"
+              @mouseleave="onHistoryMouseLeave"
+            ></canvas>
+
+            <div
+              v-if="historyTooltip.visible"
+              class="history-tooltip"
+              :style="{
+                left: historyTooltip.x + 'px',
+                top: historyTooltip.y + 'px'
+              }"
+            >
+              <div class="history-tooltip-date">{{ historyTooltip.date }}</div>
+              <div
+                v-for="row in historyTooltip.rows"
+                :key="row.id"
+                class="history-tooltip-row"
+              >
+                <span class="history-tooltip-color" :style="{ background: row.color }"></span>
+                <span class="history-tooltip-name">{{ row.name }}</span>
+                <span class="history-tooltip-value">{{ formatCurrency(row.value) }}</span>
+              </div>
+              <div class="history-tooltip-total">
+                <span>Итого:</span>
+                <strong>{{ formatCurrency(historyTooltip.total) }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="historyMode === 'all' && historyAccounts.length > 0" class="history-legend">
+            <button
+              v-for="acc in historyAccounts"
+              :key="acc.id"
+              class="history-legend-item"
+              :class="{ 'is-off': !visibleHistoryAccounts.has(acc.id) }"
+              @click="toggleHistoryAccount(acc.id)"
+            >
+              <span class="history-legend-color" :style="{ background: acc.color }"></span>
+              <span class="history-legend-name">{{ acc.name }}</span>
+              <span class="history-legend-value">
+                {{ formatCompactCurrency(acc.lastBalance) }}
+              </span>
+            </button>
+          </div>
+
+          <div class="history-footer">
+            <div class="history-stats">
+              <div class="history-stat">
+                <span class="history-stat-label">Изменение за период</span>
+                <span class="history-stat-value" :class="historyChangeClass">
+                  {{ historyChange >= 0 ? '+' : '' }}{{ formatCurrency(historyChange) }}
+                  <small>({{ historyChangePercent > 0 ? '+' : '' }}{{ historyChangePercent }}%)</small>
+                </span>
+              </div>
+              <div class="history-stat">
+                <span class="history-stat-label">Начало периода</span>
+                <span class="history-stat-value">{{ formatCurrency(historyStartBalance) }}</span>
+              </div>
+              <div class="history-stat">
+                <span class="history-stat-label">Конец периода</span>
+                <span class="history-stat-value">{{ formatCurrency(historyEndBalance) }}</span>
+              </div>
+              <div class="history-stat">
+                <span class="history-stat-label">Минимум / Максимум</span>
+                <span class="history-stat-value">
+                  {{ formatCompactCurrency(historyMinTotal) }} /
+                  {{ formatCompactCurrency(historyMaxTotal) }}
+                </span>
+              </div>
+            </div>
+            <div class="history-period-label">
+              {{ historyPeriodLabel }}
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
     <!-- Modal: Добавить транзакцию -->
     <div
       v-if="showAddTransaction"
@@ -273,12 +409,57 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import apiService from '../services/api.js'
+
+// =============================================================================
+// Константы
+// =============================================================================
+const DISTRIBUTION_COLORS = [
+  '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+  '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#6366f1',
+  '#14b8a6', '#a855f7'
+]
+
+// =============================================================================
+// Утилиты
+// =============================================================================
+const formatDateKey = (d) => {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const toNumber = (value) => {
+  const n = parseFloat(value)
+  return Number.isFinite(n) ? n : 0
+}
+
+const parentWidth = (canvas, fallback = 800) => {
+  const wrapper = canvas.parentElement
+  return wrapper ? wrapper.clientWidth : fallback
+}
+
+const setupCanvas = (canvas, cssWidth, cssHeight) => {
+  const dpr = window.devicePixelRatio || 1
+  canvas.width = cssWidth * dpr
+  canvas.height = cssHeight * dpr
+  canvas.style.width = `${cssWidth}px`
+  canvas.style.height = `${cssHeight}px`
+  const ctx = canvas.getContext('2d')
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+  ctx.scale(dpr, dpr)
+  ctx.clearRect(0, 0, cssWidth, cssHeight)
+  return { ctx, cssWidth, cssHeight }
+}
 
 export default {
   name: 'Dashboard',
   setup() {
+    // =========================================================================
+    // Состояние — счета
+    // =========================================================================
     const accounts = ref([])
     const incomeTransactionsList = ref([])
     const expenseTransactionsList = ref([])
@@ -307,7 +488,9 @@ export default {
       expense: 0
     })
 
-    // ===== КАРУСЕЛЬ =====
+    // =========================================================================
+    // Карусель статистики
+    // =========================================================================
     const currentStatIndex = ref(0)
     const touchStartX = ref(0)
     const touchDeltaX = ref(0)
@@ -320,7 +503,6 @@ export default {
       isMobileView.value = window.innerWidth <= 1024
     }
 
-    // Карточки статистики
     const statCards = computed(() => [
       {
         key: 'balance',
@@ -342,19 +524,15 @@ export default {
       }
     ])
 
-    // Позиционирование карточек в стеке (только на мобилке)
-    // Позиционирование карточек в стеке (только на мобилке)
     const cardPosition = (index) => {
       if (!isMobileView.value) return {}
 
       const offset = index - currentStatIndex.value
 
-      // Дальние карточки полностью скрываем
       if (Math.abs(offset) > 1) {
         return { display: 'none' }
       }
 
-      // Активная карточка — ровно по центру
       if (offset === 0) {
         return {
           transform: 'translateX(-50%) scale(1)',
@@ -363,7 +541,6 @@ export default {
         }
       }
 
-      // Соседняя карточка: чуть смещена и чуть меньше
       const direction = offset > 0 ? 1 : -1
       return {
         transform: `translateX(calc(-50% + ${direction * 20}px)) scale(0.94)`,
@@ -372,7 +549,6 @@ export default {
       }
     }
 
-    // Свайп
     const onTouchStart = (e) => {
       if (!isMobileView.value) return
       touchStartX.value = e.touches[0].clientX
@@ -416,13 +592,23 @@ export default {
       window.addEventListener('mouseup', onMouseUp)
     }
 
-    // ===== ВСПОМОГАТЕЛЬНЫЕ =====
+    // =========================================================================
+    // Форматирование
+    // =========================================================================
     const formatCurrency = (value) => {
       if (value === null || value === undefined || isNaN(value)) return '0 ₽'
       return new Intl.NumberFormat('ru-RU', {
         style: 'currency',
         currency: 'RUB'
       }).format(value)
+    }
+
+    const formatCompactCurrency = (value) => {
+      if (value === null || value === undefined || value === '') return '0'
+      const abs = Math.abs(value)
+      if (abs >= 1_000_000) return (value / 1_000_000).toFixed(1) + 'M'
+      if (abs >= 1_000) return (value / 1_000).toFixed(0) + 'k'
+      return String(Math.round(value))
     }
 
     const formatDate = (dateString) => {
@@ -468,7 +654,9 @@ export default {
       return `${monthNames[date.month - 1]} ${date.year}`
     }
 
-    // ===== COMPUTED =====
+    // =========================================================================
+    // Computed — счета
+    // =========================================================================
     const totalBalance = computed(() => {
       return accounts.value
         .filter(acc => acc.is_active)
@@ -479,7 +667,336 @@ export default {
       return accounts.value.filter(acc => acc.is_active)
     })
 
-    // ===== ЗАГРУЗКА СТАТИСТИКИ =====
+    // =========================================================================
+    // Динамика баланса — состояние
+    // =========================================================================
+    const historyCanvas = ref(null)
+    const historyRange = ref(30)
+    const historyRanges = [
+      { value: 7, label: '7 дней' },
+      { value: 30, label: '30 дней' },
+      { value: 90, label: '90 дней' },
+      { value: 180, label: '180 дней' }
+    ]
+    const historyMode = ref('all')
+    const historyLoading = ref(false)
+    const historyError = ref('')
+    const historyRawData = ref(null)
+    const visibleHistoryAccounts = ref(new Set())
+    const historyChartMetrics = ref({
+      paddingLeft: 60, paddingRight: 20, paddingTop: 20, paddingBottom: 40
+    })
+
+    const historyTooltip = ref({
+      visible: false, x: 0, y: 0, date: '', rows: [], total: 0
+    })
+
+    const historyAccounts = computed(() => {
+      if (!historyRawData.value?.accounts) return []
+      return historyRawData.value.accounts.map((acc, index) => {
+        const series = historyRawData.value.results.map((r) => ({
+          date: r.date,
+          value: toNumber(r.accounts[String(acc.id)])
+        }))
+        return {
+          id: acc.id,
+          name: acc.name,
+          color: DISTRIBUTION_COLORS[index % DISTRIBUTION_COLORS.length],
+          series,
+          lastBalance: series.length > 0 ? series[series.length - 1].value : 0
+        }
+      })
+    })
+
+    const historyTotalSeries = computed(() => {
+      if (!historyRawData.value?.results) return []
+      return historyRawData.value.results.map((r) => ({
+        date: r.date,
+        value: toNumber(r.total)
+      }))
+    })
+
+    const historyStartBalance = computed(() => {
+      const s = historyTotalSeries.value
+      return s.length > 0 ? s[0].value : 0
+    })
+
+    const historyEndBalance = computed(() => {
+      const s = historyTotalSeries.value
+      return s.length > 0 ? s[s.length - 1].value : 0
+    })
+
+    const historyChange = computed(() => historyEndBalance.value - historyStartBalance.value)
+
+    const historyChangePercent = computed(() => {
+      if (historyStartBalance.value === 0) return 0
+      return ((historyChange.value / Math.abs(historyStartBalance.value)) * 100).toFixed(1)
+    })
+
+    const historyChangeClass = computed(() => {
+      if (historyChange.value > 0) return 'text-success'
+      if (historyChange.value < 0) return 'text-danger'
+      return ''
+    })
+
+    const historyMinTotal = computed(() => {
+      const s = historyTotalSeries.value
+      return s.length === 0 ? 0 : Math.min(...s.map((p) => p.value))
+    })
+
+    const historyMaxTotal = computed(() => {
+      const s = historyTotalSeries.value
+      return s.length === 0 ? 0 : Math.max(...s.map((p) => p.value))
+    })
+
+    const historyPeriodLabel = computed(() => {
+      const results = historyRawData.value?.results
+      if (!results?.length) return ''
+      const first = results[0].date
+      const last = results[results.length - 1].date
+      return `${formatDateShortLabel(first)} — ${formatDateShortLabel(last)}`
+    })
+
+    const formatDateShortLabel = (iso) => {
+      if (!iso) return ''
+      return new Date(iso).toLocaleDateString('ru-RU', {
+        day: '2-digit', month: '2-digit', year: 'numeric'
+      })
+    }
+
+    // =========================================================================
+    // Динамика баланса — отрисовка
+    // =========================================================================
+    const drawHistoryChart = () => {
+      const canvas = historyCanvas.value
+      if (!canvas) return
+      const totalSeries = historyTotalSeries.value
+
+      if (totalSeries.length === 0) {
+        setupCanvas(canvas, parentWidth(canvas, 900), 100)
+        return
+      }
+
+      const cssWidth = parentWidth(canvas, 900)
+      const cssHeight = 320
+      const { ctx } = setupCanvas(canvas, cssWidth, cssHeight)
+
+      const paddingLeft = 60
+      const paddingRight = 20
+      const paddingTop = 20
+      const paddingBottom = 40
+      historyChartMetrics.value = { paddingLeft, paddingRight, paddingTop, paddingBottom }
+
+      const chartWidth = cssWidth - paddingLeft - paddingRight
+      const chartHeight = cssHeight - paddingTop - paddingBottom
+
+      const visibleSeries = []
+      if (historyMode.value === 'total') {
+        visibleSeries.push({
+          id: 'total', name: 'Итого', color: '#3b82f6',
+          series: totalSeries, isTotal: true
+        })
+      } else {
+        historyAccounts.value.forEach((acc) => {
+          if (visibleHistoryAccounts.value.has(acc.id)) {
+            visibleSeries.push({
+              id: acc.id, name: acc.name, color: acc.color,
+              series: acc.series, isTotal: false
+            })
+          }
+        })
+        visibleSeries.push({
+          id: 'total', name: 'Итого', color: '#111827',
+          series: totalSeries, isTotal: true
+        })
+      }
+
+      const allValues = visibleSeries.flatMap((s) => s.series.map((p) => p.value))
+      let minValue = Math.min(...allValues, 0)
+      let maxValue = Math.max(...allValues, 0)
+      const range = maxValue - minValue || 1
+      minValue -= range * 0.05
+      maxValue += range * 0.05
+
+      const xStep = totalSeries.length > 1 ? chartWidth / (totalSeries.length - 1) : 0
+      const yScale = (v) =>
+        paddingTop + chartHeight - ((v - minValue) / (maxValue - minValue)) * chartHeight
+
+      ctx.strokeStyle = '#e5e7eb'
+      ctx.lineWidth = 1
+      ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      ctx.fillStyle = '#9ca3af'
+      ctx.textAlign = 'right'
+      ctx.textBaseline = 'middle'
+
+      for (let i = 0; i <= 5; i++) {
+        const y = paddingTop + chartHeight - (i / 5) * chartHeight
+        ctx.beginPath()
+        ctx.moveTo(paddingLeft, y)
+        ctx.lineTo(cssWidth - paddingRight, y)
+        ctx.stroke()
+        ctx.fillText(formatCompactCurrency(minValue + ((maxValue - minValue) / 5) * i), paddingLeft - 6, y)
+      }
+
+      if (minValue < 0 && maxValue > 0) {
+        const y0 = yScale(0)
+        ctx.strokeStyle = '#9ca3af'
+        ctx.setLineDash([4, 4])
+        ctx.beginPath()
+        ctx.moveTo(paddingLeft, y0)
+        ctx.lineTo(cssWidth - paddingRight, y0)
+        ctx.stroke()
+        ctx.setLineDash([])
+      }
+
+      visibleSeries.forEach((s) => {
+        if (s.series.length === 0) return
+        ctx.beginPath()
+        ctx.strokeStyle = s.color
+        ctx.lineWidth = s.isTotal ? 3 : 1.75
+        ctx.lineJoin = 'round'
+        ctx.lineCap = 'round'
+
+        s.series.forEach((p, i) => {
+          const x = paddingLeft + i * xStep
+          const y = yScale(p.value)
+          if (i === 0) ctx.moveTo(x, y)
+          else ctx.lineTo(x, y)
+        })
+        ctx.stroke()
+
+        if (s.series.length <= 40) {
+          s.series.forEach((p, i) => {
+            const x = paddingLeft + i * xStep
+            const y = yScale(p.value)
+            ctx.beginPath()
+            ctx.fillStyle = s.color
+            ctx.arc(x, y, s.isTotal ? 3 : 2, 0, 2 * Math.PI)
+            ctx.fill()
+          })
+        }
+      })
+
+      // Подписи по оси X с защитой от наложения
+      ctx.fillStyle = '#6b7280'
+      ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'top'
+
+      const MIN_LABEL_SPACING = 36
+      const maxLabels = Math.max(2, Math.floor(chartWidth / MIN_LABEL_SPACING))
+      const step = Math.max(1, Math.ceil(totalSeries.length / maxLabels))
+
+      let lastLabelX = -Infinity
+      totalSeries.forEach((p, i) => {
+        const isFirst = i === 0
+        const isLast = i === totalSeries.length - 1
+        const showByStep = i % step === 0
+        if (!isFirst && !isLast && !showByStep) return
+
+        const x = paddingLeft + i * xStep
+        if (x - lastLabelX < MIN_LABEL_SPACING * 0.9) {
+          if (!isFirst) return
+        }
+
+        const label = new Date(p.date).toLocaleDateString('ru-RU', {
+          day: '2-digit', month: '2-digit'
+        })
+        ctx.fillText(label, x, paddingTop + chartHeight + 8)
+        lastLabelX = x
+      })
+    }
+
+    const onHistoryMouseMove = (event) => {
+      const canvas = historyCanvas.value
+      if (!canvas) return
+      const totalSeries = historyTotalSeries.value
+      if (totalSeries.length === 0) return
+
+      const rect = canvas.getBoundingClientRect()
+      const x = event.clientX - rect.left
+      const y = event.clientY - rect.top
+
+      const { paddingLeft, paddingRight } = historyChartMetrics.value
+      const chartWidth = rect.width - paddingLeft - paddingRight
+
+      if (x < paddingLeft || x > rect.width - paddingRight) {
+        historyTooltip.value.visible = false
+        return
+      }
+
+      const xStep = totalSeries.length > 1 ? chartWidth / (totalSeries.length - 1) : 0
+      const idx = Math.round((x - paddingLeft) / xStep)
+      const clampedIdx = Math.max(0, Math.min(totalSeries.length - 1, idx))
+      const point = totalSeries[clampedIdx]
+
+      const rows = []
+      if (historyMode.value === 'total') {
+        rows.push({ id: 'total', name: 'Итого', color: '#3b82f6', value: point.value })
+      } else {
+        historyAccounts.value.forEach((acc) => {
+          if (!visibleHistoryAccounts.value.has(acc.id)) return
+          const p = acc.series[clampedIdx]
+          if (p) {
+            rows.push({ id: acc.id, name: acc.name, color: acc.color, value: p.value })
+          }
+        })
+      }
+
+      historyTooltip.value = {
+        visible: true,
+        x,
+        y,
+        date: new Date(point.date).toLocaleDateString('ru-RU', {
+          day: '2-digit', month: '2-digit', year: 'numeric'
+        }),
+        rows,
+        total: point.value
+      }
+    }
+
+    const onHistoryMouseLeave = () => {
+      historyTooltip.value.visible = false
+    }
+
+    const scheduleHistoryDraw = () => {
+      nextTick(() => setTimeout(drawHistoryChart, 50))
+    }
+
+    const loadBalanceHistory = async () => {
+      historyLoading.value = true
+      historyError.value = ''
+      try {
+        const dateTo = new Date()
+        const dateFrom = new Date()
+        dateFrom.setDate(dateFrom.getDate() - historyRange.value + 1)
+
+        const data = await apiService.getBalanceHistory(
+          formatDateKey(dateFrom),
+          formatDateKey(dateTo)
+        )
+        historyRawData.value = data
+        scheduleHistoryDraw()
+      } catch (error) {
+        console.error('Error loading balance history:', error)
+        historyError.value = 'Не удалось загрузить историю баланса. Проверьте соединение.'
+        historyRawData.value = null
+      } finally {
+        historyLoading.value = false
+      }
+    }
+
+    const toggleHistoryAccount = (accountId) => {
+      const s = new Set(visibleHistoryAccounts.value)
+      if (s.has(accountId)) s.delete(accountId)
+      else s.add(accountId)
+      visibleHistoryAccounts.value = s
+      scheduleHistoryDraw()
+    }
+
+    // =========================================================================
+    // Загрузка статистики
+    // =========================================================================
     const loadPreviousMonthStatistics = async () => {
       const nowDate = new Date()
       const currentMonth = nowDate.getMonth() + 1
@@ -505,7 +1022,9 @@ export default {
       }
     }
 
-    // ===== ПРОГНОЗ =====
+    // =========================================================================
+    // Прогноз
+    // =========================================================================
     const daysInMonth = computed(() => {
       const date = new Date()
       return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
@@ -618,7 +1137,9 @@ export default {
       return ''
     })
 
-    // ===== СРАВНЕНИЕ =====
+    // =========================================================================
+    // Сравнение
+    // =========================================================================
     const incomeChange = computed(() => {
       if (previousMonthData.value.income === 0) return 'Нет данных'
       const diff = monthlyIncome.value - previousMonthData.value.income
@@ -665,7 +1186,9 @@ export default {
       return current > previous ? 'text-success' : 'text-danger'
     })
 
-    // ===== КАТЕГОРИИ =====
+    // =========================================================================
+    // Категории
+    // =========================================================================
     const availableCategories = computed(() => {
       const categories =
         newTransaction.value.type === 'income'
@@ -685,7 +1208,9 @@ export default {
       return result
     }
 
-    // ===== МЕТОДЫ =====
+    // =========================================================================
+    // Методы
+    // =========================================================================
     const fetchExchangeRates = async () => {
       exchangeRatesLoading.value = true
       exchangeRatesError.value = false
@@ -770,6 +1295,7 @@ export default {
 
         await loadMonthlyStatistics()
         await loadPreviousMonthStatistics()
+        await loadBalanceHistory()
       } catch (error) {
         console.error('Error loading data:', error)
       } finally {
@@ -806,10 +1332,35 @@ export default {
       }
     }
 
-    // ===== LIFECYCLE =====
+    // =========================================================================
+    // Watchers
+    // =========================================================================
+    watch(
+      historyAccounts,
+      (list) => {
+        if (list.length === 0) return
+        const ids = list.map((a) => a.id)
+        const currentIds = Array.from(visibleHistoryAccounts.value)
+        const sameSet =
+          currentIds.length === ids.length && ids.every((id) => currentIds.includes(id))
+        if (!sameSet) visibleHistoryAccounts.value = new Set(ids)
+      },
+      { immediate: true }
+    )
+
+    watch(historyRange, () => loadBalanceHistory())
+    watch(historyMode, () => scheduleHistoryDraw())
+    watch(visibleHistoryAccounts, () => scheduleHistoryDraw(), { deep: true })
+
+    const handleResize = () => scheduleHistoryDraw()
+
+    // =========================================================================
+    // Lifecycle
+    // =========================================================================
     onMounted(() => {
       updateViewport()
       window.addEventListener('resize', updateViewport)
+      window.addEventListener('resize', handleResize)
       loadData()
       fetchExchangeRates()
       ratesUpdateInterval = setInterval(fetchExchangeRates, 3600000)
@@ -817,6 +1368,7 @@ export default {
 
     onBeforeUnmount(() => {
       window.removeEventListener('resize', updateViewport)
+      window.removeEventListener('resize', handleResize)
       if (ratesUpdateInterval) {
         clearInterval(ratesUpdateInterval)
       }
@@ -856,6 +1408,7 @@ export default {
       savingsChangeClass,
       addTransaction,
       formatCurrency,
+      formatCompactCurrency,
       formatDate,
       formatShortDate,
       formatMonthYear,
@@ -867,7 +1420,30 @@ export default {
       onTouchStart,
       onTouchMove,
       onTouchEnd,
-      onMouseDown
+      onMouseDown,
+      // Динамика баланса
+      historyCanvas,
+      historyRange,
+      historyRanges,
+      historyMode,
+      historyLoading,
+      historyError,
+      historyAccounts,
+      visibleHistoryAccounts,
+      historyTotalSeries,
+      historyStartBalance,
+      historyEndBalance,
+      historyChange,
+      historyChangePercent,
+      historyChangeClass,
+      historyMinTotal,
+      historyMaxTotal,
+      historyPeriodLabel,
+      historyTooltip,
+      loadBalanceHistory,
+      toggleHistoryAccount,
+      onHistoryMouseMove,
+      onHistoryMouseLeave
     }
   }
 }
@@ -958,6 +1534,9 @@ export default {
   font-size: 1.25rem;
   font-weight: 600;
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .comparison-period {
@@ -967,7 +1546,7 @@ export default {
 }
 
 /* ============================================================
-   СТАТИСТИКА: ДЕСКТОП — СЕТКА 3 КОЛОНКИ
+   СТАТИСТИКА
    ============================================================ */
 .stats-carousel {
   margin-bottom: 2rem;
@@ -979,7 +1558,6 @@ export default {
   gap: 1.5rem;
 }
 
-/* ===== Базовые стили карточки ===== */
 .stat-card {
   border-radius: var(--radius, 12px);
   padding: 1.25rem 1.5rem;
@@ -1006,9 +1584,6 @@ export default {
   word-break: break-word;
 }
 
-/* ===== Цвета карточек ===== */
-
-/* Баланс — белый */
 .stat-card-balance {
   background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%);
   border: 1px solid #e5e7eb;
@@ -1022,7 +1597,6 @@ export default {
   color: #1f2937;
 }
 
-/* Расходы — красный */
 .stat-card-expense {
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
 }
@@ -1034,7 +1608,6 @@ export default {
   color: #ffffff;
 }
 
-/* Доходы — синий */
 .stat-card-income {
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
 }
@@ -1046,7 +1619,6 @@ export default {
   color: #ffffff;
 }
 
-/* ===== Точки-индикаторы ===== */
 .stats-dots {
   display: none;
   justify-content: center;
@@ -1073,7 +1645,6 @@ export default {
   background: var(--primary-color, #667eea);
 }
 
-/* ===== МОБИЛКА: СТЕК КАРТОЧЕК ===== */
 .stats-carousel.is-mobile {
   position: relative;
   height: 150px;
@@ -1099,7 +1670,6 @@ export default {
   will-change: transform;
 }
 
-/* Общие цвета текста */
 .text-success {
   color: var(--secondary-color, #10b981);
 }
@@ -1252,7 +1822,6 @@ export default {
   color: #fbbf24;
 }
 
-/* ---------- Карточка сравнения ---------- */
 .comparison-card {
   background: var(--white, #fff);
 }
@@ -1299,6 +1868,253 @@ export default {
   padding: 0.25rem 0.5rem;
   border-radius: 9999px;
   background: rgba(0, 0, 0, 0.05);
+}
+
+/* ============================================================
+   ДИНАМИКА БАЛАНСА
+   ============================================================ */
+.balance-history-card {
+  margin-bottom: 1.5rem;
+}
+
+.history-controls {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.history-range,
+.history-mode {
+  display: flex;
+  gap: 0.25rem;
+  background: var(--light-color, #f3f4f6);
+  padding: 0.25rem;
+  border-radius: var(--radius, 12px);
+}
+
+.range-btn {
+  padding: 0.375rem 0.75rem;
+  border: none;
+  background: transparent;
+  border-radius: calc(var(--radius, 12px) - 2px);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--gray-color, #6b7280);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.range-btn:hover {
+  color: var(--dark-color, #1f2937);
+}
+
+.range-btn.active {
+  background: var(--white, #fff);
+  color: var(--primary-color, #667eea);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.history-body {
+  padding: 0.5rem 0;
+}
+
+.history-loading,
+.history-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem 1rem;
+  color: var(--gray-color, #6b7280);
+  font-size: 0.9rem;
+}
+
+.history-error {
+  flex-direction: column;
+  color: var(--danger-color, #ef4444);
+}
+
+.history-error i {
+  font-size: 2rem;
+}
+
+.history-chart-wrapper {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.history-canvas {
+  display: block;
+  width: 100%;
+  cursor: crosshair;
+}
+
+.history-tooltip {
+  position: absolute;
+  z-index: 10;
+  background: rgba(17, 24, 39, 0.95);
+  color: white;
+  border-radius: var(--radius, 12px);
+  padding: 0.625rem 0.75rem;
+  font-size: 0.75rem;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  margin-top: -10px;
+  min-width: 180px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.history-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(17, 24, 39, 0.95);
+  border-bottom: none;
+}
+
+.history-tooltip-date {
+  font-weight: 700;
+  font-size: 0.8rem;
+  margin-bottom: 0.4rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.history-tooltip-row {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.history-tooltip-color {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.history-tooltip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-tooltip-value {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.history-tooltip-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  font-weight: 700;
+}
+
+.history-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--light-color, #f3f4f6);
+}
+
+.history-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  background: #f9fafb;
+  border: 1px solid var(--light-color, #f3f4f6);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--dark-color, #1f2937);
+}
+
+.history-legend-item:hover {
+  background: var(--light-color, #f3f4f6);
+}
+
+.history-legend-item.is-off {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.history-legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.history-legend-name {
+  font-weight: 500;
+}
+
+.history-legend-value {
+  color: var(--gray-color, #6b7280);
+  font-size: 0.75rem;
+}
+
+.history-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--light-color, #f3f4f6);
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.history-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.history-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.history-stat-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--gray-color, #6b7280);
+  font-weight: 500;
+}
+
+.history-stat-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--dark-color, #1f2937);
+}
+
+.history-stat-value small {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--gray-color, #6b7280);
+}
+
+.history-period-label {
+  font-size: 0.8rem;
+  color: var(--gray-color, #6b7280);
+  font-style: italic;
 }
 
 /* ============================================================
@@ -1392,8 +2208,13 @@ export default {
   color: white;
 }
 
+.btn-sm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+}
+
 /* ============================================================
-   АДАПТИВНОСТЬ (общие блоки)
+   АДАПТИВНОСТЬ
    ============================================================ */
 @media (max-width: 1024px) {
   .insights-grid {
@@ -1423,6 +2244,36 @@ export default {
   .comparison-values {
     justify-content: space-between;
   }
+
+  /* Динамика баланса */
+  .history-controls {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .history-range,
+  .history-mode {
+    width: 100%;
+  }
+
+  .range-btn {
+    flex: 1;
+    font-size: 0.7rem;
+    padding: 0.375rem 0.25rem;
+  }
+
+  .history-stats {
+    gap: 1rem;
+  }
+
+  .history-stat-value {
+    font-size: 0.85rem;
+  }
+
+  .history-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1441,6 +2292,26 @@ export default {
 
   .exchange-rates {
     justify-content: center;
+  }
+
+  /* Динамика баланса */
+  .history-legend {
+    gap: 0.375rem;
+  }
+
+  .history-legend-item {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .history-stats {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .history-tooltip {
+    min-width: 150px;
+    font-size: 0.7rem;
   }
 }
 </style>

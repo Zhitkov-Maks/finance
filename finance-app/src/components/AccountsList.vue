@@ -7,19 +7,41 @@
       </button>
     </div>
 
-    <!-- Статистика счетов -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-title">Всего счетов</div>
-        <div class="stat-value">{{ accounts.length }}</div>
+    <!-- ============================================================ -->
+    <!-- СТАТИСТИКА: карусель карточек                                 -->
+    <!-- ============================================================ -->
+    <div class="stats-carousel" :class="{ 'is-mobile': isMobileView }">
+      <div
+        class="stats-carousel-track"
+        :class="{ 'is-mobile': isMobileView }"
+        @touchstart.passive="onTouchStart"
+        @touchmove.passive="onTouchMove"
+        @touchend="onTouchEnd"
+        @touchcancel="onTouchEnd"
+        @mousedown="onMouseDown"
+      >
+        <div
+          v-for="(card, i) in statCards"
+          :key="card.key"
+          class="stat-card"
+          :class="[card.class, { 'is-active': i === currentStatIndex }]"
+          :style="cardPosition(i)"
+        >
+          <div class="stat-title">{{ card.title }}</div>
+          <div class="stat-value">{{ formatCurrency(card.value) }}</div>
+          <div class="stat-hint">{{ card.hint }}</div>
+        </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-title">Общий баланс (активные)</div>
-        <div class="stat-value text-success">{{ formatCurrency(totalBalance) }}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-title">Активных счетов</div>
-        <div class="stat-value">{{ activeAccountsCount }}</div>
+
+      <!-- Точки-индикаторы -->
+      <div class="stats-dots" :class="{ 'is-mobile': isMobileView }">
+        <span
+          v-for="i in 3"
+          :key="i - 1"
+          class="stats-dot"
+          :class="{ active: currentStatIndex === i - 1 }"
+          @click="currentStatIndex = i - 1"
+        ></span>
       </div>
     </div>
 
@@ -54,13 +76,6 @@
           </div>
 
           <div v-if="expandedAccounts.has(account.id)" class="account-expanded">
-            <div class="account-activity">
-              <i class="fas fa-clock"></i>
-              Последняя активность:
-              <strong :class="getActivityClass(account.id)">
-                {{ getLastActivityLabel(account.id) }}
-              </strong>
-            </div>
             <div class="account-actions-expanded">
               <button class="btn btn-sm btn-primary" @click="openTransferFor(account)">
                 <i class="fas fa-exchange-alt"></i> Перевести
@@ -92,7 +107,6 @@
             <tr>
               <th>Название</th>
               <th>Баланс</th>
-              <th>Последняя активность</th>
               <th>Действия</th>
             </tr>
           </thead>
@@ -101,12 +115,6 @@
               <td><strong>{{ account.name }}</strong></td>
               <td class="text-success">
                 <strong>{{ formatCurrency(account.balance) }}</strong>
-              </td>
-              <td>
-                <span class="activity-cell" :class="getActivityClass(account.id)">
-                  <i :class="getActivityIcon(account.id)"></i>
-                  {{ getLastActivityLabel(account.id) }}
-                </span>
               </td>
               <td>
                 <div class="action-buttons">
@@ -129,7 +137,7 @@
               </td>
             </tr>
             <tr v-if="activeAccounts.length === 0">
-              <td colspan="4" class="text-center">Нет активных счетов</td>
+              <td colspan="3" class="text-center">Нет активных счетов</td>
             </tr>
           </tbody>
         </table>
@@ -167,13 +175,6 @@
           </div>
 
           <div v-if="expandedAccounts.has(account.id)" class="account-expanded">
-            <div class="account-activity">
-              <i class="fas fa-clock"></i>
-              Последняя активность:
-              <strong :class="getActivityClass(account.id)">
-                {{ getLastActivityLabel(account.id) }}
-              </strong>
-            </div>
             <div class="account-actions-expanded">
               <button class="btn btn-sm btn-primary" @click="openTransferFor(account)">
                 <i class="fas fa-exchange-alt"></i> Перевести
@@ -205,7 +206,6 @@
             <tr>
               <th>Название</th>
               <th>Баланс</th>
-              <th>Последняя активность</th>
               <th>Действия</th>
             </tr>
           </thead>
@@ -214,12 +214,6 @@
               <td><strong>{{ account.name }}</strong></td>
               <td class="text-muted">
                 <strong>{{ formatCurrency(account.balance) }}</strong>
-              </td>
-              <td>
-                <span class="activity-cell" :class="getActivityClass(account.id)">
-                  <i :class="getActivityIcon(account.id)"></i>
-                  {{ getLastActivityLabel(account.id) }}
-                </span>
               </td>
               <td>
                 <div class="action-buttons">
@@ -242,7 +236,7 @@
               </td>
             </tr>
             <tr v-if="inactiveAccounts.length === 0">
-              <td colspan="4" class="text-center">Нет неактивных счетов</td>
+              <td colspan="3" class="text-center">Нет неактивных счетов</td>
             </tr>
           </tbody>
         </table>
@@ -276,209 +270,41 @@
       </div>
 
       <div v-show="analyticsExpanded" class="analytics-section-body">
-        <!-- 3.1 Метрики переводов -->
-        <div v-if="analyticsLoading" class="card">
-          <div class="history-loading">
-            <i class="fas fa-spinner fa-spin"></i>
-            <span>Загрузка аналитики...</span>
-          </div>
-        </div>
-
+        <!-- 3.1 Санкей — потоки между счетами -->
         <div
-          v-else-if="analyticsRaw && analyticsMetrics.count > 0"
-          class="card transfer-metrics-card"
+          v-if="sankeyData.nodes.length > 1"
+          class="card sankey-card"
         >
           <div class="card-header">
             <h3 class="card-title">
-              <i class="fas fa-calculator"></i> Метрики переводов
+              <i class="fas fa-diagram-project"></i> Потоки между счетами
             </h3>
-            <span class="metrics-period">
-              {{ analyticsPeriodLabel }}
-            </span>
+            <span class="metrics-period">кто кому сколько перевёл</span>
           </div>
 
-          <div class="metrics-grid">
-            <div class="metric-card">
-              <div class="metric-label">
-                <i class="fas fa-ruble-sign"></i> Средний перевод
-              </div>
-              <div class="metric-value">{{ formatCurrency(analyticsMetrics.average) }}</div>
-            </div>
+          <div class="sankey-body">
+            <canvas ref="sankeyCanvas" class="sankey-canvas"></canvas>
+          </div>
 
-            <div class="metric-card">
-              <div class="metric-label">
-                <i class="fas fa-sort-amount-up"></i> Максимальный
-              </div>
-              <div class="metric-value text-warning">{{ formatCurrency(analyticsMetrics.max) }}</div>
+          <div class="sankey-footer">
+            <div class="sankey-legend">
+              <span class="sankey-legend-item">
+                <span class="sankey-legend-color" style="background: #ef4444;"></span>
+                Исходящие (слева)
+              </span>
+              <span class="sankey-legend-item">
+                <span class="sankey-legend-color" style="background: #10b981;"></span>
+                Входящие (справа)
+              </span>
             </div>
-
-            <div class="metric-card">
-              <div class="metric-label">
-                <i class="fas fa-sort-amount-down"></i> Минимальный
-              </div>
-              <div class="metric-value">{{ formatCurrency(analyticsMetrics.min) }}</div>
-            </div>
-
-            <div class="metric-card">
-              <div class="metric-label">
-                <i class="fas fa-chart-bar"></i> Медиана
-              </div>
-              <div class="metric-value">{{ formatCurrency(analyticsMetrics.median) }}</div>
-            </div>
-
-            <div class="metric-card">
-              <div class="metric-label">
-                <i class="fas fa-hashtag"></i> Количество
-              </div>
-              <div class="metric-value">{{ analyticsMetrics.count }}</div>
-            </div>
-
-            <div class="metric-card">
-              <div class="metric-label">
-                <i class="fas fa-coins"></i> Общий оборот
-              </div>
-              <div class="metric-value text-success">
-                {{ formatCurrency(analyticsMetrics.total_amount) }}
-              </div>
+            <div class="sankey-summary">
+              <span>Счетов: <strong>{{ sankeyData.nodes.length }}</strong></span>
+              <span>Связей: <strong>{{ sankeyData.links.length }}</strong></span>
             </div>
           </div>
         </div>
 
-        <!-- 3.2 Динамика баланса -->
-        <div v-if="activeAccounts.length > 0" class="card balance-history-card">
-          <div class="card-header">
-            <h3 class="card-title">
-              <i class="fas fa-chart-line"></i> Динамика баланса
-            </h3>
-            <div class="history-controls">
-              <div class="history-range">
-                <button
-                  v-for="range in historyRanges"
-                  :key="range.value"
-                  class="range-btn"
-                  :class="{ active: historyRange === range.value }"
-                  @click.stop="historyRange = range.value"
-                >
-                  {{ range.label }}
-                </button>
-              </div>
-              <div class="history-mode">
-                <button
-                  class="range-btn"
-                  :class="{ active: historyMode === 'all' }"
-                  @click.stop="historyMode = 'all'"
-                >
-                  Все счета
-                </button>
-                <button
-                  class="range-btn"
-                  :class="{ active: historyMode === 'total' }"
-                  @click.stop="historyMode = 'total'"
-                >
-                  Только итог
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="history-body">
-            <div v-if="historyLoading" class="history-loading">
-              <i class="fas fa-spinner fa-spin"></i>
-              <span>Загрузка истории...</span>
-            </div>
-
-            <div v-else-if="historyError" class="history-error">
-              <i class="fas fa-exclamation-triangle"></i>
-              <span>{{ historyError }}</span>
-              <button class="btn btn-sm btn-primary" @click.stop="loadBalanceHistory">
-                <i class="fas fa-redo"></i> Повторить
-              </button>
-            </div>
-
-            <template v-else>
-              <div class="history-chart-wrapper">
-                <canvas
-                  ref="historyCanvas"
-                  class="history-canvas"
-                  @mousemove="onHistoryMouseMove"
-                  @mouseleave="onHistoryMouseLeave"
-                ></canvas>
-
-                <div
-                  v-if="historyTooltip.visible"
-                  class="history-tooltip"
-                  :style="{
-                    left: historyTooltip.x + 'px',
-                    top: historyTooltip.y + 'px'
-                  }"
-                >
-                  <div class="history-tooltip-date">{{ historyTooltip.date }}</div>
-                  <div
-                    v-for="row in historyTooltip.rows"
-                    :key="row.id"
-                    class="history-tooltip-row"
-                  >
-                    <span class="history-tooltip-color" :style="{ background: row.color }"></span>
-                    <span class="history-tooltip-name">{{ row.name }}</span>
-                    <span class="history-tooltip-value">{{ formatCurrency(row.value) }}</span>
-                  </div>
-                  <div class="history-tooltip-total">
-                    <span>Итого:</span>
-                    <strong>{{ formatCurrency(historyTooltip.total) }}</strong>
-                  </div>
-                </div>
-              </div>
-
-              <div v-if="historyMode === 'all' && historyAccounts.length > 0" class="history-legend">
-                <button
-                  v-for="acc in historyAccounts"
-                  :key="acc.id"
-                  class="history-legend-item"
-                  :class="{ 'is-off': !visibleHistoryAccounts.has(acc.id) }"
-                  @click="toggleHistoryAccount(acc.id)"
-                >
-                  <span class="history-legend-color" :style="{ background: acc.color }"></span>
-                  <span class="history-legend-name">{{ acc.name }}</span>
-                  <span class="history-legend-value">
-                    {{ formatCompactCurrency(acc.lastBalance) }}
-                  </span>
-                </button>
-              </div>
-
-              <div class="history-footer">
-                <div class="history-stats">
-                  <div class="history-stat">
-                    <span class="history-stat-label">Изменение за период</span>
-                    <span class="history-stat-value" :class="historyChangeClass">
-                      {{ historyChange >= 0 ? '+' : '' }}{{ formatCurrency(historyChange) }}
-                      <small>({{ historyChangePercent > 0 ? '+' : '' }}{{ historyChangePercent }}%)</small>
-                    </span>
-                  </div>
-                  <div class="history-stat">
-                    <span class="history-stat-label">Начало периода</span>
-                    <span class="history-stat-value">{{ formatCurrency(historyStartBalance) }}</span>
-                  </div>
-                  <div class="history-stat">
-                    <span class="history-stat-label">Конец периода</span>
-                    <span class="history-stat-value">{{ formatCurrency(historyEndBalance) }}</span>
-                  </div>
-                  <div class="history-stat">
-                    <span class="history-stat-label">Минимум / Максимум</span>
-                    <span class="history-stat-value">
-                      {{ formatCompactCurrency(historyMinTotal) }} /
-                      {{ formatCompactCurrency(historyMaxTotal) }}
-                    </span>
-                  </div>
-                </div>
-                <div class="history-period-label">
-                  {{ historyPeriodLabel }}
-                </div>
-              </div>
-            </template>
-          </div>
-        </div>
-
-        <!-- 3.3 Распределение + Активные/неактивные -->
+        <!-- 3.2 Распределение + Активные/неактивные -->
         <div class="analytics-row">
           <div v-if="activeAccounts.length > 0" class="card distribution-card">
             <div class="card-header">
@@ -486,7 +312,7 @@
                 <i class="fas fa-chart-pie"></i> Распределение баланса
               </h3>
               <span class="distribution-total">
-                Всего: <strong>{{ formatCurrency(totalBalance) }}</strong>
+                Всего: <strong>{{ formatCurrency(totalBalanceActive) }}</strong>
               </span>
             </div>
 
@@ -552,7 +378,7 @@
           </div>
         </div>
 
-        <!-- 3.4 Топ счетов по обороту -->
+        <!-- 3.3 Топ счетов по обороту -->
         <div v-if="topAccountsByTurnover.length > 0" class="card top-accounts-card">
           <div class="card-header">
             <h3 class="card-title">
@@ -637,7 +463,7 @@
           </div>
         </div>
 
-        <!-- 3.5 Топ контрагентов -->
+        <!-- 3.4 Топ контрагентов -->
         <div v-if="topAccountPairs.length > 0" class="card top-pairs-card">
           <div class="card-header">
             <h3 class="card-title">
@@ -708,41 +534,7 @@
           </div>
         </div>
 
-        <!-- 3.6 Санкей -->
-        <div
-          v-if="sankeyData.nodes.length > 1"
-          class="card sankey-card"
-        >
-          <div class="card-header">
-            <h3 class="card-title">
-              <i class="fas fa-diagram-project"></i> Потоки между счетами
-            </h3>
-            <span class="metrics-period">кто кому сколько перевёл</span>
-          </div>
-
-          <div class="sankey-body">
-            <canvas ref="sankeyCanvas" class="sankey-canvas"></canvas>
-          </div>
-
-          <div class="sankey-footer">
-            <div class="sankey-legend">
-              <span class="sankey-legend-item">
-                <span class="sankey-legend-color" style="background: #ef4444;"></span>
-                Исходящие (слева)
-              </span>
-              <span class="sankey-legend-item">
-                <span class="sankey-legend-color" style="background: #10b981;"></span>
-                Входящие (справа)
-              </span>
-            </div>
-            <div class="sankey-summary">
-              <span>Счетов: <strong>{{ sankeyData.nodes.length }}</strong></span>
-              <span>Связей: <strong>{{ sankeyData.links.length }}</strong></span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 3.7 Активность переводов -->
+        <!-- 3.5 Активность переводов -->
         <div v-if="activityData.length > 0" class="card activity-card">
           <div class="card-header">
             <h3 class="card-title">
@@ -777,6 +569,74 @@
                 пик: <strong>{{ activityBusiestDay.label }}</strong>
                 ({{ activityBusiestDay.count }} переводов)
               </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3.6 Метрики переводов — последним -->
+        <div v-if="analyticsLoading" class="card">
+          <div class="history-loading">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>Загрузка аналитики...</span>
+          </div>
+        </div>
+
+        <div
+          v-else-if="analyticsRaw && analyticsMetrics.count > 0"
+          class="card transfer-metrics-card"
+        >
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="fas fa-calculator"></i> Метрики переводов
+            </h3>
+            <span class="metrics-period">
+              {{ analyticsPeriodLabel }}
+            </span>
+          </div>
+
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-label">
+                <i class="fas fa-ruble-sign"></i> Средний перевод
+              </div>
+              <div class="metric-value">{{ formatCurrency(analyticsMetrics.average) }}</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-label">
+                <i class="fas fa-sort-amount-up"></i> Максимальный
+              </div>
+              <div class="metric-value text-warning">{{ formatCurrency(analyticsMetrics.max) }}</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-label">
+                <i class="fas fa-sort-amount-down"></i> Минимальный
+              </div>
+              <div class="metric-value">{{ formatCurrency(analyticsMetrics.min) }}</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-label">
+                <i class="fas fa-chart-bar"></i> Медиана
+              </div>
+              <div class="metric-value">{{ formatCurrency(analyticsMetrics.median) }}</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-label">
+                <i class="fas fa-hashtag"></i> Количество
+              </div>
+              <div class="metric-value">{{ analyticsMetrics.count }}</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-label">
+                <i class="fas fa-coins"></i> Общий оборот
+              </div>
+              <div class="metric-value text-success">
+                {{ formatCurrency(analyticsMetrics.total_amount) }}
+              </div>
             </div>
           </div>
         </div>
@@ -1149,6 +1009,7 @@ const SANKEY_VIRTUAL_W = 900
 const SANKEY_MIN_CANVAS_WIDTH = 560
 const ANALYTICS_RANGE_DAYS = 90
 const ANALYTICS_EXPANDED_KEY = 'accounts:analyticsExpanded'
+const SWIPE_THRESHOLD = 50
 
 const DISTRIBUTION_COLORS = [
   '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -1252,9 +1113,131 @@ export default {
     const allAccounts = computed(() => accounts.value)
     const activeAccountsCount = computed(() => activeAccounts.value.length)
 
-    const totalBalance = computed(() =>
+    const totalBalanceActive = computed(() =>
       activeAccounts.value.reduce((sum, a) => sum + toNumber(a.balance), 0)
     )
+
+    const totalBalanceInactive = computed(() =>
+      inactiveAccounts.value.reduce((sum, a) => sum + toNumber(a.balance), 0)
+    )
+
+    const totalBalanceAll = computed(
+      () => totalBalanceActive.value + totalBalanceInactive.value
+    )
+
+    // =========================================================================
+    // Карусель карточек статистики
+    // =========================================================================
+    const currentStatIndex = ref(0)
+    const touchStartX = ref(0)
+    const touchDeltaX = ref(0)
+    const isDragging = ref(false)
+    const isMobileView = ref(false)
+
+    const updateViewport = () => {
+      isMobileView.value = window.innerWidth <= 1024
+    }
+
+    const accountWord = (count) => {
+      const last = count % 10
+      const lastTwo = count % 100
+      if (lastTwo >= 11 && lastTwo <= 14) return 'счетов'
+      if (last === 1) return 'счет'
+      if (last >= 2 && last <= 4) return 'счета'
+      return 'счетов'
+    }
+
+    const statCards = computed(() => [
+      {
+        key: 'total',
+        title: 'Общий баланс',
+        value: totalBalanceAll.value,
+        hint: `${accounts.value.length} ${accountWord(accounts.value.length)}`,
+        class: 'stat-card-total',
+      },
+      {
+        key: 'active',
+        title: 'Баланс активных',
+        value: totalBalanceActive.value,
+        hint: `${activeAccounts.value.length} ${accountWord(activeAccounts.value.length)}`,
+        class: 'stat-card-active',
+      },
+      {
+        key: 'inactive',
+        title: 'Баланс неактивных',
+        value: totalBalanceInactive.value,
+        hint: `${inactiveAccounts.value.length} ${accountWord(inactiveAccounts.value.length)}`,
+        class: 'stat-card-inactive',
+      },
+    ])
+
+    const cardPosition = (index) => {
+      if (!isMobileView.value) return {}
+
+      const offset = index - currentStatIndex.value
+
+      if (Math.abs(offset) > 1) {
+        return { display: 'none' }
+      }
+
+      if (offset === 0) {
+        return {
+          transform: 'translateX(-50%) scale(1)',
+          zIndex: 3,
+          opacity: 1
+        }
+      }
+
+      const direction = offset > 0 ? 1 : -1
+      return {
+        transform: `translateX(calc(-50% + ${direction * 20}px)) scale(0.94)`,
+        zIndex: 2,
+        opacity: 1
+      }
+    }
+
+    const onTouchStart = (e) => {
+      if (!isMobileView.value) return
+      touchStartX.value = e.touches[0].clientX
+      touchDeltaX.value = 0
+      isDragging.value = true
+    }
+
+    const onTouchMove = (e) => {
+      if (!isDragging.value || !isMobileView.value) return
+      touchDeltaX.value = e.touches[0].clientX - touchStartX.value
+    }
+
+    const onTouchEnd = () => {
+      if (!isDragging.value) return
+      isDragging.value = false
+
+      if (touchDeltaX.value < -SWIPE_THRESHOLD && currentStatIndex.value < 2) {
+        currentStatIndex.value++
+      } else if (touchDeltaX.value > SWIPE_THRESHOLD && currentStatIndex.value > 0) {
+        currentStatIndex.value--
+      }
+      touchDeltaX.value = 0
+    }
+
+    const onMouseDown = (e) => {
+      if (!isMobileView.value) return
+      touchStartX.value = e.clientX
+      touchDeltaX.value = 0
+      isDragging.value = true
+
+      const onMouseMove = (ev) => {
+        if (!isDragging.value) return
+        touchDeltaX.value = ev.clientX - touchStartX.value
+      }
+      const onMouseUp = () => {
+        onTouchEnd()
+        window.removeEventListener('mousemove', onMouseMove)
+        window.removeEventListener('mouseup', onMouseUp)
+      }
+      window.addEventListener('mousemove', onMouseMove)
+      window.addEventListener('mouseup', onMouseUp)
+    }
 
     // =========================================================================
     // Состояние — сворачивание аналитики
@@ -1265,110 +1248,12 @@ export default {
       analyticsExpanded.value = !analyticsExpanded.value
       writeAnalyticsExpanded(analyticsExpanded.value)
       if (analyticsExpanded.value) {
-        // Перерисовываем canvas'ы после того, как Vue отрендерит блок
         scheduleAllDraws()
       }
     }
 
     // =========================================================================
-    // Состояние — динамика баланса (2.1)
-    // =========================================================================
-    const historyCanvas = ref(null)
-    const historyRange = ref(30)
-    const historyRanges = [
-      { value: 7, label: '7 дней' },
-      { value: 30, label: '30 дней' },
-      { value: 90, label: '90 дней' },
-      { value: 180, label: '180 дней' }
-    ]
-    const historyMode = ref('all')
-    const historyLoading = ref(false)
-    const historyError = ref('')
-    const historyRawData = ref(null)
-    const visibleHistoryAccounts = ref(new Set())
-    const historyChartMetrics = ref({
-      paddingLeft: 60, paddingRight: 20, paddingTop: 20, paddingBottom: 40
-    })
-
-    const historyTooltip = ref({
-      visible: false, x: 0, y: 0, date: '', rows: [], total: 0
-    })
-
-    const historyAccounts = computed(() => {
-      if (!historyRawData.value?.accounts) return []
-      return historyRawData.value.accounts.map((acc, index) => {
-        const series = historyRawData.value.results.map((r) => ({
-          date: r.date,
-          value: toNumber(r.accounts[String(acc.id)])
-        }))
-        return {
-          id: acc.id,
-          name: acc.name,
-          color: DISTRIBUTION_COLORS[index % DISTRIBUTION_COLORS.length],
-          series,
-          lastBalance: series.length > 0 ? series[series.length - 1].value : 0
-        }
-      })
-    })
-
-    const historyTotalSeries = computed(() => {
-      if (!historyRawData.value?.results) return []
-      return historyRawData.value.results.map((r) => ({
-        date: r.date,
-        value: toNumber(r.total)
-      }))
-    })
-
-    const historyStartBalance = computed(() => {
-      const s = historyTotalSeries.value
-      return s.length > 0 ? s[0].value : 0
-    })
-
-    const historyEndBalance = computed(() => {
-      const s = historyTotalSeries.value
-      return s.length > 0 ? s[s.length - 1].value : 0
-    })
-
-    const historyChange = computed(() => historyEndBalance.value - historyStartBalance.value)
-
-    const historyChangePercent = computed(() => {
-      if (historyStartBalance.value === 0) return 0
-      return ((historyChange.value / Math.abs(historyStartBalance.value)) * 100).toFixed(1)
-    })
-
-    const historyChangeClass = computed(() => {
-      if (historyChange.value > 0) return 'text-success'
-      if (historyChange.value < 0) return 'text-danger'
-      return ''
-    })
-
-    const historyMinTotal = computed(() => {
-      const s = historyTotalSeries.value
-      return s.length === 0 ? 0 : Math.min(...s.map((p) => p.value))
-    })
-
-    const historyMaxTotal = computed(() => {
-      const s = historyTotalSeries.value
-      return s.length === 0 ? 0 : Math.max(...s.map((p) => p.value))
-    })
-
-    const historyPeriodLabel = computed(() => {
-      const results = historyRawData.value?.results
-      if (!results?.length) return ''
-      const first = results[0].date
-      const last = results[results.length - 1].date
-      return `${formatDateShortLabel(first)} — ${formatDateShortLabel(last)}`
-    })
-
-    const formatDateShortLabel = (iso) => {
-      if (!iso) return ''
-      return new Date(iso).toLocaleDateString('ru-RU', {
-        day: '2-digit', month: '2-digit', year: 'numeric'
-      })
-    }
-
-    // =========================================================================
-    // Состояние — распределение (1.1) и соотношение (1.5)
+    // Распределение и соотношение
     // =========================================================================
     const distributionCanvas = ref(null)
     const ratioCanvas = ref(null)
@@ -1397,7 +1282,7 @@ export default {
     })
 
     // =========================================================================
-    // Состояние — переводы (только для таблицы истории)
+    // Переводы (только для таблицы истории)
     // =========================================================================
     const transfers = ref([])
     const currentPage = ref(1)
@@ -1437,7 +1322,7 @@ export default {
     const totalPages = computed(() => Math.ceil(totalCount.value / pageSize.value))
 
     // =========================================================================
-    // Состояние — аналитика переводов (с бэкенда)
+    // Аналитика переводов (с бэкенда)
     // =========================================================================
     const analyticsRaw = ref(null)
     const analyticsLoading = ref(false)
@@ -1514,7 +1399,7 @@ export default {
     })
 
     // =========================================================================
-    // Состояние — активность (1.3)
+    // Активность переводов
     // =========================================================================
     const activityCanvas = ref(null)
     const activityRange = ref(30)
@@ -1557,254 +1442,8 @@ export default {
     })
 
     // =========================================================================
-    // Последняя активность по счетам — из таблицы истории
+    // Отрисовка
     // =========================================================================
-    const accountLastActivity = computed(() => {
-      const map = new Map()
-      transfers.value.forEach((t) => {
-        if (!t.timestamp) return
-        const time = new Date(t.timestamp).getTime()
-        if (Number.isNaN(time)) return
-        const names = [t.source_account_name, t.destination_account_name]
-        names.forEach((name) => {
-          if (!name) return
-          if (!map.has(name) || map.get(name) < time) map.set(name, time)
-        })
-      })
-      return map
-    })
-
-    const getLastActivityTime = (accountId) => {
-      const account = accounts.value.find((a) => a.id === accountId)
-      if (!account) return null
-      return accountLastActivity.value.get(account.name) || null
-    }
-
-    const getLastActivityLabel = (accountId) => {
-      const time = getLastActivityTime(accountId)
-      if (!time) return 'Никогда'
-      const days = Math.floor((Date.now() - time) / (1000 * 60 * 60 * 24))
-      if (days === 0) return 'Сегодня'
-      if (days === 1) return 'Вчера'
-      if (days < 7) return `${days} дн. назад`
-      if (days < 30) return `${Math.floor(days / 7)} нед. назад`
-      if (days < 365) return `${Math.floor(days / 30)} мес. назад`
-      return `${Math.floor(days / 365)} г. назад`
-    }
-
-    const getActivityClass = (accountId) => {
-      const time = getLastActivityTime(accountId)
-      if (!time) return 'activity-never'
-      const days = (Date.now() - time) / (1000 * 60 * 60 * 24)
-      if (days <= 7) return 'activity-recent'
-      if (days <= 30) return 'activity-medium'
-      return 'activity-old'
-    }
-
-    const getActivityIcon = (accountId) => {
-      const time = getLastActivityTime(accountId)
-      if (!time) return 'fas fa-circle-xmark'
-      const days = (Date.now() - time) / (1000 * 60 * 60 * 24)
-      if (days <= 7) return 'fas fa-circle-check'
-      if (days <= 30) return 'fas fa-clock'
-      return 'fas fa-triangle-exclamation'
-    }
-
-    // =========================================================================
-    // Отрисовка графиков
-    // =========================================================================
-
-    const drawHistoryChart = () => {
-      const canvas = historyCanvas.value
-      if (!canvas) return
-      const totalSeries = historyTotalSeries.value
-
-      if (totalSeries.length === 0) {
-        setupCanvas(canvas, parentWidth(canvas, 900), 100)
-        return
-      }
-
-      const cssWidth = parentWidth(canvas, 900)
-      const cssHeight = 320
-      const { ctx } = setupCanvas(canvas, cssWidth, cssHeight)
-
-      const paddingLeft = 60
-      const paddingRight = 20
-      const paddingTop = 20
-      const paddingBottom = 40
-      historyChartMetrics.value = { paddingLeft, paddingRight, paddingTop, paddingBottom }
-
-      const chartWidth = cssWidth - paddingLeft - paddingRight
-      const chartHeight = cssHeight - paddingTop - paddingBottom
-
-      const visibleSeries = []
-      if (historyMode.value === 'total') {
-        visibleSeries.push({
-          id: 'total', name: 'Итого', color: '#3b82f6',
-          series: totalSeries, isTotal: true
-        })
-      } else {
-        historyAccounts.value.forEach((acc) => {
-          if (visibleHistoryAccounts.value.has(acc.id)) {
-            visibleSeries.push({
-              id: acc.id, name: acc.name, color: acc.color,
-              series: acc.series, isTotal: false
-            })
-          }
-        })
-        visibleSeries.push({
-          id: 'total', name: 'Итого', color: '#111827',
-          series: totalSeries, isTotal: true
-        })
-      }
-
-      const allValues = visibleSeries.flatMap((s) => s.series.map((p) => p.value))
-      let minValue = Math.min(...allValues, 0)
-      let maxValue = Math.max(...allValues, 0)
-      const range = maxValue - minValue || 1
-      minValue -= range * 0.05
-      maxValue += range * 0.05
-
-      const xStep = totalSeries.length > 1 ? chartWidth / (totalSeries.length - 1) : 0
-      const yScale = (v) =>
-        paddingTop + chartHeight - ((v - minValue) / (maxValue - minValue)) * chartHeight
-
-      ctx.strokeStyle = '#e5e7eb'
-      ctx.lineWidth = 1
-      ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      ctx.fillStyle = '#9ca3af'
-      ctx.textAlign = 'right'
-      ctx.textBaseline = 'middle'
-
-      for (let i = 0; i <= 5; i++) {
-        const y = paddingTop + chartHeight - (i / 5) * chartHeight
-        ctx.beginPath()
-        ctx.moveTo(paddingLeft, y)
-        ctx.lineTo(cssWidth - paddingRight, y)
-        ctx.stroke()
-        ctx.fillText(formatCompactCurrency(minValue + ((maxValue - minValue) / 5) * i), paddingLeft - 6, y)
-      }
-
-      if (minValue < 0 && maxValue > 0) {
-        const y0 = yScale(0)
-        ctx.strokeStyle = '#9ca3af'
-        ctx.setLineDash([4, 4])
-        ctx.beginPath()
-        ctx.moveTo(paddingLeft, y0)
-        ctx.lineTo(cssWidth - paddingRight, y0)
-        ctx.stroke()
-        ctx.setLineDash([])
-      }
-
-      visibleSeries.forEach((s) => {
-        if (s.series.length === 0) return
-        ctx.beginPath()
-        ctx.strokeStyle = s.color
-        ctx.lineWidth = s.isTotal ? 3 : 1.75
-        ctx.lineJoin = 'round'
-        ctx.lineCap = 'round'
-
-        s.series.forEach((p, i) => {
-          const x = paddingLeft + i * xStep
-          const y = yScale(p.value)
-          if (i === 0) ctx.moveTo(x, y)
-          else ctx.lineTo(x, y)
-        })
-        ctx.stroke()
-
-        if (s.series.length <= 40) {
-          s.series.forEach((p, i) => {
-            const x = paddingLeft + i * xStep
-            const y = yScale(p.value)
-            ctx.beginPath()
-            ctx.fillStyle = s.color
-            ctx.arc(x, y, s.isTotal ? 3 : 2, 0, 2 * Math.PI)
-            ctx.fill()
-          })
-        }
-      })
-
-      ctx.fillStyle = '#6b7280'
-      ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'top'
-
-      const MIN_LABEL_SPACING = 36
-      const maxLabels = Math.max(2, Math.floor(chartWidth / MIN_LABEL_SPACING))
-      const step = Math.max(1, Math.ceil(totalSeries.length / maxLabels))
-
-      let lastLabelX = -Infinity
-      totalSeries.forEach((p, i) => {
-        const isFirst = i === 0
-        const isLast = i === totalSeries.length - 1
-        const showByStep = i % step === 0
-        if (!isFirst && !isLast && !showByStep) return
-
-        const x = paddingLeft + i * xStep
-        if (x - lastLabelX < MIN_LABEL_SPACING * 0.9) {
-          if (!isFirst) return
-        }
-
-        const label = new Date(p.date).toLocaleDateString('ru-RU', {
-          day: '2-digit', month: '2-digit'
-        })
-        ctx.fillText(label, x, paddingTop + chartHeight + 8)
-        lastLabelX = x
-      })
-    }
-
-    const onHistoryMouseMove = (event) => {
-      const canvas = historyCanvas.value
-      if (!canvas) return
-      const totalSeries = historyTotalSeries.value
-      if (totalSeries.length === 0) return
-
-      const rect = canvas.getBoundingClientRect()
-      const x = event.clientX - rect.left
-      const y = event.clientY - rect.top
-
-      const { paddingLeft, paddingRight } = historyChartMetrics.value
-      const chartWidth = rect.width - paddingLeft - paddingRight
-
-      if (x < paddingLeft || x > rect.width - paddingRight) {
-        historyTooltip.value.visible = false
-        return
-      }
-
-      const xStep = totalSeries.length > 1 ? chartWidth / (totalSeries.length - 1) : 0
-      const idx = Math.round((x - paddingLeft) / xStep)
-      const clampedIdx = Math.max(0, Math.min(totalSeries.length - 1, idx))
-      const point = totalSeries[clampedIdx]
-
-      const rows = []
-      if (historyMode.value === 'total') {
-        rows.push({ id: 'total', name: 'Итого', color: '#3b82f6', value: point.value })
-      } else {
-        historyAccounts.value.forEach((acc) => {
-          if (!visibleHistoryAccounts.value.has(acc.id)) return
-          const p = acc.series[clampedIdx]
-          if (p) {
-            rows.push({ id: acc.id, name: acc.name, color: acc.color, value: p.value })
-          }
-        })
-      }
-
-      historyTooltip.value = {
-        visible: true,
-        x,
-        y,
-        date: new Date(point.date).toLocaleDateString('ru-RU', {
-          day: '2-digit', month: '2-digit', year: 'numeric'
-        }),
-        rows,
-        total: point.value
-      }
-    }
-
-    const onHistoryMouseLeave = () => {
-      historyTooltip.value.visible = false
-    }
-
     const drawDistributionChart = () => {
       const canvas = distributionCanvas.value
       if (!canvas) return
@@ -2153,13 +1792,6 @@ export default {
       })
     }
 
-    // =========================================================================
-    // Расписание перерисовок
-    // =========================================================================
-    const scheduleHistoryDraw = () => {
-      nextTick(() => setTimeout(drawHistoryChart, 50))
-    }
-
     const scheduleAllDraws = () => {
       nextTick(() => {
         setTimeout(() => {
@@ -2167,7 +1799,6 @@ export default {
           drawRatioChart()
           drawActivityChart()
           drawSankey()
-          drawHistoryChart()
         }, 50)
       })
     }
@@ -2175,29 +1806,6 @@ export default {
     // =========================================================================
     // Загрузка данных
     // =========================================================================
-    const loadBalanceHistory = async () => {
-      historyLoading.value = true
-      historyError.value = ''
-      try {
-        const dateTo = new Date()
-        const dateFrom = new Date()
-        dateFrom.setDate(dateFrom.getDate() - historyRange.value + 1)
-
-        const data = await apiService.getBalanceHistory(
-          formatDateKey(dateFrom),
-          formatDateKey(dateTo)
-        )
-        historyRawData.value = data
-        scheduleHistoryDraw()
-      } catch (error) {
-        console.error('Error loading balance history:', error)
-        historyError.value = 'Не удалось загрузить историю баланса. Проверьте соединение.'
-        historyRawData.value = null
-      } finally {
-        historyLoading.value = false
-      }
-    }
-
     const loadAccounts = async () => {
       loading.value = true
       try {
@@ -2258,16 +1866,8 @@ export default {
     }
 
     // =========================================================================
-    // Переключения видимости
+    // Переключения
     // =========================================================================
-    const toggleHistoryAccount = (accountId) => {
-      const s = new Set(visibleHistoryAccounts.value)
-      if (s.has(accountId)) s.delete(accountId)
-      else s.add(accountId)
-      visibleHistoryAccounts.value = s
-      scheduleHistoryDraw()
-    }
-
     const toggleExpand = (accountId) => {
       const s = new Set(expandedAccounts.value)
       if (s.has(accountId)) s.delete(accountId)
@@ -2320,7 +1920,6 @@ export default {
         }
         closeModal()
         await loadAccounts()
-        await loadBalanceHistory()
       } catch (error) {
         console.error('Error saving account:', error)
         alert('Ошибка при сохранении счета')
@@ -2331,7 +1930,6 @@ export default {
       try {
         await apiService.toggleAccountActive(account.id, !account.is_active)
         await loadAccounts()
-        await loadBalanceHistory()
       } catch (error) {
         console.error('Error toggling account visibility:', error)
         alert('Ошибка при изменении видимости счета')
@@ -2349,7 +1947,6 @@ export default {
         await apiService.patchAccount(balanceAccount.value.id, { balance: newBalance.value })
         showBalanceModal.value = false
         await loadAccounts()
-        await loadBalanceHistory()
       } catch (error) {
         console.error('Error updating balance:', error)
         alert('Ошибка при обновлении баланса')
@@ -2366,7 +1963,6 @@ export default {
         await apiService.deleteAccount(accountToDelete.value.id)
         showDeleteModal.value = false
         await loadAccounts()
-        await loadBalanceHistory()
       } catch (error) {
         console.error('Error deleting account:', error)
         alert('Ошибка при удалении счета')
@@ -2417,7 +2013,6 @@ export default {
         await loadAccounts()
         await loadTransfers()
         await loadTransferAnalytics()
-        await loadBalanceHistory()
       } catch (error) {
         console.error('Error creating transfer:', error)
         alert('Ошибка при создании перевода: ' + (error.message || 'Неизвестная ошибка'))
@@ -2465,7 +2060,6 @@ export default {
         await loadAccounts()
         await loadTransfers()
         await loadTransferAnalytics()
-        await loadBalanceHistory()
       } catch (error) {
         console.error('Error updating transfer:', error)
         alert('Ошибка при обновлении перевода: ' + (error.message || 'Неизвестная ошибка'))
@@ -2485,7 +2079,6 @@ export default {
         await loadAccounts()
         await loadTransfers()
         await loadTransferAnalytics()
-        await loadBalanceHistory()
       } catch (error) {
         console.error('Error deleting transfer:', error)
         alert('Ошибка при удалении перевода')
@@ -2560,19 +2153,6 @@ export default {
     // =========================================================================
     // Watchers
     // =========================================================================
-    watch(
-      historyAccounts,
-      (list) => {
-        if (list.length === 0) return
-        const ids = list.map((a) => a.id)
-        const currentIds = Array.from(visibleHistoryAccounts.value)
-        const sameSet =
-          currentIds.length === ids.length && ids.every((id) => currentIds.includes(id))
-        if (!sameSet) visibleHistoryAccounts.value = new Set(ids)
-      },
-      { immediate: true }
-    )
-
     watch(distributionData, () => {
       if (analyticsExpanded.value) scheduleAllDraws()
     })
@@ -2582,15 +2162,9 @@ export default {
     watch([sankeyData, topAccountPairs], () => {
       if (analyticsExpanded.value) scheduleAllDraws()
     })
-    watch(historyRange, () => loadBalanceHistory())
-    watch(historyMode, () => {
-      if (analyticsExpanded.value) scheduleHistoryDraw()
-    })
-    watch(visibleHistoryAccounts, () => {
-      if (analyticsExpanded.value) scheduleHistoryDraw()
-    }, { deep: true })
 
     const handleResize = () => {
+      updateViewport()
       if (analyticsExpanded.value) scheduleAllDraws()
     }
 
@@ -2598,10 +2172,10 @@ export default {
     // Lifecycle
     // =========================================================================
     onMounted(async () => {
+      updateViewport()
       await Promise.all([
         loadAccounts(),
         loadTransfers(),
-        loadBalanceHistory(),
         loadTransferAnalytics()
       ])
       window.addEventListener('resize', handleResize)
@@ -2622,28 +2196,23 @@ export default {
       accounts, activeAccounts, inactiveAccounts, allAccounts, loading,
       showAccountModal, showBalanceModal, showDeleteModal,
       editingAccount, balanceAccount, accountToDelete, newBalance,
-      formData, totalBalance, activeAccountsCount, expandedAccounts,
+      formData, activeAccountsCount, expandedAccounts,
+
+      // Балансы
+      totalBalanceActive, totalBalanceInactive, totalBalanceAll,
+
+      // Карусель
+      currentStatIndex, isMobileView, statCards, cardPosition,
+      onTouchStart, onTouchMove, onTouchEnd, onMouseDown,
 
       // Сворачивание аналитики
       analyticsExpanded, toggleAnalytics,
-
-      // 2.1 Динамика баланса
-      historyCanvas, historyRange, historyRanges, historyMode,
-      historyLoading, historyError, historyAccounts, visibleHistoryAccounts,
-      historyTotalSeries, historyStartBalance, historyEndBalance,
-      historyChange, historyChangePercent, historyChangeClass,
-      historyMinTotal, historyMaxTotal, historyPeriodLabel, historyTooltip,
-      loadBalanceHistory, toggleHistoryAccount,
-      onHistoryMouseMove, onHistoryMouseLeave,
 
       // 1.1 Распределение
       distributionCanvas, distributionData,
 
       // 1.5 Соотношение
       ratioCanvas, activeRatioPercent,
-
-      // 1.6 Активность аккаунта
-      getLastActivityLabel, getActivityClass, getActivityIcon,
 
       // 1.4 Метрики (из бэкенда)
       analyticsRaw, analyticsLoading, analyticsError,
@@ -2662,7 +2231,7 @@ export default {
       activityCanvas, activityRange, activityRanges, activityData,
       activityTotalCount, activityTotalAmount, activityBusiestDay,
 
-      // Переводы (только для таблицы истории)
+      // Переводы
       transfers, currentPage, totalPages, totalCount, transferLoading,
       showEditTransferModal, showDeleteTransferModal,
       editingTransfer, transferToDelete, transferData, editTransferData,
@@ -2696,32 +2265,156 @@ export default {
   color: var(--dark-color);
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
+/* ============================================================
+   СТАТИСТИКА — карусель
+   ============================================================ */
+.stats-carousel {
   margin-bottom: 2rem;
 }
 
+.stats-carousel-track {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
 .stat-card {
-  background: var(--white);
   border-radius: var(--radius);
-  padding: 1.5rem;
+  padding: 1.25rem 1.5rem;
   box-shadow: var(--shadow);
+  box-sizing: border-box;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 120px;
+  color: white;
 }
 
 .stat-title {
-  font-size: 0.875rem;
-  color: var(--gray-color);
-  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.4rem;
+  opacity: 0.9;
 }
 
 .stat-value {
-  font-size: 2rem;
+  font-size: 1.6rem;
   font-weight: 700;
-  color: var(--dark-color);
+  line-height: 1.2;
+  word-break: break-word;
 }
 
+.stat-hint {
+  font-size: 0.75rem;
+  margin-top: 0.4rem;
+  opacity: 0.75;
+}
+
+/* Три цвета — как в дашборде */
+
+/* 1. Общий баланс — белая */
+.stat-card-total {
+  background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%);
+  border: 1px solid #e5e7eb;
+}
+
+.stat-card-total .stat-title {
+  color: #6b7280;
+}
+
+.stat-card-total .stat-value {
+  color: #1f2937;
+}
+
+.stat-card-total .stat-hint {
+  color: #9ca3af;
+}
+
+/* 2. Баланс активных — красная */
+.stat-card-active {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.stat-card-active .stat-title,
+.stat-card-active .stat-value,
+.stat-card-active .stat-hint {
+  color: #ffffff;
+}
+
+.stat-card-active .stat-hint {
+  opacity: 0.85;
+}
+
+/* 3. Баланс неактивных — синяя */
+.stat-card-inactive {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.stat-card-inactive .stat-title,
+.stat-card-inactive .stat-value,
+.stat-card-inactive .stat-hint {
+  color: #ffffff;
+}
+
+.stat-card-inactive .stat-hint {
+  opacity: 0.85;
+}
+
+.stats-dots {
+  display: none;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.stats-dots.is-mobile {
+  display: flex;
+}
+
+.stats-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d1d5db;
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+
+.stats-dot.active {
+  width: 24px;
+  border-radius: 4px;
+  background: var(--primary-color);
+}
+
+/* Мобильная карусель */
+.stats-carousel.is-mobile {
+  position: relative;
+  height: 160px;
+  overflow: visible;
+}
+
+.stats-carousel-track.is-mobile {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.stats-carousel-track.is-mobile .stat-card {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: calc(100% - 24px);
+  height: 100%;
+  transform: translateX(-50%);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.35s ease;
+  will-change: transform;
+}
+
+/* ============================================================
+   ОБЩИЕ
+   ============================================================ */
 .card {
   margin-bottom: 1.5rem;
 }
@@ -2863,30 +2556,7 @@ export default {
   margin-top: 1.5rem;
 }
 
-/* ===== 2.1 Динамика баланса ===== */
-.balance-history-card {
-  margin-bottom: 1.5rem;
-}
-
-.history-controls {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.history-range,
-.history-mode {
-  display: flex;
-  gap: 0.25rem;
-  background: var(--light-color);
-  padding: 0.25rem;
-  border-radius: var(--radius);
-}
-
-.history-body {
-  padding: 0.5rem 0;
-}
-
+/* Загрузка / ошибка */
 .history-loading,
 .history-error {
   display: flex;
@@ -2907,185 +2577,7 @@ export default {
   font-size: 2rem;
 }
 
-.history-chart-wrapper {
-  position: relative;
-  width: 100%;
-  overflow: hidden;
-}
-
-.history-canvas {
-  display: block;
-  width: 100%;
-  cursor: crosshair;
-}
-
-.history-tooltip {
-  position: absolute;
-  z-index: 10;
-  background: rgba(17, 24, 39, 0.95);
-  color: white;
-  border-radius: var(--radius);
-  padding: 0.625rem 0.75rem;
-  font-size: 0.75rem;
-  pointer-events: none;
-  transform: translate(-50%, -100%);
-  margin-top: -10px;
-  min-width: 180px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-}
-
-.history-tooltip::after {
-  content: '';
-  position: absolute;
-  bottom: -6px;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: rgba(17, 24, 39, 0.95);
-  border-bottom: none;
-}
-
-.history-tooltip-date {
-  font-weight: 700;
-  font-size: 0.8rem;
-  margin-bottom: 0.4rem;
-  padding-bottom: 0.4rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.history-tooltip-row {
-  display: grid;
-  grid-template-columns: 10px 1fr auto;
-  gap: 0.5rem;
-  align-items: center;
-  margin-bottom: 0.25rem;
-}
-
-.history-tooltip-color {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-}
-
-.history-tooltip-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.history-tooltip-value {
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.history-tooltip-total {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-top: 0.4rem;
-  padding-top: 0.4rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
-  font-weight: 700;
-}
-
-.history-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--light-color);
-}
-
-.history-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.375rem 0.75rem;
-  border-radius: 9999px;
-  background: #f9fafb;
-  border: 1px solid var(--light-color);
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  color: var(--dark-color);
-}
-
-.history-legend-item:hover {
-  background: var(--light-color);
-}
-
-.history-legend-item.is-off {
-  opacity: 0.4;
-  text-decoration: line-through;
-}
-
-.history-legend-color {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  flex-shrink: 0;
-}
-
-.history-legend-name {
-  font-weight: 500;
-}
-
-.history-legend-value {
-  color: var(--gray-color);
-  font-size: 0.75rem;
-}
-
-.history-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--light-color);
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.history-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-}
-
-.history-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.history-stat-label {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  color: var(--gray-color);
-  font-weight: 500;
-}
-
-.history-stat-value {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--dark-color);
-}
-
-.history-stat-value small {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--gray-color);
-}
-
-.history-period-label {
-  font-size: 0.8rem;
-  color: var(--gray-color);
-  font-style: italic;
-}
-
-/* ===== Аналитический ряд ===== */
+/* Аналитический ряд */
 .analytics-row {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -3093,7 +2585,7 @@ export default {
   margin-bottom: 1.5rem;
 }
 
-/* ===== Распределение ===== */
+/* Распределение */
 .distribution-card { margin-bottom: 0; }
 
 .distribution-total {
@@ -3196,7 +2688,7 @@ export default {
   font-size: 0.875rem;
 }
 
-/* ===== Соотношение ===== */
+/* Соотношение */
 .accounts-ratio-card { margin-bottom: 0; }
 
 .accounts-ratio-body {
@@ -3272,7 +2764,7 @@ export default {
 .ratio-label { color: var(--dark-color); font-weight: 500; }
 .ratio-value { font-weight: 700; color: var(--dark-color); }
 
-/* ===== Метрики ===== */
+/* Метрики */
 .transfer-metrics-card { margin-bottom: 1.5rem; }
 
 .metrics-period {
@@ -3323,7 +2815,7 @@ export default {
   word-break: break-word;
 }
 
-/* ===== Топ счетов, пары, санкей ===== */
+/* Топ счетов, пары, санкей */
 .top-accounts-card,
 .top-pairs-card,
 .sankey-card { margin-bottom: 1.5rem; }
@@ -3472,7 +2964,7 @@ export default {
 
 .pair-percent { font-weight: 700; color: var(--dark-color); }
 
-/* Санкей — горизонтальный скролл на мобильных */
+/* Санкей */
 .sankey-body {
   width: 100%;
   overflow-x: auto;
@@ -3566,39 +3058,6 @@ export default {
   color: var(--dark-color);
   font-weight: 700;
 }
-
-/* 1.6 Последняя активность */
-.activity-cell {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  font-size: 0.8rem;
-  padding: 0.25rem 0.625rem;
-  border-radius: 9999px;
-  font-weight: 500;
-}
-
-.activity-cell.activity-recent { background: #d1fae5; color: #065f46; }
-.activity-cell.activity-medium { background: #fef3c7; color: #92400e; }
-.activity-cell.activity-old { background: #fee2e2; color: #991b1b; }
-.activity-cell.activity-never { background: #f3f4f6; color: #6b7280; }
-
-.account-activity {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem;
-  background: var(--white);
-  border-radius: var(--radius);
-  margin-bottom: 0.75rem;
-  font-size: 0.8rem;
-  color: var(--gray-color);
-}
-
-.account-activity strong.activity-recent { color: #065f46; }
-.account-activity strong.activity-medium { color: #92400e; }
-.account-activity strong.activity-old { color: #991b1b; }
-.account-activity strong.activity-never { color: #6b7280; }
 
 /* Мобильные карточки */
 .mobile-accounts { display: none; }
@@ -3863,7 +3322,6 @@ export default {
   .desktop-table { display: none; }
   .mobile-accounts,
   .mobile-cards { display: block; }
-  .stats-grid { gap: 1rem; }
   .stat-value { font-size: 1.5rem; }
   .card { padding: 1rem; }
   .transfer-form-grid { grid-template-columns: 1fr; }
@@ -3875,9 +3333,6 @@ export default {
   }
   .distribution-chart-wrapper { width: 280px; }
   .metrics-grid { grid-template-columns: repeat(2, 1fr); }
-  .history-controls { flex-direction: column; width: 100%; }
-  .history-range,
-  .history-mode { width: 100%; }
 }
 
 @media (min-width: 1025px) and (max-width: 1280px) {
@@ -3892,10 +3347,10 @@ export default {
   .page-header { flex-direction: column; text-align: center; }
   .page-header h1 { font-size: 1.5rem; }
   .page-header .btn { width: 100%; }
-  .stats-grid { grid-template-columns: 1fr; }
-  .stat-card { padding: 1rem; }
+  .stat-card { padding: 1rem; min-height: 110px; }
   .stat-title { font-size: 0.75rem; }
   .stat-value { font-size: 1.25rem; }
+  .stat-hint { font-size: 0.7rem; }
   .compact-left { gap: 0.5rem; }
   .account-name-compact { font-size: 0.8rem; }
   .account-balance-compact { font-size: 0.9rem; }
@@ -3925,9 +3380,6 @@ export default {
   .activity-range { width: 100%; }
   .range-btn { flex: 1; font-size: 0.7rem; padding: 0.375rem 0.25rem; }
   .activity-summary { gap: 0.75rem; font-size: 0.75rem; }
-  .history-stats { gap: 1rem; }
-  .history-stat-value { font-size: 0.85rem; }
-  .history-footer { flex-direction: column; align-items: flex-start; }
   .analytics-section-title { font-size: 1.1rem; }
   .analytics-section-hint { display: none; }
 }
@@ -3961,10 +3413,6 @@ export default {
   .ratio-center-percent { font-size: 1.35rem; }
   .pair-route { font-size: 0.75rem; }
   .sankey-footer { flex-direction: column; align-items: flex-start; }
-  .history-legend { gap: 0.375rem; }
-  .history-legend-item { font-size: 0.7rem; padding: 0.25rem 0.5rem; }
-  .history-stats { flex-direction: column; gap: 0.5rem; }
-  .history-tooltip { min-width: 150px; font-size: 0.7rem; }
   .analytics-section-header { padding: 0.875rem 1rem; }
   .analytics-section-title { font-size: 1rem; }
   .analytics-toggle-btn { font-size: 0.75rem; padding: 0.375rem 0.625rem; }
