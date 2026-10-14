@@ -103,7 +103,7 @@
         </div>
       </div>
 
-      <!-- Круговая диаграмма на всю ширину -->
+      <!-- Круговая диаграмма -->
       <div class="pie-chart-section" v-if="statistics.length > 0">
         <div class="pie-chart-wrapper">
           <canvas id="pieChartCanvas" class="pie-chart-canvas"></canvas>
@@ -117,17 +117,36 @@
         </div>
       </div>
 
-      <!-- Список категорий на всю ширину -->
+      <!-- Список категорий -->
       <div class="categories-list full-width">
         <div v-for="category in sortedStatistics" :key="category.id" class="category-item full-width-item">
-          <div class="category-header" @click="category.children?.length && toggleCategory(category.id)">
+          <div class="category-header">
             <div class="category-name">
-              <i v-if="category.children?.length" :class="expandedCategories[category.id] ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" class="expand-icon"></i>
+              <button
+                v-if="category.children?.length"
+                class="expand-icon-btn"
+                @click.stop="toggleCategory(category.id)"
+                :aria-expanded="!!expandedCategories[category.id]"
+              >
+                <i :class="expandedCategories[category.id] ? 'fas fa-chevron-down' : 'fas fa-chevron-right'"></i>
+              </button>
               <i v-else class="fas fa-folder placeholder-icon"></i>
               <i class="fas fa-folder"></i>
-              <span>{{ category.name }}</span>
+              <span
+                class="category-name-text"
+                @click="openCategoryTransactions(category)"
+                title="Показать транзакции категории"
+              >
+                {{ category.name }}
+              </span>
             </div>
-            <div class="category-total">{{ formatCurrency(category.total) }}</div>
+            <div
+              class="category-total category-total-clickable"
+              @click="openCategoryTransactions(category)"
+              title="Показать транзакции категории"
+            >
+              {{ formatCurrency(category.total) }}
+            </div>
           </div>
 
           <div class="progress-wrapper">
@@ -145,9 +164,21 @@
               <div class="subcategory-header">
                 <div class="subcategory-name">
                   <i class="fas fa-level-down-alt"></i>
-                  <span>{{ child.name }}</span>
+                  <span
+                    class="category-name-text"
+                    @click="openCategoryTransactions(child, category.name)"
+                    title="Показать транзакции подкатегории"
+                  >
+                    {{ child.name }}
+                  </span>
                 </div>
-                <div class="subcategory-total">{{ formatCurrency(child.total) }}</div>
+                <div
+                  class="subcategory-total category-total-clickable"
+                  @click="openCategoryTransactions(child, category.name)"
+                  title="Показать транзакции подкатегории"
+                >
+                  {{ formatCurrency(child.total) }}
+                </div>
               </div>
               <div class="progress-bar subcategory-progress">
                 <div class="progress-fill progress-subcategory" :style="{ width: getSubPercentage(category.total, child.total) + '%' }">
@@ -176,7 +207,7 @@
         <h3 class="card-title">Аналитика по месяцам</h3>
       </div>
 
-      <!-- Мобильные карточки (включая планшеты вертикально) -->
+      <!-- Мобильные карточки (планшеты вертикально + мобильные) -->
       <div class="mobile-months-grid">
         <div v-for="item in monthlyAnalytics" :key="item.period" class="mobile-month-card">
           <div class="mobile-month-header">
@@ -223,7 +254,7 @@
         </div>
       </div>
 
-      <!-- Десктоп таблица (только для широких экранов) -->
+      <!-- Десктоп таблица -->
       <div class="desktop-table-wrapper">
         <table class="analytics-table">
           <thead>
@@ -303,6 +334,99 @@
         <i class="fas fa-chart-simple"></i> Поверните устройство для детального просмотра
       </div>
     </div>
+
+    <!-- ============================================================ -->
+    <!-- Модальное окно с транзакциями категории                       -->
+    <!-- ============================================================ -->
+    <div v-if="showCategoryModal" class="modal" @click.self="closeCategoryModal">
+      <div class="modal-content modal-wide">
+        <div class="modal-header">
+          <div>
+            <h3>Транзакции: {{ modalCategory?.name }}</h3>
+            <p class="modal-subtitle">
+              {{ months[selectedMonth - 1] }} {{ selectedYear }}
+              <template v-if="modalParentCategoryName">
+                • {{ modalParentCategoryName }}
+              </template>
+              • {{ currentType === 'income' ? 'Доходы' : 'Расходы' }}
+            </p>
+          </div>
+          <button class="modal-close" @click="closeCategoryModal">&times;</button>
+        </div>
+
+        <div v-if="modalLoading" class="modal-loading">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>Загрузка...</p>
+        </div>
+
+        <div v-else-if="modalError" class="modal-error">
+          <i class="fas fa-exclamation-triangle"></i>
+          <p>{{ modalError }}</p>
+        </div>
+
+        <template v-else>
+          <div class="modal-summary">
+            <span>Найдено: <strong>{{ modalTotalItems }}</strong></span>
+            <span>
+              Итого:
+              <strong :class="currentType === 'income' ? 'text-success' : 'text-danger'">
+                {{ formatCurrency(modalTotalSum) }}
+              </strong>
+            </span>
+          </div>
+
+          <div class="modal-transactions-list">
+            <div v-for="t in modalTransactions" :key="t.id" class="modal-transaction-item">
+              <div class="modal-transaction-left">
+                <div class="modal-transaction-date">
+                  <i class="fas fa-calendar-day"></i>
+                  {{ formatModalDate(t.create_at) }}
+                </div>
+                <div class="modal-transaction-meta">
+                  <span v-if="t.account?.name" class="modal-transaction-account">
+                    <i class="fas fa-credit-card"></i> {{ t.account.name }}
+                  </span>
+                  <span v-if="t.comment" class="modal-transaction-comment">
+                    — {{ t.comment }}
+                  </span>
+                </div>
+              </div>
+              <div
+                class="modal-transaction-amount"
+                :class="currentType === 'income' ? 'text-success' : 'text-danger'"
+              >
+                {{ formatCurrency(t.amount) }}
+              </div>
+            </div>
+
+            <div v-if="modalTransactions.length === 0" class="empty-state">
+              <i class="fas fa-receipt"></i>
+              <p>Нет транзакций за этот период</p>
+            </div>
+          </div>
+
+          <div v-if="modalTotalPages > 1" class="modal-pagination">
+            <button
+              class="btn btn-secondary"
+              :disabled="modalCurrentPage === 1"
+              @click="modalPrevPage"
+            >
+              <i class="fas fa-chevron-left"></i> Назад
+            </button>
+            <span class="modal-pagination-info">
+              Страница {{ modalCurrentPage }} из {{ modalTotalPages }}
+            </span>
+            <button
+              class="btn btn-secondary"
+              :disabled="modalCurrentPage === modalTotalPages"
+              @click="modalNextPage"
+            >
+              Вперед <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+        </template>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -329,6 +453,27 @@ export default {
     const sortOrder = ref('desc')
     const categoryColors = ref({})
     let resizeObserver = null
+
+    // =========================================================
+    // Модальное окно транзакций по категории
+    // =========================================================
+    const showCategoryModal = ref(false)
+    const modalCategory = ref(null)
+    const modalParentCategoryName = ref('')
+    const modalTransactions = ref([])
+    const modalLoading = ref(false)
+    const modalError = ref('')
+    const modalCurrentPage = ref(1)
+    const modalPageSize = ref(20)
+    const modalTotalPages = ref(1)
+    const modalTotalItems = ref(0)
+
+    const modalTotalSum = computed(() => {
+      return modalTransactions.value.reduce(
+        (sum, t) => sum + (parseFloat(t.amount) || 0),
+        0
+      )
+    })
 
     const years = computed(() => {
       const currentYear = new Date().getFullYear()
@@ -400,6 +545,9 @@ export default {
       return ((parseFloat(amount) / maxMonthAmount.value) * 100).toFixed(1)
     }
 
+    // =========================================================
+    // Отрисовка круговой диаграммы
+    // =========================================================
     const drawPieChart = () => {
       const canvas = document.getElementById('pieChartCanvas')
       if (!canvas) return
@@ -594,7 +742,7 @@ export default {
         ctx.fill()
         ctx.fillStyle = '#666'
         ctx.font = isMobile.value || isTablet.value ? '10px Arial' : '12px Arial'
-        const monthLabel = isMobile.value || isTablet.value ? item.month_name.substring(0, 3) : item.month_name.substring(0, 3)
+        const monthLabel = item.month_name.substring(0, 3)
         ctx.fillText(monthLabel, x - (isMobile.value || isTablet.value ? 10 : 15), height - padding + (isMobile.value || isTablet.value ? 15 : 20))
       })
     }
@@ -604,6 +752,112 @@ export default {
       const numValue = parseFloat(value)
       if (isNaN(numValue)) return '0 ₽'
       return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(numValue)
+    }
+
+    /** YYYY-MM-DD из Date */
+    const formatDateOnly = (date) => {
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
+
+    /** Дата с временем для отображения в модалке */
+    const formatModalDate = (dateString) => {
+      if (!dateString) return ''
+      const d = new Date(dateString)
+      if (isNaN(d.getTime())) return ''
+      return d.toLocaleString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }
+
+    // =========================================================
+    // Модалка: транзакции категории
+    // =========================================================
+    const openCategoryTransactions = async (category, parentName = '') => {
+      if (!category) return
+
+      modalCategory.value = category
+      modalParentCategoryName.value = parentName
+      modalCurrentPage.value = 1
+      showCategoryModal.value = true
+      await loadCategoryTransactions()
+    }
+
+    /**
+     * Загружает транзакции по категории за выбранный месяц/год.
+     * Параметры — как в TransactionsList: category_name, create_at_after,
+     * create_at_before, type.
+     */
+    const loadCategoryTransactions = async () => {
+      if (!modalCategory.value) return
+
+      modalLoading.value = true
+      modalError.value = ''
+
+      try {
+        const year = selectedYear.value
+        const month = selectedMonth.value
+
+        const firstDay = new Date(year, month - 1, 1)
+        const lastDay = new Date(year, month, 0)
+
+        const params = {
+          page: modalCurrentPage.value,
+          page_size: modalPageSize.value,
+          type: currentType.value,
+          category_name: modalCategory.value.name,
+          create_at_after: formatDateOnly(firstDay),
+          create_at_before: formatDateOnly(lastDay),
+        }
+
+        const response = await apiService.getTransactions(params)
+
+        modalTransactions.value = response.results || []
+        modalTotalItems.value = response.count || 0
+        modalTotalPages.value = Math.max(
+          1,
+          Math.ceil(modalTotalItems.value / modalPageSize.value)
+        )
+      } catch (error) {
+        console.error('Error loading category transactions:', error)
+        modalError.value = 'Не удалось загрузить транзакции. Проверьте соединение.'
+        modalTransactions.value = []
+        modalTotalItems.value = 0
+        modalTotalPages.value = 1
+      } finally {
+        modalLoading.value = false
+      }
+    }
+
+    const closeCategoryModal = () => {
+      showCategoryModal.value = false
+      modalCategory.value = null
+      modalParentCategoryName.value = ''
+      modalTransactions.value = []
+      modalCurrentPage.value = 1
+      modalTotalPages.value = 1
+      modalTotalItems.value = 0
+      modalError.value = ''
+    }
+
+    const modalPrevPage = () => {
+      if (modalCurrentPage.value > 1) {
+        modalCurrentPage.value--
+        loadCategoryTransactions()
+      }
+    }
+
+    const modalNextPage = () => {
+      if (modalCurrentPage.value < modalTotalPages.value) {
+        modalCurrentPage.value++
+        loadCategoryTransactions()
+      }
     }
 
     const handleResize = () => {
@@ -649,7 +903,14 @@ export default {
       expandedCategories, sortOrder, maxMonthAmount, maxMonthName, minMonthAmount, minMonthName,
       averageMonthlyAmount, medianMonthlyAmount, standardDeviation, coefficientOfVariation,
       loadStatistics, toggleCategory, sortCategories, sortedChildren, getPercentage, getSubPercentage,
-      getMonthPercentOfMax, getTrendClass, getTrendBadgeClass, formatCurrency, getCategoryColor
+      getMonthPercentOfMax, getTrendClass, getTrendBadgeClass, formatCurrency, getCategoryColor,
+
+      // Модалка
+      showCategoryModal, modalCategory, modalParentCategoryName,
+      modalTransactions, modalLoading, modalError, modalTotalSum,
+      modalCurrentPage, modalTotalPages, modalTotalItems,
+      openCategoryTransactions, closeCategoryModal, modalPrevPage, modalNextPage,
+      formatModalDate,
     }
   }
 }
@@ -816,6 +1077,11 @@ export default {
   border-color: #9ca3af;
 }
 
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .btn-primary {
   background: #6366f1;
   color: white;
@@ -825,6 +1091,12 @@ export default {
 .btn-primary:hover {
   background: #4f46e5;
   border-color: #4f46e5;
+}
+
+.btn-secondary {
+  background: #f9fafb;
+  color: #374151;
+  border: 1px solid #d1d5db;
 }
 
 .btn-sort {
@@ -965,7 +1237,7 @@ export default {
   color: #6b7280;
 }
 
-/* ========== Список категорий на всю ширину ========== */
+/* ========== Список категорий ========== */
 .categories-list {
   padding: 0;
 }
@@ -997,12 +1269,6 @@ export default {
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem;
-  cursor: pointer;
-  user-select: none;
-}
-
-.category-header:hover {
-  opacity: 0.8;
 }
 
 .category-name {
@@ -1019,6 +1285,27 @@ export default {
   color: #6b7280;
 }
 
+.expand-icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.125rem;
+  color: #6b7280;
+  font-size: 0.688rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.expand-icon-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
 .placeholder-icon {
   width: 12px;
   visibility: hidden;
@@ -1028,6 +1315,27 @@ export default {
   font-weight: 600;
   font-size: 0.875rem;
   color: #374151;
+}
+
+/* Кликабельные элементы категории */
+.category-name-text {
+  cursor: pointer;
+  transition: color 0.2s;
+  border-bottom: 1px dashed transparent;
+}
+
+.category-name-text:hover {
+  color: #6366f1;
+  border-bottom-color: #6366f1;
+}
+
+.category-total-clickable {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.category-total-clickable:hover {
+  color: #6366f1;
 }
 
 /* ========== Прогресс-бары ========== */
@@ -1231,7 +1539,7 @@ export default {
   margin-bottom: 0.25rem;
 }
 
-/* ========== Десктоп таблица (скрыта на мобильных и планшетах) ========== */
+/* ========== Десктоп таблица ========== */
 .desktop-table-wrapper {
   display: none;
 }
@@ -1337,7 +1645,235 @@ export default {
   text-align: center;
 }
 
-/* ========== ПЛАНШЕТЫ (вертикальная ориентация, 768px - 1024px) ========== */
+/* ============================================================
+   Модальное окно транзакций по категории
+   ============================================================ */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.modal-content {
+  background: #ffffff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-content.modal-wide {
+  max-width: 720px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  gap: 0.75rem;
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  z-index: 1;
+  border-radius: 12px 12px 0 0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.modal-subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.813rem;
+  color: #6b7280;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.modal-close:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.modal-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.813rem;
+  color: #4b5563;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.modal-summary strong {
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.modal-summary .text-success { color: #10b981; }
+.modal-summary .text-danger { color: #ef4444; }
+
+/* Список транзакций в модалке */
+.modal-transactions-list {
+  padding: 0.5rem 0;
+  flex: 1;
+}
+
+.modal-transaction-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid #f3f4f6;
+  gap: 1rem;
+  transition: background 0.2s;
+}
+
+.modal-transaction-item:hover {
+  background: #f9fafb;
+}
+
+.modal-transaction-item:last-child {
+  border-bottom: none;
+}
+
+.modal-transaction-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.modal-transaction-date {
+  font-size: 0.75rem;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-bottom: 0.25rem;
+}
+
+.modal-transaction-meta {
+  font-size: 0.813rem;
+  color: #4b5563;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-transaction-account {
+  color: #6b7280;
+  margin-right: 0.375rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.modal-transaction-comment {
+  color: #9ca3af;
+}
+
+.modal-transaction-amount {
+  font-size: 1rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.modal-transaction-amount.text-success { color: #10b981; }
+.modal-transaction-amount.text-danger { color: #ef4444; }
+
+/* Пагинация в модалке */
+.modal-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  flex-wrap: wrap;
+  position: sticky;
+  bottom: 0;
+  background: #ffffff;
+  border-radius: 0 0 12px 12px;
+}
+
+.modal-pagination .btn {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.813rem;
+  width: auto;
+}
+
+.modal-pagination-info {
+  font-size: 0.813rem;
+  color: #6b7280;
+}
+
+/* Состояния внутри модалки */
+.modal-loading,
+.modal-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  color: #6b7280;
+  gap: 0.75rem;
+}
+
+.modal-loading i,
+.modal-error i {
+  font-size: 2rem;
+}
+
+.modal-error {
+  color: #ef4444;
+}
+
+.modal-loading p,
+.modal-error p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+/* ============================================================
+   ПЛАНШЕТЫ (вертикальная ориентация, 768px - 1024px)
+   ============================================================ */
 @media (min-width: 768px) and (max-width: 1024px) {
   .page-header {
     padding: 0.75rem 0;
@@ -1398,7 +1934,6 @@ export default {
     font-size: 1.125rem;
   }
 
-  /* Круговая диаграмма на планшете - фиксированный размер */
   .pie-chart-section {
     flex-direction: column;
     padding: 1rem;
@@ -1434,7 +1969,6 @@ export default {
     border-radius: 10px;
   }
 
-  /* На планшетах тоже используем мобильные карточки для годов */
   .mobile-months-grid {
     display: block;
   }
@@ -1458,9 +1992,16 @@ export default {
   .chart-section {
     padding: 1rem;
   }
+
+  .modal-content,
+  .modal-content.modal-wide {
+    max-width: 90%;
+  }
 }
 
-/* ========== ДЕСКТОП (широкие экраны, > 1024px) ========== */
+/* ============================================================
+   ДЕСКТОП (широкие экраны, > 1024px)
+   ============================================================ */
 @media (min-width: 1025px) {
   .page-header {
     padding: 0;
@@ -1546,7 +2087,6 @@ export default {
     border-radius: 10px;
   }
 
-  /* На десктопе показываем таблицу, скрываем мобильные карточки */
   .mobile-months-grid {
     display: none;
   }
@@ -1562,7 +2102,7 @@ export default {
   }
 }
 
-/* Адаптивная таблица для планшетов в горизонтальной ориентации */
+/* Планшет горизонтально (900-1024) — показываем таблицу */
 @media (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
   .desktop-table-wrapper {
     display: block;
@@ -1579,6 +2119,50 @@ export default {
   .analytics-table th,
   .analytics-table td {
     padding: 0.5rem;
+  }
+}
+
+/* ============================================================
+   МОБИЛЬНЫЕ (≤ 768px)
+   ============================================================ */
+@media (max-width: 768px) {
+  .modal-content,
+  .modal-content.modal-wide {
+    max-width: 100%;
+    max-height: 95vh;
+    border-radius: 12px;
+  }
+
+  .modal-header {
+    padding: 1rem 1.25rem;
+  }
+
+  .modal-header h3 {
+    font-size: 1rem;
+  }
+
+  .modal-summary {
+    padding: 0.625rem 1.25rem;
+  }
+
+  .modal-transaction-item {
+    padding: 0.625rem 1.25rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.375rem;
+  }
+
+  .modal-transaction-amount {
+    align-self: flex-end;
+    font-size: 0.938rem;
+  }
+
+  .modal-pagination {
+    padding: 0.75rem 1rem;
+  }
+
+  .modal-pagination-info {
+    font-size: 0.75rem;
   }
 }
 </style>
