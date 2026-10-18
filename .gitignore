@@ -179,3 +179,4 @@ mongodb_data
 swag-config
 nginx
 nginx-conf
+.celerybeat-schedule*
