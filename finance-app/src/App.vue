@@ -41,6 +41,11 @@
           <span>Транзакции</span>
         </router-link>
 
+        <router-link to="/recurring" class="nav-item" @click="closeMobileMenu">
+          <i class="fas fa-redo"></i>
+          <span>Регулярные</span>
+        </router-link>
+
         <router-link to="/debts" class="nav-item" @click="closeMobileMenu">
           <i class="fas fa-hand-holding-usd"></i>
           <span>Долги</span>

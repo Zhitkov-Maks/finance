@@ -112,6 +112,60 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # ========== CELERY ==========
+
+  celery_worker:
+    build:
+      context: ./finance
+    container_name: celery-worker
+    restart: always
+    working_dir: /finance
+    entrypoint: ["celery", "-A", "config", "worker", "-l", "info"]
+    env_file:
+      - .env
+    depends_on:
+      finance_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - finance_app_network
+    volumes:
+      - ./finance:/finance
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  celery_beat:
+    build:
+      context: ./finance
+    container_name: celery-beat
+    restart: always
+    working_dir: /finance
+    entrypoint: ["celery", "-A", "config", "beat", "-l", "info"]
+    env_file:
+      - .env
+    depends_on:
+      finance_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      celery_worker:
+        condition: service_started
+    networks:
+      - finance_app_network
+    volumes:
+      - ./finance:/finance
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ========== ФРОНТЕНД ==========
+
   fastapi:
     build: ./timesheets-app
     container_name: fastapi
@@ -136,8 +190,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-
-  # ========== ФРОНТЕНД ==========
 
   vue_app:
     build:

@@ -579,6 +579,43 @@ class ApiService {
     async deleteBudget(id) {
         await this.client.delete(`/budgets/${id}/`)
     }
+
+        // ==================== Регулярные операции ====================
+    async getRecurring(filters = {}) {
+        const response = await this.client.get('/recurring/', { params: filters })
+        return response.data
+    }
+
+    async getRecurringById(id) {
+        const response = await this.client.get(`/recurring/${id}/`)
+        return response.data
+    }
+
+    async createRecurring(data) {
+        const response = await this.client.post('/recurring/', data)
+        return response.data
+    }
+
+    async updateRecurring(id, data) {
+        const response = await this.client.put(`/recurring/${id}/`, data)
+        return response.data
+    }
+
+    async patchRecurring(id, data) {
+        const response = await this.client.patch(`/recurring/${id}/`, data)
+        return response.data
+    }
+
+    async deleteRecurring(id) {
+        await this.client.delete(`/recurring/${id}/`)
+    }
+
+    async getUpcomingPayments(days = 30) {
+        const response = await this.client.get('/recurring/upcoming/', {
+            params: { days }
+        })
+        return response.data
+    }
 }
 
 export default new ApiService()

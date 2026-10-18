@@ -16,6 +16,7 @@ import TimesheetsView from './components/TimesheetsView.vue'
 import OAuthCallback from './components/OAuthCallback.vue'
 import About from './components/About.vue'
 import BudgetsView from './components/BudgetsView.vue'
+import RecurringView from './components/RecurringView.vue'
 
 const routes = [
   { path: '/', component: Dashboard, meta: { requiresAuth: true } },
@@ -30,6 +31,7 @@ const routes = [
   { path: '/oauth-callback', component: OAuthCallback, meta: { requiresGuest: true }},
   { path: '/about', name: 'About', component: About,meta: { requiresAuth: true }},
   { path: '/budgets', name: 'Budgets', component: BudgetsView, meta: { requiresAuth: true }},
+  { path: '/recurring', name: 'Recurring', component: RecurringView, meta: { requiresAuth: true }}
 ]
 
 const router = createRouter({

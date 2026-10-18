@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 
+from celery.schedules import crontab
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -58,6 +59,7 @@ INSTALLED_APPS = [
     "analytics.apps.AnalyticsConfig",
     "timesheets.apps.TimesheetsConfig",
     "budgets.apps.BudgetsConfig",
+    "recurring.apps.RecurringConfig",
     "django_filters",
     "drf_spectacular",
     "corsheaders",
@@ -353,4 +355,14 @@ CACHES = {
         "KEY_PREFIX": "finance",
         "TIMEOUT": 300,
     }
+}
+
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_BEAT_SCHEDULE = {
+    "process-recurring-transactions": {
+        "task": "recurring.tasks.process_recurring_transactions",
+        "schedule": crontab(hour=0, minute=5),
+    },
 }

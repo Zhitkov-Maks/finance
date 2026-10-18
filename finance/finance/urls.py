@@ -49,4 +49,5 @@ urlpatterns = [
     path(f"api/{v}/debts/", include("debt.urls")),
     path(f"api/{v}/timesheets/", include("timesheets.urls")),
     path("api/v1/budgets/", include("budgets.urls")),
+    path("api/v1/recurring/", include("recurring.urls")),
 ]

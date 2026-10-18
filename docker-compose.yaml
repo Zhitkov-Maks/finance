@@ -101,6 +101,8 @@ services:
       - .env
     environment:
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/2
     depends_on:
       finance_db:
         condition: service_healthy
@@ -117,6 +119,66 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ========== CELERY ==========
+
+  celery_worker:
+    build:
+      context: ./finance
+    container_name: celery-worker
+    restart: unless-stopped
+    working_dir: /finance
+    entrypoint: ["celery", "-A", "config", "worker", "-l", "info", "--concurrency=1"]
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/2
+    depends_on:
+      finance_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app_network
+    volumes:
+      - ./finance:/finance
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  celery_beat:
+    build:
+      context: ./finance
+    container_name: celery-beat
+    restart: unless-stopped
+    working_dir: /finance
+    entrypoint: ["celery", "-A", "config", "beat", "-l", "info"]
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/2
+    depends_on:
+      finance_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      celery_worker:
+        condition: service_started
+    networks:
+      - app_network
+    volumes:
+      - ./finance:/finance
     logging:
       driver: "json-file"
       options:
