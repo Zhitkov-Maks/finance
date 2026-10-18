@@ -16,31 +16,37 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path, include, re_path
+from django.urls import include, path, re_path
 from drf_spectacular.views import (
     SpectacularAPIView,
-    SpectacularSwaggerView,
     SpectacularRedocView,
+    SpectacularSwaggerView,
 )
+
 from .views import health_check
 
 # Версия api
 v = "v1"
 
 urlpatterns = [
-    path('health/', health_check, name='health'),
+    path("health/", health_check, name="health"),
     path("admin/", admin.site.urls),
     path("api/vi/dfr_auth/", include("rest_framework.urls")),
     path(f"api/{v}/auth/", include("djoser.urls")),
     re_path("auth/", include("djoser.urls.authtoken")),
-    path('auth/yandex/', include('yandex_auth.urls')),
+    path("auth/yandex/", include("yandex_auth.urls")),
     path(f"api/{v}/accounts/", include("accounts.urls")),
     path(f"api/{v}/transaction/", include("transactions.urls")),
-    path(f'api/{v}/analitycs/', include('analytics.urls')),
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-    path(f"api/{v}/transfer/", include('transfer.urls')),
-    path(f'api/{v}/debts/', include('debt.urls')),
-    path(f'api/{v}/timesheets/', include('timesheets.urls'))
+    path(f"api/{v}/analitycs/", include("analytics.urls")),
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path(
+        "api/swagger/",
+        SpectacularSwaggerView.as_view(url_name="schema"),
+        name="swagger-ui",
+    ),
+    path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+    path(f"api/{v}/transfer/", include("transfer.urls")),
+    path(f"api/{v}/debts/", include("debt.urls")),
+    path(f"api/{v}/timesheets/", include("timesheets.urls")),
+    path("api/v1/budgets/", include("budgets.urls")),
 ]

@@ -558,6 +558,27 @@ class ApiService {
             throw error
         }
     }
+    // Бюджеты
+    async getBudgetSummary(periodType = 'monthly', date = null) {
+        const params = { period_type: periodType }
+        if (date) params.date = date
+        const response = await this.client.get('/budgets/summary/', { params })
+        return response.data
+    }
+
+    async createBudget(data) {
+        const response = await this.client.post('/budgets/', data)
+        return response.data
+    }
+
+    async updateBudget(id, data) {
+        const response = await this.client.put(`/budgets/${id}/`, data)
+        return response.data
+    }
+
+    async deleteBudget(id) {
+        await this.client.delete(`/budgets/${id}/`)
+    }
 }
 
 export default new ApiService()

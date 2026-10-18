@@ -15,6 +15,7 @@ import Statistics from './components/Statistics.vue'
 import TimesheetsView from './components/TimesheetsView.vue'
 import OAuthCallback from './components/OAuthCallback.vue'
 import About from './components/About.vue'
+import BudgetsView from './components/BudgetsView.vue'
 
 const routes = [
   { path: '/', component: Dashboard, meta: { requiresAuth: true } },
@@ -27,7 +28,8 @@ const routes = [
   { path: '/profile', name: 'Profile', component: Profile,  meta: { requiresAuth: true } },
   { path: '/timesheets', name: 'timesheets', component: TimesheetsView, meta: { requiresAuth: true }},
   { path: '/oauth-callback', component: OAuthCallback, meta: { requiresGuest: true }},
-  { path: '/about', name: 'About', component: About,meta: { requiresAuth: true }}
+  { path: '/about', name: 'About', component: About,meta: { requiresAuth: true }},
+  { path: '/budgets', name: 'Budgets', component: BudgetsView, meta: { requiresAuth: true }},
 ]
 
 const router = createRouter({

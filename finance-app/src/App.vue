@@ -26,6 +26,11 @@
           <span>Счета</span>
         </router-link>
 
+        <router-link to="/budgets" class="nav-item" @click="closeMobileMenu">
+          <i class="fas fa-wallet"></i>
+          <span>Бюджеты</span>
+        </router-link>
+
         <router-link to="/categories" class="nav-item" @click="closeMobileMenu">
           <i class="fas fa-tags"></i>
           <span>Категории</span>

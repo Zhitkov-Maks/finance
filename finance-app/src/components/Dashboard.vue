@@ -186,6 +186,54 @@
     </div>
 
     <!-- ============================================================ -->
+    <!-- ВИДЖЕТ БЮДЖЕТА МЕСЯЦА                                         -->
+    <!-- ============================================================ -->
+    <div
+      v-if="budgetSummary && budgetSummary.total_budget"
+      class="card budget-widget"
+      @click="$router.push('/budgets')"
+    >
+      <div class="budget-widget-header">
+        <h3 class="card-title">
+          <i class="fas fa-wallet"></i> Бюджет месяца
+        </h3>
+        <i class="fas fa-chevron-right budget-widget-arrow"></i>
+      </div>
+
+      <div class="budget-widget-amounts">
+        <span
+          class="budget-widget-spent"
+          :class="budgetSummary.total_budget.is_exceeded ? 'text-danger' : ''"
+        >
+          {{ formatCurrency(budgetSummary.total_budget.spent) }}
+        </span>
+        <span class="budget-widget-sep">из</span>
+        <span class="budget-widget-limit">
+          {{ formatCurrency(budgetSummary.total_budget.amount) }}
+        </span>
+      </div>
+
+      <div class="budget-widget-progress">
+        <div class="progress-bar">
+          <div
+            class="progress-fill"
+            :class="budgetPercentClass"
+            :style="{ width: Math.min(budgetSummary.total_budget.percent, 100) + '%' }"
+          ></div>
+        </div>
+        <div class="budget-widget-info">
+          <span>{{ budgetSummary.total_budget.percent }}%</span>
+          <span
+            :class="budgetSummary.total_budget.remaining >= 0 ? 'text-success' : 'text-danger'"
+          >
+            {{ budgetSummary.total_budget.remaining >= 0 ? 'Осталось' : 'Перерасход' }}:
+            {{ formatCurrency(Math.abs(budgetSummary.total_budget.remaining)) }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
     <!-- ДИНАМИКА БАЛАНСА                                              -->
     <!-- ============================================================ -->
     <div v-if="activeAccounts.length > 0" class="card balance-history-card">
@@ -461,8 +509,6 @@ export default {
     // Состояние — счета
     // =========================================================================
     const accounts = ref([])
-    const incomeTransactionsList = ref([])
-    const expenseTransactionsList = ref([])
     const incomeCategories = ref([])
     const expenseCategories = ref([])
     const loading = ref(false)
@@ -474,6 +520,10 @@ export default {
     const exchangeRatesError = ref(false)
     const now = ref(new Date())
     let ratesUpdateInterval = null
+
+    // Бюджет
+    const budgetSummary = ref(null)
+    const budgetLoading = ref(false)
 
     const newTransaction = ref({
       type: 'expense',
@@ -666,6 +716,31 @@ export default {
     const activeAccounts = computed(() => {
       return accounts.value.filter(acc => acc.is_active)
     })
+
+    // =========================================================================
+    // Виджет бюджета
+    // =========================================================================
+    const budgetPercentClass = computed(() => {
+      const p = budgetSummary.value?.total_budget?.percent || 0
+      if (p >= 100) return 'progress-danger'
+      if (p >= 80) return 'progress-warning'
+      return 'progress-success'
+    })
+
+    const loadBudgetSummary = async () => {
+      budgetLoading.value = true
+      try {
+        const nowDate = new Date()
+        const dateParam = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, '0')}-01`
+        const data = await apiService.getBudgetSummary('monthly', dateParam)
+        budgetSummary.value = data
+      } catch (error) {
+        console.error('Error loading budget summary:', error)
+        budgetSummary.value = null
+      } finally {
+        budgetLoading.value = false
+      }
+    }
 
     // =========================================================================
     // Динамика баланса — состояние
@@ -1264,38 +1339,24 @@ export default {
     const loadData = async () => {
       loading.value = true
       try {
-        const accountsData = await apiService.getAccounts(1, 100)
+        // Счета и категории не зависят друг от друга — грузим параллельно
+        const [accountsData, incomeCatData, expenseCatData] = await Promise.all([
+          apiService.getAccounts(1, 100),
+          apiService.getCategories('income', 1, 100, true),
+          apiService.getCategories('expense', 1, 100, true),
+        ])
+
         accounts.value = accountsData.results[0]?.accounts || []
-
-        const incomeData = await apiService.getTransactions({
-          page: 1,
-          page_size: 5,
-          type: 'income'
-        })
-        incomeTransactionsList.value = (incomeData.results || []).map(t => ({
-          ...t,
-          transaction_type: 'income'
-        }))
-
-        const expenseData = await apiService.getTransactions({
-          page: 1,
-          page_size: 5,
-          type: 'expense'
-        })
-        expenseTransactionsList.value = (expenseData.results || []).map(t => ({
-          ...t,
-          transaction_type: 'expense'
-        }))
-
-        const incomeCatData = await apiService.getCategories('income', 1, 100, true)
         incomeCategories.value = incomeCatData.results || []
-
-        const expenseCatData = await apiService.getCategories('expense', 1, 100, true)
         expenseCategories.value = expenseCatData.results || []
 
-        await loadMonthlyStatistics()
-        await loadPreviousMonthStatistics()
-        await loadBalanceHistory()
+        // Статистика и бюджет — параллельно
+        await Promise.all([
+          loadMonthlyStatistics(),
+          loadPreviousMonthStatistics(),
+          loadBalanceHistory(),
+          loadBudgetSummary()
+        ])
       } catch (error) {
         console.error('Error loading data:', error)
       } finally {
@@ -1421,6 +1482,10 @@ export default {
       onTouchMove,
       onTouchEnd,
       onMouseDown,
+      // Бюджет
+      budgetSummary,
+      budgetLoading,
+      budgetPercentClass,
       // Динамика баланса
       historyCanvas,
       historyRange,
@@ -1871,6 +1936,85 @@ export default {
 }
 
 /* ============================================================
+   ВИДЖЕТ БЮДЖЕТА
+   ============================================================ */
+.budget-widget {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  margin-bottom: 1.5rem;
+}
+
+.budget-widget:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.budget-widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.budget-widget-header .card-title {
+  font-size: 1.1rem;
+}
+
+.budget-widget-arrow {
+  color: var(--gray-color, #6b7280);
+  font-size: 0.875rem;
+}
+
+.budget-widget-amounts {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.budget-widget-spent {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--dark-color, #1f2937);
+}
+
+.budget-widget-sep {
+  color: var(--gray-color, #6b7280);
+  font-size: 0.875rem;
+}
+
+.budget-widget-limit {
+  color: var(--gray-color, #6b7280);
+  font-size: 1rem;
+}
+
+.budget-widget-progress .progress-bar {
+  height: 8px;
+  background: var(--light-color, #f3f4f6);
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.budget-widget-progress .progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
+
+.progress-success { background: #10b981; }
+.progress-warning { background: #f59e0b; }
+.progress-danger  { background: #ef4444; }
+
+.budget-widget-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--gray-color, #6b7280);
+  font-weight: 500;
+}
+
+/* ============================================================
    ДИНАМИКА БАЛАНСА
    ============================================================ */
 .balance-history-card {
@@ -2243,6 +2387,11 @@ export default {
 
   .comparison-values {
     justify-content: space-between;
+  }
+
+  /* Бюджет */
+  .budget-widget-spent {
+    font-size: 1.5rem;
   }
 
   /* Динамика баланса */
