@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "timesheets.apps.TimesheetsConfig",
     "budgets.apps.BudgetsConfig",
     "recurring.apps.RecurringConfig",
+    "notifications.apps.NotificationsConfig",
     "django_filters",
     "drf_spectacular",
     "corsheaders",
@@ -226,20 +227,20 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # REST Framework настройки
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.TokenAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework.authentication.TokenAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
     ),
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    'EXCEPTION_HANDLER': 'transfer.exceptions.custom_exception_handler',
-    'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle'
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "transfer.exceptions.custom_exception_handler",
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
     ],
-    'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/day',
-        'user': '1000/day',
-        'login': '5/minute',
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "100/day",
+        "user": None,
+        "login": "5/minute",
     },
 }
 
@@ -365,4 +366,18 @@ CELERY_BEAT_SCHEDULE = {
         "task": "recurring.tasks.process_recurring_transactions",
         "schedule": crontab(hour=0, minute=5),
     },
+    "check-upcoming-payments": {
+        "task": "notifications.tasks.check_upcoming_payments",
+        "schedule": crontab(hour=9, minute=0),
+    },
+    "check-budgets-daily": {
+        "task": "notifications.tasks.check_all_budgets",
+        "schedule": crontab(hour=9, minute=5),  # на случай пропущенных сигналов
+    },
 }
+
+
+# --- Web Push ---
+VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "")
+VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
+VAPID_ADMIN_EMAIL = os.getenv("VAPID_ADMIN_EMAIL", "")

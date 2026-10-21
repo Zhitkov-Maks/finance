@@ -61,6 +61,15 @@
           <span>Профиль</span>
         </router-link>
 
+        <!-- УВЕДОМЛЕНИЯ С БЕЙДЖЕМ -->
+        <router-link to="/notifications" class="nav-item" @click="closeMobileMenu">
+          <i class="fas fa-bell"></i>
+          <span>Уведомления</span>
+          <span v-if="unreadCount > 0" class="nav-badge">
+            {{ unreadCount > 99 ? '99+' : unreadCount }}
+          </span>
+        </router-link>
+
         <router-link to="/about" class="nav-item" @click="closeMobileMenu">
           <i class="fas fa-info-circle"></i>
           <span>О приложении</span>
@@ -89,9 +98,11 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted } from 'vue'
+// ИСПРАВЛЕНО: добавлен импорт computed
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import apiService from './services/api.js'
+import { notificationStore } from './stores/notifications.js'
 
 export default {
   name: 'App',
@@ -99,6 +110,8 @@ export default {
     const router = useRouter()
     const mobileMenuOpen = ref(false)
     const isMobile = ref(window.innerWidth <= 768)
+
+    const unreadCount = computed(() => notificationStore.unreadCount)
 
     const toggleMobileMenu = () => {
       mobileMenuOpen.value = !mobileMenuOpen.value
@@ -128,39 +141,46 @@ export default {
 
     const logout = async () => {
       try {
-        // Очищаем все данные
         await apiService.logout()
-
-        // Принудительно очищаем localStorage
         localStorage.clear()
         sessionStorage.clear()
-
-        // Перенаправляем на страницу логина
         await router.push('/login')
-
-        // Перезагружаем страницу для полной очистки состояния
         window.location.href = '/login'
       } catch (error) {
         console.error('Logout error:', error)
-        // Даже если ошибка, очищаем всё и перенаправляем
         localStorage.clear()
         sessionStorage.clear()
         window.location.href = '/login'
       }
     }
 
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        notificationStore.stopPolling()
+      } else {
+        notificationStore.startPolling(60000)
+      }
+    }
+
     onMounted(() => {
       window.addEventListener('resize', handleResize)
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+
+      const token = localStorage.getItem('auth_token')
+      if (token) notificationStore.startPolling(60000)
     })
 
     onUnmounted(() => {
       window.removeEventListener('resize', handleResize)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      notificationStore.stopPolling()
       document.body.style.overflow = ''
     })
 
     return {
       mobileMenuOpen,
       isMobile,
+      unreadCount,
       toggleMobileMenu,
       closeMobileMenu,
       goToProfile,
@@ -275,6 +295,21 @@ body {
   background: #34495e;
   color: #3498db;
   border-right: 3px solid #3498db;
+}
+
+/* ДОБАВЛЕНО: стили для бейджа уведомлений */
+.nav-badge {
+  margin-left: auto;
+  background: var(--danger-color);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.125rem 0.45rem;
+  border-radius: 9999px;
+  min-width: 20px;
+  text-align: center;
+  line-height: 1.4;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
 .logout-btn {

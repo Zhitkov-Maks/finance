@@ -616,6 +616,55 @@ class ApiService {
         })
         return response.data
     }
+
+    // ==================== Уведомления ====================
+    // api.js
+    async getNotifications(unreadOnly = false, page = 1) {
+        const params = { page }
+        if (unreadOnly) params.unread = '1'
+        const response = await this.client.get('/notifications/', { params })
+        return response.data
+    }
+
+    async markNotificationRead(id) {
+        await this.client.post(`/notifications/${id}/read/`)
+    }
+
+    async markAllNotificationsRead() {
+        await this.client.post('/notifications/read-all/')
+    }
+
+    async getNotificationPreferences() {
+        const response = await this.client.get('/notifications/preferences/')
+        return response.data
+    }
+
+    async updateNotificationPreferences(data) {
+        const response = await this.client.patch('/notifications/preferences/', data)
+        return response.data
+    }
+
+    async subscribePush(subscription) {
+        const response = await this.client.post('/notifications/push/subscribe/', subscription)
+        return response.data
+    }
+
+    async unsubscribePush(endpoint) {
+        await this.client.post('/notifications/push/unsubscribe/', { endpoint })
+    }
+
+    async getVapidPublicKey() {
+        const response = await this.client.get('/notifications/vapid-public-key/')
+        return response.data.public_key
+    }
+
+    async deleteNotification(id) {
+        await this.client.delete(`/notifications/${id}/`)
+    }
+
+    async clearReadNotifications() {
+        await this.client.post('/notifications/clear-read/')
+    }
 }
 
 export default new ApiService()

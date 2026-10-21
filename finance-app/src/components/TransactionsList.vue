@@ -96,9 +96,9 @@
                 </span>
               </div>
               <div class="compact-right">
-                <div class="transaction-amount-compact" :class="getTransactionType(transaction) === 'income' ? 'text-success' : 'text-danger'">
-                  {{ formatCurrency(transaction.amount) }}
-                </div>
+              <div class="transaction-amount-compact" :class="getTransactionType(transaction) === 'income' ? 'text-success' : 'text-danger'">
+                {{ formatSignedAmount(transaction) }}
+              </div>
                 <button class="expand-icon" @click.stop="toggleExpand(transaction.id)">
                   <i :class="expandedTransactions.has(transaction.id) ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
                 </button>
@@ -191,7 +191,7 @@
                 <td>{{ transaction.id }}</td>
                 <td>{{ formatDate(transaction.create_at) }}</td>
                 <td :class="getTransactionType(transaction) === 'income' ? 'text-success' : 'text-danger'">
-                  <strong>{{ formatCurrency(transaction.amount) }}</strong>
+                  <strong>{{ formatSignedAmount(transaction) }}</strong>
                 </td>
                 <td>
                   <span class="badge" :class="getTransactionType(transaction) === 'income' ? 'badge-success' : 'badge-danger'">
@@ -294,7 +294,7 @@
           <button class="modal-close" @click="showDeleteModal = false">&times;</button>
         </div>
         <p>Вы уверены, что хотите удалить транзакцию?</p>
-        <p class="text-muted">Сумма: {{ formatCurrency(transactionToDelete?.amount) }}</p>
+        <p class="text-muted">Сумма: {{ formatSignedAmount(transactionToDelete) }}</p>
         <div class="modal-footer">
           <button @click="showDeleteModal = false" class="btn btn-secondary">Отмена</button>
           <button @click="deleteTransaction" class="btn btn-danger">Да, удалить</button>
@@ -709,6 +709,13 @@ export default {
       }).format(value)
     }
 
+    const formatSignedAmount = (transaction) => {
+      const type = getTransactionType(transaction)
+      const sign = type === 'income' ? '+' : '−'
+      const value = Math.abs(Number(transaction.amount) || 0)
+      return `${sign}${formatCurrency(value)}`
+    }
+
     const formatDate = (dateString) => {
       if (!dateString) return ''
       return new Date(dateString).toLocaleString('ru-RU', {
@@ -768,7 +775,8 @@ export default {
       onTypeChange,
       formatCurrency,
       formatDate,
-      formatShortDate
+      formatShortDate,
+      formatSignedAmount
     }
   }
 }

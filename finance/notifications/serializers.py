@@ -1,0 +1,30 @@
+from rest_framework import serializers
+
+from .models import Notification, NotificationPreferences
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = (
+            "id",
+            "notification_type",
+            "title",
+            "message",
+            "data",
+            "is_read",
+            "created_at",
+        )
+        read_only_fields = fields
+
+
+class NotificationPreferencesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NotificationPreferences
+        fields = (
+            "push_enabled",
+            "budget_alerts",
+            "payment_alerts",
+            "payment_days_before",
+            "budget_warning_threshold",
+        )

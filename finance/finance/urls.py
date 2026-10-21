@@ -48,6 +48,7 @@ urlpatterns = [
     path(f"api/{v}/transfer/", include("transfer.urls")),
     path(f"api/{v}/debts/", include("debt.urls")),
     path(f"api/{v}/timesheets/", include("timesheets.urls")),
-    path("api/v1/budgets/", include("budgets.urls")),
-    path("api/v1/recurring/", include("recurring.urls")),
+    path(f"api/{v}/budgets/", include("budgets.urls")),
+    path(f"api/{v}/recurring/", include("recurring.urls")),
+    path(f"api/{v}/notifications/", include("notifications.urls")),
 ]

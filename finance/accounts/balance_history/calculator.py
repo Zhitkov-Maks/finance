@@ -2,23 +2,26 @@ from collections import defaultdict
 from datetime import date, timedelta
 from decimal import Decimal
 
+from accounts.models import Account
 from django.utils import timezone
+from transactions.models import Transaction
+from transfer.models import Transfer
 
 
 def compute_balance_at_end(
-    accounts,
-    current_balances,
-    income_after,
-    expense_after,
-    incoming_after,
-    outgoing_after,
+    accounts: list[Account],
+    current_balances: dict[int, Decimal],
+    income_after: dict[int, Decimal],
+    expense_after: dict[int, Decimal],
+    incoming_after: dict[int, Decimal],
+    outgoing_after: dict[int, Decimal],
 ) -> dict[int, Decimal]:
     """
     Откатывает текущие балансы назад к концу date_to:
     убираем доходы/входящие, возвращаем расходы/исходящие.
     """
     zero = Decimal(0)
-    result = {}
+    result: dict[int, Decimal] = {}
     for acc in accounts:
         pk = acc.pk
         result[pk] = (
@@ -31,8 +34,34 @@ def compute_balance_at_end(
     return result
 
 
+def _extract_day_and_amount(record, ts_field: str) -> tuple[date, Decimal]:
+    """День (в локальной TZ) и сумма операции из записи."""
+    day = timezone.localtime(record[ts_field]).date()
+    amount = record["amount"] or Decimal(0)
+    return day, amount
+
+
+def _apply_delta(
+    day_ops: dict[date, dict[int, Decimal]],
+    day: date,
+    account_id: int,
+    delta: Decimal,
+    allowed_ids: set[int] | None = None,
+) -> None:
+    """Прибавляет delta к счёту за день.
+
+    Если allowed_ids задано — операция применяется только для счетов из этого множества
+    (так фильтруются переводы, но не транзакции).
+    """
+    if allowed_ids is not None and account_id not in allowed_ids:
+        return
+    day_ops[day][account_id] += delta
+
+
 def build_day_ops(
-    account_ids, transactions, transfers
+    account_ids: list[int],
+    transactions: list[Transaction],
+    transfers: list[Transfer],
 ) -> dict[date, dict[int, Decimal]]:
     """
     Раскладывает операции по дням: day_ops[day][acc_id] = дельта.
@@ -41,22 +70,14 @@ def build_day_ops(
     day_ops: dict[date, dict[int, Decimal]] = defaultdict(lambda: defaultdict(Decimal))
 
     for tx in transactions:
-        day = timezone.localtime(tx["create_at"]).date()
-        amount = tx["amount"] or Decimal(0)
-        if tx["category__type_transaction"] == "income":
-            day_ops[day][tx["account_id"]] += amount
-        else:
-            day_ops[day][tx["account_id"]] -= amount
+        day, amount = _extract_day_and_amount(tx, "create_at")
+        delta = amount if tx["category__type_transaction"] == "income" else -amount
+        _apply_delta(day_ops, day, tx["account_id"], delta)
 
     for tr in transfers:
-        day = timezone.localtime(tr["timestamp"]).date()
-        amount = tr["amount"] or Decimal(0)
-        src = tr["source_account_id"]
-        dst = tr["destination_account_id"]
-        if src in account_ids:
-            day_ops[day][src] -= amount
-        if dst in account_ids:
-            day_ops[day][dst] += amount
+        day, amount = _extract_day_and_amount(tr, "timestamp")
+        _apply_delta(day_ops, day, tr["source_account_id"], -amount, account_ids)
+        _apply_delta(day_ops, day, tr["destination_account_id"], amount, account_ids)
 
     return day_ops
 
