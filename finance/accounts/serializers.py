@@ -12,7 +12,18 @@ class BaseAccountSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Account
-        fields = ["id", "name", "balance", "is_active"]
+        fields = [
+            "id",
+            "name",
+            "balance",
+            "is_active",
+            # ДОБАВЛЯЕМ ЭТИ ПОЛЯ:
+            "account_type",
+            "interest_rate",
+            "credit_limit",
+            "grace_period_days",
+            "grace_period_start",
+        ]
 
 
 class AccountTransactionSerializer(serializers.ModelSerializer):
@@ -31,7 +42,35 @@ class AccountSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Account
-        fields = ['id', 'name', 'balance', 'is_active']
+        fields = [
+            "id",
+            "name",
+            "balance",
+            "is_active",
+            "account_type",
+            "interest_rate",
+            "credit_limit",
+            "grace_period_days",
+            "grace_period_start",
+        ]
+
+    def validate(self, attrs):
+        acc_type = attrs.get(
+            "account_type",
+            self.instance.account_type if self.instance else Account.TYPE_STANDARD,
+        )
+
+        if acc_type == Account.TYPE_DEPOSIT and not attrs.get("interest_rate"):
+            raise serializers.ValidationError(
+                {"interest_rate": "Укажите процентную ставку для вклада."}
+            )
+
+        if acc_type == Account.TYPE_CREDIT and not attrs.get("credit_limit"):
+            raise serializers.ValidationError(
+                {"credit_limit": "Укажите кредитный лимит."}
+            )
+
+        return attrs
 
 
 class AccountListResponseSerializer(serializers.Serializer):

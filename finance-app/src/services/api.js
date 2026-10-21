@@ -152,11 +152,8 @@ class ApiService {
         return response.data
     }
 
-    async createAccount(name, balance) {
-        const response = await this.client.post('/accounts/', {
-            name,
-            balance
-        })
+    async createAccount(data) {
+        const response = await this.client.post('/accounts/', data)
         return response.data
     }
 
@@ -166,7 +163,7 @@ class ApiService {
     }
 
     async updateAccount(id, data) {
-        const response = await this.client.put(`/accounts/${id}/`, data)
+        const response = await this.client.patch(`/accounts/${id}/`, data) // <-- PATCH
         return response.data
     }
 

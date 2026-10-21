@@ -366,13 +366,25 @@ CELERY_BEAT_SCHEDULE = {
         "task": "recurring.tasks.process_recurring_transactions",
         "schedule": crontab(hour=0, minute=5),
     },
+    # Проверка платежей на завтра/сегодня
     "check-upcoming-payments": {
         "task": "notifications.tasks.check_upcoming_payments",
         "schedule": crontab(hour=9, minute=0),
     },
+    # Проверка бюджетов (чуть позже)
     "check-budgets-daily": {
         "task": "notifications.tasks.check_all_budgets",
-        "schedule": crontab(hour=9, minute=5),  # на случай пропущенных сигналов
+        "schedule": crontab(hour=9, minute=5),
+    },
+    # Проверка кредиток (еще позже, чтобы не мешать бюджетам)
+    "daily_check_credit_card": {
+        "task": "accounts.tasks.check_credit_card_overdue",
+        "schedule": crontab(hour=9, minute=10),  # <-- сдвинули на 9:10
+    },
+    # Начисление процентов по вкладам (строго до полуночи)
+    "daily_interest_accrual": {
+        "task": "accounts.tasks.accrue_deposit_interest",
+        "schedule": crontab(hour=23, minute=55),  # <-- сдвинули на 23:55
     },
 }
 
