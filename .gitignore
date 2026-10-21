@@ -180,3 +180,4 @@ swag-config
 nginx
 nginx-conf
 .celerybeat-schedule*
+*.pem
