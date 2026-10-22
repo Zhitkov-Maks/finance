@@ -662,6 +662,17 @@ class ApiService {
     async clearReadNotifications() {
         await this.client.post('/notifications/clear-read/')
     }
+
+    // ==================== Insights ====================
+    async getInsights(activeOnly = true) {
+        const params = activeOnly ? { active: '1' } : {}
+        const response = await this.client.get('/insights/', { params })
+        return response.data
+    }
+
+    async dismissInsight(id) {
+        await this.client.post(`/insights/${id}/dismiss/`)
+    }
 }
 
 export default new ApiService()

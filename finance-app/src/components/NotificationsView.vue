@@ -69,6 +69,12 @@
           </label>
         </div>
         <div class="setting-row">
+          <label class="setting-label">
+            <input type="checkbox" v-model="prefs.insight_alerts" @change="savePreferences" />
+            Уведомления об инсайтах
+          </label>
+        </div>
+        <div class="setting-row">
           <label class="setting-label">За сколько дней до платежа:</label>
           <input type="number" v-model.number="prefs.payment_days_before" min="0" max="30" @change="savePreferences" class="form-control short-input" />
         </div>
@@ -176,6 +182,7 @@ export default {
       push_enabled: true,
       budget_alerts: true,
       payment_alerts: true,
+      insight_alerts: true,          // ← NEW
       payment_days_before: 1,
       budget_warning_threshold: 80,
     })
@@ -308,6 +315,7 @@ export default {
           push_enabled: prefs.value.push_enabled,
           budget_alerts: prefs.value.budget_alerts,
           payment_alerts: prefs.value.payment_alerts,
+          insight_alerts: prefs.value.insight_alerts,            // ← NEW
           payment_days_before: prefs.value.payment_days_before,
           budget_warning_threshold: prefs.value.budget_warning_threshold,
         })
@@ -347,6 +355,7 @@ export default {
         payment_today: 'fas fa-bell',
         budget_warning: 'fas fa-exclamation-triangle',
         budget_exceeded: 'fas fa-times-circle',
+        insight_alert: 'fas fa-lightbulb',
       }[type] || 'fas fa-bell')
 
     const getIconClass = (type) =>
@@ -355,6 +364,7 @@ export default {
         payment_today: 'icon-danger',
         budget_warning: 'icon-warning',
         budget_exceeded: 'icon-danger',
+        insight_alert: 'icon-info',
       }[type] || 'icon-info')
 
     const formatDateTime = (iso) => {

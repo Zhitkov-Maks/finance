@@ -37,6 +37,11 @@
       </div>
     </div>
 
+    <!-- ============================================================ -->
+    <!-- ИНСАЙТЫ                                                       -->
+    <!-- ============================================================ -->
+    <InsightsWidget ref="insightsWidgetRef" />
+
     <!-- Панель действий и курсы валют -->
     <div class="actions-panel">
       <button @click="showAddTransaction = true" class="btn btn-success">
@@ -459,6 +464,7 @@
 <script>
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import apiService from '../services/api.js'
+import InsightsWidget from './InsightsWidget.vue'
 
 // =============================================================================
 // Константы
@@ -504,6 +510,7 @@ const setupCanvas = (canvas, cssWidth, cssHeight) => {
 
 export default {
   name: 'Dashboard',
+  components: { InsightsWidget },
   setup() {
     // =========================================================================
     // Состояние — счета
@@ -520,6 +527,10 @@ export default {
     const exchangeRatesError = ref(false)
     const now = ref(new Date())
     let ratesUpdateInterval = null
+    let insightsRefreshInterval = null
+
+    // Ссылка на дочерний виджет инсайтов
+    const insightsWidgetRef = ref(null)
 
     // --- ТЕМНАЯ ТЕМА ДЛЯ CANVAS ---
     const isDarkTheme = ref(document.documentElement.getAttribute('data-theme') === 'dark')
@@ -1398,6 +1409,11 @@ export default {
           comment: ''
         }
         await loadData()
+
+        // Обновляем инсайты (могут появиться дубликаты/скачки)
+        if (insightsWidgetRef.value?.loadInsights) {
+          await insightsWidgetRef.value.loadInsights()
+        }
       } catch (error) {
         console.error('Error creating transaction:', error)
         alert('Ошибка при создании транзакции')
@@ -1448,6 +1464,11 @@ export default {
       loadData()
       fetchExchangeRates()
       ratesUpdateInterval = setInterval(fetchExchangeRates, 3600000)
+
+      // Автообновление инсайтов раз в 5 минут
+      insightsRefreshInterval = setInterval(() => {
+        insightsWidgetRef.value?.loadInsights?.()
+      }, 5 * 60 * 1000)
     })
 
     onBeforeUnmount(() => {
@@ -1456,6 +1477,10 @@ export default {
       themeObserver.disconnect()
       if (ratesUpdateInterval) {
         clearInterval(ratesUpdateInterval)
+      }
+      if (insightsRefreshInterval) {
+        clearInterval(insightsRefreshInterval)
+        insightsRefreshInterval = null
       }
     })
 
@@ -1532,7 +1557,9 @@ export default {
       loadBalanceHistory,
       toggleHistoryAccount,
       onHistoryMouseMove,
-      onHistoryMouseLeave
+      onHistoryMouseLeave,
+      // Инсайты
+      insightsWidgetRef
     }
   }
 }
@@ -2125,7 +2152,7 @@ export default {
 .history-tooltip {
   position: absolute;
   z-index: 10;
-  background: rgba(17, 24, 39, 0.95); /* Темный, чтобы всегда читалось */
+  background: rgba(17, 24, 39, 0.95);
   color: white;
   border-radius: var(--radius);
   padding: 0.625rem 0.75rem;

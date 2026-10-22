@@ -9,12 +9,14 @@ class Notification(models.Model):
     TYPE_PAYMENT_TODAY = "payment_today"
     TYPE_BUDGET_WARNING = "budget_warning"
     TYPE_BUDGET_EXCEEDED = "budget_exceeded"
+    TYPE_INSIGHT_ALERT = "insight_alert"  # ← NEW
 
     TYPE_CHOICES = [
         (TYPE_PAYMENT_UPCOMING, "Скоро платёж"),
         (TYPE_PAYMENT_TODAY, "Платёж сегодня"),
         (TYPE_BUDGET_WARNING, "Бюджет почти исчерпан"),
         (TYPE_BUDGET_EXCEEDED, "Бюджет превышен"),
+        (TYPE_INSIGHT_ALERT, "Инсайт"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -50,6 +52,7 @@ class NotificationPreferences(models.Model):
     payment_alerts = models.BooleanField(default=True)
     payment_days_before = models.PositiveSmallIntegerField(default=1)  # 1 = завтра
     budget_warning_threshold = models.PositiveSmallIntegerField(default=80)
+    insight_alerts = models.BooleanField(default=True)
 
 
 class PushSubscription(models.Model):

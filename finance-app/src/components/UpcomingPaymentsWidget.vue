@@ -132,10 +132,10 @@ export default {
   align-items: center;
   padding: 0.75rem;
   border-radius: var(--radius);
-  background: #f9fafb;
+  background: var(--light-color); /* Заменили #f9fafb */
   transition: background 0.2s;
 }
-.upcoming-item:hover { background: var(--light-color); }
+.upcoming-item:hover { filter: brightness(0.95); }
 
 .upcoming-left { flex: 1; min-width: 0; }
 .upcoming-title {
@@ -160,6 +160,8 @@ export default {
   color: var(--gray-color);
   margin-top: 0.15rem;
 }
+
+/* --- Светлая тема для бейджей дней --- */
 .upcoming-days {
   padding: 0.1rem 0.4rem;
   border-radius: 9999px;
@@ -169,6 +171,20 @@ export default {
 .days-critical { background: #fee2e2; color: #991b1b; }
 .days-soon { background: #fef3c7; color: #92400e; }
 .days-normal { background: #e0e7ff; color: #3730a3; }
+
+/* --- Темная тема для бейджей дней --- */
+:global(:root[data-theme="dark"]) .days-critical {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+:global(:root[data-theme="dark"]) .days-soon {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+}
+:global(:root[data-theme="dark"]) .days-normal {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+}
 
 .upcoming-amount {
   font-weight: 700;

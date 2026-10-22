@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     "budgets.apps.BudgetsConfig",
     "recurring.apps.RecurringConfig",
     "notifications.apps.NotificationsConfig",
+    "insights.apps.InsightsConfig",
     "django_filters",
     "drf_spectacular",
     "corsheaders",
@@ -385,6 +386,10 @@ CELERY_BEAT_SCHEDULE = {
     "daily_interest_accrual": {
         "task": "accounts.tasks.accrue_deposit_interest",
         "schedule": crontab(hour=23, minute=55),  # <-- сдвинули на 23:55
+    },
+    "detect-category-spikes": {
+        "task": "insights.tasks.detect_category_spikes_all",
+        "schedule": crontab(hour=10, minute=0),
     },
 }
 

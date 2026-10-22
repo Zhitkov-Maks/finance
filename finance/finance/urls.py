@@ -51,4 +51,5 @@ urlpatterns = [
     path(f"api/{v}/budgets/", include("budgets.urls")),
     path(f"api/{v}/recurring/", include("recurring.urls")),
     path(f"api/{v}/notifications/", include("notifications.urls")),
+    path(f"api/{v}/insights/", include("insights.urls")),
 ]
