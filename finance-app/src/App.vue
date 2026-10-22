@@ -75,6 +75,12 @@
           <span>О приложении</span>
         </router-link>
 
+        <!-- Кнопка переключения темы -->
+        <button @click="toggleTheme" class="nav-item theme-toggle-btn">
+          <i class="fas" :class="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
+          <span>{{ isDarkMode ? 'Светлая тема' : 'Тёмная тема' }}</span>
+        </button>
+
         <button @click="logout" class="nav-item logout-btn">
           <i class="fas fa-sign-out-alt"></i>
           <span>Выйти</span>
@@ -98,7 +104,6 @@
 </template>
 
 <script>
-// ИСПРАВЛЕНО: добавлен импорт computed
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import apiService from './services/api.js'
@@ -112,6 +117,25 @@ export default {
     const isMobile = ref(window.innerWidth <= 768)
 
     const unreadCount = computed(() => notificationStore.unreadCount)
+
+    // --- ЛОГИКА ТЕМНОЙ ТЕМЫ ---
+    const isDarkMode = ref(false)
+
+    const applyTheme = (dark) => {
+      if (dark) {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        localStorage.setItem('theme', 'dark')
+      } else {
+        document.documentElement.removeAttribute('data-theme')
+        localStorage.setItem('theme', 'light')
+      }
+      isDarkMode.value = dark
+    }
+
+    const toggleTheme = () => {
+      applyTheme(!isDarkMode.value)
+    }
+    // ---------------------------
 
     const toggleMobileMenu = () => {
       mobileMenuOpen.value = !mobileMenuOpen.value
@@ -163,6 +187,13 @@ export default {
     }
 
     onMounted(() => {
+      // 1. Инициализация темы при загрузке
+      const savedTheme = localStorage.getItem('theme')
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      // Если тема сохранена, берем её. Иначе смотрим на системную.
+      applyTheme(savedTheme === 'dark' || (!savedTheme && prefersDark))
+
+      // 2. Слушатели
       window.addEventListener('resize', handleResize)
       document.addEventListener('visibilitychange', handleVisibilityChange)
 
@@ -181,6 +212,8 @@ export default {
       mobileMenuOpen,
       isMobile,
       unreadCount,
+      isDarkMode,
+      toggleTheme,
       toggleMobileMenu,
       closeMobileMenu,
       goToProfile,
@@ -197,23 +230,35 @@ export default {
   box-sizing: border-box;
 }
 
+/* ============================================================
+   ПЕРЕМЕННЫЕ (Светлая тема по умолчанию)
+   ============================================================ */
 :root {
   --primary-color: #101010;
   --secondary-color: #10b981;
   --danger-color: #ef4444;
   --warning-color: #f59e0b;
-  --dark-color: #12135b;
-  --gray-color: #6b7280;
-  --light-color: #f3f4f6;
-  --white: #ffffff;
+  --dark-color: #12135b; /* Основной цвет текста */
+  --gray-color: #6b7280; /* Второстепенный текст */
+  --light-color: #f3f4f6; /* Фон/бордеры */
+  --white: #ffffff;      /* Фон карточек */
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   --radius: 8px;
+
+  /* Переменные для лейаута */
+  --bg-body: #f5f5f5;
+  --sidebar-bg: #2c3e50;
+  --sidebar-hover: #34495e;
+  --sidebar-text: #ecf0f1;
+  --topbar-bg: #ffffff;
 }
+
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background: #f5f5f5;
+  background: var(--bg-body);
   color: var(--dark-color);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .app {
@@ -245,7 +290,7 @@ body {
 /* Sidebar */
 .sidebar {
   width: 260px;
-  background: #2c3e50;
+  background: var(--sidebar-bg);
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
@@ -253,17 +298,17 @@ body {
   height: 100vh;
   overflow-y: auto;
   z-index: 100;
-  transition: transform 0.3s ease;
+  transition: transform 0.3s ease, background-color 0.3s ease;
 }
 
 .sidebar-header {
   padding: 1.5rem;
-  border-bottom: 1px solid #34495e;
+  border-bottom: 1px solid var(--sidebar-hover);
 }
 
 .sidebar-header h2 {
   font-size: 1.5rem;
-  color: #ecf0f1;
+  color: var(--sidebar-text);
 }
 
 .nav-menu {
@@ -276,7 +321,7 @@ body {
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1.5rem;
-  color: #ecf0f1;
+  color: var(--sidebar-text);
   text-decoration: none;
   transition: all 0.3s;
   cursor: pointer;
@@ -288,16 +333,15 @@ body {
 }
 
 .nav-item:hover {
-  background: #34495e;
+  background: var(--sidebar-hover);
 }
 
 .nav-item.router-link-active {
-  background: #34495e;
+  background: var(--sidebar-hover);
   color: #3498db;
   border-right: 3px solid #3498db;
 }
 
-/* ДОБАВЛЕНО: стили для бейджа уведомлений */
 .nav-badge {
   margin-left: auto;
   background: var(--danger-color);
@@ -312,14 +356,22 @@ body {
   box-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
+/* Кнопка темы */
+.theme-toggle-btn {
+  color: #fbbf24; /* Желтоватый цвет для иконки */
+}
+.theme-toggle-btn:hover {
+  color: #fde68a;
+}
+
 .logout-btn {
   color: #e74c3c;
   margin-top: auto;
-  border-top: 1px solid #34495e;
+  border-top: 1px solid var(--sidebar-hover);
 }
 
 .logout-btn:hover {
-  background: #34495e;
+  background: var(--sidebar-hover);
   color: #e74c3c;
 }
 
@@ -328,6 +380,7 @@ body {
   margin-left: 260px;
   padding: 2rem;
   width: calc(100% - 260px);
+  transition: background-color 0.3s ease;
 }
 
 /* Mobile styles */
@@ -363,184 +416,59 @@ body {
   }
 }
 
-/* Адаптивные стили для всех компонентов */
-@media (max-width: 768px) {
-  /* Статистика */
-  .stats-grid {
-    grid-template-columns: 1fr !important;
-    gap: 1rem;
-  }
-
-  .stat-card {
-    padding: 1rem;
-  }
-
-  .stat-value {
-    font-size: 1.5rem;
-  }
-
-  /* Быстрые действия */
-  .quick-actions {
-    flex-direction: column;
-  }
-
-  .quick-actions .btn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  /* Таблицы */
-  .table-responsive {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .table {
-    min-width: 600px;
-  }
-
-  /* Карточки */
-  .card {
-    padding: 1rem;
-  }
-
-  .card-header {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: flex-start;
-  }
-
-  .card-header .btn {
-    width: 100%;
-  }
-
-  /* Модальные окна */
-  .modal-content {
-    width: 95%;
-    margin: 1rem;
-    max-height: 85vh;
-  }
-
-  /* Формы */
-  .form-group select,
-  .form-group input,
-  .form-group textarea {
-    font-size: 16px; /* Предотвращает зумирование на iOS */
-  }
-
-  /* Фильтры */
-  .filters {
-    grid-template-columns: 1fr !important;
-    gap: 1rem;
-  }
-
-  /* Категории */
-  .category-stat {
-    padding: 0.75rem;
-  }
-
-  .subcategories {
-    padding-left: 0.5rem;
-  }
-
-  .subcategory {
-    padding: 0.5rem;
-  }
-
-  /* Заголовки */
-  .page-header {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: flex-start;
-  }
-
-  .page-header h1 {
-    font-size: 1.5rem;
-  }
-
-  .page-header .btn {
-    width: 100%;
-  }
-
-  /* Вкладки */
-  .type-tabs {
-    flex-direction: column;
-  }
-
-  .tab-btn {
-    width: 100%;
-  }
-
-  /* Таблица долгов */
-  .action-buttons {
-    flex-direction: column;
-  }
-
-  .action-buttons .btn-sm {
-    width: 100%;
-  }
-
-  /* Детали долга */
-  .debt-details {
-    padding: 0.5rem;
-  }
-
-  .detail-row {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  /* Пагинация */
-  .pagination {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .pagination button {
-    width: 100%;
-  }
-
-  /* Категории дерево */
-  .category-item {
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .category-info {
-    width: 100%;
-  }
-
-  .category-actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
-
-  .category-children {
-    margin-left: 0.5rem;
-    padding-left: 0.5rem;
-  }
+/*
+  ВАЖНО: Мы меняем 'white' на var(--white) в базовых стилях,
+  чтобы карточки автоматически становились темными!
+*/
+.card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+  transition: background-color 0.3s ease;
 }
 
-/* Для очень маленьких экранов */
-@media (max-width: 480px) {
-  .main-content {
-    padding: 0.75rem;
-    padding-top: 4rem;
-  }
-
-  .stat-value {
-    font-size: 1.25rem;
-  }
-
-  .btn {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.8rem;
-  }
-
-  .modal-header h3 {
-    font-size: 1.1rem;
-  }
+.modal-content {
+  background: var(--white);
+  border-radius: var(--radius);
+  width: 500px;
+  max-width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  transition: background-color 0.3s ease;
 }
+
+.top-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--white);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: var(--shadow);
+}
+
+.user-menu:hover {
+  background: var(--light-color);
+  transform: translateY(-1px);
+}
+
+.user-menu i {
+  font-size: 1.25rem;
+  color: var(--primary-color);
+}
+
+/* ... Остальные стили (формы, кнопки, таблицы) оставляем без изменений,
+   так как они уже используют var(--dark-color) и var(--light-color) ... */
 
 /* Стили для кнопок */
 .btn {
@@ -556,89 +484,38 @@ body {
   transition: all 0.3s;
 }
 
-.btn-primary {
-  background: var(--primary-color);
-  color: white;
-}
-
-.btn-primary:hover {
-  background: #4338ca;
-}
-
-.btn-secondary {
-  background: #6b7280;
-  color: white;
-}
-
-.btn-secondary:hover {
-  background: #4b5563;
-}
-
-.btn-success {
-  background: var(--secondary-color);
-  color: white;
-}
-
-.btn-success:hover {
-  background: #059669;
-}
-
-.btn-danger {
-  background: var(--danger-color);
-  color: white;
-}
-
-.btn-danger:hover {
-  background: #dc2626;
-}
-
-.btn-info {
-  background: #3b82f6;
-  color: white;
-}
-
-.btn-info:hover {
-  background: #2563eb;
-}
-
-.btn-sm {
-  padding: 0.25rem 0.75rem;
-  font-size: 0.75rem;
-}
-
-/* Стили для карточек */
-.card {
-  background: white;
-  border-radius: var(--radius);
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  box-shadow: var(--shadow);
-}
+.btn-primary { background: var(--primary-color); color: white; }
+.btn-primary:hover { background: #4338ca; }
+.btn-secondary { background: #6b7280; color: white; }
+.btn-secondary:hover { background: #4b5563; }
+.btn-success { background: var(--secondary-color); color: white; }
+.btn-success:hover { background: #059669; }
+.btn-danger { background: var(--danger-color); color: white; }
+.btn-danger:hover { background: #dc2626; }
+.btn-info { background: #3b82f6; color: white; }
+.btn-info:hover { background: #2563eb; }
+.btn-sm { padding: 0.25rem 0.75rem; font-size: 0.75rem; }
 
 /* Стили для форм */
-.form-group {
-  margin-bottom: 1rem;
-}
-
+.form-group { margin-bottom: 1rem; }
 .form-label {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
   font-size: 0.875rem;
+  color: var(--dark-color);
 }
-
-.form-label.required:after {
-  content: " *";
-  color: var(--danger-color);
-}
+.form-label.required:after { content: " *"; color: var(--danger-color); }
 
 .form-control {
   width: 100%;
   padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--gray-color);
   border-radius: var(--radius);
   font-size: 0.875rem;
-  transition: border-color 0.3s;
+  transition: border-color 0.3s, background-color 0.3s;
+  background: var(--white);
+  color: var(--dark-color);
 }
 
 .form-control:focus {
@@ -652,44 +529,27 @@ textarea.form-control {
 }
 
 /* Стили для таблиц */
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.table th,
-.table td {
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td {
   padding: 0.75rem;
   text-align: left;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--light-color);
+  color: var(--dark-color);
 }
-
 .table th {
   font-weight: 600;
-  background: #f9fafb;
+  background: var(--light-color);
 }
 
-/* Стили для модальных окон */
+/* Модальные окна */
 .modal {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  border-radius: var(--radius);
-  width: 500px;
-  max-width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
 }
 
 .modal-header {
@@ -697,7 +557,7 @@ textarea.form-control {
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--light-color);
 }
 
 .modal-close {
@@ -705,92 +565,60 @@ textarea.form-control {
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: #6b7280;
+  color: var(--gray-color);
   transition: color 0.3s;
 }
 
-.modal-close:hover {
-  color: #374151;
-}
+.modal-close:hover { color: var(--dark-color); }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
   padding: 1rem 1.5rem;
-  border-top: 1px solid #e5e7eb;
-}
-
-/* Адаптивные стили для модальных окон */
-@media (max-width: 768px) {
-  .modal-content {
-    width: 95%;
-    margin: 1rem;
-  }
+  border-top: 1px solid var(--light-color);
 }
 
 /* Утилиты */
-.text-success {
-  color: var(--secondary-color);
+.text-success { color: var(--secondary-color); }
+.text-danger { color: var(--danger-color); }
+.text-center { text-align: center; }
+
+.alert { padding: 0.75rem 1rem; border-radius: var(--radius); margin-bottom: 1rem; }
+.alert-info { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+.alert-danger { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+.alert-warning { background: #fed7aa; color: #92400e; border: 1px solid #fed7aa; }
+
+/* Адаптивность, которую ты присылал, можно оставить без изменений */
+@media (max-width: 768px) {
+  .stats-grid { grid-template-columns: 1fr !important; gap: 1rem; }
+  .stat-card { padding: 1rem; }
+  .stat-value { font-size: 1.5rem; }
+  .quick-actions { flex-direction: column; }
+  .quick-actions .btn { width: 100%; justify-content: center; }
+  .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table { min-width: 600px; }
+  .card { padding: 1rem; }
+  .card-header { flex-direction: column; gap: 1rem; align-items: flex-start; }
+  .card-header .btn { width: 100%; }
+  .modal-content { width: 95%; margin: 1rem; max-height: 85vh; }
+  .form-group select, .form-group input, .form-group textarea { font-size: 16px; }
+  .filters { grid-template-columns: 1fr !important; gap: 1rem; }
+  .page-header { flex-direction: column; gap: 1rem; align-items: flex-start; }
+  .page-header h1 { font-size: 1.5rem; }
+  .page-header .btn { width: 100%; }
+  .type-tabs { flex-direction: column; }
+  .tab-btn { width: 100%; }
+  .action-buttons { flex-direction: column; }
+  .action-buttons .btn-sm { width: 100%; }
+  .pagination { flex-direction: column; gap: 0.5rem; }
+  .pagination button { width: 100%; }
 }
 
-.text-danger {
-  color: var(--danger-color);
-}
-
-.text-center {
-  text-align: center;
-}
-
-.alert {
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius);
-  margin-bottom: 1rem;
-}
-
-.alert-info {
-  background: #dbeafe;
-  color: #1e40af;
-  border: 1px solid #bfdbfe;
-}
-
-.alert-danger {
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-}
-
-.alert-warning {
-  background: #fed7aa;
-  color: #92400e;
-  border: 1px solid #fed7aa;
-}
-
-.top-bar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 1rem;
-}
-
-.user-menu {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: white;
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: var(--shadow);
-}
-
-.user-menu:hover {
-  background: var(--light-color);
-  transform: translateY(-1px);
-}
-
-.user-menu i {
-  font-size: 1.25rem;
-  color: var(--primary-color);
+@media (max-width: 480px) {
+  .main-content { padding: 0.75rem; padding-top: 4rem; }
+  .stat-value { font-size: 1.25rem; }
+  .btn { padding: 0.5rem 0.75rem; font-size: 0.8rem; }
+  .modal-header h3 { font-size: 1.1rem; }
 }
 </style>

@@ -28,16 +28,16 @@
 
     <!-- Переключатель типов -->
     <div class="type-tabs">
-      <button 
-        @click="currentType = 'lend'" 
-        class="tab-btn" 
+      <button
+        @click="currentType = 'lend'"
+        class="tab-btn"
         :class="{ active: currentType === 'lend' }"
       >
         <i class="fas fa-hand-holding-usd"></i> <span class="tab-text">Мне должны</span>
       </button>
-      <button 
-        @click="currentType = 'borrow'" 
-        class="tab-btn" 
+      <button
+        @click="currentType = 'borrow'"
+        class="tab-btn"
         :class="{ active: currentType === 'borrow' }"
       >
         <i class="fas fa-hand-holding-heart"></i> <span class="tab-text">Я должен</span>
@@ -764,6 +764,7 @@ export default {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  color: var(--gray-color);
 }
 
 .tab-btn.active {
@@ -796,7 +797,7 @@ export default {
 }
 
 .debt-compact:hover {
-  background-color: #f9fafb;
+  background-color: var(--light-color); /* Было #f9fafb */
 }
 
 .compact-left {
@@ -815,6 +816,7 @@ export default {
 .debt-contractor-compact {
   font-size: 0.875rem;
   flex: 1;
+  color: var(--dark-color);
 }
 
 .compact-right {
@@ -852,7 +854,7 @@ export default {
 .debt-expanded {
   padding: 1rem;
   border-top: 1px solid var(--light-color);
-  background-color: #fafafa;
+  background-color: var(--light-color); /* Было #fafafa */
   animation: slideDown 0.3s ease;
 }
 
@@ -922,6 +924,7 @@ export default {
   padding: 0.75rem;
   text-align: left;
   border-bottom: 1px solid var(--light-color);
+  color: var(--dark-color);
 }
 
 .table th {
@@ -969,6 +972,7 @@ export default {
   gap: 0.25rem;
 }
 
+/* --- Светлая тема для бейджей --- */
 .badge-info {
   background: #dbeafe;
   color: #1e40af;
@@ -987,6 +991,27 @@ export default {
 .badge-danger {
   background: #fee2e2;
   color: #991b1b;
+}
+
+/* --- Темная тема для бейджей --- */
+:global(:root[data-theme="dark"]) .badge-info {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+}
+
+:global(:root[data-theme="dark"]) .badge-success {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+}
+
+:global(:root[data-theme="dark"]) .badge-warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+}
+
+:global(:root[data-theme="dark"]) .badge-danger {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
 }
 
 .text-success {
@@ -1022,9 +1047,17 @@ export default {
   gap: 0.5rem;
 }
 
+/* --- Светлая тема для алертов --- */
 .alert-info {
   background: #dbeafe;
   color: #1e40af;
+}
+
+/* --- Темная тема для алертов --- */
+:global(:root[data-theme="dark"]) .alert-info {
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+  border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
 .debt-details-modal {
@@ -1046,6 +1079,7 @@ export default {
 .empty-state {
   text-align: center;
   padding: 3rem;
+  color: var(--gray-color);
 }
 
 .empty-state i {

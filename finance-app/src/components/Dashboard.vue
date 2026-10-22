@@ -521,6 +521,9 @@ export default {
     const now = ref(new Date())
     let ratesUpdateInterval = null
 
+    // --- ТЕМНАЯ ТЕМА ДЛЯ CANVAS ---
+    const isDarkTheme = ref(document.documentElement.getAttribute('data-theme') === 'dark')
+
     // Бюджет
     const budgetSummary = ref(null)
     const budgetLoading = ref(false)
@@ -842,6 +845,13 @@ export default {
     // =========================================================================
     // Динамика баланса — отрисовка
     // =========================================================================
+    const getCanvasColors = () => ({
+      grid: isDarkTheme.value ? '#374151' : '#e5e7eb',
+      text: isDarkTheme.value ? '#9ca3af' : '#9ca3af',
+      textBold: isDarkTheme.value ? '#f3f4f6' : '#6b7280',
+      totalLine: isDarkTheme.value ? '#f3f4f6' : '#111827'
+    })
+
     const drawHistoryChart = () => {
       const canvas = historyCanvas.value
       if (!canvas) return
@@ -855,6 +865,7 @@ export default {
       const cssWidth = parentWidth(canvas, 900)
       const cssHeight = 320
       const { ctx } = setupCanvas(canvas, cssWidth, cssHeight)
+      const colors = getCanvasColors()
 
       const paddingLeft = 60
       const paddingRight = 20
@@ -881,7 +892,7 @@ export default {
           }
         })
         visibleSeries.push({
-          id: 'total', name: 'Итого', color: '#111827',
+          id: 'total', name: 'Итого', color: colors.totalLine,
           series: totalSeries, isTotal: true
         })
       }
@@ -897,10 +908,10 @@ export default {
       const yScale = (v) =>
         paddingTop + chartHeight - ((v - minValue) / (maxValue - minValue)) * chartHeight
 
-      ctx.strokeStyle = '#e5e7eb'
+      ctx.strokeStyle = colors.grid
       ctx.lineWidth = 1
       ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      ctx.fillStyle = '#9ca3af'
+      ctx.fillStyle = colors.text
       ctx.textAlign = 'right'
       ctx.textBaseline = 'middle'
 
@@ -915,7 +926,7 @@ export default {
 
       if (minValue < 0 && maxValue > 0) {
         const y0 = yScale(0)
-        ctx.strokeStyle = '#9ca3af'
+        ctx.strokeStyle = colors.text
         ctx.setLineDash([4, 4])
         ctx.beginPath()
         ctx.moveTo(paddingLeft, y0)
@@ -952,8 +963,8 @@ export default {
         }
       })
 
-      // Подписи по оси X с защитой от наложения
-      ctx.fillStyle = '#6b7280'
+      // Подписи по оси X
+      ctx.fillStyle = colors.textBold
       ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'top'
@@ -1415,6 +1426,16 @@ export default {
 
     const handleResize = () => scheduleHistoryDraw()
 
+    // Слушатель изменения темы
+    const themeObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'data-theme') {
+          isDarkTheme.value = document.documentElement.getAttribute('data-theme') === 'dark'
+          scheduleHistoryDraw()
+        }
+      })
+    })
+
     // =========================================================================
     // Lifecycle
     // =========================================================================
@@ -1422,6 +1443,8 @@ export default {
       updateViewport()
       window.addEventListener('resize', updateViewport)
       window.addEventListener('resize', handleResize)
+      themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+
       loadData()
       fetchExchangeRates()
       ratesUpdateInterval = setInterval(fetchExchangeRates, 3600000)
@@ -1430,6 +1453,7 @@ export default {
     onBeforeUnmount(() => {
       window.removeEventListener('resize', updateViewport)
       window.removeEventListener('resize', handleResize)
+      themeObserver.disconnect()
       if (ratesUpdateInterval) {
         clearInterval(ratesUpdateInterval)
       }
@@ -1525,6 +1549,7 @@ export default {
 .dashboard-title {
   margin-bottom: 2rem;
   margin-top: 0;
+  color: var(--dark-color);
 }
 
 /* ---------- Панель действий и курсы ---------- */
@@ -1540,7 +1565,7 @@ export default {
 .exchange-rates {
   display: flex;
   gap: 1rem;
-  background: var(--light-color, #f3f4f6);
+  background: var(--light-color);
   padding: 0.5rem 1rem;
   border-radius: 9999px;
   flex-wrap: wrap;
@@ -1554,11 +1579,11 @@ export default {
 }
 
 .rate-currency {
-  color: var(--gray-color, #6b7280);
+  color: var(--gray-color);
 }
 
 .rate-value {
-  color: var(--dark-color, #1f2937);
+  color: var(--dark-color);
   font-weight: 600;
 }
 
@@ -1573,10 +1598,10 @@ export default {
 
 /* ---------- Карточки ---------- */
 .card {
-  background: var(--white, #fff);
+  background: var(--white);
   border-radius: var(--radius, 12px);
   padding: 1.25rem;
-  box-shadow: var(--shadow, 0 2px 8px rgba(0, 0, 0, 0.08));
+  box-shadow: var(--shadow);
   margin-bottom: 1.5rem;
 }
 
@@ -1590,7 +1615,7 @@ export default {
   align-items: center;
   margin-bottom: 1rem;
   padding-bottom: 1rem;
-  border-bottom: 2px solid var(--light-color, #f3f4f6);
+  border-bottom: 2px solid var(--light-color);
   flex-wrap: wrap;
   gap: 1rem;
 }
@@ -1602,11 +1627,12 @@ export default {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  color: var(--dark-color);
 }
 
 .comparison-period {
   font-size: 0.875rem;
-  color: var(--gray-color, #6b7280);
+  color: var(--gray-color);
   font-weight: 500;
 }
 
@@ -1626,7 +1652,7 @@ export default {
 .stat-card {
   border-radius: var(--radius, 12px);
   padding: 1.25rem 1.5rem;
-  box-shadow: var(--shadow, 0 4px 12px rgba(0, 0, 0, 0.08));
+  box-shadow: var(--shadow);
   box-sizing: border-box;
   min-width: 0;
   display: flex;
@@ -1639,7 +1665,6 @@ export default {
 .stat-title {
   font-size: 0.85rem;
   margin-bottom: 0.4rem;
-  color: #1f2937;
 }
 
 .stat-value {
@@ -1649,17 +1674,18 @@ export default {
   word-break: break-word;
 }
 
+/* Карточка баланса — использует переменные темы */
 .stat-card-balance {
-  background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%);
-  border: 1px solid #e5e7eb;
+  background: linear-gradient(135deg, var(--white) 0%, var(--light-color) 100%);
+  border: 1px solid var(--light-color);
 }
 
 .stat-card-balance .stat-title {
-  color: #6b7280;
+  color: var(--gray-color);
 }
 
 .stat-card-balance .stat-value {
-  color: #1f2937;
+  color: var(--dark-color);
 }
 
 .stat-card-expense {
@@ -1699,7 +1725,7 @@ export default {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #d1d5db;
+  background: var(--gray-color);
   transition: all 0.25s ease;
   cursor: pointer;
 }
@@ -1707,7 +1733,7 @@ export default {
 .stats-dot.active {
   width: 24px;
   border-radius: 4px;
-  background: var(--primary-color, #667eea);
+  background: var(--primary-color);
 }
 
 .stats-carousel.is-mobile {
@@ -1736,11 +1762,11 @@ export default {
 }
 
 .text-success {
-  color: var(--secondary-color, #10b981);
+  color: var(--secondary-color);
 }
 
 .text-danger {
-  color: var(--danger-color, #ef4444);
+  color: var(--danger-color);
 }
 
 /* ============================================================
@@ -1753,6 +1779,7 @@ export default {
   margin-bottom: 2rem;
 }
 
+/* Карточка прогноза — фиолетовый градиент отлично смотрится в обеих темах */
 .forecast-card {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
@@ -1849,17 +1876,9 @@ export default {
   transition: width 0.6s ease;
 }
 
-.progress-fill.progress-low {
-  background: #34d399;
-}
-
-.progress-fill.progress-medium {
-  background: #fbbf24;
-}
-
-.progress-fill.progress-high {
-  background: #f87171;
-}
+.progress-fill.progress-low { background: #34d399; }
+.progress-fill.progress-medium { background: #fbbf24; }
+.progress-fill.progress-high { background: #f87171; }
 
 .forecast-status {
   padding: 0.75rem;
@@ -1887,8 +1906,9 @@ export default {
   color: #fbbf24;
 }
 
+/* Карточка сравнения */
 .comparison-card {
-  background: var(--white, #fff);
+  background: var(--white);
 }
 
 .comparison-content {
@@ -1903,12 +1923,13 @@ export default {
   align-items: center;
   padding: 0.75rem;
   border-radius: 0.5rem;
-  background: var(--light-color, #f3f4f6);
+  background: var(--light-color);
+  color: var(--dark-color);
 }
 
 .comparison-item.highlight {
-  background: #f3f4f6;
-  border: 2px solid var(--primary-color, #667eea);
+  background: var(--light-color);
+  border: 2px solid var(--primary-color);
 }
 
 .comparison-label {
@@ -1935,6 +1956,10 @@ export default {
   background: rgba(0, 0, 0, 0.05);
 }
 
+:global(:root[data-theme="dark"]) .comparison-change {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 /* ============================================================
    ВИДЖЕТ БЮДЖЕТА
    ============================================================ */
@@ -1942,11 +1967,12 @@ export default {
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
   margin-bottom: 1.5rem;
+  background: var(--white);
 }
 
 .budget-widget:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-lg);
 }
 
 .budget-widget-header {
@@ -1961,7 +1987,7 @@ export default {
 }
 
 .budget-widget-arrow {
-  color: var(--gray-color, #6b7280);
+  color: var(--gray-color);
   font-size: 0.875rem;
 }
 
@@ -1975,22 +2001,22 @@ export default {
 .budget-widget-spent {
   font-size: 1.75rem;
   font-weight: 700;
-  color: var(--dark-color, #1f2937);
+  color: var(--dark-color);
 }
 
 .budget-widget-sep {
-  color: var(--gray-color, #6b7280);
+  color: var(--gray-color);
   font-size: 0.875rem;
 }
 
 .budget-widget-limit {
-  color: var(--gray-color, #6b7280);
+  color: var(--gray-color);
   font-size: 1rem;
 }
 
 .budget-widget-progress .progress-bar {
   height: 8px;
-  background: var(--light-color, #f3f4f6);
+  background: var(--light-color);
   border-radius: 9999px;
   overflow: hidden;
   margin-bottom: 0.5rem;
@@ -2010,7 +2036,7 @@ export default {
   display: flex;
   justify-content: space-between;
   font-size: 0.75rem;
-  color: var(--gray-color, #6b7280);
+  color: var(--gray-color);
   font-weight: 500;
 }
 
@@ -2019,6 +2045,7 @@ export default {
    ============================================================ */
 .balance-history-card {
   margin-bottom: 1.5rem;
+  background: var(--white);
 }
 
 .history-controls {
@@ -2031,30 +2058,30 @@ export default {
 .history-mode {
   display: flex;
   gap: 0.25rem;
-  background: var(--light-color, #f3f4f6);
+  background: var(--light-color);
   padding: 0.25rem;
-  border-radius: var(--radius, 12px);
+  border-radius: var(--radius);
 }
 
 .range-btn {
   padding: 0.375rem 0.75rem;
   border: none;
   background: transparent;
-  border-radius: calc(var(--radius, 12px) - 2px);
+  border-radius: calc(var(--radius) - 2px);
   font-size: 0.75rem;
   font-weight: 500;
-  color: var(--gray-color, #6b7280);
+  color: var(--gray-color);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .range-btn:hover {
-  color: var(--dark-color, #1f2937);
+  color: var(--dark-color);
 }
 
 .range-btn.active {
-  background: var(--white, #fff);
-  color: var(--primary-color, #667eea);
+  background: var(--white);
+  color: var(--primary-color);
   font-weight: 600;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
@@ -2070,13 +2097,13 @@ export default {
   justify-content: center;
   gap: 0.75rem;
   padding: 3rem 1rem;
-  color: var(--gray-color, #6b7280);
+  color: var(--gray-color);
   font-size: 0.9rem;
 }
 
 .history-error {
   flex-direction: column;
-  color: var(--danger-color, #ef4444);
+  color: var(--danger-color);
 }
 
 .history-error i {
@@ -2098,9 +2125,9 @@ export default {
 .history-tooltip {
   position: absolute;
   z-index: 10;
-  background: rgba(17, 24, 39, 0.95);
+  background: rgba(17, 24, 39, 0.95); /* Темный, чтобы всегда читалось */
   color: white;
-  border-radius: var(--radius, 12px);
+  border-radius: var(--radius);
   padding: 0.625rem 0.75rem;
   font-size: 0.75rem;
   pointer-events: none;
@@ -2170,7 +2197,7 @@ export default {
   gap: 0.5rem;
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid var(--light-color, #f3f4f6);
+  border-top: 1px solid var(--light-color);
 }
 
 .history-legend-item {
@@ -2179,16 +2206,16 @@ export default {
   gap: 0.5rem;
   padding: 0.375rem 0.75rem;
   border-radius: 9999px;
-  background: #f9fafb;
-  border: 1px solid var(--light-color, #f3f4f6);
+  background: var(--white);
+  border: 1px solid var(--light-color);
   font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.2s;
-  color: var(--dark-color, #1f2937);
+  color: var(--dark-color);
 }
 
 .history-legend-item:hover {
-  background: var(--light-color, #f3f4f6);
+  background: var(--light-color);
 }
 
 .history-legend-item.is-off {
@@ -2208,7 +2235,7 @@ export default {
 }
 
 .history-legend-value {
-  color: var(--gray-color, #6b7280);
+  color: var(--gray-color);
   font-size: 0.75rem;
 }
 
@@ -2218,7 +2245,7 @@ export default {
   align-items: center;
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid var(--light-color, #f3f4f6);
+  border-top: 1px solid var(--light-color);
   flex-wrap: wrap;
   gap: 1rem;
 }
@@ -2239,25 +2266,25 @@ export default {
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  color: var(--gray-color, #6b7280);
+  color: var(--gray-color);
   font-weight: 500;
 }
 
 .history-stat-value {
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--dark-color, #1f2937);
+  color: var(--dark-color);
 }
 
 .history-stat-value small {
   font-size: 0.75rem;
   font-weight: 500;
-  color: var(--gray-color, #6b7280);
+  color: var(--gray-color);
 }
 
 .history-period-label {
   font-size: 0.8rem;
-  color: var(--gray-color, #6b7280);
+  color: var(--gray-color);
   font-style: italic;
 }
 
@@ -2278,8 +2305,8 @@ export default {
 }
 
 .modal-content {
-  background: white;
-  border-radius: var(--radius, 12px);
+  background: var(--white);
+  border-radius: var(--radius);
   padding: 2rem;
   width: 100%;
   max-width: 500px;
@@ -2294,11 +2321,16 @@ export default {
   margin-bottom: 1.5rem;
 }
 
+.modal-header h3 {
+  color: var(--dark-color);
+}
+
 .modal-close {
   background: none;
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
+  color: var(--gray-color);
 }
 
 .modal-footer {
@@ -2307,7 +2339,7 @@ export default {
   gap: 1rem;
   margin-top: 1.5rem;
   padding-top: 1rem;
-  border-top: 1px solid var(--light-color, #f3f4f6);
+  border-top: 1px solid var(--light-color);
 }
 
 .form-group {
@@ -2318,37 +2350,40 @@ export default {
   display: block;
   margin-bottom: 0.25rem;
   font-weight: 500;
+  color: var(--dark-color);
 }
 
 .form-control {
   width: 100%;
   padding: 0.5rem;
-  border: 1px solid var(--light-color, #f3f4f6);
-  border-radius: var(--radius, 12px);
+  border: 1px solid var(--gray-color);
+  border-radius: var(--radius);
   font-size: 1rem;
+  background: var(--white);
+  color: var(--dark-color);
 }
 
 .btn {
   padding: 0.5rem 1rem;
   border: none;
-  border-radius: var(--radius, 12px);
+  border-radius: var(--radius);
   cursor: pointer;
   font-size: 1rem;
   font-weight: 500;
 }
 
 .btn-primary {
-  background: var(--primary-color, #667eea);
+  background: var(--primary-color);
   color: white;
 }
 
 .btn-secondary {
-  background: var(--light-color, #f3f4f6);
-  color: var(--dark-color, #1f2937);
+  background: var(--light-color);
+  color: var(--dark-color);
 }
 
 .btn-success {
-  background: var(--secondary-color, #10b981);
+  background: var(--secondary-color);
   color: white;
 }
 
@@ -2389,12 +2424,10 @@ export default {
     justify-content: space-between;
   }
 
-  /* Бюджет */
   .budget-widget-spent {
     font-size: 1.5rem;
   }
 
-  /* Динамика баланса */
   .history-controls {
     flex-direction: column;
     width: 100%;
@@ -2443,7 +2476,6 @@ export default {
     justify-content: center;
   }
 
-  /* Динамика баланса */
   .history-legend {
     gap: 0.375rem;
   }

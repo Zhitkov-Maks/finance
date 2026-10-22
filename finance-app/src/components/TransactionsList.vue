@@ -806,6 +806,7 @@ export default {
   background: var(--white);
   border-radius: var(--radius);
   margin-bottom: 1rem;
+  color: var(--dark-color);
 }
 
 .filters-header h3 {
@@ -830,6 +831,7 @@ export default {
 .filter-group label {
   font-weight: 500;
   font-size: 0.875rem;
+  color: var(--dark-color);
 }
 
 .filter-actions {
@@ -846,6 +848,7 @@ export default {
   margin-top: 1.5rem;
   padding-top: 1rem;
   border-top: 1px solid var(--light-color);
+  color: var(--dark-color);
 }
 
 .badge {
@@ -856,6 +859,7 @@ export default {
   display: inline-block;
 }
 
+/* --- Светлая тема для бейджей --- */
 .badge-success {
   background: #d1fae5;
   color: #065f46;
@@ -864,6 +868,17 @@ export default {
 .badge-danger {
   background: #fee2e2;
   color: #991b1b;
+}
+
+/* --- Темная тема для бейджей --- */
+:global(:root[data-theme="dark"]) .badge-success {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+}
+
+:global(:root[data-theme="dark"]) .badge-danger {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
 }
 
 .text-success {
@@ -896,6 +911,7 @@ export default {
 
 .text-center {
   text-align: center;
+  color: var(--dark-color);
 }
 
 .text-muted {
@@ -932,7 +948,7 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem 1rem;
-  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  background: var(--light-color); /* Заменили жесткий градиент */
   border-radius: var(--radius);
   margin-bottom: 0.5rem;
   font-weight: 600;
@@ -970,7 +986,7 @@ export default {
 }
 
 .transaction-compact:hover {
-  background-color: #f9fafb;
+  background-color: var(--light-color); /* Заменили #f9fafb */
 }
 
 .compact-left {
@@ -1013,14 +1029,14 @@ export default {
 }
 
 .expand-icon:hover {
-  background-color: var(--light-color);
-  color: var(--primary-color);
+  background-color: var(--gray-color);
+  color: var(--white);
 }
 
 .transaction-expanded {
   padding: 1rem;
   border-top: 1px solid var(--light-color);
-  background-color: #fafafa;
+  background-color: var(--light-color); /* Заменили #fafafa */
   animation: slideDown 0.3s ease;
 }
 
@@ -1101,6 +1117,7 @@ export default {
   padding: 0.75rem;
   text-align: left;
   border-bottom: 1px solid var(--light-color);
+  color: var(--dark-color); /* Добавлено для темной темы */
 }
 
 .table th {
@@ -1110,7 +1127,7 @@ export default {
 
 /* Строка-разделитель дня в таблице */
 .day-separator td {
-  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  background: var(--light-color); /* Заменили жесткий градиент */
   font-weight: 600;
   font-size: 0.9rem;
   border-left: 3px solid var(--primary-color, #3b82f6);

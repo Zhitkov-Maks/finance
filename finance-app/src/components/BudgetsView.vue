@@ -721,7 +721,7 @@ export default {
 }
 
 .total-budget-card .budget-spent.is-exceeded {
-  color: #fecaca;
+  color: #fecaca; /* Светло-красный, виден на фиолетовом */
 }
 
 .total-budget-card .budget-separator {
@@ -743,11 +743,11 @@ export default {
 }
 
 .total-budget-card .progress-info .text-success {
-  color: #86efac;
+  color: #86efac; /* Светло-зеленый */
 }
 
 .total-budget-card .progress-info .text-danger {
-  color: #fca5a5;
+  color: #fca5a5; /* Светло-красный */
 }
 
 .total-budget-card .btn-icon {
@@ -765,7 +765,7 @@ export default {
   justify-content: space-between;
   align-items: center;
   background: var(--white);
-  border: 1px dashed #d1d5db;
+  border: 1px dashed var(--gray-color); /* Заменили #d1d5db на переменную */
   border-radius: var(--radius);
   padding: 1rem 1.25rem;
   margin-bottom: 1.5rem;
@@ -822,6 +822,7 @@ export default {
 .summary-value {
   font-size: 1.5rem;
   font-weight: 700;
+  color: var(--dark-color); /* Добавлено для темной темы */
 }
 
 /* ============================================================
@@ -894,8 +895,8 @@ export default {
 }
 
 .btn-icon.text-danger:hover {
-  background: #fee2e2;
-  color: #ef4444;
+  background: rgba(239, 68, 68, 0.15); /* Полупрозрачный красный вместо #fee2e2 */
+  color: var(--danger-color);
 }
 
 .budget-amounts {
@@ -908,6 +909,7 @@ export default {
 .budget-spent {
   font-size: 1.5rem;
   font-weight: 700;
+  color: var(--dark-color); /* Добавлено для темной темы */
 }
 
 .budget-separator {

@@ -27,16 +27,16 @@
         <div class="form-group">
           <label class="form-label required">Текущий пароль</label>
           <div class="password-input-wrapper">
-            <input 
-              :type="showEmailCurrentPassword ? 'text' : 'password'" 
-              v-model="emailForm.current_password" 
-              class="form-control" 
+            <input
+              :type="showEmailCurrentPassword ? 'text' : 'password'"
+              v-model="emailForm.current_password"
+              class="form-control"
               required
               placeholder="Введите текущий пароль"
             >
-            <button 
-              type="button" 
-              class="password-toggle" 
+            <button
+              type="button"
+              class="password-toggle"
               @click="showEmailCurrentPassword = !showEmailCurrentPassword"
             >
               <i :class="showEmailCurrentPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
@@ -47,10 +47,10 @@
         <div class="form-group">
           <label class="form-label required">Новый email</label>
           <div class="email-input-wrapper">
-            <input 
-              type="email" 
-              v-model="emailForm.new_email" 
-              class="form-control" 
+            <input
+              type="email"
+              v-model="emailForm.new_email"
+              class="form-control"
               required
               placeholder="Введите новый email"
               @input="validateEmail"
@@ -67,10 +67,10 @@
         <div class="form-group">
           <label class="form-label required">Подтверждение email</label>
           <div class="email-input-wrapper">
-            <input 
-              type="email" 
-              v-model="emailForm.confirm_email" 
-              class="form-control" 
+            <input
+              type="email"
+              v-model="emailForm.confirm_email"
+              class="form-control"
               required
               placeholder="Подтвердите новый email"
               @input="checkEmailMatch"
@@ -103,16 +103,16 @@
         <div class="form-group">
           <label class="form-label required">Текущий пароль</label>
           <div class="password-input-wrapper">
-            <input 
-              :type="showCurrentPassword ? 'text' : 'password'" 
-              v-model="passwordForm.current_password" 
-              class="form-control" 
+            <input
+              :type="showCurrentPassword ? 'text' : 'password'"
+              v-model="passwordForm.current_password"
+              class="form-control"
               required
               placeholder="Введите текущий пароль"
             >
-            <button 
-              type="button" 
-              class="password-toggle" 
+            <button
+              type="button"
+              class="password-toggle"
               @click="showCurrentPassword = !showCurrentPassword"
             >
               <i :class="showCurrentPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
@@ -123,17 +123,17 @@
         <div class="form-group">
           <label class="form-label required">Новый пароль</label>
           <div class="password-input-wrapper">
-            <input 
-              :type="showNewPassword ? 'text' : 'password'" 
-              v-model="passwordForm.new_password" 
-              class="form-control" 
+            <input
+              :type="showNewPassword ? 'text' : 'password'"
+              v-model="passwordForm.new_password"
+              class="form-control"
               required
               placeholder="Введите новый пароль"
               @input="validatePassword"
             >
-            <button 
-              type="button" 
-              class="password-toggle" 
+            <button
+              type="button"
+              class="password-toggle"
               @click="showNewPassword = !showNewPassword"
             >
               <i :class="showNewPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
@@ -141,8 +141,8 @@
           </div>
           <div v-if="passwordStrength" class="password-strength">
             <div class="strength-bar">
-              <div 
-                class="strength-fill" 
+              <div
+                class="strength-fill"
                 :class="strengthClass"
                 :style="{ width: passwordStrength.percentage + '%' }"
               ></div>
@@ -156,17 +156,17 @@
         <div class="form-group">
           <label class="form-label required">Подтверждение пароля</label>
           <div class="password-input-wrapper">
-            <input 
-              :type="showConfirmPassword ? 'text' : 'password'" 
-              v-model="passwordForm.confirm_password" 
-              class="form-control" 
+            <input
+              :type="showConfirmPassword ? 'text' : 'password'"
+              v-model="passwordForm.confirm_password"
+              class="form-control"
               required
               placeholder="Подтвердите новый пароль"
               @input="checkPasswordMatch"
             >
-            <button 
-              type="button" 
-              class="password-toggle" 
+            <button
+              type="button"
+              class="password-toggle"
               @click="showConfirmPassword = !showConfirmPassword"
             >
               <i :class="showConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
@@ -233,13 +233,13 @@ export default {
       id: null,
       email: ''
     })
-    
+
     // State for password change
     const passwordLoading = ref(false)
     const showCurrentPassword = ref(false)
     const showNewPassword = ref(false)
     const showConfirmPassword = ref(false)
-    
+
     const passwordForm = ref({
       current_password: '',
       new_password: '',
@@ -249,7 +249,7 @@ export default {
     // State for email change
     const emailLoading = ref(false)
     const showEmailCurrentPassword = ref(false)
-    
+
     const emailForm = ref({
       current_password: '',
       new_email: '',
@@ -276,7 +276,7 @@ export default {
     })
 
     const emailMismatch = computed(() => {
-      return emailForm.value.new_email !== emailForm.value.confirm_email && 
+      return emailForm.value.new_email !== emailForm.value.confirm_email &&
              emailForm.value.confirm_email !== ''
     })
 
@@ -292,13 +292,13 @@ export default {
     const passwordStrength = computed(() => {
       const password = passwordForm.value.new_password
       if (!password) return null
-      
+
       let strength = 0
       if (password.length >= 8) strength += 25
       if (/[A-Z]/.test(password)) strength += 25
       if (/[a-z]/.test(password)) strength += 25
       if (/[0-9]/.test(password)) strength += 25
-      
+
       let text = ''
       if (strength <= 25) {
         text = 'Слабый'
@@ -309,7 +309,7 @@ export default {
       } else {
         text = 'Отличный'
       }
-      
+
       return {
         percentage: strength,
         text: text
@@ -341,7 +341,7 @@ export default {
     })
 
     const passwordMismatch = computed(() => {
-      return passwordForm.value.new_password !== passwordForm.value.confirm_password && 
+      return passwordForm.value.new_password !== passwordForm.value.confirm_password &&
              passwordForm.value.confirm_password !== ''
     })
 
@@ -374,24 +374,24 @@ export default {
 
     const handleChangeEmail = async () => {
       if (!isEmailFormValid.value) return
-      
+
       emailLoading.value = true
       try {
         await apiService.changeEmail(
           emailForm.value.current_password,
           emailForm.value.new_email
         )
-        
+
         // Обновляем информацию о пользователе
         await loadUserInfo()
-        
+
         // Очищаем форму
         emailForm.value = {
           current_password: '',
           new_email: '',
           confirm_email: ''
         }
-        
+
         showSuccessToast('Email успешно изменен!')
       } catch (error) {
         console.error('Error changing email:', error)
@@ -409,21 +409,21 @@ export default {
 
     const handleChangePassword = async () => {
       if (!isPasswordFormValid.value) return
-      
+
       passwordLoading.value = true
       try {
         await apiService.changePassword(
           passwordForm.value.current_password,
           passwordForm.value.new_password
         )
-        
+
         // Очищаем форму
         passwordForm.value = {
           current_password: '',
           new_password: '',
           confirm_password: ''
         }
-        
+
         showSuccessToast('Пароль успешно изменен!')
       } catch (error) {
         console.error('Error changing password:', error)
@@ -560,6 +560,7 @@ export default {
 
 .card {
   margin-bottom: 1.5rem;
+  background: var(--white);
 }
 
 .card-header {
@@ -579,6 +580,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  color: var(--dark-color);
 }
 
 /* Стили для поля пароля */
@@ -615,7 +617,7 @@ export default {
 
 .strength-bar {
   height: 4px;
-  background: #e5e7eb;
+  background: var(--light-color); /* Заменили #e5e7eb */
   border-radius: 2px;
   overflow: hidden;
   margin-bottom: 0.25rem;
@@ -713,6 +715,7 @@ export default {
   right: 2rem;
   z-index: 1000;
   animation: slideIn 0.3s ease;
+  box-shadow: var(--shadow-lg);
 }
 
 .error-toast {
@@ -721,6 +724,7 @@ export default {
   right: 2rem;
   z-index: 1000;
   animation: slideIn 0.3s ease;
+  box-shadow: var(--shadow-lg);
 }
 
 @keyframes slideIn {
@@ -743,6 +747,7 @@ export default {
   gap: 0.5rem;
 }
 
+/* --- Светлая тема для алертов --- */
 .alert-success {
   background: #d1fae5;
   color: #065f46;
@@ -755,29 +760,42 @@ export default {
   border: 1px solid #fecaca;
 }
 
+/* --- Темная тема для алертов --- */
+:global(:root[data-theme="dark"]) .alert-success {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+:global(:root[data-theme="dark"]) .alert-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
 /* Адаптивные стили */
 @media (max-width: 768px) {
   .page-header {
     flex-direction: column;
     text-align: center;
   }
-  
+
   .page-header h1 {
     font-size: 1.5rem;
   }
-  
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .stat-card {
     padding: 1rem;
   }
-  
+
   .stat-value {
     font-size: 1.25rem;
   }
-  
+
   .card {
     padding: 1rem;
   }
@@ -794,15 +812,15 @@ export default {
   h1 {
     font-size: 1.25rem;
   }
-  
+
   .stat-value {
     font-size: 1rem;
   }
-  
+
   .password-requirements ul {
     display: block;
   }
-  
+
   .password-requirements li {
     margin-bottom: 0.25rem;
   }

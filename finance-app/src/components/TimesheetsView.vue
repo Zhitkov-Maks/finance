@@ -1687,7 +1687,8 @@ export default {
             to { transform: translateX(100%); opacity: 0; }
           }
           .notification {
-            background: white;
+            background: var(--white, #ffffff);
+            color: var(--dark-color, #1e293b);
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             margin-bottom: 10px;
@@ -1855,7 +1856,7 @@ export default {
   justify-content: center;
   min-height: 400px;
   gap: 1rem;
-  color: #64748b;
+  color: var(--gray-color);
 }
 
 .loading-container i {
@@ -1879,7 +1880,7 @@ export default {
 
 .page-title {
   font-size: 1.5rem;
-  color: #1e293b;
+  color: var(--dark-color);
   margin: 0;
 }
 
@@ -1899,7 +1900,7 @@ export default {
 }
 
 .btn-nav {
-  background: #f0f9ff;
+  background: var(--light-color);
   border: none;
   width: 40px;
   height: 40px;
@@ -1923,12 +1924,12 @@ export default {
   font-size: 1.25rem;
   text-transform: capitalize;
   margin: 0;
-  color: #1e293b;
+  color: var(--dark-color);
 }
 
 .btn-today {
   padding: 0.5rem 1rem;
-  background: #f0f9ff;
+  background: var(--light-color);
   color: #0284c7;
   border: none;
   border-radius: var(--radius);
@@ -1952,14 +1953,14 @@ export default {
   text-align: center;
   padding: 0.75rem;
   font-weight: 600;
-  background: #fef3c7;
+  background: var(--light-color);
   border-radius: var(--radius);
-  color: #92400e;
+  color: var(--dark-color);
 }
 
 .weekday.weekend {
-  background: #fee2e2;
-  color: #dc2626;
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger-color);
 }
 
 .calendar-grid {
@@ -1975,17 +1976,18 @@ export default {
   min-height: 80px;
   cursor: pointer;
   transition: all 0.3s;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--light-color);
   position: relative;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  background: white;
+  background: var(--white);
+  color: var(--dark-color);
 }
 
 .calendar-day:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: var(--shadow);
 }
 
 .calendar-day.other-month {
@@ -2001,9 +2003,9 @@ export default {
 }
 
 .calendar-day.weekend-day {
-  background: #fee2e2;
-  border-color: #fecaca;
-  color: #991b1b;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: var(--danger-color);
 }
 
 .calendar-day.weekend-with-shift {
@@ -2019,7 +2021,7 @@ export default {
 
 .calendar-day.vacation-day {
   background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%);
-  color: #1e293b;
+  color: #1e293b; /* Оставляем темным, так как градиент желтый */
   border-color: #f59e0b;
 }
 
@@ -2031,7 +2033,7 @@ export default {
 
 .calendar-day.today {
   border: 2px solid #f59e0b;
-  box-shadow: 0 0 0 2px #fef3c7;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
 }
 
 .day-number {
@@ -2068,7 +2070,7 @@ export default {
 
 .day-empty {
   text-align: right;
-  color: #9ca3af;
+  color: var(--gray-color);
   margin-top: auto;
 }
 
@@ -2082,10 +2084,10 @@ export default {
 .stat-card {
   flex: 1;
   min-width: 280px;
-  background: white;
+  background: var(--white);
   border-radius: var(--radius);
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: var(--shadow);
 }
 
 .stat-card-header {
@@ -2100,7 +2102,7 @@ export default {
 }
 
 .stat-card-header:hover {
-  background: #006400;
+  filter: brightness(0.9);
 }
 
 .stat-card-header i {
@@ -2131,7 +2133,7 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--light-color);
 }
 
 .stat-line:last-child {
@@ -2140,13 +2142,13 @@ export default {
 
 .stat-label {
   font-size: 0.8rem;
-  color: #02214c;
+  color: var(--gray-color);
 }
 
 .stat-number {
   font-weight: 600;
   font-size: 0.85rem;
-  color: #1e293b;
+  color: var(--dark-color);
 }
 
 .stat-number.award {
@@ -2154,16 +2156,16 @@ export default {
 }
 
 .stat-number.overtime {
-  color: #dc2626;
+  color: var(--danger-color);
 }
 
 .stat-number.total {
-  color: #10b981;
+  color: var(--secondary-color);
   font-size: 1rem;
 }
 
 .award-line {
-  background: #fef3c7;
+  background: rgba(245, 158, 11, 0.1);
   margin: 0.25rem 0;
   padding: 0.5rem;
   border-radius: var(--radius);
@@ -2187,7 +2189,7 @@ export default {
 .currency-block {
   margin-top: 0rem;
   padding-top: 0.5rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--light-color);
 }
 
 .currency-header {
@@ -2215,13 +2217,14 @@ export default {
 .currency-line {
   font-size: 0.75rem;
   padding: 0.3rem 0.5rem;
-  background: #f1f5f9;
+  background: var(--light-color);
   border-radius: var(--radius);
+  color: var(--dark-color);
 }
 
 /* Vacation/Sick styles */
 .vacation-sick-details {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  background: rgba(245, 158, 11, 0.1);
   padding: 1rem;
   border-radius: var(--radius);
   margin-bottom: 1rem;
@@ -2234,11 +2237,13 @@ export default {
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
+  color: var(--dark-color);
 }
 
 .vacation-preview {
   padding: 0.75rem;
-  background: #f0fdf4;
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--dark-color);
   border-radius: var(--radius);
   margin-top: 0.5rem;
   text-align: center;
@@ -2247,7 +2252,7 @@ export default {
 .best-day-period {
   margin-top: 0.75rem;
   padding: 0.5rem;
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  background: rgba(16, 185, 129, 0.1);
   border-radius: var(--radius);
   border-left: 3px solid #10b981;
 }
@@ -2255,7 +2260,7 @@ export default {
 .best-day-month {
   margin-top: 0.75rem;
   padding: 0.75rem;
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  background: rgba(16, 185, 129, 0.1);
   border-radius: var(--radius);
   border-left: 3px solid #10b981;
 }
@@ -2279,12 +2284,12 @@ export default {
 .best-day-date {
   font-weight: 600;
   font-size: 0.8rem;
-  color: #1e293b;
+  color: var(--dark-color);
 }
 
 .best-day-stats {
   font-size: 0.7rem;
-  color: #64748b;
+  color: var(--gray-color);
 }
 
 .best-day-productivity {
@@ -2299,7 +2304,7 @@ export default {
 .dynamics-line {
   margin-top: 0.75rem;
   padding: 0.5rem;
-  background: #f1f5f9;
+  background: var(--light-color);
   border-radius: var(--radius);
 }
 
@@ -2307,7 +2312,7 @@ export default {
   font-size: 0.65rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #64748b;
+  color: var(--gray-color);
   margin-bottom: 0.25rem;
 }
 
@@ -2321,9 +2326,10 @@ export default {
 .period1-value, .period2-value {
   font-weight: 600;
   font-size: 0.85rem;
-  background: white;
+  background: var(--white);
   padding: 0.2rem 0.5rem;
   border-radius: var(--radius);
+  color: var(--dark-color);
 }
 
 .dynamics-content i {
@@ -2339,25 +2345,25 @@ export default {
 }
 
 .dynamics-change.positive {
-  background: #dcfce7;
+  background: rgba(16, 185, 129, 0.2);
   color: #059669;
 }
 
 .dynamics-change.negative {
-  background: #fee2e2;
+  background: rgba(239, 68, 68, 0.2);
   color: #dc2626;
 }
 
 .dynamics-change.neutral {
-  background: #e2e8f0;
-  color: #64748b;
+  background: var(--white);
+  color: var(--gray-color);
 }
 
 .selection-calendar {
-  background: white;
+  background: var(--white);
   border-radius: var(--radius);
   padding: 1rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--light-color);
 }
 
 .selection-weekdays {
@@ -2372,9 +2378,9 @@ export default {
   padding: 0.5rem;
   font-size: 0.75rem;
   font-weight: 600;
-  background: #fef3c7;
+  background: var(--light-color);
   border-radius: var(--radius);
-  color: #92400e;
+  color: var(--dark-color);
 }
 
 .selection-grid {
@@ -2389,24 +2395,24 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--light-color);
   border-radius: var(--radius);
   cursor: pointer;
   transition: all 0.2s;
   font-size: 0.875rem;
-  background: white;
-  color: #1e293b;
+  background: var(--white);
+  color: var(--dark-color);
 }
 
 .selection-day:hover {
   transform: scale(1.05);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  box-shadow: var(--shadow);
 }
 
 .selection-day.has-shift {
-  background: #dbeafe;
-  border-color: #3b82f6;
-  color: #1e40af;
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #3b82f6;
 }
 
 .selection-day.selected {
@@ -2417,7 +2423,7 @@ export default {
 
 .selection-day.other-month-date {
   opacity: 0.3;
-  background: #f3f4f6;
+  background: var(--light-color);
 }
 
 .selection-day.other-month-date:hover {
@@ -2469,10 +2475,11 @@ export default {
 .selected-count {
   margin-top: 0.75rem;
   padding: 0.5rem;
-  background: #f1f5f9;
+  background: var(--light-color);
   border-radius: var(--radius);
   text-align: center;
   font-size: 0.875rem;
+  color: var(--dark-color);
 }
 
 .month-selector {
@@ -2481,13 +2488,13 @@ export default {
   justify-content: center;
   gap: 1rem;
   padding: 0.5rem;
-  background: #f1f5f9;
+  background: var(--light-color);
   border-radius: var(--radius);
 }
 
 .btn-month-nav {
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--white);
+  border: 1px solid var(--light-color);
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -2512,7 +2519,7 @@ export default {
   min-width: 150px;
   text-align: center;
   text-transform: capitalize;
-  color: #1e293b;
+  color: var(--dark-color);
 }
 
 .modal {
@@ -2529,7 +2536,7 @@ export default {
 }
 
 .modal-content {
-  background: white;
+  background: var(--white);
   border-radius: var(--radius);
   max-width: 500px;
   width: 90%;
@@ -2547,13 +2554,14 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 0.3rem 1rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--light-color);
   margin-bottom: 0.5rem;
 }
 
 .modal-header h3 {
   margin: 0;
   font-size: 1.25rem;
+  color: var(--dark-color);
 }
 
 .modal-close {
@@ -2561,11 +2569,11 @@ export default {
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: #64748b;
+  color: var(--gray-color);
 }
 
 .modal-close:hover {
-  color: #1e293b;
+  color: var(--dark-color);
 }
 
 .modal-body {
@@ -2574,8 +2582,8 @@ export default {
 
 .modal-footer {
   padding: 1rem 1.5rem;
-  border-top: 1px solid #e5e7eb;
-  background: #f8fafc;
+  border-top: 1px solid var(--light-color);
+  background: var(--light-color);
   display: flex;
   justify-content: center;
 }
@@ -2735,7 +2743,7 @@ button:disabled {
 .shift-details {
   margin-bottom: 0.5rem;
   padding: 1rem;
-  background: #f8fafc;
+  background: var(--light-color);
   border-radius: var(--radius);
 }
 
@@ -2746,14 +2754,14 @@ button:disabled {
 .award-section {
   margin-top: 0.5rem;
   padding: 0.5rem;
-  background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
+  background: rgba(245, 158, 11, 0.1);
   border-radius: var(--radius);
-  border: 1px solid #fde68a;
+  border: 1px solid rgba(245, 158, 11, 0.2);
 }
 
 .award-divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, #fde68a, transparent);
+  background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.3), transparent);
   margin: -1rem -1rem 1rem -1rem;
 }
 
@@ -2766,22 +2774,24 @@ button:disabled {
   margin-bottom: 0.5rem;
   font-weight: 500;
   font-size: 0.875rem;
-  color: #1e293b;
+  color: var(--dark-color);
 }
 
 .form-label.required:after {
   content: " *";
-  color: #ef4444;
+  color: var(--danger-color);
 }
 
 .form-control {
   width: 100%;
   padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--gray-color);
   border-radius: var(--radius);
   font-size: 0.875rem;
   transition: border-color 0.3s;
   box-sizing: border-box;
+  background: var(--white);
+  color: var(--dark-color);
 }
 
 .form-control:focus {
@@ -2799,7 +2809,7 @@ button:disabled {
   align-items: center;
   gap: 1rem;
   padding: 1rem;
-  background: #f1f5f9;
+  background: var(--light-color);
   border-radius: var(--radius);
   margin-bottom: 1rem;
 }
@@ -2807,7 +2817,7 @@ button:disabled {
 .stat-icon-large {
   width: 60px;
   height: 60px;
-  background: white;
+  background: var(--white);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -2823,7 +2833,7 @@ button:disabled {
 .stat-value-large {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--dark-color);
 }
 
 .year-currency {
@@ -2844,9 +2854,10 @@ button:disabled {
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: white;
+  background: var(--white);
+  color: var(--dark-color);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: var(--shadow);
 }
 
 .notification-success {
@@ -2866,7 +2877,7 @@ button:disabled {
 }
 
 .productivity-line {
-  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  background: rgba(59, 130, 246, 0.1);
   margin: 0.25rem 0;
   padding: 0.5rem;
   border-radius: var(--radius);
@@ -2874,47 +2885,47 @@ button:disabled {
 
 .productivity {
   font-weight: 700;
-  color: #0a0b0b;
+  color: var(--dark-color);
   font-size: 1rem;
 }
 
 .cold-percent-line {
-  background: linear-gradient(135deg, #dbeafe 0%, #0170f8 100%);
+  background: rgba(59, 130, 246, 0.1);
   margin: 0.25rem 0;
   padding: 0.5rem;
   border-radius: var(--radius);
 }
 
 .award-percent-line {
-  background: linear-gradient(135deg, #eee7e7 0%, #00b418 100%);
+  background: rgba(16, 185, 129, 0.1);
   margin: 0.25rem 0;
   padding: 0.5rem;
   border-radius: var(--radius);
 }
 
 .hours-percent-line {
-  background: linear-gradient(135deg, #9cdb9f 0%, #80b7f1 100%);
+  background: rgba(16, 185, 129, 0.1);
   margin: 0.25rem 0;
   padding: 0.5rem;
   border-radius: var(--radius);
 }
 
 .non-productive-percent-line {
-  background: linear-gradient(135deg, #eee7e7 0%, #dcf118 100%);
+  background: rgba(245, 158, 11, 0.1);
   margin: 0.25rem 0;
   padding: 0.5rem;
   border-radius: var(--radius);
 }
 
 .cold-boost-line {
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  background: rgba(16, 185, 129, 0.1);
   margin: 0.25rem 0;
   padding: 0.5rem;
   border-radius: var(--radius);
 }
 
 .overtime-percent-line {
-  background: linear-gradient(135deg, #fee2e2 0%, #f64ee5 100%);
+  background: rgba(239, 68, 68, 0.1);
   margin: 0.25rem 0;
   padding: 0.5rem;
   border-radius: var(--radius);
@@ -3031,13 +3042,13 @@ button:disabled {
   gap: 1rem;
   margin-bottom: 1.5rem;
   padding: 0.5rem;
-  background: #f1f5f9;
+  background: var(--light-color);
   border-radius: var(--radius);
 }
 
 .btn-year-nav {
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--white);
+  border: 1px solid var(--light-color);
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -3060,10 +3071,10 @@ button:disabled {
   padding: 0.5rem 1rem;
   font-size: 1rem;
   font-weight: 600;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--light-color);
   border-radius: var(--radius);
-  background: white;
-  color: #1e293b;
+  background: var(--white);
+  color: var(--dark-color);
   cursor: pointer;
   outline: none;
   min-width: 100px;
@@ -3078,13 +3089,13 @@ button:disabled {
 .no-data {
   text-align: center;
   padding: 2rem;
-  color: #64748b;
+  color: var(--gray-color);
 }
 
 .no-data i {
   font-size: 3rem;
   margin-bottom: 1rem;
-  color: #cbd5e1;
+  color: var(--light-color);
 }
 
 .no-data p {

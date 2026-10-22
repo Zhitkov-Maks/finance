@@ -692,7 +692,7 @@ export default {
   padding: 1rem;
 }
 .filter-group { display: flex; flex-direction: column; gap: 0.5rem; }
-.filter-group label { font-weight: 500; font-size: 0.875rem; }
+.filter-group label { font-weight: 500; font-size: 0.875rem; color: var(--dark-color); }
 
 .loading-state {
   text-align: center;
@@ -709,6 +709,7 @@ export default {
   padding: 0.75rem;
   text-align: left;
   border-bottom: 1px solid var(--light-color);
+  color: var(--dark-color); /* Добавлено для темной темы */
 }
 .table th { font-weight: 600; color: var(--gray-color); }
 
@@ -719,9 +720,26 @@ export default {
   font-weight: 600;
   display: inline-block;
 }
+
+/* --- Светлая тема для бейджей --- */
 .badge-success { background: #d1fae5; color: #065f46; }
 .badge-danger { background: #fee2e2; color: #991b1b; }
 .badge-secondary { background: #e5e7eb; color: #4b5563; }
+
+/* --- Темная тема для бейджей --- */
+:global(:root[data-theme="dark"]) .badge-success {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+}
+:global(:root[data-theme="dark"]) .badge-danger {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+:global(:root[data-theme="dark"]) .badge-secondary {
+  background: rgba(107, 114, 128, 0.2);
+  color: #d1d5db;
+}
+
 .badge-sm { font-size: 0.65rem; padding: 0.15rem 0.5rem; }
 
 .schedule-badge {
@@ -766,7 +784,7 @@ export default {
   cursor: pointer;
   transition: background 0.2s;
 }
-.recurring-compact:hover { background: #f9fafb; }
+.recurring-compact:hover { background: var(--light-color); } /* Заменили #f9fafb */
 .compact-left { flex: 1; min-width: 0; }
 .recurring-title { font-weight: 600; color: var(--dark-color); margin-bottom: 0.25rem; }
 .recurring-meta { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
@@ -775,7 +793,7 @@ export default {
 .recurring-expanded {
   padding: 1rem;
   border-top: 1px solid var(--light-color);
-  background: #fafafa;
+  background: var(--light-color); /* Заменили #fafafa */
 }
 .detail-item {
   display: flex;
@@ -800,7 +818,7 @@ export default {
   align-items: center;
   justify-content: center;
 }
-.expand-icon:hover { background: var(--light-color); color: var(--primary-color); }
+.expand-icon:hover { background: var(--gray-color); color: var(--white); }
 
 .checkbox-label {
   display: flex;
@@ -808,6 +826,7 @@ export default {
   gap: 0.5rem;
   cursor: pointer;
   font-size: 0.875rem;
+  color: var(--dark-color);
 }
 
 .form-hint {
@@ -843,7 +862,16 @@ export default {
   gap: 0.5rem;
   font-size: 0.8rem;
 }
+
+/* --- Светлая тема для алертов --- */
 .alert-info { background: #dbeafe; color: #1e40af; }
+
+/* --- Темная тема для алертов --- */
+:global(:root[data-theme="dark"]) .alert-info {
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
 
 @media (max-width: 1024px) {
   .desktop-table { display: none; }

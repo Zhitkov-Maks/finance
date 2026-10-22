@@ -795,6 +795,9 @@ export default {
     const newBalance = ref(0)
     const expandedAccounts = ref(new Set())
 
+    // --- ТЕМНАЯ ТЕМА ДЛЯ CANVAS ---
+    const isDarkTheme = ref(document.documentElement.getAttribute('data-theme') === 'dark')
+
     // Добавлены новые поля в форму
     const formData = ref({
       name: '',
@@ -933,7 +936,6 @@ export default {
     const onTouchEnd = () => {
       if (!isDragging.value) return
       isDragging.value = false
-      // Теперь свайпаем до 3 индекса (4 карточки)
       if (touchDeltaX.value < -SWIPE_THRESHOLD && currentStatIndex.value < 3) {
         currentStatIndex.value++
       } else if (touchDeltaX.value > SWIPE_THRESHOLD && currentStatIndex.value > 0) {
@@ -1077,28 +1079,40 @@ export default {
       return { ...max, label }
     })
 
+    const getCanvasColors = () => ({
+      text: isDarkTheme.value ? '#9ca3af' : '#6b7280',
+      textBold: isDarkTheme.value ? '#f3f4f6' : '#1f2937',
+      grid: isDarkTheme.value ? '#374151' : '#e5e7eb',
+      donutHole: isDarkTheme.value ? '#1f2937' : '#ffffff',
+      sankeyBg: isDarkTheme.value ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.92)',
+      sankeyBorder: isDarkTheme.value ? 'rgba(255,255,255,0.1)' : 'rgba(255, 255, 255, 0.5)',
+    })
+
     const drawDistributionChart = () => {
       const canvas = distributionCanvas.value
       if (!canvas) return
       const data = distributionData.value
       const wrapper = canvas.parentElement
       const size = wrapper ? Math.min(wrapper.clientWidth, 320) : 280
+      const colors = getCanvasColors()
+
       if (data.length === 0) { setupCanvas(canvas, size, size); return }
       const { ctx } = setupCanvas(canvas, size, size)
       const centerX = size / 2; const centerY = size / 2; const radius = size / 2 - 20
       let startAngle = -Math.PI / 2
+
       data.forEach((item) => {
         const percent = parseFloat(item.percent) / 100
         const angle = percent * 2 * Math.PI
         const endAngle = startAngle + angle
         ctx.beginPath(); ctx.fillStyle = item.color; ctx.moveTo(centerX, centerY); ctx.arc(centerX, centerY, radius, startAngle, endAngle); ctx.closePath(); ctx.fill()
-        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke()
+        ctx.strokeStyle = colors.donutHole; ctx.lineWidth = 2; ctx.stroke() // Разделитель сегментов
         if (percent > 0.08) {
           const midAngle = startAngle + angle / 2
           const textRadius = radius * 0.68
           const x = centerX + Math.cos(midAngle) * textRadius
           const y = centerY + Math.sin(midAngle) * textRadius
-          ctx.fillStyle = '#ffffff'
+          ctx.fillStyle = '#ffffff' // Внутри цветных сегментов текст всегда белый
           ctx.font = `bold ${size < 260 ? 11 : 13}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`
           ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 3
           ctx.fillText(`${item.percent}%`, x, y); ctx.shadowBlur = 0
@@ -1113,6 +1127,8 @@ export default {
       const total = accounts.value.length
       const wrapper = canvas.parentElement
       const size = wrapper ? Math.min(wrapper.clientWidth, 200) : 180
+      const colors = getCanvasColors()
+
       if (total === 0) { setupCanvas(canvas, size, size); return }
       const { ctx } = setupCanvas(canvas, size, size)
       const centerX = size / 2; const centerY = size / 2; const radius = size / 2 - 15
@@ -1122,14 +1138,18 @@ export default {
       ctx.beginPath(); ctx.fillStyle = '#10b981'; ctx.moveTo(centerX, centerY); ctx.arc(centerX, centerY, radius, -Math.PI / 2, -Math.PI / 2 + activeAngle); ctx.closePath(); ctx.fill()
       const inactiveAngle = inactivePercent * 2 * Math.PI
       ctx.beginPath(); ctx.fillStyle = '#9ca3af'; ctx.moveTo(centerX, centerY); ctx.arc(centerX, centerY, radius, -Math.PI / 2 + activeAngle, -Math.PI / 2 + activeAngle + inactiveAngle); ctx.closePath(); ctx.fill()
-      ctx.beginPath(); ctx.fillStyle = '#ffffff'; ctx.arc(centerX, centerY, radius * 0.6, 0, 2 * Math.PI); ctx.fill()
+
+      // Вырезаем центр (зависит от темы)
+      ctx.beginPath(); ctx.fillStyle = colors.donutHole; ctx.arc(centerX, centerY, radius * 0.6, 0, 2 * Math.PI); ctx.fill()
     }
 
     const drawSankey = () => {
       const canvas = sankeyCanvas.value
       if (!canvas) return
       const { nodes, links } = sankeyData.value
+      const colors = getCanvasColors()
       if (nodes.length < 2) { setupCanvas(canvas, parentWidth(canvas, 900), 100); return }
+
       const VIRTUAL_W = SANKEY_VIRTUAL_W
       const VIRTUAL_H = Math.max(520, nodes.length * 90)
       const { ctx } = setupCanvasVirtual(canvas, VIRTUAL_W, VIRTUAL_H, 0.6, SANKEY_MIN_CANVAS_WIDTH)
@@ -1178,7 +1198,7 @@ export default {
         ctx.beginPath(); ctx.moveTo(x1, srcY); ctx.bezierCurveTo(midX, srcY, midX, dstY, x2, dstY); ctx.lineTo(x2, dstY + dstH); ctx.bezierCurveTo(midX, dstY + dstH, midX, srcY + srcH, x1, srcY + srcH); ctx.closePath()
         const gradient = ctx.createLinearGradient(x1, 0, x2, 0)
         gradient.addColorStop(0, 'rgba(239, 68, 68, 0.55)'); gradient.addColorStop(1, 'rgba(16, 185, 129, 0.55)')
-        ctx.fillStyle = gradient; ctx.fill(); ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; ctx.lineWidth = 0.75; ctx.stroke()
+        ctx.fillStyle = gradient; ctx.fill(); ctx.strokeStyle = colors.sankeyBorder; ctx.lineWidth = 0.75; ctx.stroke()
       })
       const drawNode = (name, pos, color, sign, value) => {
         const isSource = sign === '−'
@@ -1192,14 +1212,20 @@ export default {
         const padding = 6; const bgW = maxLabelW + padding * 2; const bgH = 34
         const bgX = isSource ? pos.x - nodeWidth - 8 - bgW : pos.x + nodeWidth + 8
         const bgY = pos.y + pos.h / 2 - bgH / 2
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.92)'; ctx.beginPath(); const r = 6
+
+        // Фон подписи (светлый/темный)
+        ctx.fillStyle = colors.sankeyBg; ctx.beginPath(); const r = 6
         ctx.moveTo(bgX + r, bgY); ctx.arcTo(bgX + bgW, bgY, bgX + bgW, bgY + bgH, r); ctx.arcTo(bgX + bgW, bgY + bgH, bgX, bgY + bgH, r); ctx.arcTo(bgX, bgY + bgH, bgX, bgY, r); ctx.arcTo(bgX, bgY, bgX + bgW, bgY, r); ctx.closePath(); ctx.fill()
+        // Тень для контраста
+        ctx.shadowColor = 'rgba(0,0,0,0.2)'; ctx.shadowBlur = 4;
+        ctx.fill(); ctx.shadowBlur = 0;
+
         ctx.fillStyle = color; ctx.fillRect(pos.x, pos.y, nodeWidth, pos.h)
-        ctx.fillStyle = '#1f2937'; ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        ctx.fillStyle = colors.textBold; ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
         ctx.textAlign = isSource ? 'right' : 'left'; ctx.textBaseline = 'middle'
         const labelX = isSource ? pos.x - nodeWidth - 8 - padding : pos.x + nodeWidth + 8 + padding
         ctx.fillText(label, labelX, pos.y + pos.h / 2 - 6)
-        ctx.fillStyle = '#6b7280'; ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        ctx.fillStyle = colors.text; ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
         ctx.fillText(subLabel, labelX, pos.y + pos.h / 2 + 8)
       }
       sources.forEach((n) => drawNode(n.name, sourcePositions.get(n.name), '#ef4444', '−', n.outgoing))
@@ -1211,33 +1237,40 @@ export default {
       if (!canvas) return
       const data = activityData.value
       const cssWidth = parentWidth(canvas, 800); const cssHeight = 260
+      const colors = getCanvasColors()
       const { ctx } = setupCanvas(canvas, cssWidth, cssHeight)
+
       if (data.length === 0) return
       const paddingLeft = 50; const paddingRight = 20; const paddingTop = 30; const paddingBottom = 40
       const chartWidth = cssWidth - paddingLeft - paddingRight; const chartHeight = cssHeight - paddingTop - paddingBottom
       const maxAmount = Math.max(...data.map((d) => d.amount), 1)
       const barWidth = chartWidth / data.length; const barGap = Math.min(4, barWidth * 0.2)
-      ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1; ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      ctx.fillStyle = '#9ca3af'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'
+
+      ctx.strokeStyle = colors.grid; ctx.lineWidth = 1; ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      ctx.fillStyle = colors.text; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'
+
       for (let i = 0; i <= 4; i++) {
         const y = paddingTop + chartHeight - (i / 4) * chartHeight
         ctx.beginPath(); ctx.moveTo(paddingLeft, y); ctx.lineTo(cssWidth - paddingRight, y); ctx.stroke()
         ctx.fillText(formatCompactCurrency((maxAmount / 4) * i), paddingLeft - 6, y)
       }
+
       data.forEach((d, i) => {
         const x = paddingLeft + i * barWidth + barGap / 2; const w = barWidth - barGap
         const h = maxAmount > 0 ? (d.amount / maxAmount) * chartHeight : 0; const y = paddingTop + chartHeight - h
-        if (d.count === 0) { ctx.fillStyle = '#f3f4f6'; ctx.fillRect(x, paddingTop + chartHeight - 2, w, 2); return }
+        if (d.count === 0) { ctx.fillStyle = colors.grid; ctx.fillRect(x, paddingTop + chartHeight - 2, w, 2); return }
         const gradient = ctx.createLinearGradient(0, y, 0, paddingTop + chartHeight)
         gradient.addColorStop(0, '#3b82f6'); gradient.addColorStop(1, '#93c5fd'); ctx.fillStyle = gradient
         const r = Math.min(4, w / 2, h)
         ctx.beginPath(); ctx.moveTo(x, y + r); ctx.arcTo(x, y, x + r, y, r); ctx.lineTo(x + w - r, y); ctx.arcTo(x + w, y, x + w, y + r, r); ctx.lineTo(x + w, paddingTop + chartHeight); ctx.lineTo(x, paddingTop + chartHeight); ctx.closePath(); ctx.fill()
+
         if (d.count > 0 && barWidth > 16) {
-          ctx.fillStyle = '#1f2937'; ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+          ctx.fillStyle = colors.textBold; ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
           ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(String(d.count), x + w / 2, y - 2)
         }
       })
-      ctx.fillStyle = '#6b7280'; ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+
+      ctx.fillStyle = colors.text; ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       ctx.textAlign = 'center'; ctx.textBaseline = 'top'; const labelStep = Math.max(1, Math.ceil(data.length / 10))
       data.forEach((d, i) => {
         if (i % labelStep !== 0 && i !== data.length - 1) return
@@ -1309,7 +1342,6 @@ export default {
       expandedTransfers.value = s
     }
 
-    // ОБНОВЛЕНО: работа с новыми типами счетов
     const openCreateModal = () => {
       editingAccount.value = null
       formData.value = {
@@ -1499,6 +1531,16 @@ export default {
       return text.substring(0, maxLength) + '...'
     }
 
+    // Слушатель изменения темы (чтобы перерисовывать графики)
+    const themeObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'data-theme') {
+          isDarkTheme.value = document.documentElement.getAttribute('data-theme') === 'dark'
+          if (analyticsExpanded.value) scheduleAllDraws()
+        }
+      })
+    })
+
     watch(distributionData, () => { if (analyticsExpanded.value) scheduleAllDraws() })
     watch(activityRange, () => { if (analyticsExpanded.value) scheduleAllDraws() })
     watch([sankeyData, topAccountPairs], () => { if (analyticsExpanded.value) scheduleAllDraws() })
@@ -1507,12 +1549,16 @@ export default {
 
     onMounted(async () => {
       updateViewport()
+      themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
       await Promise.all([loadAccounts(), loadTransfers(), loadTransferAnalytics()])
       window.addEventListener('resize', handleResize)
       if (analyticsExpanded.value) scheduleAllDraws()
     })
 
-    onBeforeUnmount(() => { window.removeEventListener('resize', handleResize) })
+    onBeforeUnmount(() => {
+      window.removeEventListener('resize', handleResize)
+      themeObserver.disconnect()
+    })
 
     return {
       accounts, activeAccounts, inactiveAccounts, allAccounts, loading,
@@ -1560,11 +1606,11 @@ export default {
 .stat-value { font-size: 1.4rem; font-weight: 700; line-height: 1.2; word-break: break-word; }
 .stat-hint { font-size: 0.75rem; margin-top: 0.4rem; opacity: 0.75; }
 
-/* 1. Свободные деньги — белая */
-.stat-card-total { background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%); border: 1px solid #e5e7eb; }
-.stat-card-total .stat-title { color: #6b7280; }
-.stat-card-total .stat-value { color: #1f2937; }
-.stat-card-total .stat-hint { color: #9ca3af; }
+/* 1. Свободные деньги — подхватывает переменные темы */
+.stat-card-total { background: linear-gradient(135deg, var(--white) 0%, var(--light-color) 100%); border: 1px solid var(--light-color); }
+.stat-card-total .stat-title { color: var(--gray-color); }
+.stat-card-total .stat-value { color: var(--dark-color); }
+.stat-card-total .stat-hint { color: var(--gray-color); }
 
 /* 2. Долг по кредиткам — темная */
 .stat-card-credit { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); }
@@ -1582,7 +1628,7 @@ export default {
 
 .stats-dots { display: none; justify-content: center; gap: 0.5rem; margin-top: 1rem; }
 .stats-dots.is-mobile { display: flex; }
-.stats-dot { width: 8px; height: 8px; border-radius: 50%; background: #d1d5db; transition: all 0.25s ease; cursor: pointer; }
+.stats-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gray-color); transition: all 0.25s ease; cursor: pointer; }
 .stats-dot.active { width: 24px; border-radius: 4px; background: var(--primary-color); }
 
 .stats-carousel.is-mobile { position: relative; height: 160px; overflow: visible; }
@@ -1619,7 +1665,7 @@ export default {
 /* Аналитика */
 .analytics-section { margin-bottom: 1.5rem; }
 .analytics-section-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); cursor: pointer; user-select: none; transition: background-color 0.2s; gap: 0.75rem; flex-wrap: wrap; }
-.analytics-section-header:hover { background: #f9fafb; }
+.analytics-section-header:hover { background: var(--light-color); }
 .analytics-section-title { display: flex; align-items: center; gap: 0.5rem; font-size: 1.25rem; font-weight: 600; color: var(--dark-color); min-width: 0; }
 .analytics-section-title i { color: var(--primary-color); }
 .analytics-section-hint { font-size: 0.8rem; color: var(--gray-color); font-weight: 400; font-style: italic; margin-left: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1638,8 +1684,8 @@ export default {
 .distribution-chart-wrapper { display: flex; justify-content: center; align-items: center; flex-shrink: 0; width: 320px; max-width: 100%; }
 .distribution-canvas { display: block; max-width: 100%; height: auto; }
 .distribution-legend { flex: 1; display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
-.legend-row { display: grid; grid-template-columns: 14px 1fr auto auto; align-items: center; gap: 0.75rem; padding: 0.5rem 0.75rem; border-radius: var(--radius); background: #f9fafb; transition: background 0.2s; font-size: 0.875rem; }
-.legend-row:hover { background: var(--light-color); }
+.legend-row { display: grid; grid-template-columns: 14px 1fr auto auto; align-items: center; gap: 0.75rem; padding: 0.5rem 0.75rem; border-radius: var(--radius); background: var(--light-color); transition: background 0.2s; font-size: 0.875rem; }
+.legend-row:hover { filter: brightness(0.95); }
 .legend-color { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; }
 .legend-name { font-weight: 500; color: var(--dark-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .legend-value { color: var(--gray-color); font-weight: 500; white-space: nowrap; }
@@ -1656,7 +1702,7 @@ export default {
 .ratio-center-percent { font-size: 1.75rem; font-weight: 700; color: var(--secondary-color); line-height: 1; }
 .ratio-center-caption { font-size: 0.7rem; color: var(--gray-color); margin-top: 0.2rem; text-transform: uppercase; letter-spacing: 0.5px; }
 .ratio-stats { width: 100%; display: flex; flex-direction: column; gap: 0.5rem; }
-.ratio-stat-row { display: grid; grid-template-columns: 14px 1fr auto; align-items: center; gap: 0.75rem; padding: 0.5rem 0.75rem; border-radius: var(--radius); background: #f9fafb; font-size: 0.875rem; }
+.ratio-stat-row { display: grid; grid-template-columns: 14px 1fr auto; align-items: center; gap: 0.75rem; padding: 0.5rem 0.75rem; border-radius: var(--radius); background: var(--light-color); font-size: 0.875rem; }
 .ratio-stat-row.total { background: transparent; border-top: 1px solid var(--light-color); border-radius: 0; margin-top: 0.25rem; padding-top: 0.75rem; }
 .ratio-color { width: 14px; height: 14px; border-radius: 4px; }
 .ratio-label { color: var(--dark-color); font-weight: 500; }
@@ -1666,8 +1712,8 @@ export default {
 .transfer-metrics-card { margin-bottom: 1.5rem; }
 .metrics-period { font-size: 0.75rem; color: var(--gray-color); font-style: italic; }
 .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; }
-.metric-card { background: #f9fafb; border-radius: var(--radius); padding: 1rem; text-align: center; transition: all 0.2s; }
-.metric-card:hover { background: var(--light-color); transform: translateY(-2px); box-shadow: var(--shadow); }
+.metric-card { background: var(--light-color); border-radius: var(--radius); padding: 1rem; text-align: center; transition: all 0.2s; }
+.metric-card:hover { filter: brightness(0.95); transform: translateY(-2px); box-shadow: var(--shadow); }
 .metric-label { font-size: 0.75rem; color: var(--gray-color); margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: center; gap: 0.375rem; text-transform: uppercase; letter-spacing: 0.3px; font-weight: 500; }
 .metric-label i { color: var(--primary-color); }
 .metric-value { font-size: 1.15rem; font-weight: 700; color: var(--dark-color); word-break: break-word; }
@@ -1708,16 +1754,16 @@ export default {
 /* Мобильные карточки */
 .mobile-accounts { display: none; }
 .account-card { background: var(--white); border: 1px solid var(--light-color); border-radius: var(--radius); margin-bottom: 0.5rem; overflow: hidden; transition: all 0.3s ease; }
-.account-card.inactive { opacity: 0.85; background: #f9fafb; }
+.account-card.inactive { opacity: 0.85; background: var(--light-color); }
 .account-compact { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; cursor: pointer; transition: background-color 0.2s; }
-.account-compact:hover { background-color: #f9fafb; }
+.account-compact:hover { background-color: var(--light-color); }
 .compact-left { display: flex; flex-direction: column; gap: 0.25rem; flex: 1; }
 .account-name-compact { font-size: 0.875rem; display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem;}
 .compact-right { display: flex; align-items: center; gap: 0.75rem; }
 .account-balance-compact { font-size: 1rem; font-weight: 700; }
 .expand-icon { background: none; border: none; cursor: pointer; padding: 0.25rem; color: var(--gray-color); transition: color 0.3s; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
 .expand-icon:hover { background-color: var(--light-color); color: var(--primary-color); }
-.account-expanded { padding: 1rem; border-top: 1px solid var(--light-color); background-color: #fafafa; animation: slideDown 0.3s ease; }
+.account-expanded { padding: 1rem; border-top: 1px solid var(--light-color); background-color: var(--light-color); animation: slideDown 0.3s ease; }
 @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 .account-actions-expanded { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .account-actions-expanded .btn-sm { flex: 1; min-width: calc(50% - 0.25rem); }
@@ -1737,10 +1783,10 @@ export default {
 .mobile-cards { display: none; }
 .transfer-card { background: var(--white); border: 1px solid var(--light-color); border-radius: var(--radius); margin-bottom: 0.5rem; overflow: hidden; transition: all 0.3s ease; }
 .transfer-compact { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; cursor: pointer; transition: background-color 0.2s; }
-.transfer-compact:hover { background-color: #f9fafb; }
+.transfer-compact:hover { background-color: var(--light-color); }
 .transfer-date-compact { font-size: 0.75rem; color: var(--gray-color); min-width: 70px; }
 .transfer-amount-compact { font-size: 1rem; font-weight: 700; }
-.transfer-expanded { padding: 1rem; border-top: 1px solid var(--light-color); background-color: #fafafa; animation: slideDown 0.3s ease; }
+.transfer-expanded { padding: 1rem; border-top: 1px solid var(--light-color); background-color: var(--light-color); animation: slideDown 0.3s ease; }
 .transfer-details { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem; }
 .detail-item { display: flex; justify-content: space-between; align-items: center; font-size: 0.875rem; }
 .detail-label { color: var(--gray-color); font-weight: 500; display: flex; align-items: center; gap: 0.5rem; }

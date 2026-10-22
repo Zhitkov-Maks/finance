@@ -4,6 +4,9 @@
   box-sizing: border-box;
 }
 
+/* ============================================================
+   СВЕТЛАЯ ТЕМА (по умолчанию)
+   ============================================================ */
 :root {
   --primary-color: #000000;
   --primary-dark: hwb(246 2% 27%);
@@ -11,19 +14,49 @@
   --danger-color: #ef4444;
   --warning-color: #f59e0b;
   --dark-color: #1e1c37;
-  --light-color: #f3f4f6;
-  --gray-color: #6b7280;
-  --white: #ffffff;
+    /* Основной текст */
+    --light-color: #f3f4f6;
+    /* Фон полей, ховеры, бордеры */
+    --gray-color: #6b7280;
+    /* Второстепенный текст */
+    --white: #ffffff;
+    /* Фон карточек и сайдбара */
   --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   --radius: 0.5rem;
+/* Переменная для фона страницы */
+  --bg-body: linear-gradient(135deg, #faf5ff 0%, #b7b7b7 100%);
+}
+
+/* ============================================================
+   ТЕМНАЯ ТЕМА (переопределяем переменные)
+   ============================================================ */
+:root[data-theme="dark"] {
+  --primary-color: #3b82f6;
+  /* Делаем кнопки синими, чтобы были видны на темном фоне */
+  --primary-dark: #2563eb;
+  --dark-color: #f3f4f6;
+  /* Текст становится светлым */
+  --light-color: #374151;
+  /* Бордеры и легкие фоны становятся темно-серыми */
+  --gray-color: #9ca3af;
+  /* Второстепенный текст светлее */
+  --white: #1f2937;
+  /* Карточки становятся темно-серыми */
+
+  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+
+  /* Темный фон страницы вместо градиента */
+  --bg-body: #111827;
 }
 
 body {
   font-family: 'Inter', sans-serif;
-  background: linear-gradient(135deg, #faf5ff 0%, #b7b7b7 100%);
+  background: var(--bg-body);
   color: var(--dark-color);
   line-height: 1.5;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 /* App Layout */
@@ -42,12 +75,14 @@ body {
   box-shadow: var(--shadow-lg);
   overflow-y: auto;
   z-index: 1000;
+  transition: background-color 0.3s ease;
 }
 
 .sidebar-header {
   padding: 2rem 1.5rem;
   background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-  color: var(--white);
+  color: #ffffff;
+    /* В шапке сайдбара текст всегда белый */
 }
 
 .sidebar-header h2 {
@@ -112,6 +147,7 @@ body {
   box-shadow: var(--shadow);
   padding: 1.5rem;
   margin-bottom: 1.5rem;
+  transition: background-color 0.3s ease;
 }
 
 .card-header {
@@ -144,16 +180,18 @@ body {
 .form-control {
   width: 100%;
   padding: 0.625rem 0.875rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--light-color);
   border-radius: var(--radius);
   font-size: 0.875rem;
   transition: all 0.3s;
+  background: var(--white);
+    color: var(--dark-color);
 }
 
 .form-control:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
 }
 
 /* Buttons */
@@ -172,7 +210,7 @@ body {
 
 .btn-primary {
   background: var(--primary-color);
-  color: var(--white);
+  color: #ffffff;
 }
 
 .btn-primary:hover {
@@ -182,17 +220,17 @@ body {
 
 .btn-danger {
   background: var(--danger-color);
-  color: var(--white);
+  color: #ffffff;
 }
 
 .btn-success {
   background: var(--secondary-color);
-  color: var(--white);
+  color: #ffffff;
 }
 
 .btn-secondary {
   background: var(--gray-color);
-  color: var(--white);
+  color: #ffffff;
 }
 
 /* Tables */
@@ -210,6 +248,7 @@ th, td {
   padding: 0.75rem;
   text-align: left;
   border-bottom: 1px solid var(--light-color);
+  color: var(--dark-color);
 }
 
 th {
@@ -256,6 +295,7 @@ th {
   border-radius: var(--radius);
   padding: 1.5rem;
   box-shadow: var(--shadow);
+  transition: background-color 0.3s ease;
 }
 
 .stat-title {
@@ -277,7 +317,7 @@ th {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -292,6 +332,7 @@ th {
   width: 90%;
   max-height: 90vh;
   overflow-y: auto;
+  transition: background-color 0.3s ease;
 }
 
 .modal-header {
@@ -309,6 +350,9 @@ th {
   color: var(--gray-color);
 }
 
+.modal-close:hover {
+  color: var(--dark-color);
+}
 /* Login Page */
 .login-container {
   min-height: 100vh;
@@ -325,6 +369,7 @@ th {
   width: 100%;
   max-width: 400px;
   box-shadow: var(--shadow-lg);
+  transition: background-color 0.3s ease;
 }
 
 .login-header {

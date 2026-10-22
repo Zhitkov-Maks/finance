@@ -454,6 +454,9 @@ export default {
     const categoryColors = ref({})
     let resizeObserver = null
 
+    // --- ТЕМНАЯ ТЕМА ---
+    const isDarkTheme = ref(document.documentElement.getAttribute('data-theme') === 'dark')
+
     // =========================================================
     // Модальное окно транзакций по категории
     // =========================================================
@@ -548,6 +551,12 @@ export default {
     // =========================================================
     // Отрисовка круговой диаграммы
     // =========================================================
+    const getCanvasColors = () => ({
+      stroke: isDarkTheme.value ? '#1f2937' : '#ffffff',
+      text: isDarkTheme.value ? '#9ca3af' : '#666666',
+      grid: isDarkTheme.value ? '#374151' : '#ccc'
+    })
+
     const drawPieChart = () => {
       const canvas = document.getElementById('pieChartCanvas')
       if (!canvas) return
@@ -569,6 +578,7 @@ export default {
       const centerX = size / 2
       const centerY = size / 2
       const radius = size / 2 - 20
+      const colors = getCanvasColors()
 
       ctx.clearRect(0, 0, size, size)
 
@@ -586,7 +596,7 @@ export default {
         ctx.moveTo(centerX, centerY)
         ctx.arc(centerX, centerY, radius, startAngle, endAngle)
         ctx.fill()
-        ctx.strokeStyle = '#ffffff'
+        ctx.strokeStyle = colors.stroke
         ctx.lineWidth = 1.5
         ctx.stroke()
 
@@ -698,9 +708,11 @@ export default {
       const chartWidth = width - 2 * padding
       const chartHeight = height - 2 * padding
       const maxValue = Math.max(...monthlyAnalytics.value.map(item => parseFloat(item.total_amount)), 0)
+      const colors = getCanvasColors()
 
+      // Оси
       ctx.beginPath()
-      ctx.strokeStyle = '#ccc'
+      ctx.strokeStyle = colors.grid
       ctx.lineWidth = 1
       ctx.moveTo(padding, padding)
       ctx.lineTo(padding, height - padding)
@@ -708,7 +720,8 @@ export default {
       ctx.lineTo(width - padding, height - padding)
       ctx.stroke()
 
-      ctx.fillStyle = '#666'
+      // Подписи по оси Y
+      ctx.fillStyle = colors.text
       ctx.font = isMobile.value || isTablet.value ? '10px Arial' : '12px Arial'
       for (let i = 0; i <= 5; i++) {
         const value = (maxValue / 5) * i
@@ -716,6 +729,7 @@ export default {
         ctx.fillText(formatCurrency(value), 10, y + 4)
       }
 
+      // Линия графика
       const step = chartWidth / (monthlyAnalytics.value.length - 1)
       ctx.beginPath()
       ctx.strokeStyle = currentType.value === 'income' ? '#10b981' : '#ef4444'
@@ -729,6 +743,7 @@ export default {
       })
       ctx.stroke()
 
+      // Точки и подписи X
       monthlyAnalytics.value.forEach((item, index) => {
         const x = padding + index * step
         const y = height - padding - (parseFloat(item.total_amount) / maxValue) * chartHeight
@@ -736,11 +751,13 @@ export default {
         ctx.fillStyle = currentType.value === 'income' ? '#10b981' : '#ef4444'
         ctx.arc(x, y, isMobile.value || isTablet.value ? 4 : 6, 0, 2 * Math.PI)
         ctx.fill()
+
         ctx.beginPath()
-        ctx.fillStyle = 'white'
+        ctx.fillStyle = isDarkTheme.value ? '#1f2937' : '#ffffff'
         ctx.arc(x, y, isMobile.value || isTablet.value ? 2 : 3, 0, 2 * Math.PI)
         ctx.fill()
-        ctx.fillStyle = '#666'
+
+        ctx.fillStyle = colors.text
         ctx.font = isMobile.value || isTablet.value ? '10px Arial' : '12px Arial'
         const monthLabel = item.month_name.substring(0, 3)
         ctx.fillText(monthLabel, x - (isMobile.value || isTablet.value ? 10 : 15), height - padding + (isMobile.value || isTablet.value ? 15 : 20))
@@ -754,7 +771,6 @@ export default {
       return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(numValue)
     }
 
-    /** YYYY-MM-DD из Date */
     const formatDateOnly = (date) => {
       const year = date.getFullYear()
       const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -762,7 +778,6 @@ export default {
       return `${year}-${month}-${day}`
     }
 
-    /** Дата с временем для отображения в модалке */
     const formatModalDate = (dateString) => {
       if (!dateString) return ''
       const d = new Date(dateString)
@@ -789,11 +804,6 @@ export default {
       await loadCategoryTransactions()
     }
 
-    /**
-     * Загружает транзакции по категории за выбранный месяц/год.
-     * Параметры — как в TransactionsList: category_name, create_at_after,
-     * create_at_before, type.
-     */
     const loadCategoryTransactions = async () => {
       if (!modalCategory.value) return
 
@@ -870,10 +880,26 @@ export default {
       }
     }
 
+    // Слушатель изменения темы
+    const themeObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'data-theme') {
+          isDarkTheme.value = document.documentElement.getAttribute('data-theme') === 'dark'
+          if (selectedPeriod.value === 'year' && monthlyAnalytics.value.length > 0) {
+            setTimeout(() => drawChart(), 100)
+          }
+          if (selectedPeriod.value === 'month' && statistics.value.length > 0) {
+            setTimeout(() => drawPieChart(), 100)
+          }
+        }
+      })
+    })
+
     onMounted(() => {
       checkScreenSize()
       loadStatistics()
       window.addEventListener('resize', handleResize)
+      themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
 
       if (window.ResizeObserver) {
         resizeObserver = new ResizeObserver(() => {
@@ -890,6 +916,7 @@ export default {
 
     onUnmounted(() => {
       window.removeEventListener('resize', handleResize)
+      themeObserver.disconnect()
       if (resizeObserver) {
         resizeObserver.disconnect()
       }
@@ -936,19 +963,19 @@ export default {
   font-size: 1.5rem;
   font-weight: 700;
   margin: 0;
-  color: #1f2937;
+  color: var(--dark-color);
   text-align: center;
 }
 
 /* ========== Карточки ========== */
 .card {
-  background: #ffffff;
+  background: var(--white);
   border-radius: 0;
   box-shadow: none;
   margin-bottom: 0.5rem;
   overflow: hidden;
   border: none;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--light-color);
 }
 
 .full-width-card {
@@ -968,15 +995,15 @@ export default {
   flex-wrap: wrap;
   gap: 0.75rem;
   padding: 1rem;
-  border-bottom: 1px solid #e5e7eb;
-  background: #ffffff;
+  border-bottom: 1px solid var(--light-color);
+  background: var(--white);
 }
 
 .card-title {
   font-size: 1rem;
   font-weight: 600;
   margin: 0;
-  color: #1f2937;
+  color: var(--dark-color);
 }
 
 /* ========== Фильтры ========== */
@@ -990,24 +1017,24 @@ export default {
   align-items: center;
   padding: 0.875rem 1rem;
   cursor: pointer;
-  background: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--light-color);
+  border-bottom: 1px solid var(--light-color);
 }
 
 .filters-header:hover {
-  background: #f3f4f6;
+  filter: brightness(0.95);
 }
 
 .filters-title {
   font-size: 0.875rem;
   font-weight: 600;
   margin: 0;
-  color: #374151;
+  color: var(--dark-color);
 }
 
 .filters-body {
   padding: 1rem;
-  background: #ffffff;
+  background: var(--white);
   transition: all 0.3s ease;
 }
 
@@ -1030,7 +1057,7 @@ export default {
 .filter-label {
   font-size: 0.75rem;
   font-weight: 500;
-  color: #4b5563;
+  color: var(--gray-color);
 }
 
 .filter-actions {
@@ -1040,41 +1067,40 @@ export default {
 /* ========== Формы и кнопки ========== */
 .form-control {
   padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--gray-color);
   border-radius: 8px;
   font-size: 0.813rem;
   transition: all 0.2s;
-  background: #ffffff;
-  color: #1f2937;
+  background: var(--white);
+  color: var(--dark-color);
   width: 100%;
 }
 
 .form-control:hover {
-  border-color: #9ca3af;
+  border-color: var(--dark-color);
 }
 
 .form-control:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 .btn {
   padding: 0.5rem 1rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--gray-color);
   border-radius: 8px;
   font-size: 0.813rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-  background: #f9fafb;
-  color: #374151;
+  background: var(--light-color);
+  color: var(--dark-color);
   width: 100%;
 }
 
 .btn:hover {
-  background: #f3f4f6;
-  border-color: #9ca3af;
+  filter: brightness(0.95);
 }
 
 .btn:disabled {
@@ -1083,43 +1109,41 @@ export default {
 }
 
 .btn-primary {
-  background: #6366f1;
-  color: white;
-  border: 1px solid #6366f1;
+  background: var(--primary-color);
+  color: #ffffff;
+  border: 1px solid var(--primary-color);
 }
 
 .btn-primary:hover {
-  background: #4f46e5;
-  border-color: #4f46e5;
+  filter: brightness(1.1);
 }
 
 .btn-secondary {
-  background: #f9fafb;
-  color: #374151;
-  border: 1px solid #d1d5db;
+  background: var(--light-color);
+  color: var(--dark-color);
+  border: 1px solid var(--gray-color);
 }
 
 .btn-sort {
   padding: 0.375rem 0.75rem;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  background: var(--light-color);
+  border: 1px solid var(--light-color);
   border-radius: 8px;
   font-size: 0.75rem;
   cursor: pointer;
   transition: all 0.2s;
-  color: #374151;
+  color: var(--dark-color);
   width: auto;
 }
 
 .btn-sort:hover {
-  background: #f3f4f6;
-  border-color: #d1d5db;
+  filter: brightness(0.95);
 }
 
 .btn-sort.active {
-  background: #6366f1;
+  background: var(--primary-color);
   color: white;
-  border-color: #6366f1;
+  border-color: var(--primary-color);
 }
 
 .sort-buttons {
@@ -1137,12 +1161,12 @@ export default {
 }
 
 .stat-card {
-  background: #ffffff;
+  background: var(--white);
   border-radius: 10px;
   padding: 0.875rem;
   text-align: center;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e5e7eb;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--light-color);
 }
 
 .stat-card:first-child {
@@ -1153,24 +1177,25 @@ export default {
   font-size: 0.688rem;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  color: #6b7280;
+  color: var(--gray-color);
   margin-bottom: 0.375rem;
 }
 
 .stat-card-value {
   font-size: 1.25rem;
   font-weight: 700;
+  color: var(--dark-color);
 }
 
 .stat-card-subtitle {
   font-size: 0.625rem;
-  color: #9ca3af;
+  color: var(--gray-color);
   margin-top: 0.25rem;
 }
 
 /* ========== Цвета текста ========== */
-.text-success { color: #10b981; }
-.text-danger { color: #ef4444; }
+.text-success { color: var(--secondary-color); }
+.text-danger { color: var(--danger-color); }
 
 /* ========== Круговая диаграмма ========== */
 .pie-chart-section {
@@ -1179,7 +1204,7 @@ export default {
   gap: 1rem;
   align-items: center;
   padding: 1rem;
-  background: #f9fafb;
+  background: var(--light-color);
 }
 
 .pie-chart-wrapper {
@@ -1200,10 +1225,10 @@ export default {
   width: 100%;
   max-height: 250px;
   overflow-y: auto;
-  background: #ffffff;
+  background: var(--white);
   border-radius: 8px;
   padding: 0.5rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--light-color);
 }
 
 .legend-item {
@@ -1211,7 +1236,7 @@ export default {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--light-color);
 }
 
 .legend-item:last-child {
@@ -1228,13 +1253,13 @@ export default {
 .legend-name {
   flex: 1;
   font-size: 0.75rem;
-  color: #374151;
+  color: var(--dark-color);
 }
 
 .legend-percent {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--gray-color);
 }
 
 /* ========== Список категорий ========== */
@@ -1249,10 +1274,10 @@ export default {
 .category-item {
   margin-bottom: 0;
   padding: 1rem;
-  background: #ffffff;
+  background: var(--white);
   border-radius: 0;
   border: none;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--light-color);
 }
 
 .category-item:last-child {
@@ -1277,12 +1302,12 @@ export default {
   gap: 0.5rem;
   font-weight: 600;
   font-size: 0.875rem;
-  color: #1f2937;
+  color: var(--dark-color);
 }
 
 .expand-icon {
   font-size: 0.688rem;
-  color: #6b7280;
+  color: var(--gray-color);
 }
 
 .expand-icon-btn {
@@ -1290,7 +1315,7 @@ export default {
   border: none;
   cursor: pointer;
   padding: 0.125rem;
-  color: #6b7280;
+  color: var(--gray-color);
   font-size: 0.688rem;
   display: inline-flex;
   align-items: center;
@@ -1302,8 +1327,8 @@ export default {
 }
 
 .expand-icon-btn:hover {
-  background: #e5e7eb;
-  color: #374151;
+  background: var(--light-color);
+  color: var(--dark-color);
 }
 
 .placeholder-icon {
@@ -1314,7 +1339,7 @@ export default {
 .category-total {
   font-weight: 600;
   font-size: 0.875rem;
-  color: #374151;
+  color: var(--dark-color);
 }
 
 /* Кликабельные элементы категории */
@@ -1325,8 +1350,8 @@ export default {
 }
 
 .category-name-text:hover {
-  color: #6366f1;
-  border-bottom-color: #6366f1;
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
 }
 
 .category-total-clickable {
@@ -1335,7 +1360,7 @@ export default {
 }
 
 .category-total-clickable:hover {
-  color: #6366f1;
+  color: var(--primary-color);
 }
 
 /* ========== Прогресс-бары ========== */
@@ -1345,7 +1370,7 @@ export default {
 
 .progress-bar {
   height: 28px;
-  background: #e5e7eb;
+  background: var(--light-color);
   border-radius: 8px;
   overflow: hidden;
   position: relative;
@@ -1391,7 +1416,7 @@ export default {
 
 .progress-percent-info {
   font-size: 0.625rem;
-  color: #6b7280;
+  color: var(--gray-color);
   text-align: right;
   margin-top: 0.25rem;
 }
@@ -1405,9 +1430,9 @@ export default {
 .subcategory-item {
   margin-bottom: 0.75rem;
   padding: 0.625rem;
-  background: #f9fafb;
+  background: var(--light-color);
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--light-color);
   border-left-width: 3px;
 }
 
@@ -1425,12 +1450,13 @@ export default {
   align-items: center;
   gap: 0.375rem;
   font-size: 0.75rem;
-  color: #4b5563;
+  color: var(--gray-color);
 }
 
 .subcategory-total {
   font-weight: 600;
   font-size: 0.75rem;
+  color: var(--dark-color);
 }
 
 .subcategory-progress {
@@ -1439,13 +1465,13 @@ export default {
 
 .subcategory-percent {
   font-size: 0.625rem;
-  color: #6b7280;
+  color: var(--gray-color);
   text-align: right;
 }
 
 .expand-hint {
   font-size: 0.688rem;
-  color: #6366f1;
+  color: var(--primary-color);
   cursor: pointer;
   text-align: right;
   margin-top: 0.375rem;
@@ -1463,12 +1489,12 @@ export default {
 }
 
 .mobile-month-card {
-  background: #ffffff;
+  background: var(--white);
   border-radius: 0;
   padding: 1rem;
   margin-bottom: 0;
   border: none;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--light-color);
 }
 
 .mobile-month-card:last-child {
@@ -1483,7 +1509,7 @@ export default {
   gap: 0.5rem;
   margin-bottom: 0.75rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--light-color);
 }
 
 .mobile-month-name {
@@ -1491,6 +1517,7 @@ export default {
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
+  color: var(--dark-color);
 }
 
 .month-name-text {
@@ -1513,20 +1540,21 @@ export default {
 .mobile-stat {
   text-align: center;
   padding: 0.5rem;
-  background: #f9fafb;
+  background: var(--light-color);
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--light-color);
 }
 
 .mobile-stat-label {
   font-size: 0.625rem;
-  color: #6b7280;
+  color: var(--gray-color);
   margin-bottom: 0.25rem;
 }
 
 .mobile-stat-value {
   font-size: 0.813rem;
   font-weight: 600;
+  color: var(--dark-color);
 }
 
 .mobile-progress {
@@ -1535,7 +1563,7 @@ export default {
 
 .progress-label {
   font-size: 0.625rem;
-  color: #6b7280;
+  color: var(--gray-color);
   margin-bottom: 0.25rem;
 }
 
@@ -1563,17 +1591,17 @@ export default {
 
 .trend-badge.trend-up {
   background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
+  color: var(--secondary-color);
 }
 
 .trend-badge.trend-down {
   background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
+  color: var(--danger-color);
 }
 
 .trend-badge.trend-neutral {
   background: rgba(107, 114, 128, 0.1);
-  color: #6b7280;
+  color: var(--gray-color);
 }
 
 /* ========== Годовая сводка ========== */
@@ -1582,57 +1610,57 @@ export default {
   grid-template-columns: repeat(2, 1fr);
   gap: 0.75rem;
   padding: 1rem;
-  border-top: 1px solid #e5e7eb;
-  background: #f9fafb;
+  border-top: 1px solid var(--light-color);
+  background: var(--light-color);
 }
 
 .summary-card {
   text-align: center;
   padding: 0.625rem;
-  background: #ffffff;
+  background: var(--white);
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--light-color);
 }
 
 .summary-label {
   font-size: 0.625rem;
-  color: #6b7280;
+  color: var(--gray-color);
   margin-bottom: 0.25rem;
 }
 
 .summary-value {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--dark-color);
 }
 
 /* ========== График ========== */
 .chart-section {
   padding: 1rem;
   overflow-x: auto;
-  background: #ffffff;
+  background: var(--white);
 }
 
 .chart-canvas {
   max-width: 100%;
   height: auto;
-  background: #ffffff;
+  background: var(--white);
 }
 
 .chart-note {
   text-align: center;
   padding: 0.5rem;
   font-size: 0.688rem;
-  color: #6b7280;
-  border-top: 1px solid #e5e7eb;
-  background: #f9fafb;
+  color: var(--gray-color);
+  border-top: 1px solid var(--light-color);
+  background: var(--light-color);
 }
 
 /* ========== Пустое состояние ========== */
 .empty-state {
   text-align: center;
   padding: 2rem;
-  color: #6b7280;
+  color: var(--gray-color);
 }
 
 .empty-state i {
@@ -1664,7 +1692,7 @@ export default {
 }
 
 .modal-content {
-  background: #ffffff;
+  background: var(--white);
   border-radius: 12px;
   width: 100%;
   max-width: 560px;
@@ -1684,11 +1712,11 @@ export default {
   justify-content: space-between;
   align-items: flex-start;
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--light-color);
   gap: 0.75rem;
   position: sticky;
   top: 0;
-  background: #ffffff;
+  background: var(--white);
   z-index: 1;
   border-radius: 12px 12px 0 0;
 }
@@ -1697,13 +1725,13 @@ export default {
   margin: 0;
   font-size: 1.125rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--dark-color);
 }
 
 .modal-subtitle {
   margin: 0.25rem 0 0;
   font-size: 0.813rem;
-  color: #6b7280;
+  color: var(--gray-color);
 }
 
 .modal-close {
@@ -1712,7 +1740,7 @@ export default {
   font-size: 1.5rem;
   line-height: 1;
   cursor: pointer;
-  color: #6b7280;
+  color: var(--gray-color);
   padding: 0;
   width: 32px;
   height: 32px;
@@ -1725,8 +1753,8 @@ export default {
 }
 
 .modal-close:hover {
-  background: #f3f4f6;
-  color: #1f2937;
+  background: var(--light-color);
+  color: var(--dark-color);
 }
 
 .modal-summary {
@@ -1734,21 +1762,21 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1.5rem;
-  background: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--light-color);
+  border-bottom: 1px solid var(--light-color);
   font-size: 0.813rem;
-  color: #4b5563;
+  color: var(--gray-color);
   flex-wrap: wrap;
   gap: 0.5rem;
 }
 
 .modal-summary strong {
-  color: #1f2937;
+  color: var(--dark-color);
   font-weight: 600;
 }
 
-.modal-summary .text-success { color: #10b981; }
-.modal-summary .text-danger { color: #ef4444; }
+.modal-summary .text-success { color: var(--secondary-color); }
+.modal-summary .text-danger { color: var(--danger-color); }
 
 /* Список транзакций в модалке */
 .modal-transactions-list {
@@ -1761,13 +1789,13 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1.5rem;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--light-color);
   gap: 1rem;
   transition: background 0.2s;
 }
 
 .modal-transaction-item:hover {
-  background: #f9fafb;
+  background: var(--light-color);
 }
 
 .modal-transaction-item:last-child {
@@ -1781,7 +1809,7 @@ export default {
 
 .modal-transaction-date {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--gray-color);
   display: flex;
   align-items: center;
   gap: 0.375rem;
@@ -1790,14 +1818,14 @@ export default {
 
 .modal-transaction-meta {
   font-size: 0.813rem;
-  color: #4b5563;
+  color: var(--gray-color);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .modal-transaction-account {
-  color: #6b7280;
+  color: var(--gray-color);
   margin-right: 0.375rem;
   display: inline-flex;
   align-items: center;
@@ -1805,7 +1833,7 @@ export default {
 }
 
 .modal-transaction-comment {
-  color: #9ca3af;
+  color: var(--gray-color);
 }
 
 .modal-transaction-amount {
@@ -1815,8 +1843,8 @@ export default {
   flex-shrink: 0;
 }
 
-.modal-transaction-amount.text-success { color: #10b981; }
-.modal-transaction-amount.text-danger { color: #ef4444; }
+.modal-transaction-amount.text-success { color: var(--secondary-color); }
+.modal-transaction-amount.text-danger { color: var(--danger-color); }
 
 /* Пагинация в модалке */
 .modal-pagination {
@@ -1825,11 +1853,11 @@ export default {
   align-items: center;
   gap: 0.75rem;
   padding: 1rem 1.5rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--light-color);
   flex-wrap: wrap;
   position: sticky;
   bottom: 0;
-  background: #ffffff;
+  background: var(--white);
   border-radius: 0 0 12px 12px;
 }
 
@@ -1841,7 +1869,7 @@ export default {
 
 .modal-pagination-info {
   font-size: 0.813rem;
-  color: #6b7280;
+  color: var(--gray-color);
 }
 
 /* Состояния внутри модалки */
@@ -1852,7 +1880,7 @@ export default {
   align-items: center;
   justify-content: center;
   padding: 3rem 1.5rem;
-  color: #6b7280;
+  color: var(--gray-color);
   gap: 0.75rem;
 }
 
@@ -1862,7 +1890,7 @@ export default {
 }
 
 .modal-error {
-  color: #ef4444;
+  color: var(--danger-color);
 }
 
 .modal-loading p,
@@ -1888,7 +1916,7 @@ export default {
   .card {
     border-radius: 12px;
     margin-bottom: 1rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--light-color);
   }
 
   .full-width-card {
@@ -1960,9 +1988,9 @@ export default {
   .category-item {
     margin-bottom: 0.75rem;
     padding: 0.875rem;
-    background: #f9fafb;
+    background: var(--light-color);
     border-radius: 10px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--light-color);
   }
 
   .category-item.full-width-item {
@@ -1980,7 +2008,7 @@ export default {
   .mobile-month-card {
     border-radius: 10px;
     margin-bottom: 0.75rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--light-color);
   }
 
   .year-summary {
@@ -2016,7 +2044,7 @@ export default {
   .card {
     border-radius: 12px;
     margin-bottom: 1.5rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--light-color);
   }
 
   .full-width-card {
@@ -2078,9 +2106,9 @@ export default {
   .category-item {
     margin-bottom: 1rem;
     padding: 1rem;
-    background: #f9fafb;
+    background: var(--light-color);
     border-radius: 10px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--light-color);
   }
 
   .category-item.full-width-item {

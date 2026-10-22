@@ -9,16 +9,16 @@
 
     <!-- Переключатель типов -->
     <div class="type-tabs">
-      <button 
-        @click="currentType = 'income'" 
-        class="tab-btn" 
+      <button
+        @click="currentType = 'income'"
+        class="tab-btn"
         :class="{ active: currentType === 'income' }"
       >
         <i class="fas fa-arrow-up"></i> Доходы
       </button>
-      <button 
-        @click="currentType = 'expense'" 
-        class="tab-btn" 
+      <button
+        @click="currentType = 'expense'"
+        class="tab-btn"
         :class="{ active: currentType === 'expense' }"
       >
         <i class="fas fa-arrow-down"></i> Расходы
@@ -30,17 +30,17 @@
         <div class="spinner"></div>
         <p>Загрузка категорий...</p>
       </div>
-      
+
       <div v-else-if="categoriesList.length === 0" class="empty-state">
         <i class="fas fa-folder-open"></i>
         <p>Нет созданных категорий для {{ currentType === 'income' ? 'доходов' : 'расходов' }}</p>
         <button @click="openCreateModal" class="btn btn-primary">Создать первую категорию</button>
       </div>
-      
+
       <div v-else class="categories-list">
-        <div 
-          v-for="category in categoriesList" 
-          :key="category.id" 
+        <div
+          v-for="category in categoriesList"
+          :key="category.id"
           class="category-item"
           :style="{ marginLeft: category.level * 20 + 'px' }"
         >
@@ -83,10 +83,10 @@
 
           <div class="form-group">
             <label class="form-label required">Название категории</label>
-            <input 
-              type="text" 
-              v-model="formData.name" 
-              class="form-control" 
+            <input
+              type="text"
+              v-model="formData.name"
+              class="form-control"
               :class="{ 'is-invalid': fieldErrors.name }"
               required
               placeholder="Например: Еда, Транспорт, Зарплата"
@@ -124,14 +124,14 @@
           <h3>Подтверждение удаления</h3>
           <button class="modal-close" @click="showDeleteModal = false">&times;</button>
         </div>
-        
+
         <div class="alert alert-danger" v-if="categoryToDelete?.has_children">
           <i class="fas fa-exclamation-triangle"></i>
           Внимание! У этой категории есть дочерние категории, они также будут удалены!
         </div>
-        
+
         <p>Вы уверены, что хотите удалить категорию <strong>"{{ categoryToDelete?.name }}"</strong>?</p>
-        
+
         <div class="modal-footer">
           <button @click="showDeleteModal = false" class="btn btn-secondary">Отмена</button>
           <button @click="deleteCategory" class="btn btn-danger">Да, удалить</button>
@@ -158,7 +158,7 @@ export default {
     const categoryToDelete = ref(null)
     const apiError = ref('')
     const fieldErrors = ref({})
-    
+
     const formData = ref({
       name: '',
       parent: ''
@@ -182,9 +182,9 @@ export default {
       if (!categories.value || !Array.isArray(categories.value)) {
         return []
       }
-      
+
       const result = []
-      
+
       const flatten = (items, level = 0) => {
         if (!items || !Array.isArray(items)) return
         for (const item of items) {
@@ -197,7 +197,7 @@ export default {
           }
         }
       }
-      
+
       flatten(categories.value)
       return result
     })
@@ -207,9 +207,9 @@ export default {
       if (!categories.value || !Array.isArray(categories.value)) {
         return []
       }
-      
+
       const result = []
-      
+
       const flatten = (items, prefix = '') => {
         if (!items || !Array.isArray(items)) return
         for (const item of items) {
@@ -217,18 +217,18 @@ export default {
           if (editingCategory.value && item.id === editingCategory.value.id) {
             continue
           }
-          
+
           // Добавляем только корневые категории (без родителей)
           // так как максимальная вложенность - 1 уровень
           if (!item.parent) {
-            result.push({ 
-              id: item.id, 
+            result.push({
+              id: item.id,
               name: prefix + item.name
             })
           }
         }
       }
-      
+
       flatten(categories.value)
       return result
     })
@@ -267,7 +267,7 @@ export default {
         }, 3000)
         return
       }
-      
+
       editingCategory.value = null
       apiError.value = ''
       fieldErrors.value = {}
@@ -294,11 +294,11 @@ export default {
         fieldErrors.value.name = 'Введите название категории'
         return
       }
-      
+
       saving.value = true
       apiError.value = ''
       fieldErrors.value = {}
-      
+
       try {
         if (editingCategory.value) {
           await apiService.updateCategory(
@@ -317,11 +317,11 @@ export default {
         await loadCategories()
       } catch (error) {
         console.error('Error saving category:', error)
-        
+
         // Обработка ошибки от API
         if (error.response?.data?.detail) {
           const detail = error.response.data.detail
-          
+
           // Проверяем различные форматы ошибки
           if (typeof detail === 'string') {
             if (detail.includes('глубина вложенности') || detail.includes('подкатегорию для подкатегории')) {
@@ -439,6 +439,7 @@ export default {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  color: var(--gray-color);
 }
 
 .tab-btn.active {
@@ -484,6 +485,7 @@ export default {
 .category-name {
   font-weight: 500;
   font-size: 1rem;
+  color: var(--dark-color);
 }
 
 .category-badge {
@@ -492,6 +494,7 @@ export default {
   border-radius: 12px;
 }
 
+/* --- Светлая тема для бейджей --- */
 .badge-parent {
   background: #dbeafe;
   color: #1e40af;
@@ -500,6 +503,17 @@ export default {
 .badge-regular {
   background: #f3e8ff;
   color: #6b21a5;
+}
+
+/* --- Темная тема для бейджей --- */
+:global(:root[data-theme="dark"]) .badge-parent {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+}
+
+:global(:root[data-theme="dark"]) .badge-regular {
+  background: rgba(168, 85, 247, 0.2);
+  color: #d8b4fe;
 }
 
 .category-actions {
@@ -588,22 +602,32 @@ export default {
   gap: 0.5rem;
 }
 
+/* --- Светлая тема для алертов --- */
 .alert-danger {
   background: #fee2e2;
   border: 1px solid #fecaca;
   color: #dc2626;
 }
-
 .alert-danger i {
   color: #dc2626;
 }
 
+/* --- Темная тема для алертов --- */
+:global(:root[data-theme="dark"]) .alert-danger {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+:global(:root[data-theme="dark"]) .alert-danger i {
+  color: #fca5a5;
+}
+
 .is-invalid {
-  border-color: #dc2626 !important;
+  border-color: var(--danger-color) !important;
 }
 
 .invalid-feedback {
-  color: #dc2626;
+  color: var(--danger-color);
   font-size: 0.75rem;
   margin-top: 0.25rem;
 }
@@ -613,11 +637,11 @@ export default {
     flex-direction: column;
     gap: 0.75rem;
   }
-  
+
   .category-info {
     width: 100%;
   }
-  
+
   .category-actions {
     width: 100%;
     justify-content: flex-end;

@@ -422,6 +422,10 @@ export default {
   flex-wrap: wrap;
 }
 
+.page-header h1 {
+  color: var(--dark-color);
+}
+
 .header-actions {
   display: flex;
   gap: 0.5rem;
@@ -489,11 +493,19 @@ export default {
   font-size: 0.875rem;
 }
 
+/* Темная тема для push-unsupported */
+:global(:root[data-theme="dark"]) .push-unsupported {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
 /* ===== Settings ===== */
 .settings-card {
   padding: 0;
   overflow: hidden;
   margin-bottom: 1.5rem;
+  background: var(--white);
 }
 .settings-header {
   display: flex;
@@ -509,6 +521,7 @@ export default {
   align-items: center;
   gap: 0.5rem;
   margin: 0;
+  color: var(--dark-color);
 }
 .settings-header:hover {
   background: var(--light-color);
@@ -535,6 +548,7 @@ export default {
   font-size: 0.875rem;
   cursor: pointer;
   flex: 1;
+  color: var(--dark-color);
 }
 .short-input {
   width: 100px;
@@ -557,7 +571,7 @@ export default {
 .tab-btn {
   padding: 0.5rem 1rem;
   border: 1px solid var(--light-color);
-  background: white;
+  background: var(--white);
   border-radius: var(--radius);
   cursor: pointer;
   font-size: 0.875rem;
@@ -573,7 +587,7 @@ export default {
 }
 .tab-btn.active {
   background: var(--primary-color);
-  color: white;
+  color: var(--white);
   border-color: var(--primary-color);
 }
 .tab-badge {
@@ -588,13 +602,19 @@ export default {
   color: #991b1b;
 }
 
+/* Темная тема для бейджа */
+:global(:root[data-theme="dark"]) .tab-btn:not(.active) .tab-badge {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
 /* ===== Loading / Empty ===== */
 .loading-state,
 .empty-state {
   text-align: center;
   padding: 3rem 1rem;
   color: var(--gray-color);
-  background: white;
+  background: var(--white);
   border-radius: var(--radius);
 }
 .loading-state i,
@@ -614,7 +634,7 @@ export default {
 .notification-item {
   display: flex;
   align-items: stretch;
-  background: white;
+  background: var(--white);
   border-radius: var(--radius);
   border-left: 4px solid transparent;
   box-shadow: var(--shadow);
@@ -623,11 +643,16 @@ export default {
 }
 .notification-item:hover {
   transform: translateX(2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-lg);
 }
 .notification-item.unread {
   border-left-color: var(--primary-color);
   background: #fafaff;
+}
+
+/* Темная тема для непрочитанного уведомления */
+:global(:root[data-theme="dark"]) .notification-item.unread {
+  background: rgba(59, 130, 246, 0.1);
 }
 
 .notification-icon {
@@ -644,6 +669,11 @@ export default {
 .icon-info { color: #1e40af; }
 .icon-warning { color: #92400e; }
 .icon-danger { color: #991b1b; }
+
+/* Темная тема для иконок */
+:global(:root[data-theme="dark"]) .icon-info { color: #93c5fd; }
+:global(:root[data-theme="dark"]) .icon-warning { color: #fcd34d; }
+:global(:root[data-theme="dark"]) .icon-danger { color: #fca5a5; }
 
 .notification-body {
   flex: 1;
@@ -675,7 +705,7 @@ export default {
 }
 .notification-date {
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: var(--gray-color);
 }
 
 .delete-btn {
@@ -695,6 +725,15 @@ export default {
 .delete-btn:hover {
   color: var(--danger-color);
   background: #fee2e2;
+}
+
+/* Темная тема для кнопки удаления */
+:global(:root[data-theme="dark"]) .delete-btn {
+  color: #6b7280;
+}
+:global(:root[data-theme="dark"]) .delete-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
 }
 
 /* ===== Pagination ===== */
