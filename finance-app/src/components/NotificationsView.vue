@@ -124,7 +124,7 @@
 
         <div class="notification-body" @click="markRead(notif)">
           <div class="notification-title">
-            {{ notif.title }}
+            <span class="notification-title-text">{{ notif.title }}</span>
             <span v-if="!notif.is_read" class="unread-dot"></span>
           </div>
           <div class="notification-message">{{ notif.message }}</div>
@@ -182,7 +182,7 @@ export default {
       push_enabled: true,
       budget_alerts: true,
       payment_alerts: true,
-      insight_alerts: true,          // ← NEW
+      insight_alerts: true,
       payment_days_before: 1,
       budget_warning_threshold: 80,
     })
@@ -205,7 +205,6 @@ export default {
       try {
         const data = await apiService.getNotifications(unreadOnly.value, page)
 
-        // Обработка пагинации DRF (если она включена) или плоского массива
         const items = Array.isArray(data) ? data : (data.results || [])
         hasMore.value = data.next !== undefined ? !!data.next : false
 
@@ -253,7 +252,6 @@ export default {
         notif.is_read = true
         notificationStore.decrement()
 
-        // Если мы в режиме "только непрочитанные", убираем его из списка
         if (unreadOnly.value) {
           notifications.value = notifications.value.filter((n) => n.id !== notif.id)
         }
@@ -315,7 +313,7 @@ export default {
           push_enabled: prefs.value.push_enabled,
           budget_alerts: prefs.value.budget_alerts,
           payment_alerts: prefs.value.payment_alerts,
-          insight_alerts: prefs.value.insight_alerts,            // ← NEW
+          insight_alerts: prefs.value.insight_alerts,
           payment_days_before: prefs.value.payment_days_before,
           budget_warning_threshold: prefs.value.budget_warning_threshold,
         })
@@ -675,6 +673,7 @@ export default {
   font-size: 1.1rem;
   border-top-left-radius: var(--radius);
   border-bottom-left-radius: var(--radius);
+  flex-shrink: 0;
 }
 .icon-info { color: #1e40af; }
 .icon-warning { color: #92400e; }
@@ -691,27 +690,50 @@ export default {
   cursor: pointer;
   min-width: 0;
 }
+
+/* ===== ЗАГОЛОВОК УВЕДОМЛЕНИЯ ===== */
 .notification-title {
-  font-weight: 600;
-  color: var(--dark-color);
-  margin-bottom: 0.25rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.938rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--dark-color);
+  margin-bottom: 0.35rem;
+  line-height: 1.35;
+  word-break: break-word;
 }
+
+.notification-title-text {
+  flex: 1;
+  min-width: 0;
+}
+
 .unread-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--primary-color);
   display: inline-block;
+  flex-shrink: 0;
 }
+
+/* Усиление контраста в темной теме */
+:global(:root[data-theme="dark"]) .notification-title {
+  color: #ffffff;
+}
+
+:global(:root[data-theme="dark"]) .notification-title-text {
+  color: #ffffff;
+  font-weight: 700;
+}
+
 .notification-message {
   font-size: 0.875rem;
   color: var(--gray-color);
   margin-bottom: 0.375rem;
   line-height: 1.4;
+  word-break: break-word;
 }
 .notification-date {
   font-size: 0.75rem;
@@ -731,6 +753,7 @@ export default {
   align-items: center;
   justify-content: center;
   font-size: 1.2rem;
+  flex-shrink: 0;
 }
 .delete-btn:hover {
   color: var(--danger-color);
@@ -757,7 +780,14 @@ export default {
 @media (max-width: 768px) {
   .page-header {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
+    text-align: center;
+    gap: 0.75rem;
+  }
+  .page-header h1 {
+    text-align: center;
+    width: 100%;
+    margin: 0;
   }
   .header-actions {
     width: 100%;
@@ -789,9 +819,44 @@ export default {
   }
   .notification-body {
     padding: 0.75rem;
+    text-align: center;
   }
+
+  /* Заголовок по центру на мобильных */
+  .notification-title {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 0.25rem;
+  }
+  .notification-title-text {
+    text-align: center;
+    width: 100%;
+  }
+  .unread-dot {
+    order: 2;
+    margin: 0;
+  }
+
+  .notification-message {
+    text-align: center;
+  }
+  .notification-date {
+    text-align: center;
+  }
+
   .delete-btn {
     padding: 0 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .notification-title {
+    font-size: 0.95rem;
+  }
+  .notification-message {
+    font-size: 0.85rem;
   }
 }
 

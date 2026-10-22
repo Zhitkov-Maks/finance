@@ -291,40 +291,7 @@ export default {
   color: var(--primary-color);
 }
 
-/* ===== Вступление ===== */
-.intro-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-}
-
-.intro-content {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  padding: 0.5rem;
-}
-
-.intro-icon {
-  font-size: 3rem;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.intro-text h2 {
-  margin: 0 0 0.5rem 0;
-  font-size: 1.5rem;
-  color: white;
-}
-
-.intro-text p {
-  margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.5;
-  opacity: 0.95;
-}
-
-/* ===== Карточки ===== */
+/* ===== Карточки (общее) ===== */
 .card {
   background: var(--white);
   border-radius: var(--radius);
@@ -358,6 +325,50 @@ export default {
 
 .card-title i {
   color: var(--primary-color);
+}
+
+/* ===== Вступление (Интро) ===== */
+/* Жёстко переопределяем фон и убираем влияние глобальных правил */
+.card.intro-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+.intro-content {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.5rem;
+}
+
+.intro-icon {
+  font-size: 3rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.intro-text h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.5rem;
+}
+
+.intro-text p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+/* Жёстко делаем текст белым в интро-блоке */
+.card.intro-card .intro-text h2,
+.card.intro-card .intro-text p {
+  color: #ffffff !important;
+  opacity: 1 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.card.intro-card .intro-icon {
+  color: #ffffff !important;
 }
 
 /* ===== Аккордеон ===== */
@@ -401,7 +412,6 @@ export default {
   background: var(--light-color);
 }
 
-/* Фон для открытого аккордеона (работает в обеих темах) */
 .accordion-item.is-open .accordion-header {
   background: var(--light-color);
 }
@@ -432,7 +442,7 @@ export default {
 .accordion-body {
   padding: 1rem 1.25rem 1.25rem;
   border-top: 1px solid var(--light-color);
-  background: var(--white); /* Тело аккордеона белое/темное, а шапка серая */
+  background: var(--white);
 }
 
 .accordion-description {
@@ -479,22 +489,42 @@ export default {
 }
 
 /* ===== Связь с разработчиком ===== */
-.contact-card {
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-  border: 1px solid #bbf7d0;
+/* Жёстко переопределяем фон для светлой темы */
+.card.contact-card {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important;
+  border: 1px solid #bbf7d0 !important;
 }
 
-.contact-card .card-header {
-  border-bottom-color: #bbf7d0;
+.card.contact-card .card-header {
+  border-bottom-color: #bbf7d0 !important;
 }
 
-/* Темная тема для контактной карточки - делаем её едва заметной */
-:global(:root[data-theme="dark"]) .contact-card {
-  background: rgba(16, 185, 129, 0.05);
-  border-color: rgba(16, 185, 129, 0.15);
+.card.contact-card .card-title,
+.card.contact-card .contact-text {
+  color: #374151 !important;
 }
-:global(:root[data-theme="dark"]) .contact-card .card-header {
-  border-bottom-color: rgba(16, 185, 129, 0.15);
+
+.card.contact-card .contact-note {
+  color: #6b7280 !important;
+}
+
+/* Жёстко переопределяем фон для тёмной темы */
+:global(:root[data-theme="dark"]) .card.contact-card {
+  background: rgba(16, 185, 129, 0.1) !important;
+  border: 1px solid rgba(16, 185, 129, 0.25) !important;
+}
+
+:global(:root[data-theme="dark"]) .card.contact-card .card-header {
+  border-bottom-color: rgba(16, 185, 129, 0.25) !important;
+}
+
+:global(:root[data-theme="dark"]) .card.contact-card .card-title,
+:global(:root[data-theme="dark"]) .card.contact-card .contact-text {
+  color: #f3f4f6 !important;
+}
+
+:global(:root[data-theme="dark"]) .card.contact-card .contact-note {
+  color: #9ca3af !important;
 }
 
 .contact-content {
@@ -505,7 +535,6 @@ export default {
 .contact-text {
   margin: 0 0 1.25rem 0;
   font-size: 0.95rem;
-  color: var(--dark-color);
   line-height: 1.5;
 }
 
@@ -515,7 +544,7 @@ export default {
   gap: 0.75rem;
   padding: 0.875rem 1.75rem;
   background: var(--secondary-color);
-  color: white;
+  color: white !important;
   text-decoration: none;
   border-radius: var(--radius);
   font-size: 1.1rem;
@@ -538,7 +567,6 @@ export default {
 .contact-note {
   margin: 1rem 0 0 0;
   font-size: 0.8rem;
-  color: var(--gray-color);
   display: flex;
   align-items: center;
   justify-content: center;
