@@ -1,13 +1,30 @@
-import decimal
+"""
+Views для переводов между счетами и аналитики.
+
+Транзакционная стратегия:
+    - Любая мутация баланса идёт через TransferViewMixin + @transaction.atomic.
+    - Счета блокируются через select_for_update в детерминированном порядке
+      (по PK) — это защищает от дедлоков при встречных переводах.
+    - Инвалидация кэшей откладывается через transaction.on_commit, чтобы
+      не заполнять кэш устаревшими данными до коммита и не трогать его
+      при откате транзакции.
+    - Баланс проверяется по заблокированному инстансу (свежее значение),
+      а не по данным из validated_data (они могут быть устаревшими).
+"""
+
+from collections import defaultdict
 from datetime import date, timedelta
+from decimal import Decimal
+from typing import Iterable
 
 from accounts.cache import invalidate_balance_history_cache
 from accounts.models import Account
 from app_user.models import CustomUser
+from django.db import transaction
 from django.db.models import Avg, Count, Max, Min, Q, QuerySet, Sum
 from django.db.models.functions import TruncDate
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework import generics, status
+from rest_framework import generics, serializers
 from rest_framework.authentication import (
     BasicAuthentication,
     SessionAuthentication,
@@ -31,9 +48,6 @@ from .schemas import (
 from .serializers import TransferSerializer
 
 
-# =============================================================================
-# Хелперы
-# =============================================================================
 def _parse_date(value: str | None) -> date | None:
     """YYYY-MM-DD → date. None, если пусто/невалидно."""
     if not value:
@@ -44,10 +58,10 @@ def _parse_date(value: str | None) -> date | None:
         return None
 
 
-def _median(values: list[decimal.Decimal]) -> decimal.Decimal:
+def _median(values: list[Decimal]) -> Decimal:
     """Медиана списка Decimal. Пустой список → 0."""
     if not values:
-        return decimal.Decimal(0)
+        return Decimal(0)
     sorted_vals = sorted(values)
     mid = len(sorted_vals) // 2
     if len(sorted_vals) % 2 == 0:
@@ -55,12 +69,70 @@ def _median(values: list[decimal.Decimal]) -> decimal.Decimal:
     return sorted_vals[mid]
 
 
-# =============================================================================
-# TransferFundsView
-# =============================================================================
+class TransferViewMixin:
+    """
+    Общие хелперы для любых операций, меняющих балансы счетов.
+
+    Все методы рассчитаны на вызов внутри @transaction.atomic —
+    сами по себе они транзакцию не открывают.
+    """
+
+    @staticmethod
+    def _lock_accounts(*account_ids: int) -> dict[int, Account]:
+        """
+        Заблокировать счета и вернуть их keyed by PK.
+
+        Сортировка PK — детерминированный порядок блокировки,
+        чтобы встречные переводы A→B и B→A не привели к дедлоку.
+        """
+        ids = sorted(set(account_ids))
+        return {
+            acc.pk: acc
+            for acc in Account.objects.select_for_update().filter(pk__in=ids)
+        }
+
+    @staticmethod
+    def _apply_deltas(
+        accounts: dict[int, Account],
+        deltas: dict[int, Decimal],
+    ) -> None:
+        """
+        Применить дельты к заблокированным счетам и сохранить только изменённые.
+
+        Нулевые дельты пропускаются — при отсутствии реальных изменений
+        (например, PUT с теми же значениями) не будет лишних UPDATE.
+        """
+        for acc_id, delta in deltas.items():
+            if not delta:
+                continue
+            account = accounts[acc_id]
+            account.balance += delta
+            account.save(update_fields=["balance"])
+
+    @staticmethod
+    def _schedule_cache_invalidation(accounts: Iterable[Account]) -> None:
+        """
+        Инвалидировать кэши всех пользователей, чьи счета затронуты.
+
+        Колбэк выполнится только после успешного коммита транзакции —
+        при откате кэш остаётся нетронутым, а при коммите читатели
+        увидят актуальные данные.
+        """
+        user_ids = {acc.user_id for acc in accounts if acc.user_id is not None}
+        if not user_ids:
+            return
+
+        def _invalidate() -> None:
+            for uid in user_ids:
+                invalidate_balance_history_cache(uid)
+                invalidate_transfer_analytics_cache(uid)
+
+        transaction.on_commit(_invalidate)
+
+
 @extend_schema(tags=["Transfer"])
 @TransferSchema
-class TransferFundsView(generics.CreateAPIView):
+class TransferFundsView(TransferViewMixin, generics.CreateAPIView):
     serializer_class = TransferSerializer
     permission_classes = (IsAuthenticated,)
     authentication_classes = (
@@ -69,43 +141,36 @@ class TransferFundsView(generics.CreateAPIView):
         SessionAuthentication,
     )
 
-    def perform_create(self, serializer):
-        source_account: Account = serializer.validated_data["source_account"]
-        destination_account: Account = serializer.validated_data["destination_account"]
-        amount = serializer.validated_data["amount"]
+    @transaction.atomic
+    def perform_create(self, serializer: TransferSerializer) -> Transfer:
+        source: Account = serializer.validated_data["source_account"]
+        destination: Account = serializer.validated_data["destination_account"]
+        amount: Decimal = serializer.validated_data["amount"]
 
-        source_account.balance -= amount
-        destination_account.balance += amount
+        locked = self._lock_accounts(source.pk, destination.pk)
 
-        source_account.save()
-        destination_account.save()
+        deltas: dict[int, Decimal] = {
+            source.pk: -amount,
+            destination.pk: +amount,
+        }
+        if locked[source.pk].balance + deltas[source.pk] < 0:
+            raise serializers.ValidationError(
+                {"amount": "Недостаточно средств на счёте списания."}
+            )
 
         transfer = serializer.save()
-        invalidate_balance_history_cache(source_account.user_id)
-        invalidate_transfer_analytics_cache(source_account.user_id)  # ← добавили
+        self._apply_deltas(locked, deltas)
+        self._schedule_cache_invalidation(locked.values())
 
         return transfer
 
-    def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
 
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-
-# =============================================================================
-# Пагинация
-# =============================================================================
 class TransferPagination(PageNumberPagination):
     page_size: int = 10
     page_size_query_param: str = "page_size"
     max_page_size: int = 100
 
 
-# =============================================================================
-# TransferHistoryView
-# =============================================================================
 @extend_schema(tags=["Transfer"])
 @TransferHistoryViewSchema
 class TransferHistoryView(generics.ListAPIView):
@@ -127,12 +192,9 @@ class TransferHistoryView(generics.ListAPIView):
         ).order_by("-timestamp")
 
 
-# =============================================================================
-# TransferDetailView
-# =============================================================================
 @extend_schema(tags=["Transfer"])
 @TransferRetrieveViewSchema
-class TransferDetailView(generics.RetrieveUpdateDestroyAPIView):
+class TransferDetailView(TransferViewMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class = TransferSerializer
     permission_classes = (IsAuthenticated,)
     authentication_classes = (
@@ -140,56 +202,83 @@ class TransferDetailView(generics.RetrieveUpdateDestroyAPIView):
         BasicAuthentication,
         SessionAuthentication,
     )
-    http_method_names: list = ["get", "put", "delete"]
+    http_method_names = ["get", "put", "patch", "delete"]
 
     def get_queryset(self) -> QuerySet:
-        user: CustomUser = self.request.user
-        return (
-            Transfer.objects.filter(source_account__user=user)
-            .order_by("-timestamp")
-        )
+        """
+        Только переводы, где текущий пользователь — владелец счёта списания.
 
-    def perform_update(self, serializer):
+        Сознательно ограничиваем update/delete источником: если бы получатель
+        мог удалить перевод, это забрало бы деньги с его же счёта обратно
+        отправителю без его согласия.
+        """
+        user: CustomUser = self.request.user
+        return Transfer.objects.filter(source_account__user=user).order_by("-timestamp")
+
+    @transaction.atomic
+    def perform_update(self, serializer: TransferSerializer) -> None:
         transfer: Transfer = self.get_object()
 
-        old_amount: decimal = transfer.amount
-        new_amount: decimal = serializer.validated_data["amount"]
+        old_amount: Decimal = transfer.amount
+        old_source_id: int = transfer.source_account_id
+        old_destination_id: int = transfer.destination_account_id
 
-        source_account: Account = transfer.source_account
-        destination_account: Account = transfer.destination_account
+        # PUT пришлёт всё, PATCH — только изменённое; fallback на текущее.
+        new_amount: Decimal = serializer.validated_data.get("amount", old_amount)
+        new_source: Account = serializer.validated_data.get(
+            "source_account", transfer.source_account
+        )
+        new_destination: Account = serializer.validated_data.get(
+            "destination_account", transfer.destination_account
+        )
 
-        if new_amount != old_amount:
-            source_account.balance += old_amount - new_amount
-            destination_account.balance -= old_amount - new_amount
+        if new_source.pk == new_destination.pk:
+            raise serializers.ValidationError(
+                {
+                    "destination_account": "Счета списания и зачисления должны быть разными."
+                }
+            )
 
-            source_account.save()
-            destination_account.save()
+        locked = self._lock_accounts(
+            old_source_id,
+            old_destination_id,
+            new_source.pk,
+            new_destination.pk,
+        )
+
+        # Откат старого перевода + применение нового — через накопление дельт.
+        # Один паттерн покрывает смену суммы, смену счёта, смену обоих и swap.
+        deltas: dict[int, Decimal] = defaultdict(Decimal)
+        deltas[old_source_id] += old_amount
+        deltas[old_destination_id] -= old_amount
+        deltas[new_source.pk] -= new_amount
+        deltas[new_destination.pk] += new_amount
+
+        if locked[new_source.pk].balance + deltas[new_source.pk] < 0:
+            raise serializers.ValidationError(
+                {"amount": "Недостаточно средств на счёте списания."}
+            )
 
         serializer.save()
+        self._apply_deltas(locked, deltas)
+        self._schedule_cache_invalidation(locked.values())
 
-        invalidate_balance_history_cache(source_account.user_id)
-        invalidate_transfer_analytics_cache(source_account.user_id)
+    @transaction.atomic
+    def perform_destroy(self, instance: Transfer) -> None:
+        source_id: int = instance.source_account_id
+        destination_id: int = instance.destination_account_id
+        amount: Decimal = instance.amount
 
-    def perform_destroy(self, instance):
-        source_account: Account = instance.source_account
-        destination_account: Account = instance.destination_account
+        locked = self._lock_accounts(source_id, destination_id)
 
-        source_account.balance += instance.amount
-        destination_account.balance -= instance.amount
-
-        source_account.save()
-        destination_account.save()
-
-        user_id = source_account.user_id
         instance.delete()
+        self._apply_deltas(
+            locked,
+            {source_id: +amount, destination_id: -amount},
+        )
+        self._schedule_cache_invalidation(locked.values())
 
-        invalidate_balance_history_cache(user_id)
-        invalidate_transfer_analytics_cache(user_id)
 
-
-# =============================================================================
-# TransferAnalyticsView
-# =============================================================================
 @extend_schema(
     tags=["Transfer"],
     parameters=[
@@ -266,10 +355,10 @@ class TransferAnalyticsView(generics.GenericAPIView):
         )
 
         count: int = aggregates["count"] or 0
-        total_amount = aggregates["total_amount"] or decimal.Decimal(0)
-        average = aggregates["average"] or decimal.Decimal(0)
-        max_amount = aggregates["max_amount"] or decimal.Decimal(0)
-        min_amount = aggregates["min_amount"] or decimal.Decimal(0)
+        total_amount = aggregates["total_amount"] or Decimal(0)
+        average = aggregates["average"] or Decimal(0)
+        max_amount = aggregates["max_amount"] or Decimal(0)
+        min_amount = aggregates["min_amount"] or Decimal(0)
 
         amounts = list(qs.values_list("amount", flat=True))
         median = _median(amounts)
@@ -299,14 +388,9 @@ class TransferAnalyticsView(generics.GenericAPIView):
             "daily_activity": daily_activity,
         }
 
-        # --- Кладём в кэш ---
         set_analytics_cache(user.id, date_from, date_to, payload)
-
         return Response(payload)
 
-    # =========================================================================
-    # Топ счетов по обороту
-    # =========================================================================
     @staticmethod
     def _build_top_accounts(qs: QuerySet) -> list[dict]:
         """
@@ -316,6 +400,7 @@ class TransferAnalyticsView(generics.GenericAPIView):
         outgoing_rows = qs.values("source_account_id", "source_account__name").annotate(
             total=Sum("amount"), cnt=Count("id")
         )
+
         incoming_rows = qs.values(
             "destination_account_id", "destination_account__name"
         ).annotate(total=Sum("amount"), cnt=Count("id"))
@@ -327,15 +412,15 @@ class TransferAnalyticsView(generics.GenericAPIView):
                 by_id[acc_id] = {
                     "id": acc_id,
                     "name": name,
-                    "incoming": decimal.Decimal(0),
-                    "outgoing": decimal.Decimal(0),
+                    "incoming": Decimal(0),
+                    "outgoing": Decimal(0),
                     "count": 0,
                 }
             return by_id[acc_id]
 
         for row in outgoing_rows:
             entry = ensure(row["source_account_id"], row["source_account__name"])
-            entry["outgoing"] += row["total"] or decimal.Decimal(0)
+            entry["outgoing"] += row["total"] or Decimal(0)
             entry["count"] += row["cnt"] or 0
 
         for row in incoming_rows:
@@ -343,12 +428,12 @@ class TransferAnalyticsView(generics.GenericAPIView):
                 row["destination_account_id"],
                 row["destination_account__name"],
             )
-            entry["incoming"] += row["total"] or decimal.Decimal(0)
+            entry["incoming"] += row["total"] or Decimal(0)
             entry["count"] += row["cnt"] or 0
 
         total_turnover = sum(
             (e["incoming"] + e["outgoing"]) for e in by_id.values()
-        ) or decimal.Decimal(1)
+        ) or Decimal(1)
 
         result = []
         for entry in by_id.values():
@@ -370,9 +455,6 @@ class TransferAnalyticsView(generics.GenericAPIView):
         result.sort(key=lambda x: x["turnover"], reverse=True)
         return result
 
-    # =========================================================================
-    # Топ пар source → destination
-    # =========================================================================
     @staticmethod
     def _build_top_pairs(qs: QuerySet, limit: int = 10) -> list[dict]:
         rows = (
@@ -386,13 +468,11 @@ class TransferAnalyticsView(generics.GenericAPIView):
             .order_by("-total")
         )
 
-        total_amount = sum(
-            (r["total"] or decimal.Decimal(0)) for r in rows
-        ) or decimal.Decimal(1)
+        total_amount = sum((r["total"] or Decimal(0)) for r in rows) or Decimal(1)
 
         result = []
         for row in rows[:limit]:
-            amount = row["total"] or decimal.Decimal(0)
+            amount = row["total"] or Decimal(0)
             result.append(
                 {
                     "key": f"{row['source_account_id']}→{row['destination_account_id']}",
@@ -408,9 +488,6 @@ class TransferAnalyticsView(generics.GenericAPIView):
 
         return result
 
-    # =========================================================================
-    # Sankey: nodes + links
-    # =========================================================================
     @staticmethod
     def _build_sankey(
         top_accounts: list[dict],
@@ -424,16 +501,15 @@ class TransferAnalyticsView(generics.GenericAPIView):
         top_nodes = top_accounts[:node_limit]
         node_ids = {n["id"] for n in top_nodes}
 
-        links = []
-        for pair in top_pairs:
-            if pair["source_id"] in node_ids and pair["destination_id"] in node_ids:
-                links.append(
-                    {
-                        "source": pair["source_id"],
-                        "destination": pair["destination_id"],
-                        "amount": pair["amount"],
-                    }
-                )
+        links = [
+            {
+                "source": pair["source_id"],
+                "destination": pair["destination_id"],
+                "amount": pair["amount"],
+            }
+            for pair in top_pairs
+            if pair["source_id"] in node_ids and pair["destination_id"] in node_ids
+        ]
 
         nodes = [
             {
@@ -448,9 +524,6 @@ class TransferAnalyticsView(generics.GenericAPIView):
 
         return {"nodes": nodes, "links": links}
 
-    # =========================================================================
-    # Дневная активность
-    # =========================================================================
     @staticmethod
     def _build_daily_activity(
         qs: QuerySet,

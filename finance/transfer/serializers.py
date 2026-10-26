@@ -1,8 +1,8 @@
 import decimal
 
+from accounts.models import Account
 from rest_framework import serializers
 
-from accounts.models import Account
 from .models import Transfer
 
 
@@ -24,10 +24,10 @@ class TransferSerializer(serializers.ModelSerializer):
             "id",
             "source_account",
             "source_account_name",
-            "destination_account", 
+            "destination_account",
             "destination_account_name",
             "amount",
-            "timestamp"
+            "timestamp",
         ]
         extra_kwargs = {
             'source_account': {'write_only': True},
