@@ -391,6 +391,52 @@ CELERY_BEAT_SCHEDULE = {
         "task": "insights.tasks.detect_category_spikes_all",
         "schedule": crontab(hour=10, minute=0),
     },
+    # Проверка трат после зарплаты (каждый день в 10:10)
+    "detect-salary-spikes": {
+        "task": "insights.tasks.detect_salary_spikes_all",
+        "schedule": crontab(hour=10, minute=10),
+    },
+    # Проверка скрытых утечек (раз в 3 дня в 10:15, чтобы не спамить)
+    "detect-hidden-leaks": {
+        "task": "insights.tasks.detect_hidden_leaks_all",
+        "schedule": crontab(hour=10, minute=0, day_of_month="1,11,21"),
+    },
+    "detect-budget-overspends": {
+        "task": "insights.tasks.detect_budget_overspends_all",
+        "schedule": crontab(hour=12, minute=0),
+    },
+    "detect-cash-gaps": {
+        "task": "insights.tasks.detect_cash_gaps_all",
+        "schedule": crontab(hour=9, minute=0),
+    },
+    "detect-deposit-forecasts": {
+        "task": "insights.tasks.detect_deposit_forecasts_all",
+        "schedule": crontab(hour=10, minute=0, day_of_month="1"),
+    },
+    "detect-credit-card-grace": {
+        "task": "insights.tasks.detect_credit_card_grace_all",
+        "schedule": crontab(hour=9, minute=30),
+    },
+    "detect-monthly-reports": {
+        "task": "insights.tasks.detect_monthly_reports_all",
+        "schedule": crontab(hour=9, minute=0, day_of_month="1"),
+    },
+    "detect-savings-improved": {
+        "task": "insights.tasks.detect_savings_improved_all",
+        "schedule": crontab(hour=10, minute=0, day_of_week="mon"),
+    },
+    "detect-idle-cash": {
+        "task": "insights.tasks.detect_idle_cash_all",
+        "schedule": crontab(hour=10, minute=20, day_of_week="mon"),
+    },
+    "detect-debt-vs-deposit": {
+        "task": "insights.tasks.detect_debt_vs_deposit_all",
+        "schedule": crontab(hour=10, minute=25, day_of_week="mon"),
+    },
+    "detect-budget-realloc": {
+        "task": "insights.tasks.detect_budget_reallocation_all",
+        "schedule": crontab(hour=18, minute=0),
+    },
 }
 
 

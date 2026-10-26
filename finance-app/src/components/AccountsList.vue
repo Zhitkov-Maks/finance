@@ -33,7 +33,7 @@
         </div>
       </div>
 
-      <!-- Точки-индикаторы (теперь их 4) -->
+      <!-- Точки-индикаторы (4 шт) -->
       <div class="stats-dots" :class="{ 'is-mobile': isMobileView }">
         <span
           v-for="i in 4"
@@ -370,6 +370,7 @@
             <h3 class="card-title"><i class="fas fa-trophy"></i> Топ счетов по обороту</h3>
             <span class="metrics-period">входящие + исходящие переводы</span>
           </div>
+
           <div class="desktop-table">
             <table class="table">
               <thead>
@@ -394,6 +395,113 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Мобильная версия Топ счетов -->
+          <div class="mobile-cards">
+            <div
+              v-for="(item, index) in topAccountsByTurnover"
+              :key="item.name"
+              class="top-account-card"
+            >
+              <div class="top-account-header">
+                <span class="rank-badge" :class="'rank-' + Math.min(index + 1, 3)">
+                  {{ index + 1 }}
+                </span>
+                <span class="top-account-name">{{ item.name }}</span>
+                <span class="top-account-turnover">{{ formatCurrency(item.turnover) }}</span>
+              </div>
+              <div class="top-account-details">
+                <div class="top-detail">
+                  <span class="top-detail-label">Входящие</span>
+                  <span class="top-detail-value text-success">{{ formatCurrency(item.incoming) }}</span>
+                </div>
+                <div class="top-detail">
+                  <span class="top-detail-label">Исходящие</span>
+                  <span class="top-detail-value text-danger">{{ formatCurrency(item.outgoing) }}</span>
+                </div>
+                <div class="top-detail">
+                  <span class="top-detail-label">Переводов</span>
+                  <span class="top-detail-value">{{ item.count }}</span>
+                </div>
+                <div class="top-detail">
+                  <span class="top-detail-label">Доля</span>
+                  <span class="top-detail-value">{{ item.turnoverPercent }}%</span>
+                </div>
+              </div>
+              <div class="turnover-bar mobile">
+                <div class="turnover-fill" :style="{ width: item.turnoverPercent + '%' }"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3.4 Топ контрагентов -->
+        <div v-if="topAccountPairs.length > 0" class="card top-pairs-card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-people-arrows"></i> Топ контрагентов</h3>
+            <span class="metrics-period">самые активные пары счёт → счёт</span>
+          </div>
+
+          <div class="desktop-table">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Откуда</th>
+                  <th></th>
+                  <th>Куда</th>
+                  <th>Сумма</th>
+                  <th>Переводов</th>
+                  <th>Доля</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(pair, index) in topAccountPairs" :key="pair.key">
+                  <td>
+                    <span class="rank-badge" :class="'rank-' + Math.min(index + 1, 3)">
+                      {{ index + 1 }}
+                    </span>
+                  </td>
+                  <td>{{ pair.source }}</td>
+                  <td class="pair-arrow"><i class="fas fa-arrow-right"></i></td>
+                  <td>{{ pair.destination }}</td>
+                  <td><strong>{{ formatCurrency(pair.amount) }}</strong></td>
+                  <td>{{ pair.count }}</td>
+                  <td>
+                    <div class="turnover-progress">
+                      <div class="turnover-bar">
+                        <div class="turnover-fill" :style="{ width: pair.percent + '%' }"></div>
+                      </div>
+                      <span class="turnover-percent">{{ pair.percent }}%</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mobile-cards">
+            <div v-for="(pair, index) in topAccountPairs" :key="pair.key" class="pair-card">
+              <div class="pair-header">
+                <span class="rank-badge" :class="'rank-' + Math.min(index + 1, 3)">
+                  {{ index + 1 }}
+                </span>
+                <span class="pair-amount">{{ formatCurrency(pair.amount) }}</span>
+              </div>
+              <div class="pair-route">
+                <span class="pair-account">{{ pair.source }}</span>
+                <i class="fas fa-arrow-right pair-arrow-icon"></i>
+                <span class="pair-account">{{ pair.destination }}</span>
+              </div>
+              <div class="pair-footer">
+                <span>{{ pair.count }} переводов</span>
+                <span class="pair-percent">{{ pair.percent }}%</span>
+              </div>
+              <div class="turnover-bar mobile">
+                <div class="turnover-fill" :style="{ width: pair.percent + '%' }"></div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1731,6 +1839,77 @@ export default {
 .turnover-fill { height: 100%; background: linear-gradient(90deg, #3b82f6 0%, #93c5fd 100%); border-radius: 9999px; transition: width 0.4s ease; }
 .turnover-percent { font-size: 0.75rem; font-weight: 600; color: var(--gray-color); min-width: 40px; text-align: right; }
 
+/* Мобильные карточки топов */
+.top-account-card,
+.pair-card {
+  background: var(--white);
+  border: 1px solid var(--light-color);
+  border-radius: var(--radius);
+  padding: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+.top-account-header,
+.pair-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--light-color);
+}
+.top-account-name {
+  flex: 1;
+  font-weight: 600;
+  color: var(--dark-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.top-account-turnover,
+.pair-amount {
+  font-weight: 700;
+  color: var(--primary-color);
+}
+.top-account-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.top-detail {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  padding: 0.25rem 0;
+}
+.top-detail-label { color: var(--gray-color); }
+.top-detail-value { font-weight: 600; }
+
+.pair-header .pair-amount { margin-left: auto; }
+.pair-route {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+.pair-account {
+  font-weight: 600;
+  color: var(--dark-color);
+  background: var(--light-color);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+.pair-arrow-icon { color: var(--gray-color); font-size: 0.75rem; }
+.pair-arrow { color: var(--gray-color); text-align: center; }
+.pair-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--gray-color);
+}
+.pair-percent { font-weight: 700; color: var(--dark-color); }
+
 /* Санкей */
 .sankey-body { width: 100%; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; padding: 0.5rem 0; }
 .sankey-canvas { display: block; }
@@ -1897,5 +2076,106 @@ export default {
   .analytics-section-header { padding: 0.875rem 1rem; }
   .analytics-section-title { font-size: 1rem; }
   .analytics-toggle-btn { font-size: 0.75rem; padding: 0.375rem 0.625rem; }
+}
+
+/* ============================================================
+   HOVER-ЭФФЕКТЫ
+   ============================================================ */
+
+/* --- 1. Карточки статистики (desktop): подъём, увеличение, цветная тень --- */
+.stats-carousel:not(.is-mobile) .stat-card {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.28s ease;
+}
+.stats-carousel:not(.is-mobile) .stat-card:hover {
+  transform: translateY(-6px) scale(1.03);
+  z-index: 5;
+}
+.stats-carousel:not(.is-mobile) .stat-card:active {
+  transform: translateY(-3px) scale(1.01);
+  transition-duration: 0.1s;
+}
+.stats-carousel:not(.is-mobile) .stat-card-total:hover {
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.15), 0 6px 12px rgba(0, 0, 0, 0.08);
+}
+.stats-carousel:not(.is-mobile) .stat-card-credit:hover {
+  box-shadow: 0 16px 32px rgba(31, 41, 55, 0.45), 0 6px 12px rgba(0, 0, 0, 0.25);
+}
+.stats-carousel:not(.is-mobile) .stat-card-active:hover {
+  box-shadow: 0 16px 32px rgba(239, 68, 68, 0.45), 0 6px 12px rgba(220, 38, 38, 0.3);
+}
+.stats-carousel:not(.is-mobile) .stat-card-inactive:hover {
+  box-shadow: 0 16px 32px rgba(59, 130, 246, 0.45), 0 6px 12px rgba(37, 99, 235, 0.3);
+}
+
+/* --- 1.1 Shimmer-блик (только для цветных карточек: тёмной, красной, синей) --- */
+@keyframes shimmer-sweep {
+  from { transform: translateX(-100%) skewX(-12deg); }
+  to   { transform: translateX(100%) skewX(-12deg); }
+}
+
+.stats-carousel:not(.is-mobile) .stat-card-credit::after,
+.stats-carousel:not(.is-mobile) .stat-card-active::after,
+.stats-carousel:not(.is-mobile) .stat-card-inactive::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 65%
+  );
+  transform: translateX(-100%) skewX(-12deg);
+  pointer-events: none;
+  border-radius: inherit;
+  will-change: transform;
+}
+
+.stats-carousel:not(.is-mobile) .stat-card-credit:hover::after,
+.stats-carousel:not(.is-mobile) .stat-card-active:hover::after,
+.stats-carousel:not(.is-mobile) .stat-card-inactive:hover::after {
+  animation: shimmer-sweep 0.85s ease-out;
+}
+
+/* --- 2. Карточки счетов (мобильные) --- */
+.account-card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.account-card:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.2);
+  transform: translateY(-2px);
+}
+.account-card.inactive:hover {
+  border-color: var(--gray-color);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+/* --- 3. Карточки переводов (мобильные) --- */
+.transfer-card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.transfer-card:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.2);
+  transform: translateY(-2px);
+}
+
+/* --- 4. Строки таблиц (desktop): подсветка фона + акцентная полоса слева --- */
+.table tbody tr {
+  transition: background-color 0.18s ease;
+}
+.table tbody tr:hover:not(:has(td[colspan])) {
+  background-color: var(--light-color);
+}
+.table tbody tr:hover:not(:has(td[colspan])) td:first-child {
+  box-shadow: inset 3px 0 0 var(--primary-color);
 }
 </style>

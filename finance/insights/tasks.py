@@ -1,29 +1,72 @@
+import asyncio
 import logging
 from datetime import date, timedelta
 from decimal import Decimal
 
+from asgiref.sync import async_to_sync, sync_to_async
 from celery import shared_task
 from django.contrib.auth import get_user_model
+from django.db import close_old_connections
 from recurring.models import RecurringTransaction
 from transactions.models import Transaction
 
-from .detectors import detect_category_spikes_for_user
+from .detectors import (
+    detect_budget_overspends_for_user,
+    detect_budget_reallocation_for_user,
+    detect_cash_gaps_for_user,
+    detect_category_spikes_for_user,
+    detect_credit_card_grace_for_user,
+    detect_debt_vs_deposit_for_user,
+    detect_deposit_forecasts_for_user,
+    detect_hidden_leaks_for_user,
+    detect_idle_cash_for_user,
+    detect_monthly_report_for_user,
+    detect_salary_spikes_for_user,
+    detect_savings_improved_for_user,
+)
 from .models import Insight
 from .services import create_insight
 
 logger = logging.getLogger(__name__)
 
-DUPLICATE_WINDOW_SECONDS = 60 * 60  # 1 час
-DUPLICATE_MIN_AMOUNT = 10  # игнорируем мелкие транзакции (₽)
+USER_BATCH_SIZE = 500
+DETECTOR_CONCURRENCY = 10
+DUPLICATE_WINDOW_SECONDS = 60 * 60
+DUPLICATE_MIN_AMOUNT = 10
 SUBSCRIPTION_INCREASE_THRESHOLD = 0.02
+
+
+@shared_task(name="insights.tasks.detect_idle_cash_all")
+def detect_idle_cash_all():
+    return _run_detector_task(detect_idle_cash_for_user, "Idle cash")
+
+
+@shared_task(name="insights.tasks.detect_debt_vs_deposit_all")
+def detect_debt_vs_deposit_all():
+    return _run_detector_task(detect_debt_vs_deposit_for_user, "Debt vs deposit")
+
+
+@shared_task(name="insights.tasks.detect_budget_reallocation_all")
+def detect_budget_reallocation_all():
+    return _run_detector_task(
+        detect_budget_reallocation_for_user, "Budget reallocation"
+    )
+
+
+@shared_task(name="insights.tasks.detect_savings_improved_all")
+def detect_savings_improved_all():
+    """Раз в неделю: проверяем улучшение нормы сбережений."""
+    return _run_detector_task(detect_savings_improved_for_user, "Savings improved")
+
+
+@shared_task(name="insights.tasks.detect_monthly_reports_all")
+def detect_monthly_reports_all():
+    return _run_detector_task(detect_monthly_report_for_user, "Monthly report")
 
 
 @shared_task(name="insights.tasks.async_detect_transaction_duplicate")
 def async_detect_transaction_duplicate(transaction_id: str):
-    """
-    Проверяет, есть ли рядом (в окне 5 минут) дубликат указанной транзакции.
-    Вызывается сигналом через on_commit + .delay(), чтобы не тормозить bulk-создание.
-    """
+    """Проверяет, есть ли рядом (в окне 1 час) дубликат указанной транзакции."""
     try:
         instance = Transaction.objects.select_related("user", "category").get(
             pk=transaction_id
@@ -86,14 +129,13 @@ def async_detect_transaction_duplicate(transaction_id: str):
 @shared_task(name="insights.tasks.async_detect_subscription_increase")
 def async_detect_subscription_increase(recurring_id: int, old_amount_str: str):
     """
-    Проверяет, выросла ли сумма регулярного платежа относительно предыдущего значения.
-    old_amount передаётся строкой, чтобы избежать проблем с сериализацией Decimal.
+    Проверяет, выросла ли сумма регулярного
+    платежа относительно предыдущего значения.
     """
     try:
         old_amount = Decimal(old_amount_str)
     except Exception:
         return
-
     if old_amount <= 0:
         return
 
@@ -138,20 +180,86 @@ def async_detect_subscription_increase(recurring_id: int, old_amount_str: str):
         logger.exception("async_detect_subscription_increase failed: %s", recurring_id)
 
 
+async def _run_one(detector, user, today: date, sem: asyncio.Semaphore, counter: dict):
+    """Один юзер — один детектор. Защищаем цикл от падения одного пользователя."""
+    async with sem:
+        try:
+            result = await detector(user, today)
+        except Exception:
+            logger.exception("%s failed for user %s", detector.__name__, user.pk)
+            return
+        counter["total"] += result or 0
+
+
+async def _detect_for_all_active_users(
+    detector,
+    today: date,
+    batch_size: int = USER_BATCH_SIZE,
+    concurrency: int = DETECTOR_CONCURRENCY,
+) -> int:
+    """
+    Асинхронно прогоняет async-детектор по всем активным пользователям.
+
+    Батчи ограничивают память и число «холодных» запросов к User.
+    Семафор ограничивает количество одновременных DB-соединений.
+    """
+    User = get_user_model()
+    qs = User.objects.filter(is_active=True)
+    sem = asyncio.Semaphore(concurrency)
+    counter = {"total": 0}
+
+    offset = 0
+    while True:
+        batch = await sync_to_async(list)(qs[offset : offset + batch_size])
+        if not batch:
+            break
+        await asyncio.gather(
+            *(_run_one(detector, user, today, sem, counter) for user in batch)
+        )
+        offset += batch_size
+
+    return counter["total"]
+
+
+def _run_detector_task(detector, label: str) -> str:
+    """Синхронный мост Celery → async-оркестратор."""
+    close_old_connections()
+    try:
+        total = async_to_sync(_detect_for_all_active_users)(detector, date.today())
+        return f"{label}: {total}"
+    finally:
+        close_old_connections()
+
+
 @shared_task(name="insights.tasks.detect_category_spikes_all")
 def detect_category_spikes_all():
-    """
-    Раз в день: проверяем скачки трат по категориям у всех активных пользователей.
-    Запускается через celery-beat (см. CELERY_BEAT_SCHEDULE).
-    """
-    today = date.today()
-    total = 0
-    User = get_user_model()
+    return _run_detector_task(detect_category_spikes_for_user, "Category spike")
 
-    for user in User.objects.filter(is_active=True).iterator():
-        try:
-            total += detect_category_spikes_for_user(user, today)
-        except Exception:
-            logger.exception("category spike detect failed for user %s", user.id)
 
-    return f"Category spike insights: {total}"
+@shared_task(name="insights.tasks.detect_salary_spikes_all")
+def detect_salary_spikes_all():
+    return _run_detector_task(detect_salary_spikes_for_user, "Salary spike")
+
+
+@shared_task(name="insights.tasks.detect_hidden_leaks_all")
+def detect_hidden_leaks_all():
+    return _run_detector_task(detect_hidden_leaks_for_user, "Hidden leak")
+
+
+@shared_task(name="insights.tasks.detect_budget_overspends_all")
+def detect_budget_overspends_all():
+    return _run_detector_task(detect_budget_overspends_for_user, "Budget overspend")
+
+
+@shared_task(name="insights.tasks.detect_cash_gaps_all")
+def detect_cash_gaps_all():
+    return _run_detector_task(detect_cash_gaps_for_user, "Cash gap")
+
+
+@shared_task(name="insights.tasks.detect_deposit_forecasts_all")
+def detect_deposit_forecasts_all():
+    return _run_detector_task(detect_deposit_forecasts_for_user, "Deposit forecast")
+
+@shared_task(name="insights.tasks.detect_credit_card_grace_all")
+def detect_credit_card_grace_all():
+    return _run_detector_task(detect_credit_card_grace_for_user, "Credit card grace")

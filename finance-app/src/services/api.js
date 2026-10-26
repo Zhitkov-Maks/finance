@@ -673,6 +673,34 @@ class ApiService {
     async dismissInsight(id) {
         await this.client.post(`/insights/${id}/dismiss/`)
     }
+
+    async getGamificationDashboard() {
+        const response = await this.client.get('/insights/gamification/')
+        return response.data
+    }
+
+    async getCurrentGoal() {
+        const response = await this.client.get('/insights/goals/current/')
+        return response.data.goal // вернёт объект цели или null
+    }
+
+    async saveGoal(data) {
+        const response = await this.client.post('/insights/goals/current/', data)
+        return response.data
+    }
+
+    async deleteGoal() {
+        await this.client.delete('/insights/goals/current/')
+    }
+
+    async getInsightSettings() {
+        const response = await this.client.get('/insights/settings/')
+        return response.data
+    }
+    async updateInsightSettings(data) {
+        const response = await this.client.patch('/insights/settings/', data)
+        return response.data
+    }
 }
 
 export default new ApiService()

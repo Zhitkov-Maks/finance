@@ -204,7 +204,6 @@ export default {
 
       try {
         const data = await apiService.getNotifications(unreadOnly.value, page)
-
         const items = Array.isArray(data) ? data : (data.results || [])
         hasMore.value = data.next !== undefined ? !!data.next : false
 
@@ -501,13 +500,6 @@ export default {
   font-size: 0.875rem;
 }
 
-/* Темная тема для push-unsupported */
-:global(:root[data-theme="dark"]) .push-unsupported {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fcd34d;
-  border-color: rgba(245, 158, 11, 0.3);
-}
-
 /* ===== Settings ===== */
 .settings-card {
   padding: 0;
@@ -610,12 +602,6 @@ export default {
   color: #991b1b;
 }
 
-/* Темная тема для бейджа */
-:global(:root[data-theme="dark"]) .tab-btn:not(.active) .tab-badge {
-  background: rgba(239, 68, 68, 0.2);
-  color: #fca5a5;
-}
-
 /* ===== Loading / Empty ===== */
 .loading-state,
 .empty-state {
@@ -639,6 +625,8 @@ export default {
   flex-direction: column;
   gap: 0.5rem;
 }
+
+/* --- БАЗОВЫЕ СТИЛИ (СВЕТЛАЯ ТЕМА) --- */
 .notification-item {
   display: flex;
   align-items: stretch;
@@ -655,12 +643,8 @@ export default {
 }
 .notification-item.unread {
   border-left-color: var(--primary-color);
-  background: #fafaff;
-}
-
-/* Темная тема для непрочитанного уведомления */
-:global(:root[data-theme="dark"]) .notification-item.unread {
-  background: rgba(59, 130, 246, 0.1);
+  /* Убрали жесткий background, чтобы в темной теме он переопределялся */
+  background: #f0f4ff;
 }
 
 .notification-icon {
@@ -679,11 +663,6 @@ export default {
 .icon-warning { color: #92400e; }
 .icon-danger { color: #991b1b; }
 
-/* Темная тема для иконок */
-:global(:root[data-theme="dark"]) .icon-info { color: #93c5fd; }
-:global(:root[data-theme="dark"]) .icon-warning { color: #fcd34d; }
-:global(:root[data-theme="dark"]) .icon-danger { color: #fca5a5; }
-
 .notification-body {
   flex: 1;
   padding: 1rem;
@@ -691,7 +670,6 @@ export default {
   min-width: 0;
 }
 
-/* ===== ЗАГОЛОВОК УВЕДОМЛЕНИЯ ===== */
 .notification-title {
   display: flex;
   align-items: center;
@@ -703,12 +681,10 @@ export default {
   line-height: 1.35;
   word-break: break-word;
 }
-
 .notification-title-text {
   flex: 1;
   min-width: 0;
 }
-
 .unread-dot {
   width: 8px;
   height: 8px;
@@ -717,17 +693,6 @@ export default {
   display: inline-block;
   flex-shrink: 0;
 }
-
-/* Усиление контраста в темной теме */
-:global(:root[data-theme="dark"]) .notification-title {
-  color: #ffffff;
-}
-
-:global(:root[data-theme="dark"]) .notification-title-text {
-  color: #ffffff;
-  font-weight: 700;
-}
-
 .notification-message {
   font-size: 0.875rem;
   color: var(--gray-color);
@@ -739,7 +704,6 @@ export default {
   font-size: 0.75rem;
   color: var(--gray-color);
 }
-
 .delete-btn {
   background: transparent;
   border: none;
@@ -758,15 +722,6 @@ export default {
 .delete-btn:hover {
   color: var(--danger-color);
   background: #fee2e2;
-}
-
-/* Темная тема для кнопки удаления */
-:global(:root[data-theme="dark"]) .delete-btn {
-  color: #6b7280;
-}
-:global(:root[data-theme="dark"]) .delete-btn:hover {
-  background: rgba(239, 68, 68, 0.15);
-  color: #fca5a5;
 }
 
 /* ===== Pagination ===== */

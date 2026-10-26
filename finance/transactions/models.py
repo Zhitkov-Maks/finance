@@ -1,11 +1,10 @@
 from decimal import Decimal
 
+from accounts.models import Account
+from app_user.models import CustomUser
 from django.core.validators import MinValueValidator
 from django.db import models
 from rest_framework import serializers
-
-from app_user.models import CustomUser
-from accounts.models import Account
 
 
 class Category(models.Model):
@@ -39,7 +38,7 @@ class Category(models.Model):
 
     def save(self, *args, **kwargs):
         """
-        Автоматически устанавливаем уровень вложенности 
+        Автоматически устанавливаем уровень вложенности
         и проверяем глубину.
         """
         # Проверяем уровень вложенности перед сохранением
@@ -153,8 +152,10 @@ class Transaction(models.Model):
     )
 
     def __str__(self):
-        return (f"{self.amount} {self.type_transaction}"
-                "{self.category.name} {self.user.email}")
+        return (
+            f"{self.amount} "
+            f"{self.category.type_transaction if self.category else 'unknown'}"
+        )
 
     class Meta:
         verbose_name = "транзакция"

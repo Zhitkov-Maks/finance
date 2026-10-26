@@ -191,6 +191,100 @@
     </div>
 
     <!-- ============================================================ -->
+    <!-- ГЕЙМИФИКАЦИЯ И ЦЕЛИ                                          -->
+    <!-- ============================================================ -->
+    <div v-if="gamification" class="gamification-grid">
+        <!-- 1. Цель месяца -->
+        <div class="card goal-card">
+            <div class="card-header">
+                <h3 class="card-title">🎯 Цель месяца</h3>
+                <button v-if="gamification.goal" @click="showGoalModal = true" class="btn-icon" title="Редактировать">
+                    <i class="fas fa-edit"></i>
+                </button>
+            </div>
+
+            <div v-if="gamification.goal && goalProgress" class="goal-content">
+                <div class="goal-amounts">
+                    <span class="goal-current" :class="goalProgress.is_negative ? 'text-danger' : ''">
+                        {{ formatCurrency(goalProgress.current) }}
+                    </span>
+                    <span class="goal-separator">из</span>
+                    <span class="goal-target">{{ formatCurrency(gamification.goal.amount) }}</span>
+                </div>
+
+                <div class="goal-subtitle" v-if="gamification.goal.goal_type === 'save'">
+                    прогноз экономии на конец месяца
+                </div>
+                <div class="goal-subtitle" v-else>
+                    потрачено из лимита
+                </div>
+
+                <div class="progress-bar" style="margin-top: 0.5rem;">
+                    <div
+                        class="progress-fill"
+                        :class="goalProgress.is_completed ? 'progress-success' : 'progress-warning'"
+                        :style="{ width: goalProgress.percent + '%' }"
+                    ></div>
+                </div>
+
+                <p class="goal-status" :class="goalProgress.is_negative ? 'text-danger' : ''">
+                    {{ goalProgress.status_text }}
+                </p>
+
+                <button @click="deleteGoal" class="btn btn-sm btn-outline-danger" style="margin-top: 10px;">
+                    Удалить цель
+                </button>
+            </div>
+
+            <div v-else class="goal-empty">
+                <p>У вас нет цели на этот месяц.</p>
+                <button @click="showGoalModal = true" class="btn btn-primary btn-sm">Установить цель</button>
+            </div>
+        </div>
+
+        <!-- 2. Уровень грамотности -->
+        <div class="card literacy-card">
+            <div class="card-header">
+                <h3 class="card-title">🏆 Уровень {{ gamification.level.score }} / 10</h3>
+                <button
+                    @click="showBreakdown = !showBreakdown"
+                    class="btn-icon"
+                    title="За что начислены баллы?"
+                >
+                    <i class="fas" :class="showBreakdown ? 'fa-chevron-up' : 'fa-info-circle'"></i>
+                </button>
+            </div>
+
+            <div class="literacy-content">
+                <div class="literacy-stars">
+                    <i v-for="i in 10" :key="i"
+                      class="fas fa-star"
+                      :class="{ active: i <= gamification.level.score }"></i>
+                </div>
+
+                <div class="literacy-hint" :class="gamification.level.raw_score < 0 ? 'hint-danger' : ''">
+                    <i class="fas fa-lightbulb"></i> {{ gamification.level.hint }}
+                </div>
+
+                <!-- Расшифровка баллов (показывается по клику) -->
+                <div v-if="showBreakdown" class="literacy-breakdown">
+                    <div
+                        v-for="item in gamification.level.breakdown"
+                        :key="item.action"
+                        class="breakdown-item"
+                        :class="item.type"
+                    >
+                        <span class="breakdown-action">{{ item.action }}</span>
+                        <span class="breakdown-points">
+                            {{ item.points > 0 ? '+' : '' }}{{ item.points }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
     <!-- ВИДЖЕТ БЮДЖЕТА МЕСЯЦА                                         -->
     <!-- ============================================================ -->
     <div
@@ -458,6 +552,14 @@
         </form>
       </div>
     </div>
+
+    <!-- Modal: Установка цели -->
+    <GoalModal
+        v-if="showGoalModal"
+        :existingGoal="gamification?.goal"
+        @close="showGoalModal = false"
+        @saved="onGoalSaved"
+    />
   </div>
 </template>
 
@@ -465,6 +567,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import apiService from '../services/api.js'
 import InsightsWidget from './InsightsWidget.vue'
+import GoalModal from './GoalModal.vue'
 
 // =============================================================================
 // Константы
@@ -510,7 +613,7 @@ const setupCanvas = (canvas, cssWidth, cssHeight) => {
 
 export default {
   name: 'Dashboard',
-  components: { InsightsWidget },
+  components: { InsightsWidget, GoalModal },
   setup() {
     // =========================================================================
     // Состояние — счета
@@ -520,12 +623,15 @@ export default {
     const expenseCategories = ref([])
     const loading = ref(false)
     const showAddTransaction = ref(false)
+    const showGoalModal = ref(false)
     const monthlyIncome = ref(0)
     const monthlyExpense = ref(0)
     const exchangeRates = ref([])
     const exchangeRatesLoading = ref(true)
     const exchangeRatesError = ref(false)
     const now = ref(new Date())
+    const gamification = ref(null)
+    const showBreakdown = ref(false)
     let ratesUpdateInterval = null
     let insightsRefreshInterval = null
 
@@ -635,6 +741,30 @@ export default {
         currentStatIndex.value--
       }
       touchDeltaX.value = 0
+    }
+
+    const loadGamification = async () => {
+      try {
+          gamification.value = await apiService.getGamificationDashboard()
+        } catch (e) {
+          console.error('Gamification load error', e)
+        }
+    }
+
+    const onGoalSaved = () => {
+      loadGamification()
+    }
+
+    const deleteGoal = async () => {
+      if (confirm('Вы уверены, что хотите удалить текущую цель?')) {
+        try {
+          await apiService.deleteGoal()
+          loadGamification()
+        } catch (e) {
+          console.error('Delete goal error', e)
+          alert('Не удалось удалить цель')
+        }
+      }
     }
 
     const onMouseDown = (e) => {
@@ -1235,6 +1365,48 @@ export default {
     })
 
     // =========================================================================
+    // Расчёт цели месяца
+    // =========================================================================
+    const goalProgress = computed(() => {
+      if (!gamification.value?.goal) return null
+
+      const g = gamification.value.goal
+      const amount = g.amount
+
+      if (g.goal_type === 'limit') {
+        const current = g.spent_on_backend || 0
+        const percent = amount > 0 ? Math.min(100, (current / amount) * 100) : 0
+        return {
+          current: current,
+          percent: percent,
+          is_completed: current <= amount,
+          status_text: current > amount
+            ? '⚠️ Лимит превышен!'
+            : `Потрачено ${percent.toFixed(1)}% от лимита`,
+          is_negative: false
+        }
+      }
+
+      // Для 'save' прогноз на конец месяца
+      const avgDailyExpense = daysPassed.value > 0 ? monthlyExpense.value / daysPassed.value : 0
+      const projectedExpense = avgDailyExpense * daysInMonth.value
+      const projectedSavings = monthlyIncome.value - projectedExpense
+
+      const percent = amount > 0 ? Math.min(100, Math.max(0, (projectedSavings / amount) * 100)) : 0
+      const isCompleted = projectedSavings >= amount
+
+      return {
+        current: projectedSavings,
+        percent: percent,
+        is_completed: isCompleted,
+        status_text: projectedSavings < 0
+          ? '⚠️ При текущем темпе трат вы уйдете в минус'
+          : (isCompleted ? '🎉 По прогнозу цель будет достигнута!' : `Выполнено на ${percent.toFixed(1)}%`),
+        is_negative: projectedSavings < 0
+      }
+    })
+
+    // =========================================================================
     // Сравнение
     // =========================================================================
     const incomeChange = computed(() => {
@@ -1409,6 +1581,7 @@ export default {
           comment: ''
         }
         await loadData()
+        await loadGamification()
 
         // Обновляем инсайты (могут появиться дубликаты/скачки)
         if (insightsWidgetRef.value?.loadInsights) {
@@ -1462,6 +1635,7 @@ export default {
       themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
 
       loadData()
+      loadGamification()
       fetchExchangeRates()
       ratesUpdateInterval = setInterval(fetchExchangeRates, 3600000)
 
@@ -1488,6 +1662,7 @@ export default {
       accounts,
       loading,
       showAddTransaction,
+      showGoalModal,
       newTransaction,
       totalBalance,
       activeAccounts,
@@ -1522,6 +1697,10 @@ export default {
       formatDate,
       formatShortDate,
       formatMonthYear,
+      gamification,
+      goalProgress,
+      onGoalSaved,
+      deleteGoal,
       // Карусель
       currentStatIndex,
       isMobileView,
@@ -1559,7 +1738,8 @@ export default {
       onHistoryMouseMove,
       onHistoryMouseLeave,
       // Инсайты
-      insightsWidgetRef
+      insightsWidgetRef,
+      showBreakdown
     }
   }
 }
@@ -1931,6 +2111,134 @@ export default {
 .forecast-status.status-neutral {
   background: rgba(255, 255, 255, 0.1);
   color: #fbbf24;
+}
+
+/* ============================================================
+   ГЕЙМИФИКАЦИЯ
+   ============================================================ */
+.gamification-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.goal-card, .literacy-card {
+    background: var(--white);
+}
+
+.goal-content {
+    padding: 0.5rem 0;
+}
+
+.goal-amounts {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.goal-current {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--dark-color);
+}
+
+.goal-target {
+    color: var(--gray-color);
+}
+
+.goal-subtitle {
+    font-size: 0.75rem;
+    color: var(--gray-color);
+    margin-bottom: 0.25rem;
+}
+
+.goal-status {
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--gray-color);
+}
+
+.goal-empty {
+    text-align: center;
+    padding: 1rem 0;
+    color: var(--gray-color);
+}
+
+.goal-empty p {
+    margin-bottom: 1rem;
+}
+
+.literacy-stars {
+    display: flex;
+    gap: 0.25rem;
+    font-size: 1.1rem;
+    color: #d1d5db; /* Серый для неактивных звезд */
+    margin-bottom: 1rem;
+}
+
+.literacy-stars .active {
+    color: #fbbf24; /* Золотой для активных */
+}
+
+.literacy-hint {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+    padding: 0.75rem;
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.literacy-hint.hint-danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger-color);
+}
+
+.literacy-breakdown {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    border-top: 1px dashed var(--light-color);
+    padding-top: 0.75rem;
+}
+
+.breakdown-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+}
+
+.breakdown-item.positive {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+}
+
+.breakdown-item.negative {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+}
+
+:global(:root[data-theme="dark"]) .breakdown-item.positive {
+    color: #6ee7b7;
+}
+:global(:root[data-theme="dark"]) .breakdown-item.negative {
+    color: #fca5a5;
+}
+
+.breakdown-action {
+    flex: 1;
+}
+
+.breakdown-points {
+    font-weight: 700;
 }
 
 /* Карточка сравнения */
@@ -2419,6 +2727,28 @@ export default {
   font-size: 0.875rem;
 }
 
+.btn-outline-danger {
+  background: transparent;
+  color: var(--danger-color);
+  border: 1px solid var(--danger-color);
+}
+.btn-outline-danger:hover {
+  background: var(--danger-color);
+  color: white;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  color: var(--gray-color);
+  cursor: pointer;
+  font-size: 1rem;
+  transition: color 0.2s;
+}
+.btn-icon:hover {
+  color: var(--primary-color);
+}
+
 /* ============================================================
    АДАПТИВНОСТЬ
    ============================================================ */
@@ -2429,6 +2759,9 @@ export default {
 }
 
 @media (max-width: 768px) {
+  .gamification-grid {
+        grid-template-columns: 1fr;
+    }
   .dashboard-title {
     text-align: center;
   }
@@ -2521,5 +2854,95 @@ export default {
     min-width: 150px;
     font-size: 0.7rem;
   }
+}
+
+/* ============================================================
+   HOVER-ЭФФЕКТЫ
+   ============================================================ */
+
+/* --- 1. Карточки статистики (desktop): подъём, увеличение, цветная тень --- */
+.stats-carousel:not(.is-mobile) .stat-card {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.28s ease;
+}
+.stats-carousel:not(.is-mobile) .stat-card:hover {
+  transform: translateY(-6px) scale(1.03);
+  z-index: 5;
+}
+.stats-carousel:not(.is-mobile) .stat-card:active {
+  transform: translateY(-3px) scale(1.01);
+  transition-duration: 0.1s;
+}
+.stats-carousel:not(.is-mobile) .stat-card-balance:hover {
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.15), 0 6px 12px rgba(0, 0, 0, 0.08);
+}
+.stats-carousel:not(.is-mobile) .stat-card-expense:hover {
+  box-shadow: 0 16px 32px rgba(239, 68, 68, 0.45), 0 6px 12px rgba(220, 38, 38, 0.3);
+}
+.stats-carousel:not(.is-mobile) .stat-card-income:hover {
+  box-shadow: 0 16px 32px rgba(59, 130, 246, 0.45), 0 6px 12px rgba(37, 99, 235, 0.3);
+}
+
+/* --- 1.1 Shimmer-блик (только для цветных карточек: расходы и доходы) --- */
+@keyframes shimmer-sweep {
+  from { transform: translateX(-100%) skewX(-12deg); }
+  to   { transform: translateX(100%) skewX(-12deg); }
+}
+
+.stats-carousel:not(.is-mobile) .stat-card-expense::after,
+.stats-carousel:not(.is-mobile) .stat-card-income::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 65%
+  );
+  transform: translateX(-100%) skewX(-12deg);
+  pointer-events: none;
+  border-radius: inherit;
+  will-change: transform;
+}
+
+.stats-carousel:not(.is-mobile) .stat-card-expense:hover::after,
+.stats-carousel:not(.is-mobile) .stat-card-income:hover::after {
+  animation: shimmer-sweep 0.85s ease-out;
+}
+
+/* --- 2. Виджет бюджета (кликабельный) — синяя тень при hover --- */
+.budget-widget:hover {
+  box-shadow: var(--shadow-lg), 0 6px 20px rgba(59, 130, 246, 0.15);
+}
+
+/* --- 3. Пункты сравнения — мягкий hover-фидбэк --- */
+.comparison-item {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.comparison-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* --- 4. Плашки прогноза — подсветка фона при hover --- */
+.forecast-item {
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+.forecast-item:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* --- 5. Легенда динамики баланса — акцентная рамка при hover --- */
+.history-legend-item:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  transform: translateY(-1px);
 }
 </style>
