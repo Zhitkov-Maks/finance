@@ -1852,7 +1852,8 @@ export default {
 
 .stats-carousel-track {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* minmax(0, 1fr) не даёт карточкам раздуваться шире контейнера */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1.5rem;
 }
 
@@ -1981,7 +1982,8 @@ export default {
    ============================================================ */
 .insights-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  /* minmax(0, 2fr) minmax(0, 1fr) — колонки могут сжиматься */
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: 1.5rem;
   margin-bottom: 2rem;
 }
@@ -2027,7 +2029,7 @@ export default {
 
 .forecast-details {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
@@ -2038,6 +2040,7 @@ export default {
   border-radius: 0.5rem;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .forecast-item-label {
@@ -2049,6 +2052,7 @@ export default {
 .forecast-item-value {
   font-size: 1.1rem;
   font-weight: 600;
+  word-break: break-word;
 }
 
 .forecast-item-value.text-success {
@@ -2118,13 +2122,15 @@ export default {
    ============================================================ */
 .gamification-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    /* minmax(0, 1fr) не даёт карточкам раздуваться шире контейнера */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1.5rem;
     margin-bottom: 1.5rem;
 }
 
 .goal-card, .literacy-card {
     background: var(--white);
+    min-width: 0;
 }
 
 .goal-content {
@@ -2136,6 +2142,8 @@ export default {
     align-items: baseline;
     gap: 0.5rem;
     margin-bottom: 0.75rem;
+    /* flex-wrap: wrap — суммы перенесутся, если не влезут в одну строку */
+    flex-wrap: wrap;
 }
 
 .goal-current {
@@ -2173,6 +2181,7 @@ export default {
 
 .literacy-stars {
     display: flex;
+    flex-wrap: wrap; /* звёзды перенесутся, если не влезут в один ряд */
     gap: 0.25rem;
     font-size: 1.1rem;
     color: #d1d5db; /* Серый для неактивных звезд */
@@ -2192,6 +2201,7 @@ export default {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    word-break: break-word; /* перенос длинных слов внутри подсказки */
 }
 
 .literacy-hint.hint-danger {
@@ -2260,6 +2270,8 @@ export default {
   border-radius: 0.5rem;
   background: var(--light-color);
   color: var(--dark-color);
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .comparison-item.highlight {
@@ -2278,6 +2290,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .comparison-current {
@@ -2331,6 +2344,7 @@ export default {
   align-items: baseline;
   gap: 0.5rem;
   margin-bottom: 0.75rem;
+  flex-wrap: wrap; /* суммы перенесутся, если не влезут */
 }
 
 .budget-widget-spent {
@@ -2373,6 +2387,8 @@ export default {
   font-size: 0.75rem;
   color: var(--gray-color);
   font-weight: 500;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 /* ============================================================
@@ -2756,12 +2772,13 @@ export default {
   .insights-grid {
     grid-template-columns: 1fr;
   }
+  /* Теперь геймификация складывается в колонку уже на планшетах */
+  .gamification-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {
-  .gamification-grid {
-        grid-template-columns: 1fr;
-    }
   .dashboard-title {
     text-align: center;
   }
