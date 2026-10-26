@@ -407,21 +407,29 @@
 
           <div v-if="modalTotalPages > 1" class="modal-pagination">
             <button
-              class="btn btn-secondary"
+              class="btn btn-secondary modal-page-btn"
               :disabled="modalCurrentPage === 1"
               @click="modalPrevPage"
+              aria-label="Предыдущая страница"
             >
-              <i class="fas fa-chevron-left"></i> Назад
+              <i class="fas fa-chevron-left"></i>
+              <span class="modal-page-label">Назад</span>
             </button>
             <span class="modal-pagination-info">
-              Страница {{ modalCurrentPage }} из {{ modalTotalPages }}
+              <span class="modal-page-info-full">Страница </span>
+              <strong>{{ modalCurrentPage }}</strong>
+              <span class="modal-page-info-full"> из </span>
+              <span class="modal-page-info-short"> / </span>
+              <span>{{ modalTotalPages }}</span>
             </span>
             <button
-              class="btn btn-secondary"
+              class="btn btn-secondary modal-page-btn"
               :disabled="modalCurrentPage === modalTotalPages"
               @click="modalNextPage"
+              aria-label="Следующая страница"
             >
-              Вперед <i class="fas fa-chevron-right"></i>
+              <span class="modal-page-label">Вперед</span>
+              <i class="fas fa-chevron-right"></i>
             </button>
           </div>
         </template>
@@ -1854,7 +1862,7 @@ export default {
   gap: 0.75rem;
   padding: 1rem 1.5rem;
   border-top: 1px solid var(--light-color);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   position: sticky;
   bottom: 0;
   background: var(--white);
@@ -1867,9 +1875,22 @@ export default {
   width: auto;
 }
 
+.modal-page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  white-space: nowrap;
+}
+
 .modal-pagination-info {
   font-size: 0.813rem;
   color: var(--gray-color);
+  text-align: center;
+}
+
+.modal-page-info-short {
+  display: none;
 }
 
 /* Состояния внутри модалки */
@@ -2173,11 +2194,21 @@ export default {
     padding: 0.625rem 1.25rem;
   }
 
+  /* ===== Транзакция: фикс «плывущего» комментария ===== */
   .modal-transaction-item {
     padding: 0.625rem 1.25rem;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 0.375rem;
+  }
+
+  .modal-transaction-left {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .modal-transaction-meta {
+    max-width: 100%;
   }
 
   .modal-transaction-amount {
@@ -2185,12 +2216,32 @@ export default {
     font-size: 0.938rem;
   }
 
+  /* ===== Пагинация: компактный вид ===== */
   .modal-pagination {
     padding: 0.75rem 1rem;
+    gap: 0.5rem;
+  }
+
+  .modal-pagination .modal-page-btn {
+    min-width: 40px;
+    padding: 0.5rem 0.625rem;
+  }
+
+  .modal-page-label {
+    display: none;
   }
 
   .modal-pagination-info {
-    font-size: 0.75rem;
+    flex: 1;
+    font-size: 0.813rem;
+  }
+
+  .modal-page-info-full {
+    display: none;
+  }
+
+  .modal-page-info-short {
+    display: inline;
   }
 }
 </style>
