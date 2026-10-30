@@ -79,14 +79,6 @@
         <div v-else-if="day.isCurrentMonth && day.hasShift && day.earned && day.earned > 0" class="day-earned">
           {{ formatNumberShort(day.earned) }} ₽
         </div>
-        <div v-else-if="day.isCurrentMonth && day.isVacation" class="day-status vacation-status">
-          <i class="fas fa-umbrella-beach"></i>
-          <span>О</span>
-        </div>
-        <div v-else-if="day.isCurrentMonth && day.isSick" class="day-status sick-status">
-          <i class="fas fa-thermometer-half"></i>
-          <span>Б</span>
-        </div>
         <div v-else-if="day.isCurrentMonth && !day.hasShift && !day.isVacation && !day.isSick" class="day-empty">
           <i class="fas fa-plus-circle"></i>
         </div>
@@ -116,24 +108,33 @@
               <span class="stat-label">Доплата за холод:</span>
               <span class="stat-number">{{ formatNumber(monthlyStats.period_one.total_earned_cold) }} ₽</span>
             </div>
-            <div v-if="monthlyStats.period_one.total_award" class="stat-line award-line">
-              <span class="stat-label">🏆 Мотивация:</span>
-              <span class="stat-number award">{{ formatNumber(monthlyStats.period_one.total_award) }} ₽</span>
+
+            <!-- Блок мотивации (сумма 4 типов) -->
+            <div v-if="getMotivationTotal(monthlyStats.period_one) > 0" class="stat-line award-line">
+              <span class="stat-label">🏆 Мотивация (всего):</span>
+              <span class="stat-number award">{{ formatNumber(getMotivationTotal(monthlyStats.period_one)) }} ₽</span>
             </div>
-            <div v-if="monthlyStats.period_one.total_operations" class="stat-line">
+            <div v-if="monthlyStats.period_one.total_earned_collect" class="stat-line sub-line">
+              <span class="stat-label">— Набор:</span>
+              <span class="stat-number">{{ formatNumber(monthlyStats.period_one.total_earned_collect) }} ₽ ({{ monthlyStats.period_one.total_operations_collect || 0 }} оп)</span>
+            </div>
+            <div v-if="monthlyStats.period_one.total_earned_replenishment" class="stat-line sub-line">
+              <span class="stat-label">— Пополнение:</span>
+              <span class="stat-number">{{ formatNumber(monthlyStats.period_one.total_earned_replenishment) }} ₽ ({{ monthlyStats.period_one.total_operations_replenishment || 0 }} оп)</span>
+            </div>
+            <div v-if="monthlyStats.period_one.total_earned_placement" class="stat-line sub-line">
+              <span class="stat-label">— Размещение:</span>
+              <span class="stat-number">{{ formatNumber(monthlyStats.period_one.total_earned_placement) }} ₽ ({{ monthlyStats.period_one.total_operations_placement || 0 }} оп)</span>
+            </div>
+            <div v-if="monthlyStats.period_one.total_earned_for_non_production" class="stat-line sub-line">
+              <span class="stat-label">— Непроизводственные:</span>
+              <span class="stat-number">{{ formatNumber(monthlyStats.period_one.total_earned_for_non_production) }} ₽ ({{ formatNumber(monthlyStats.period_one.total_hours_for_non_production) }} ч)</span>
+            </div>
+
+            <div v-if="getOperationsTotal(monthlyStats.period_one)" class="stat-line">
               <span class="stat-label">Кол-во операций:</span>
-              <span class="stat-number">{{ monthlyStats.period_one.total_operations }}</span>
+              <span class="stat-number">{{ getOperationsTotal(monthlyStats.period_one) }}</span>
             </div>
-
-            <div v-if="monthlyStats.period_one.total_hours_for_non_production" class="stat-line">
-              <span class="stat-label">Непроиз-х часов::</span>
-              <span class="stat-number">{{ formatNumber(monthlyStats.period_one.total_hours_for_non_production) }} ₽</span>
-            </div>
-            <div v-if="monthlyStats.period_one.total_earned_for_non_production" class="stat-line">
-              <span class="stat-label">Доплата за непроиз-е работы:</span>
-              <span class="stat-number">{{ formatNumber(monthlyStats.period_one.total_earned_for_non_production) }} ₽</span>
-            </div>
-
             <div v-if="monthlyStats.period_one.total_overtime" class="stat-line">
               <span class="stat-label">Доплата за переработку:</span>
               <span class="stat-number overtime">{{ formatNumber(monthlyStats.period_one.total_overtime) }} ₽</span>
@@ -142,11 +143,10 @@
               <span class="stat-label">Часов переработки:</span>
               <span class="stat-number">{{ monthlyStats.period_one.total_hours_overtime }} ч</span>
             </div>
-            <div v-if="monthlyStats.period_one.total_operations && monthlyStats.period_one.total_base_hours" class="stat-line productivity-line">
+            <div v-if="getOperationsTotal(monthlyStats.period_one) && monthlyStats.period_one.total_base_hours" class="stat-line productivity-line">
               <span class="stat-label">⚡ Производительность:</span>
-              <span class="stat-number productivity">{{ getProductivity(monthlyStats.period_one.total_operations, monthlyStats.period_one.total_base_hours) }} оп/ч</span>
+              <span class="stat-number productivity">{{ getProductivity(getOperationsTotal(monthlyStats.period_one), monthlyStats.period_one.total_base_hours) }} оп/ч</span>
             </div>
-            <!-- Лучший день периода 1 -->
             <div v-if="periodOneBestDay" class="best-day-period">
               <div class="best-day-header">🏆 Лучший день периода</div>
               <div class="best-day-content">
@@ -155,7 +155,6 @@
                 <span class="best-day-productivity">{{ periodOneBestDay.productivity.toFixed(2) }} оп/ч</span>
               </div>
             </div>
-
             <div class="currency-block" v-if="hasCurrencyData(monthlyStats.period_one)">
               <div class="currency-header" @click="toggleCurrency('period1')">
                 <i class="fas" :class="openCurrency.period1 ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
@@ -191,24 +190,32 @@
               <span class="stat-label">Доплата за холод:</span>
               <span class="stat-number">{{ formatNumber(monthlyStats.period_two.total_earned_cold) }} ₽</span>
             </div>
-            <div v-if="monthlyStats.period_two.total_award" class="stat-line award-line">
-              <span class="stat-label">🏆 Мотивация:</span>
-              <span class="stat-number award">{{ formatNumber(monthlyStats.period_two.total_award) }} ₽</span>
+
+            <div v-if="getMotivationTotal(monthlyStats.period_two) > 0" class="stat-line award-line">
+              <span class="stat-label">🏆 Мотивация (всего):</span>
+              <span class="stat-number award">{{ formatNumber(getMotivationTotal(monthlyStats.period_two)) }} ₽</span>
             </div>
-            <div v-if="monthlyStats.period_two.total_operations" class="stat-line">
+            <div v-if="monthlyStats.period_two.total_earned_collect" class="stat-line sub-line">
+              <span class="stat-label">— Набор:</span>
+              <span class="stat-number">{{ formatNumber(monthlyStats.period_two.total_earned_collect) }} ₽ ({{ monthlyStats.period_two.total_operations_collect || 0 }} оп)</span>
+            </div>
+            <div v-if="monthlyStats.period_two.total_earned_replenishment" class="stat-line sub-line">
+              <span class="stat-label">— Пополнение:</span>
+              <span class="stat-number">{{ formatNumber(monthlyStats.period_two.total_earned_replenishment) }} ₽ ({{ monthlyStats.period_two.total_operations_replenishment || 0 }} оп)</span>
+            </div>
+            <div v-if="monthlyStats.period_two.total_earned_placement" class="stat-line sub-line">
+              <span class="stat-label">— Размещение:</span>
+              <span class="stat-number">{{ formatNumber(monthlyStats.period_two.total_earned_placement) }} ₽ ({{ monthlyStats.period_two.total_operations_placement || 0 }} оп)</span>
+            </div>
+            <div v-if="monthlyStats.period_two.total_earned_for_non_production" class="stat-line sub-line">
+              <span class="stat-label">— Непроизводственные:</span>
+              <span class="stat-number">{{ formatNumber(monthlyStats.period_two.total_earned_for_non_production) }} ₽ ({{ formatNumber(monthlyStats.period_two.total_hours_for_non_production) }} ч)</span>
+            </div>
+
+            <div v-if="getOperationsTotal(monthlyStats.period_two)" class="stat-line">
               <span class="stat-label">Кол-во операций:</span>
-              <span class="stat-number">{{ monthlyStats.period_two.total_operations }}</span>
+              <span class="stat-number">{{ getOperationsTotal(monthlyStats.period_two) }}</span>
             </div>
-
-            <div v-if="monthlyStats.period_two.total_hours_for_non_production" class="stat-line">
-              <span class="stat-label">Непроиз-х часов::</span>
-              <span class="stat-number">{{ formatNumber(monthlyStats.period_two.total_hours_for_non_production) }} ₽</span>
-            </div>
-            <div v-if="monthlyStats.period_two.total_earned_for_non_production" class="stat-line">
-              <span class="stat-label">Доплата за непроиз-е работы:</span>
-              <span class="stat-number">{{ formatNumber(monthlyStats.period_two.total_earned_for_non_production) }} ₽</span>
-            </div>
-
             <div v-if="monthlyStats.period_two.total_overtime" class="stat-line">
               <span class="stat-label">Доплата за переработку:</span>
               <span class="stat-number overtime">{{ formatNumber(monthlyStats.period_two.total_overtime) }} ₽</span>
@@ -217,11 +224,10 @@
               <span class="stat-label">Часов переработки:</span>
               <span class="stat-number">{{ monthlyStats.period_two.total_hours_overtime }} ч</span>
             </div>
-            <div v-if="monthlyStats.period_two.total_operations && monthlyStats.period_two.total_base_hours" class="stat-line productivity-line">
+            <div v-if="getOperationsTotal(monthlyStats.period_two) && monthlyStats.period_two.total_base_hours" class="stat-line productivity-line">
               <span class="stat-label">⚡ Производительность:</span>
-              <span class="stat-number productivity">{{ getProductivity(monthlyStats.period_two.total_operations, monthlyStats.period_two.total_base_hours) }} оп/ч</span>
+              <span class="stat-number productivity">{{ getProductivity(getOperationsTotal(monthlyStats.period_two), monthlyStats.period_two.total_base_hours) }} оп/ч</span>
             </div>
-            <!-- Лучший день периода 2 -->
             <div v-if="periodTwoBestDay" class="best-day-period">
               <div class="best-day-header">🏆 Лучший день периода</div>
               <div class="best-day-content">
@@ -230,7 +236,6 @@
                 <span class="best-day-productivity">{{ periodTwoBestDay.productivity.toFixed(2) }} оп/ч</span>
               </div>
             </div>
-
             <div class="currency-block" v-if="hasCurrencyData(monthlyStats.period_two)">
               <div class="currency-header" @click="toggleCurrency('period2')">
                 <i class="fas" :class="openCurrency.period2 ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
@@ -266,24 +271,32 @@
               <span class="stat-label">Доплата за холод:</span>
               <span class="stat-number">{{ formatNumber(monthlyStats.total.total_earned_cold) }} ₽</span>
             </div>
-            <div v-if="monthlyStats.total?.total_award" class="stat-line award-line">
-              <span class="stat-label">🏆 Мотивация:</span>
-              <span class="stat-number award">{{ formatNumber(monthlyStats.total.total_award) }} ₽</span>
+
+            <div v-if="getMotivationTotal(monthlyStats.total) > 0" class="stat-line award-line">
+              <span class="stat-label">🏆 Мотивация (всего):</span>
+              <span class="stat-number award">{{ formatNumber(getMotivationTotal(monthlyStats.total)) }} ₽</span>
             </div>
-            <div v-if="monthlyStats.total?.total_operations" class="stat-line">
+            <div v-if="monthlyStats.total?.total_earned_collect" class="stat-line sub-line">
+              <span class="stat-label">— Набор:</span>
+              <span class="stat-number">{{ formatNumber(monthlyStats.total.total_earned_collect) }} ₽ ({{ monthlyStats.total.total_operations_collect || 0 }} оп)</span>
+            </div>
+            <div v-if="monthlyStats.total?.total_earned_replenishment" class="stat-line sub-line">
+              <span class="stat-label">— Пополнение:</span>
+              <span class="stat-number">{{ formatNumber(monthlyStats.total.total_earned_replenishment) }} ₽ ({{ monthlyStats.total.total_operations_replenishment || 0 }} оп)</span>
+            </div>
+            <div v-if="monthlyStats.total?.total_earned_placement" class="stat-line sub-line">
+              <span class="stat-label">— Размещение:</span>
+              <span class="stat-number">{{ formatNumber(monthlyStats.total.total_earned_placement) }} ₽ ({{ monthlyStats.total.total_operations_placement || 0 }} оп)</span>
+            </div>
+            <div v-if="monthlyStats.total?.total_earned_for_non_production" class="stat-line sub-line">
+              <span class="stat-label">— Непроизводственные:</span>
+              <span class="stat-number">{{ formatNumber(monthlyStats.total.total_earned_for_non_production) }} ₽ ({{ formatNumber(monthlyStats.total.total_hours_for_non_production) }} ч)</span>
+            </div>
+
+            <div v-if="getOperationsTotal(monthlyStats.total)" class="stat-line">
               <span class="stat-label">Кол-во операций:</span>
-              <span class="stat-number">{{ monthlyStats.total.total_operations }}</span>
+              <span class="stat-number">{{ getOperationsTotal(monthlyStats.total) }}</span>
             </div>
-
-            <div v-if="monthlyStats.total?.total_hours_for_non_production" class="stat-line">
-              <span class="stat-label">Непроиз-х часов::</span>
-              <span class="stat-number">{{ formatNumber(monthlyStats.total?.total_hours_for_non_production) }} ₽</span>
-            </div>
-            <div v-if="monthlyStats.total?.total_earned_for_non_production" class="stat-line">
-              <span class="stat-label">Доплата за непроиз-е работы:</span>
-              <span class="stat-number">{{ formatNumber(monthlyStats.total?.total_earned_for_non_production) }} ₽</span>
-            </div>
-
             <div v-if="monthlyStats.total?.total_overtime" class="stat-line">
               <span class="stat-label">Доплата за переработку:</span>
               <span class="stat-number overtime">{{ formatNumber(monthlyStats.total.total_overtime) }} ₽</span>
@@ -292,40 +305,30 @@
               <span class="stat-label">Часов переработки:</span>
               <span class="stat-number">{{ monthlyStats.total.total_hours_overtime }} ч</span>
             </div>
-            <div v-if="monthlyStats.total?.total_operations && monthlyStats.total?.total_base_hours" class="stat-line productivity-line">
+            <div v-if="getOperationsTotal(monthlyStats.total) && monthlyStats.total?.total_base_hours" class="stat-line productivity-line">
               <span class="stat-label">⚡ Производительность:</span>
-              <span class="stat-number productivity">{{ getProductivity(monthlyStats.total.total_operations, monthlyStats.total.total_base_hours) }} оп/ч</span>
+              <span class="stat-number productivity">{{ getProductivity(getOperationsTotal(monthlyStats.total), monthlyStats.total.total_base_hours) }} оп/ч</span>
             </div>
-
             <div v-if="monthlyStats.total?.total_earned_hours && monthlyStats.total?.total_earned" class="stat-line hours-percent-line">
               <span class="stat-label">⏳ Доля оплаты за часы:</span>
               <span class="stat-number">{{ getHoursPercent(monthlyStats.total.total_earned_hours, monthlyStats.total.total_earned) }}%</span>
             </div>
-
             <div v-if="monthlyStats.total?.total_earned_cold && monthlyStats.total?.total_earned" class="stat-line cold-percent-line">
               <span class="stat-label">❄️ Доля доплаты за холод:</span>
               <span class="stat-number">{{ getColdPercent(monthlyStats.total.total_earned_cold, monthlyStats.total.total_earned) }}%</span>
             </div>
-
-
-            <div v-if="monthlyStats.total?.total_award && monthlyStats.total?.total_earned" class="stat-line award-percent-line">
+            <div v-if="getMotivationTotal(monthlyStats.total) > 0 && monthlyStats.total?.total_earned" class="stat-line award-percent-line">
               <span class="stat-label">🏆 Доля мотивации:</span>
-              <span class="stat-number">{{ getAwardPercent(monthlyStats.total.total_award, monthlyStats.total.total_earned) }}%</span>
+              <span class="stat-number">{{ getAwardPercent(getMotivationTotal(monthlyStats.total), monthlyStats.total.total_earned) }}%</span>
             </div>
-
-
             <div v-if="monthlyStats.total?.total_earned_for_non_production && monthlyStats.total?.total_earned" class="stat-line non-productive-percent-line">
               <span class="stat-label">🪏 Доля непроиз-х работ:</span>
               <span class="stat-number">{{ getNonProductivePercent(monthlyStats.total.total_earned_for_non_production, monthlyStats.total.total_earned) }}%</span>
             </div>
-
-
             <div v-if="monthlyStats.total?.total_overtime && monthlyStats.total?.total_earned" class="stat-line overtime-percent-line">
               <span class="stat-label">⏱️ Доля доплаты за переработку:</span>
               <span class="stat-number overtime">{{ getOvertimePercent(monthlyStats.total.total_overtime, monthlyStats.total.total_earned) }}%</span>
             </div>
-
-            <!-- Динамика производительности между периодами -->
             <div v-if="periodOneProductivity !== null && periodTwoProductivity !== null" class="dynamics-line">
               <div class="dynamics-header">📈 Динамика производительности</div>
               <div class="dynamics-content">
@@ -337,8 +340,6 @@
                 </span>
               </div>
             </div>
-
-            <!-- Лучший день месяца -->
             <div v-if="monthBestDay" class="best-day-month">
               <div class="best-day-header">🏆 Лучший день месяца</div>
               <div class="best-day-content">
@@ -347,7 +348,6 @@
                 <span class="best-day-productivity">{{ monthBestDay.productivity.toFixed(2) }} оп/ч</span>
               </div>
             </div>
-
             <div class="currency-block" v-if="hasCurrencyData(monthlyStats.total)">
               <div class="currency-header" @click="toggleCurrency('total')">
                 <i class="fas" :class="openCurrency.total ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
@@ -433,9 +433,9 @@
               <i class="fas fa-times"></i>
               <span>Очистить</span>
             </button>
-            <button class="btn-primary" @click="saveManyShifts" :disabled="!manyShiftsData.hours || manyShiftsData.selectedDates.length === 0">
-              <i class="fas fa-save"></i>
-              <span>Save ({{ manyShiftsData.selectedDates.length }})</span>
+            <button class="btn-primary" @click="saveManyShifts" :disabled="isSavingMany || !manyShiftsData.hours || manyShiftsData.selectedDates.length === 0">
+              <i :class="isSavingMany ? 'fas fa-spinner fa-spin' : 'fas fa-save'"></i>
+              <span>{{ isSavingMany ? 'Сохранение...' : 'Save (' + manyShiftsData.selectedDates.length + ')' }}</span>
             </button>
             <button class="btn-secondary" @click="closeAddManyModal">
               <i class="fas fa-times"></i>
@@ -446,7 +446,7 @@
       </div>
     </div>
 
-    <!-- Модальное окно смены -->
+    <!-- Модальное окно смены (детально по дню) -->
     <div v-if="showShiftModal" class="modal" @click.self="closeShiftModal">
       <div class="modal-content">
         <div class="modal-header">
@@ -466,10 +466,6 @@
               <span class="stat-label">Статус:</span>
               <span class="stat-number">{{ selectedDay.isVacation ? '📅 Отдых' : '🏥 Больничный' }}</span>
             </div>
-            <div class="stat-line">
-              <span class="stat-label">Заработано:</span>
-              <span class="stat-number">{{ selectedDay.isVacation ? 'Отдых' : 'Больничный' }}</span>
-            </div>
             <div class="shift-actions">
               <button class="btn-danger" @click="deleteVacationOrSick" style="width: 100%;">
                 <i class="fas fa-trash"></i>
@@ -477,44 +473,93 @@
               </button>
             </div>
           </div>
+
           <div v-else-if="shiftDetails" class="shift-details">
-            <div class="stat-line">
-              <span class="stat-label">Отработано:</span>
-              <span class="stat-number">{{ shiftDetails.base_hours }} ч</span>
+            <!-- ИТОГО ЗА ДЕНЬ (крупно вверху) -->
+            <div class="day-total-block">
+              <div class="day-total-info">
+                <span class="day-total-label">💰 Всего за день</span>
+                <span class="day-total-hours">{{ shiftDetails.base_hours }} ч</span>
+              </div>
+              <span class="day-total-value">{{ formatNumber(shiftDetails.earned) }} ₽</span>
             </div>
-            <div class="stat-line">
-              <span class="stat-label">Заработано за часы:</span>
-              <span class="stat-number">{{ formatNumber(shiftDetails.earned_hours) }} ₽</span>
+
+            <!-- РАЗБИВКА: ЧТО К ЧЕМУ -->
+            <div class="day-breakdown-header">📋 Из чего складывается:</div>
+
+            <div v-if="shiftDetails.earned_hours" class="stat-line hours-percent-line">
+              <span class="stat-label">⏳ За отработанные часы:</span>
+              <span class="stat-number">
+                {{ formatNumber(shiftDetails.earned_hours) }} ₽
+                <span class="percent-badge">{{ getHoursPercent(shiftDetails.earned_hours, shiftDetails.earned) }}%</span>
+              </span>
             </div>
-            <div class="stat-line">
-              <span class="stat-label">Доплата за холод:</span>
-              <span class="stat-number">{{ formatNumber(shiftDetails.earned_cold) }} ₽</span>
+
+            <div v-if="shiftDetails.earned_cold" class="stat-line cold-percent-line">
+              <span class="stat-label">❄️ Доплата за холод:</span>
+              <span class="stat-number">
+                {{ formatNumber(shiftDetails.earned_cold) }} ₽
+                <span class="percent-badge">{{ getColdPercent(shiftDetails.earned_cold, shiftDetails.earned) }}%</span>
+              </span>
             </div>
-            <div v-if="shiftDetails.earned_overtime" class="stat-line">
-              <span class="stat-label">Переработка:</span>
-              <span class="stat-number overtime">{{ formatNumber(shiftDetails.earned_overtime) }} ₽</span>
+
+            <div v-if="shiftDetails.earned_overtime" class="stat-line overtime-percent-line">
+              <span class="stat-label">⏱️ Доплата за переработку:</span>
+              <span class="stat-number overtime">
+                {{ formatNumber(shiftDetails.earned_overtime) }} ₽
+                <span class="percent-badge">{{ getOvertimePercent(shiftDetails.earned_overtime, shiftDetails.earned) }}%</span>
+              </span>
             </div>
-            <div v-if="shiftDetails.award_amount" class="stat-line award-line">
-              <span class="stat-label">🏆 Мотивация:</span>
-              <span class="stat-number award">{{ formatNumber(shiftDetails.award_amount) }} ₽</span>
+
+            <!-- Блок мотивации (сумма 4 типов) -->
+            <div v-if="getMotivationTotal(shiftDetails) > 0" class="day-motivation-block">
+              <div class="day-motivation-header">
+                <span class="day-motivation-title">🏆 Мотивация / доп. работы</span>
+                <span class="day-motivation-total">
+                  {{ formatNumber(getMotivationTotal(shiftDetails)) }} ₽
+                  <span class="percent-badge">{{ getAwardPercent(getMotivationTotal(shiftDetails), shiftDetails.earned) }}%</span>
+                </span>
+              </div>
+              <div v-if="shiftDetails.motivation_collect" class="stat-line sub-line">
+                <span class="stat-label">— Набор:</span>
+                <span class="stat-number">{{ formatNumber(shiftDetails.motivation_collect) }} ₽ ({{ shiftDetails.count_operations_collect || 0 }} оп)</span>
+              </div>
+              <div v-if="shiftDetails.motivation_replenishment" class="stat-line sub-line">
+                <span class="stat-label">— Пополнение:</span>
+                <span class="stat-number">{{ formatNumber(shiftDetails.motivation_replenishment) }} ₽ ({{ shiftDetails.count_operations_replenishment || 0 }} оп)</span>
+              </div>
+              <div v-if="shiftDetails.motivation_placement" class="stat-line sub-line">
+                <span class="stat-label">— Размещение:</span>
+                <span class="stat-number">{{ formatNumber(shiftDetails.motivation_placement) }} ₽ ({{ shiftDetails.count_operations_placement || 0 }} оп)</span>
+              </div>
+              <div v-if="shiftDetails.earned_for_non_productive_work" class="stat-line sub-line">
+                <span class="stat-label">— Непроизводственные:</span>
+                <span class="stat-number">{{ formatNumber(shiftDetails.earned_for_non_productive_work) }} ₽ ({{ formatNumber(shiftDetails.hours_non_productive) }} ч)</span>
+              </div>
             </div>
-            <div v-if="shiftDetails.hours_non_productive" class="stat-line award-line">
-              <span class="stat-label">Непроизв-х часов:</span>
-              <span class="stat-number">{{ formatNumber(shiftDetails.hours_non_productive) }} ₽</span>
+
+            <!-- Производительность дня -->
+            <div v-if="getOperationsTotal(shiftDetails) && shiftDetails.base_hours" class="day-productivity-block">
+              <div class="day-prod-line">
+                <span class="stat-label">⚡ Операций / производительность:</span>
+                <span class="stat-number productivity">
+                  {{ getOperationsTotal(shiftDetails) }} оп / {{ getProductivity(getOperationsTotal(shiftDetails), shiftDetails.base_hours) }} оп/ч
+                </span>
+              </div>
+              <div v-if="shiftDetails.hours_non_productive" class="day-prod-line">
+                <span class="stat-label">🪏 Непроизводственных часов:</span>
+                <span class="stat-number">{{ formatNumber(shiftDetails.hours_non_productive) }} ч</span>
+              </div>
             </div>
-            <div v-if="shiftDetails.earned_for_non_productive_work" class="stat-line award-line">
-              <span class="stat-label">Доп. за непроизв. работы:</span>
-              <span class="stat-number">{{ formatNumber(shiftDetails.earned_for_non_productive_work) }} ₽</span>
+            <div v-else-if="shiftDetails.hours_non_productive" class="day-productivity-block">
+              <div class="day-prod-line">
+                <span class="stat-label">🪏 Непроизводственных часов:</span>
+                <span class="stat-number">{{ formatNumber(shiftDetails.hours_non_productive) }} ч</span>
+              </div>
             </div>
-            <div v-if="shiftDetails.count_operations" class="stat-line">
-              <span class="stat-label">Кол-во операций:</span>
-              <span class="stat-number">{{ shiftDetails.count_operations }}</span>
-            </div>
-            <div class="stat-line total-line">
-              <span class="stat-label">💰 Всего:</span>
-              <span class="stat-number total">{{ formatNumber(shiftDetails.earned) }} ₽</span>
-            </div>
-            <div class="currency-block">
+
+            <!-- Валютная часть -->
+            <div class="currency-block" v-if="hasShiftCurrencyData(shiftDetails)">
               <div class="currency-header" @click="toggleShiftCurrency">
                 <i class="fas" :class="showShiftCurrency ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
                 <span>💱 В валюте:</span>
@@ -527,38 +572,24 @@
               </div>
             </div>
           </div>
+
           <div class="shift-actions" v-if="!selectedDay?.isVacation && !selectedDay?.isSick">
             <div class="form-group">
               <label class="form-label">Количество часов</label>
               <input type="number" v-model.number="editHours" class="form-control" min="0" step="0.5" />
             </div>
-            <div v-if="selectedDay?.hasShift" class="award-section">
-              <div class="award-divider"></div>
-              <!-- Поля ввода под каждой кнопкой -->
-              <div class="award-inputs-row">
-                <div class="form-group">
-                  <input type="number" v-model.number="operationsCount" class="form-control" min="0" placeholder="Кол-во операций" />
-                </div>
-                <div class="form-group">
-                  <input type="number" v-model.number="hoursCount" class="form-control" min="0" max="24" placeholder="Непроиз. часов" />
-                </div>
-              </div>
-                <!-- Ряд с двумя кнопками -->
-                <div class="award-buttons-row">
-                  <button class="btn-award" @click="addAward" :disabled="!operationsCount">
-                    Save
-                  </button>
-                  <button class="btn-award" @click="addHours" :disabled="!hoursCount">
-                    Save
-                  </button>
-                </div>
+
+            <div v-if="selectedDay?.hasShift" class="motivation-section">
+              <button class="btn-motivation" @click="openMotivationModal">
+                <i class="fas fa-star"></i> Добавить мотивацию / работы
+              </button>
             </div>
           </div>
         </div>
         <div class="modal-footer" v-if="!selectedDay?.isVacation && !selectedDay?.isSick">
           <div class="footer-buttons-grid three-buttons">
-            <button class="btn-primary" @click="saveShift">
-              <i class="fas fa-save"></i>
+            <button class="btn-primary" @click="saveShift" :disabled="isSavingShift">
+              <i :class="isSavingShift ? 'fas fa-spinner fa-spin' : 'fas fa-save'"></i>
             </button>
             <button v-if="selectedDay?.hasShift" class="btn-danger" @click="deleteShift">
               <i class="fas fa-trash"></i>
@@ -573,6 +604,52 @@
             <button class="btn-secondary" @click="closeShiftModal">
               <i class="fas fa-times"></i>
               <span>Закрыть</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модальное окно ДОБАВЛЕНИЯ МОТИВАЦИИ -->
+    <div v-if="showMotivationModal" class="modal" @click.self="closeMotivationModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>
+            <i class="fas fa-star"></i>
+            Добавить
+          </h3>
+          <button class="modal-close" @click="closeMotivationModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label required">Тип</label>
+            <select v-model="motivationData.type_operations" class="form-control">
+              <option value="placement">Размещение</option>
+              <option value="collect">Набор</option>
+              <option value="replenishment">Пополнение</option>
+              <option value="non_productive">Непроизводственные работы</option>
+            </select>
+          </div>
+
+          <div class="form-group" v-if="motivationData.type_operations !== 'non_productive'">
+            <label class="form-label required">Кол-во операций</label>
+            <input type="number" v-model.number="motivationData.count_operations" class="form-control" min="0" placeholder="Введите количество" />
+          </div>
+
+          <div class="form-group" v-else>
+            <label class="form-label required">Кол-во часов</label>
+            <input type="number" v-model.number="motivationData.hours" class="form-control" min="0" step="0.5" placeholder="Введите часы" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="footer-buttons-grid three-buttons">
+            <button class="btn-primary" @click="saveMotivation" :disabled="isSavingMotivation || isSaveMotivationDisabled">
+              <i :class="isSavingMotivation ? 'fas fa-spinner fa-spin' : 'fas fa-save'"></i>
+              <span>{{ isSavingMotivation ? 'Сохранение...' : 'Сохранить' }}</span>
+            </button>
+            <button class="btn-secondary" @click="closeMotivationModal">
+              <i class="fas fa-times"></i>
+              <span>Отмена</span>
             </button>
           </div>
         </div>
@@ -602,10 +679,24 @@
             <label class="form-label">Доплата за холод</label>
             <input type="number" v-model.number="settings.price_cold" class="form-control" step="0.1" />
           </div>
+
+          <div class="settings-divider">Мотивация (за операцию)</div>
+
           <div class="form-group">
-            <label class="form-label">Стоимость операции</label>
-            <input type="number" v-model.number="settings.price_award" class="form-control" step="0.1" />
+            <label class="form-label">Стоимость набора</label>
+            <input type="number" v-model.number="settings.price_collect" class="form-control" step="0.1" />
           </div>
+          <div class="form-group">
+            <label class="form-label">Стоимость пополнения</label>
+            <input type="number" v-model.number="settings.price_replenishment" class="form-control" step="0.1" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Стоимость размещения</label>
+            <input type="number" v-model.number="settings.price_placement" class="form-control" step="0.1" />
+          </div>
+
+          <div class="settings-divider">Прочее</div>
+
           <div class="form-group">
             <label class="form-label">Час непроизводственных работ.</label>
             <input type="number" v-model.number="settings.price_non_productive_work" class="form-control" step="0.1" />
@@ -613,11 +704,11 @@
         </div>
         <div class="modal-footer">
           <div class="footer-buttons-grid three-buttons">
-            <button class="btn-danger" @click="deleteSettings" v-if="hasSettings">
+            <button class="btn-danger" @click="deleteSettings" v-if="hasSettings" :disabled="isSavingSettings">
               <i class="fas fa-trash"></i>
             </button>
-            <button class="btn-primary" @click="saveSettings">
-              <i class="fas fa-save"></i>
+            <button class="btn-primary" @click="saveSettings" :disabled="isSavingSettings">
+              <i :class="isSavingSettings ? 'fas fa-spinner fa-spin' : 'fas fa-save'"></i>
             </button>
             <button class="btn-secondary" @click="closeSettingsModal">
               <i class="fas fa-times"></i>
@@ -671,6 +762,26 @@
                 <div class="stat-value-large">{{ formatNumber(yearStats.total_earned) }} ₽</div>
               </div>
             </div>
+
+            <div v-if="getYearMotivationTotal(yearStats) > 0" class="year-motivation-block">
+              <div class="year-motivation-header">
+                🏆 Мотивация (всего): {{ formatNumber(getYearMotivationTotal(yearStats)) }} ₽
+                <span class="percent-badge">{{ getAwardPercent(getYearMotivationTotal(yearStats), yearStats.total_earned) }}%</span>
+              </div>
+              <div v-if="yearStats.total_earned_collect" class="stat-line sub-line">
+                <span class="stat-label">— Набор:</span>
+                <span class="stat-number">{{ formatNumber(yearStats.total_earned_collect) }} ₽</span>
+              </div>
+              <div v-if="yearStats.total_earned_replenishment" class="stat-line sub-line">
+                <span class="stat-label">— Пополнение:</span>
+                <span class="stat-number">{{ formatNumber(yearStats.total_earned_replenishment) }} ₽</span>
+              </div>
+              <div v-if="yearStats.total_earned_placement" class="stat-line sub-line">
+                <span class="stat-label">— Размещение:</span>
+                <span class="stat-number">{{ formatNumber(yearStats.total_earned_placement) }} ₽</span>
+              </div>
+            </div>
+
             <div class="currency-block year-currency">
               <div class="currency-header" @click="toggleYearCurrency">
                 <i class="fas" :class="showYearCurrency ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
@@ -732,9 +843,9 @@
         </div>
         <div class="modal-footer">
           <div class="footer-buttons-grid three-buttons">
-            <button class="btn-primary" @click="saveVacation" :disabled="!vacationData.start_date || !vacationData.number_of_days">
-              <i class="fas fa-save"></i>
-              <span>Сохранить</span>
+            <button class="btn-primary" @click="saveVacation" :disabled="isSavingVacation || !vacationData.start_date || !vacationData.number_of_days">
+              <i :class="isSavingVacation ? 'fas fa-spinner fa-spin' : 'fas fa-save'"></i>
+              <span>{{ isSavingVacation ? 'Сохранение...' : 'Сохранить' }}</span>
             </button>
             <button class="btn-secondary" @click="closeVacationModal">
               <i class="fas fa-times"></i>
@@ -746,8 +857,17 @@
     </div>
   </div>
   <div v-else class="loading-container">
-    <i class="fas fa-spinner fa-spin"></i>
-    <p>Загрузка данных...</p>
+    <div v-if="hasLoadError" class="error-state">
+      <i class="fas fa-exclamation-triangle text-danger"></i>
+      <p>Не удалось загрузить данные. Проверьте интернет.</p>
+      <button class="btn btn-primary mt-3" @click="loadData">
+        <i class="fas fa-redo"></i> Повторить попытку
+      </button>
+    </div>
+    <div v-else>
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Загрузка данных...</p>
+    </div>
   </div>
 </template>
 
@@ -767,21 +887,38 @@ export default {
       price_time: 0,
       price_overtime: 0,
       price_cold: 0,
-      price_award: 0,
+      price_collect: 0,
+      price_replenishment: 0,
+      price_placement: 0,
       price_non_productive_work: 0
     })
     const hasSettings = ref(false)
+
+    // Состояния загрузки и ошибок
+    const isLoading = ref(true)
+    const hasLoadError = ref(false)
+    const isSavingShift = ref(false)
+    const isSavingMotivation = ref(false)
+    const isSavingSettings = ref(false)
+    const isSavingVacation = ref(false)
+    const isSavingMany = ref(false)
 
     const showShiftModal = ref(false)
     const showSettingsModal = ref(false)
     const showAddManyModal = ref(false)
     const showYearStatsModal = ref(false)
     const showVacationModal = ref(false)
+
+    const showMotivationModal = ref(false)
+    const motivationData = ref({
+      type_operations: 'placement',
+      count_operations: null,
+      hours: null
+    })
+
     const selectedDay = ref(null)
     const shiftDetails = ref(null)
     const editHours = ref(0)
-    const operationsCount = ref(null)
-    const hoursCount = ref(null)
     const showShiftCurrency = ref(false)
     const showYearCurrency = ref(false)
 
@@ -813,11 +950,35 @@ export default {
 
     const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
-    const getShiftStatus = (earned) => {
-      if (earned === -1) return 'vacation'
-      if (earned === -2) return 'sick'
-      return null
+    // --- Универсальные хелперы ---
+    const getMotivationTotal = (obj) => {
+      if (!obj) return 0
+      return (obj.motivation_collect ?? obj.total_earned_collect ?? 0) +
+             (obj.motivation_replenishment ?? obj.total_earned_replenishment ?? 0) +
+             (obj.motivation_placement ?? obj.total_earned_placement ?? 0) +
+             (obj.earned_for_non_productive_work ?? obj.total_earned_for_non_production ?? 0)
     }
+
+    const getOperationsTotal = (obj) => {
+      if (!obj) return 0
+      return (obj.count_operations_collect ?? obj.total_operations_collect ?? 0) +
+             (obj.count_operations_replenishment ?? obj.total_operations_replenishment ?? 0) +
+             (obj.count_operations_placement ?? obj.total_operations_placement ?? 0)
+    }
+
+    const getYearMotivationTotal = (yearObj) => {
+      if (!yearObj) return 0
+      return (yearObj.total_earned_collect || 0) +
+             (yearObj.total_earned_replenishment || 0) +
+             (yearObj.total_earned_placement || 0)
+    }
+
+    const hasShiftCurrencyData = (shift) => {
+      if (!shift?.valute) return false
+      const v = shift.valute
+      return !!(v.dollar || v.euro || v.yena || v.som)
+    }
+    // ---------------------------------------------
 
     const getPeriodNumber = (dateStr) => {
       if (!dateStr) return 1
@@ -826,13 +987,17 @@ export default {
     }
 
     const periodOneProductivity = computed(() => {
-      if (!monthlyStats.value?.period_one?.total_operations || !monthlyStats.value?.period_one?.total_base_hours) return null
-      return monthlyStats.value.period_one.total_operations / monthlyStats.value.period_one.total_base_hours
+      const ops = getOperationsTotal(monthlyStats.value?.period_one)
+      const hours = monthlyStats.value?.period_one?.total_base_hours
+      if (!ops || !hours) return null
+      return ops / hours
     })
 
     const periodTwoProductivity = computed(() => {
-      if (!monthlyStats.value?.period_two?.total_operations || !monthlyStats.value?.period_two?.total_base_hours) return null
-      return monthlyStats.value.period_two.total_operations / monthlyStats.value.period_two.total_base_hours
+      const ops = getOperationsTotal(monthlyStats.value?.period_two)
+      const hours = monthlyStats.value?.period_two?.total_base_hours
+      if (!ops || !hours) return null
+      return ops / hours
     })
 
     const productivityChangePercent = computed(() => {
@@ -852,77 +1017,38 @@ export default {
       return 'neutral'
     })
 
-    const periodOneBestDay = computed(() => {
+    const computeBestDay = (periodFilter) => {
       if (!shifts.value || !Array.isArray(shifts.value) || shifts.value.length === 0) return null
-      const daysWithOps = shifts.value.filter(day =>
-        day &&
-        day.base_hours > 0 &&
-        day.count_operations > 0 &&
-        day.date &&
-        getPeriodNumber(day.date) === 1 &&
-        day.earned > 0
-      )
+      const daysWithOps = shifts.value.filter(day => {
+        if (!day || !day.date) return false
+        const ops = getOperationsTotal(day)
+        if (!ops || ops <= 0) return false
+        if (!(day.base_hours > 0)) return false
+        if (!(day.earned > 0)) return false
+        if (periodFilter !== null && getPeriodNumber(day.date) !== periodFilter) return false
+        return true
+      })
       if (daysWithOps.length === 0) return null
       const best = daysWithOps.reduce((best, current) => {
-        const currentProd = current.count_operations / current.base_hours
-        const bestProd = best.count_operations / best.base_hours
+        const currentProd = getOperationsTotal(current) / current.base_hours
+        const bestProd = getOperationsTotal(best) / best.base_hours
         return currentProd > bestProd ? current : best
       }, daysWithOps[0])
 
       if (!best) return null
-      const date = new Date(best.date)
-      return {
-        ...best,
-        dateStr: date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }),
-        productivity: best.count_operations / best.base_hours
-      }
-    })
-
-    const periodTwoBestDay = computed(() => {
-      if (!shifts.value || !Array.isArray(shifts.value) || shifts.value.length === 0) return null
-      const daysWithOps = shifts.value.filter(day =>
-        day &&
-        day.base_hours > 0 &&
-        day.count_operations > 0 &&
-        day.date &&
-        getPeriodNumber(day.date) === 2 &&
-        day.earned > 0
-      )
-      if (daysWithOps.length === 0) return null
-      const best = daysWithOps.reduce((best, current) => {
-        const currentProd = current.count_operations / current.base_hours
-        const bestProd = best.count_operations / best.base_hours
-        return currentProd > bestProd ? current : best
-      }, daysWithOps[0])
-
-      if (!best) return null
-      const date = new Date(best.date)
-      return {
-        ...best,
-        dateStr: date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }),
-        productivity: best.count_operations / best.base_hours
-      }
-    })
-
-    const monthBestDay = computed(() => {
-      if (!shifts.value || !Array.isArray(shifts.value) || shifts.value.length === 0) return null
-      const daysWithOps = shifts.value.filter(day => day && day.base_hours > 0 && day.count_operations > 0 && day.date && day.earned > 0)
-      if (daysWithOps.length === 0) return null
-      const best = daysWithOps.reduce((best, current) => {
-        const currentProd = current.count_operations / current.base_hours
-        const bestProd = best.count_operations / best.base_hours
-        return currentProd > bestProd ? current : best
-      }, daysWithOps[0])
-
-      if (!best || !best.date) return null
       const date = new Date(best.date)
       return {
         ...best,
         dateStr: date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }),
         dayOfWeek: date.toLocaleDateString('ru-RU', { weekday: 'long' }),
-        productivity: best.count_operations / best.base_hours
+        count_operations: getOperationsTotal(best),
+        productivity: getOperationsTotal(best) / best.base_hours
       }
-    })
+    }
+
+    const periodOneBestDay = computed(() => computeBestDay(1))
+    const periodTwoBestDay = computed(() => computeBestDay(2))
+    const monthBestDay = computed(() => computeBestDay(null))
 
     const isWeekendDay = (date) => {
       const dayOfWeek = date.getDay()
@@ -943,7 +1069,7 @@ export default {
       return period.total_earned > 0 ||
              period.total_base_hours > 0 ||
              period.total_earned_hours > 0 ||
-             period.total_award > 0
+             getMotivationTotal(period) > 0
     }
 
     const hasCurrencyData = (period) => {
@@ -951,15 +1077,75 @@ export default {
       return !!(period.dollar || period.euro || period.yena || period.som)
     }
 
+    // Безопасное уведомление (защита от XSS)
+    const showNotification = (message, type = 'success') => {
+      const notification = document.createElement('div')
+      notification.className = `notification notification-${type}`
+
+      const content = document.createElement('div')
+      content.className = 'notification-content'
+
+      const icon = document.createElement('i')
+      icon.className = `fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}`
+
+      const textSpan = document.createElement('span')
+      textSpan.textContent = message
+
+      content.appendChild(icon)
+      content.appendChild(textSpan)
+      notification.appendChild(content)
+
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+        cursor: pointer;
+      `
+      document.body.appendChild(notification)
+      setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease'
+        setTimeout(() => {
+          if (document.body.contains(notification)) {
+            document.body.removeChild(notification)
+          }
+        }, 300)
+      }, 4000)
+      notification.onclick = () => {
+        notification.style.animation = 'slideOut 0.3s ease'
+        setTimeout(() => {
+          if (document.body.contains(notification)) {
+            document.body.removeChild(notification)
+          }
+        }, 300)
+      }
+    }
+
+    // Улучшенная обработка API ошибок
     const handleApiError = (error, defaultMessage = 'Произошла ошибка') => {
       console.error('API Error:', error)
+
+      if (!error.response) {
+        if (error.code === 'ECONNABORTED') {
+          showNotification('Превышено время ожидания ответа от сервера', 'error')
+        } else {
+          showNotification('Ошибка сети. Проверьте подключение к интернету', 'error')
+        }
+        return
+      }
+
+      if (error.response.status === 401 || error.response.status === 403) {
+        showNotification('Сессия истекла или нет доступа. Пожалуйста, обновите страницу.', 'error')
+        return
+      }
 
       if (error.response?.data?.detail) {
         const detail = error.response.data.detail
 
         if (Array.isArray(detail)) {
           const errors = detail.map(err => {
-            const field = err.loc?.filter(l => l !== 'body').join('.') || 'неизвестное поле'
+            const field = err.loc?.filter(l => l !== 'body').join('.') || 'поле'
             const cleanMsg = err.msg.replace(/^Value error,\s*/, '')
             return `${field}: ${cleanMsg}`
           })
@@ -1002,17 +1188,7 @@ export default {
       }
     }
 
-    const loadYearStatistics = async () => {
-      try {
-        const year = currentDate.value.getFullYear()
-        const response = await apiService.getYearlyStatistics(year)
-        yearStats.value = response
-        yearStatsYear.value = year
-      } catch (error) {
-        handleApiError(error, 'Ошибка при загрузке годовой статистики')
-      }
-    }
-
+    // Исправленная загрузка настроек (отличаем 404 от 500)
     const loadSettings = async () => {
       try {
         const response = await apiService.getTimesheetSettings()
@@ -1020,49 +1196,20 @@ export default {
           price_time: response.price_time || 0,
           price_overtime: response.price_overtime || 0,
           price_cold: response.price_cold || 0,
-          price_award: response.price_award || 0,
+          price_collect: response.price_collect || 0,
+          price_replenishment: response.price_replenishment || 0,
+          price_placement: response.price_placement || 0,
           price_non_productive_work: response.price_non_productive_work || 0
         }
         hasSettings.value = true
       } catch (error) {
-        console.log('No settings found')
-        hasSettings.value = false
-      }
-    }
-
-    const showNotification = (message, type = 'success') => {
-      const notification = document.createElement('div')
-      notification.className = `notification notification-${type}`
-      notification.innerHTML = `
-        <div class="notification-content">
-          <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
-          <span>${message}</span>
-        </div>
-      `
-      notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 10000;
-        animation: slideIn 0.3s ease;
-        cursor: pointer;
-      `
-      document.body.appendChild(notification)
-      setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease'
-        setTimeout(() => {
-          if (document.body.contains(notification)) {
-            document.body.removeChild(notification)
-          }
-        }, 300)
-      }, 3000)
-      notification.onclick = () => {
-        notification.style.animation = 'slideOut 0.3s ease'
-        setTimeout(() => {
-          if (document.body.contains(notification)) {
-            document.body.removeChild(notification)
-          }
-        }, 300)
+        if (error.response?.status === 404) {
+          console.log('Настройки не найдены (404)')
+          hasSettings.value = false
+        } else {
+          handleApiError(error, 'Не удалось загрузить настройки')
+          hasSettings.value = false
+        }
       }
     }
 
@@ -1133,7 +1280,7 @@ export default {
           day_id: shift?.day_id,
           earned: shift?.earned || 0,
           base_hours: shift?.base_hours || 0,
-          count_operations: shift?.count_operations || 0
+          count_operations: getOperationsTotal(shift)
         }
 
         days.push(dayObject)
@@ -1178,72 +1325,32 @@ export default {
       const dates = []
       const currentShifts = shifts.value
 
+      const makeSelectionDate = (dayNum, fullDateObj, isCurrentMonthFlag) => {
+        const y = fullDateObj.getFullYear()
+        const m = String(fullDateObj.getMonth() + 1).padStart(2, '0')
+        const d = String(fullDateObj.getDate()).padStart(2, '0')
+        const ds = `${y}-${m}-${d}`
+        const shift = currentShifts.find(s => (s.date ? s.date.split(' ')[0] : '') === ds)
+        return {
+          dayNumber: dayNum,
+          fullDate: ds,
+          hasShift: !!(shift && shift.earned > 0),
+          isVacation: !!(shift && shift.earned === -1),
+          isSick: !!(shift && shift.earned === -2),
+          isCurrentMonth: isCurrentMonthFlag
+        }
+      }
+
       for (let i = startingDayOfWeek - 1; i > 0; i--) {
         const date = daysInPrevMonth - i + 1
-        const fullDate = new Date(year, month - 1, date)
-        const yearStr = fullDate.getFullYear()
-        const monthStr = String(fullDate.getMonth() + 1).padStart(2, '0')
-        const dayStr = String(fullDate.getDate()).padStart(2, '0')
-        const dateStr = `${yearStr}-${monthStr}-${dayStr}`
-
-        const shift = currentShifts.find(s => {
-          const shiftDate = s.date ? s.date.split(' ')[0] : ''
-          return shiftDate === dateStr
-        })
-
-        dates.push({
-          dayNumber: date,
-          fullDate: dateStr,
-          hasShift: !!(shift && shift.earned > 0),
-          isVacation: !!(shift && shift.earned === -1),
-          isSick: !!(shift && shift.earned === -2),
-          isCurrentMonth: false
-        })
+        dates.push(makeSelectionDate(date, new Date(year, month - 1, date), false))
       }
-
       for (let i = 1; i <= daysInMonth; i++) {
-        const fullDate = new Date(year, month, i)
-        const yearStr = fullDate.getFullYear()
-        const monthStr = String(fullDate.getMonth() + 1).padStart(2, '0')
-        const dayStr = String(fullDate.getDate()).padStart(2, '0')
-        const dateStr = `${yearStr}-${monthStr}-${dayStr}`
-
-        const shift = currentShifts.find(s => {
-          const shiftDate = s.date ? s.date.split(' ')[0] : ''
-          return shiftDate === dateStr
-        })
-
-        dates.push({
-          dayNumber: i,
-          fullDate: dateStr,
-          hasShift: !!(shift && shift.earned > 0),
-          isVacation: !!(shift && shift.earned === -1),
-          isSick: !!(shift && shift.earned === -2),
-          isCurrentMonth: true
-        })
+        dates.push(makeSelectionDate(i, new Date(year, month, i), true))
       }
-
       const remainingCells = totalCells - dates.length
       for (let i = 1; i <= remainingCells; i++) {
-        const fullDate = new Date(year, month + 1, i)
-        const yearStr = fullDate.getFullYear()
-        const monthStr = String(fullDate.getMonth() + 1).padStart(2, '0')
-        const dayStr = String(fullDate.getDate()).padStart(2, '0')
-        const dateStr = `${yearStr}-${monthStr}-${dayStr}`
-
-        const shift = currentShifts.find(s => {
-          const shiftDate = s.date ? s.date.split(' ')[0] : ''
-          return shiftDate === dateStr
-        })
-
-        dates.push({
-          dayNumber: i,
-          fullDate: dateStr,
-          hasShift: !!(shift && shift.earned > 0),
-          isVacation: !!(shift && shift.earned === -1),
-          isSick: !!(shift && shift.earned === -2),
-          isCurrentMonth: false
-        })
+        dates.push(makeSelectionDate(i, new Date(year, month + 1, i), false))
       }
 
       return dates
@@ -1320,7 +1427,9 @@ export default {
     }
 
     const selectAllDatesInMonth = () => {
-      manyShiftsData.value.selectedDates = selectionDates.value.filter(d => d.isCurrentMonth && !d.hasShift && !d.isVacation && !d.isSick).map(d => d.fullDate)
+      manyShiftsData.value.selectedDates = selectionDates.value
+        .filter(d => d.isCurrentMonth && !d.hasShift && !d.isVacation && !d.isSick)
+        .map(d => d.fullDate)
     }
 
     const clearAllDates = () => {
@@ -1332,8 +1441,6 @@ export default {
 
       selectedDay.value = day
       editHours.value = day.base_hours || 0
-      operationsCount.value = null
-      hoursCount.value = null
       showShiftCurrency.value = false
 
       if ((day.hasShift || day.isVacation || day.isSick) && day.day_id) {
@@ -1356,8 +1463,6 @@ export default {
       selectedDay.value = null
       shiftDetails.value = null
       editHours.value = 0
-      operationsCount.value = 0
-      hoursCount.value = 0
     }
 
     const saveShift = async () => {
@@ -1372,6 +1477,7 @@ export default {
       const day = String(fullDate.getDate()).padStart(2, '0')
       const dateStr = `${year}-${month}-${day}`
 
+      isSavingShift.value = true
       try {
         if (selectedDay.value.hasShift) {
           await apiService.updateShift(dateStr, editHours.value)
@@ -1385,6 +1491,8 @@ export default {
         await loadData()
       } catch (error) {
         handleApiError(error, 'Ошибка при сохранении смены')
+      } finally {
+        isSavingShift.value = false
       }
     }
 
@@ -1418,37 +1526,52 @@ export default {
       }
     }
 
-    const addAward = async () => {
-      if (!selectedDay.value?.day_id || !operationsCount.value) {
-        showNotification('Введите количество операций', 'error')
-        return
+    const isSaveMotivationDisabled = computed(() => {
+      if (motivationData.value.type_operations === 'non_productive') {
+        return !motivationData.value.hours
       }
+      return !motivationData.value.count_operations
+    })
 
-      try {
-        await apiService.addAward(selectedDay.value.day_id, operationsCount.value)
-        const updatedShift = await apiService.getShiftById(selectedDay.value.day_id)
-        shiftDetails.value = updatedShift
-        await loadData()
-        showNotification('Премия успешно добавлена', 'success')
-      } catch (error) {
-        handleApiError(error, 'Ошибка при добавлении премии')
+    const openMotivationModal = () => {
+      motivationData.value = {
+        type_operations: 'placement',
+        count_operations: null,
+        hours: null
       }
+      showMotivationModal.value = true
     }
 
-    const addHours = async () => {
-      if (!selectedDay.value?.day_id || !hoursCount.value) {
-        showNotification('Введите количество часов', 'error')
-        return
-      }
+    const closeMotivationModal = () => {
+      showMotivationModal.value = false
+    }
 
+    const saveMotivation = async () => {
+      if (isSaveMotivationDisabled.value) return
+
+      isSavingMotivation.value = true
       try {
-        await apiService.addNonProductiveWork(selectedDay.value.day_id, hoursCount.value)
+        if (motivationData.value.type_operations === 'non_productive') {
+          await apiService.addNonProductiveWork(selectedDay.value.day_id, motivationData.value.hours)
+          showNotification('Непроизводственные работы добавлены', 'success')
+        } else {
+          await apiService.addAward(
+            selectedDay.value.day_id,
+            motivationData.value.count_operations,
+            motivationData.value.type_operations
+          )
+          showNotification('Мотивация успешно добавлена', 'success')
+        }
+
         const updatedShift = await apiService.getShiftById(selectedDay.value.day_id)
         shiftDetails.value = updatedShift
         await loadData()
-        showNotification('Непроизводственные работы добавлены', 'success')
+
+        closeMotivationModal()
       } catch (error) {
-        handleApiError(error, 'Ошибка при добавлении непроизводственных работ')
+        handleApiError(error, 'Ошибка при добавлении')
+      } finally {
+        isSavingMotivation.value = false
       }
     }
 
@@ -1466,6 +1589,7 @@ export default {
         return
       }
 
+      isSavingSettings.value = true
       try {
         await apiService.updateTimesheetSettings(settings.value)
         showNotification('Настройки сохранены', 'success')
@@ -1473,6 +1597,8 @@ export default {
         await loadData()
       } catch (error) {
         handleApiError(error, 'Ошибка при сохранении настроек')
+      } finally {
+        isSavingSettings.value = false
       }
     }
 
@@ -1480,7 +1606,15 @@ export default {
       if (confirm('Вы уверены, что хотите удалить настройки?')) {
         try {
           await apiService.deleteTimesheetSettings()
-          settings.value = { price_time: 0, price_overtime: 0, price_cold: 0, price_award: 0 }
+          settings.value = {
+            price_time: 0,
+            price_overtime: 0,
+            price_cold: 0,
+            price_collect: 0,
+            price_replenishment: 0,
+            price_placement: 0,
+            price_non_productive_work: 0
+          }
           hasSettings.value = false
           showNotification('Настройки удалены', 'success')
           closeSettingsModal()
@@ -1510,6 +1644,7 @@ export default {
         return
       }
 
+      isSavingMany.value = true
       try {
         await apiService.addManyShifts(manyShiftsData.value.hours, manyShiftsData.value.selectedDates)
         showNotification('Смены успешно добавлены', 'success')
@@ -1517,6 +1652,8 @@ export default {
         await loadData()
       } catch (error) {
         handleApiError(error, 'Ошибка при добавлении смен')
+      } finally {
+        isSavingMany.value = false
       }
     }
 
@@ -1541,9 +1678,9 @@ export default {
         return
       }
 
+      isSavingVacation.value = true
       try {
-        // Используем apiService для запроса
-        const response = await apiService.addVacation({
+        await apiService.addVacation({
           start_date: vacationData.value.start_date,
           number_of_days: vacationData.value.number_of_days,
           type_days: vacationData.value.type_days
@@ -1554,6 +1691,8 @@ export default {
         await loadData()
       } catch (error) {
         handleApiError(error, 'Ошибка при добавлении')
+      } finally {
+        isSavingVacation.value = false
       }
     }
 
@@ -1562,8 +1701,20 @@ export default {
       yearStats.value = null
     }
 
+    // Загрузка данных с защитой от падения
     const loadData = async () => {
-      await Promise.all([loadShifts(), loadStatistics(), loadSettings()])
+      isLoading.value = true
+      hasLoadError.value = false
+      try {
+        await Promise.all([loadShifts(), loadStatistics(), loadSettings()])
+        if (!monthlyStats.value) {
+          hasLoadError.value = true
+        }
+      } catch (e) {
+        hasLoadError.value = true
+      } finally {
+        isLoading.value = false
+      }
     }
 
     const formatNumber = (num) => {
@@ -1733,16 +1884,23 @@ export default {
       yearStatsYear,
       settings,
       hasSettings,
+      isLoading,
+      hasLoadError,
+      isSavingShift,
+      isSavingMotivation,
+      isSavingSettings,
+      isSavingVacation,
+      isSavingMany,
       showShiftModal,
       showSettingsModal,
       showAddManyModal,
       showYearStatsModal,
       showVacationModal,
+      showMotivationModal,
+      motivationData,
       selectedDay,
       shiftDetails,
       editHours,
-      operationsCount,
-      hoursCount,
       showShiftCurrency,
       showYearCurrency,
       openSections,
@@ -1776,8 +1934,10 @@ export default {
       saveShift,
       deleteShift,
       deleteVacationOrSick,
-      addAward,
-      addHours,
+      openMotivationModal,
+      closeMotivationModal,
+      saveMotivation,
+      isSaveMotivationDisabled,
       openSettingsModal,
       closeSettingsModal,
       saveSettings,
@@ -1796,6 +1956,7 @@ export default {
       formatDateForDisplay,
       hasPeriodData,
       hasCurrencyData,
+      hasShiftCurrencyData,
       selectedYear,
       availableYears,
       prevYear,
@@ -1807,6 +1968,9 @@ export default {
       getNonProductivePercent,
       getAwardPercent,
       getOvertimePercent,
+      getMotivationTotal,
+      getOperationsTotal,
+      getYearMotivationTotal,
       periodOneBestDay,
       periodTwoBestDay,
       monthBestDay,
@@ -1826,23 +1990,234 @@ export default {
   --radius: 8px;
 }
 
-.award-buttons-row {
+/* --- Кнопка мотивации --- */
+.motivation-section {
+  margin-top: 1rem;
+}
+
+.btn-motivation {
+  width: 100%;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: all 0.3s;
   display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
-.award-buttons-row .btn-award {
-  flex: 1;
+.btn-motivation:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245,158,11,0.3);
 }
 
-.award-inputs-row {
+.settings-divider {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gray-color);
+  margin: 1rem 0 0.5rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--light-color);
+  padding-bottom: 0.25rem;
+}
+
+/* --- Детализация за день --- */
+.day-total-block {
   display: flex;
-  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  margin: -1rem -1rem 1rem -1rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border-radius: var(--radius) var(--radius) 0 0;
 }
 
-.award-inputs-row .form-group {
-  flex: 1;
+.day-total-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.day-total-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.day-total-hours {
+  font-size: 0.75rem;
+  opacity: 0.85;
+}
+
+.day-total-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: white;
+  letter-spacing: 0.5px;
+}
+
+.day-breakdown-header {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--gray-color, #94a3b8); /* Адаптивный цвет для темной темы */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.35rem;
+  padding-top: 0.25rem;
+}
+
+/* Бейджи процентов */
+.percent-badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: rgba(148, 163, 184, 0.2); /* Нейтральный полупрозрачный */
+  color: var(--dark-color, #e2e8f0);
+  border-radius: 10px;
+  vertical-align: middle;
+}
+
+/* Конкретные бейджи для контраста */
+.hours-percent-line .percent-badge {
+  background: rgba(16, 185, 129, 0.25);
+  color: #34d399; /* Светло-зеленый */
+}
+
+.cold-percent-line .percent-badge {
+  background: rgba(59, 130, 246, 0.25);
+  color: #60a5fa; /* Светло-синий */
+}
+
+.overtime-percent-line .percent-badge {
+  background: rgba(239, 68, 68, 0.25);
+  color: #f87171; /* Светло-красный */
+}
+
+/* Блок мотивации */
+.day-motivation-block {
+  margin: 0.5rem 0;
+  padding: 0.75rem;
+  background: rgba(245, 158, 11, 0.1);
+  border-radius: var(--radius);
+  border-left: 3px solid #f59e0b;
+}
+
+.day-motivation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px dashed rgba(245, 158, 11, 0.4);
+}
+
+.day-motivation-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fbbf24; /* Янтарный, хорошо виден на темном */
+}
+
+.day-motivation-total {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fcd34d; /* Светло-янтарный */
+}
+
+.day-productivity-block {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(59, 130, 246, 0.08);
+  border-radius: var(--radius);
+  border-left: 3px solid #3b82f6;
+}
+
+.day-prod-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0;
+  font-size: 0.8rem;
+}
+
+.day-prod-line .stat-label {
+  font-size: 0.78rem;
+  color: var(--gray-color, #94a3b8);
+}
+
+.day-prod-line .stat-number {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--dark-color, #e2e8f0);
+}
+
+/* Sub-line (детализация внутри блока) */
+.stat-line.sub-line {
+  padding-left: 1.25rem;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  border-bottom: none;
+}
+
+.stat-line.sub-line .stat-label {
+  font-size: 0.75rem;
+  color: #94a3b8; /* Светло-серый, виден на темном фоне */
+}
+
+.stat-line.sub-line .stat-number {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #cbd5e1; /* Светло-серый, виден на темном фоне */
+}
+
+/* Годовая статистика — блок мотивации */
+.year-motivation-block {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: rgba(245, 158, 11, 0.1);
+  border-radius: var(--radius);
+  border-left: 3px solid #f59e0b;
+}
+
+.year-motivation-header {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #fbbf24; /* Адаптивный янтарный */
+  margin-bottom: 0.25rem;
+}
+
+/* --- Экран ошибки загрузки --- */
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: #ef4444;
+  text-align: center;
+}
+
+.error-state i {
+  font-size: 3rem;
+}
+
+.text-danger {
+  color: #ef4444 !important;
+}
+
+.mt-3 {
+  margin-top: 1rem;
 }
 
 .timesheets-container {
@@ -2021,7 +2396,7 @@ export default {
 
 .calendar-day.vacation-day {
   background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%);
-  color: #1e293b; /* Оставляем темным, так как градиент желтый */
+  color: #1e293b;
   border-color: #f59e0b;
 }
 
@@ -2152,11 +2527,11 @@ export default {
 }
 
 .stat-number.award {
-  color: #d97706;
+  color: #fbbf24; /* Светло-янтарный */
 }
 
 .stat-number.overtime {
-  color: var(--danger-color);
+  color: #f87171; /* Светло-красный */
 }
 
 .stat-number.total {
@@ -2222,7 +2597,6 @@ export default {
   color: var(--dark-color);
 }
 
-/* Vacation/Sick styles */
 .vacation-sick-details {
   background: rgba(245, 158, 11, 0.1);
   padding: 1rem;
@@ -2612,7 +2986,6 @@ export default {
   width: 100%;
 }
 
-
 .footer-buttons-grid.four-buttons {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -2749,20 +3122,6 @@ button:disabled {
 
 .shift-actions {
   margin-top: 0rem;
-}
-
-.award-section {
-  margin-top: 0.5rem;
-  padding: 0.5rem;
-  background: rgba(245, 158, 11, 0.1);
-  border-radius: var(--radius);
-  border: 1px solid rgba(245, 158, 11, 0.2);
-}
-
-.award-divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.3), transparent);
-  margin: -1rem -1rem 1rem -1rem;
 }
 
 .form-group {
@@ -3000,6 +3359,10 @@ button:disabled {
     font-size: 0.625rem;
   }
 
+  .day-total-value {
+    font-size: 1.3rem;
+  }
+
   .footer-buttons-grid.three-buttons {
     gap: 0.5rem;
     width: 100%;
@@ -3011,7 +3374,6 @@ button:disabled {
 }
 
 @media (max-width: 480px) {
-
   .calendar-day {
     min-height: 55px;
     padding: 0.25rem;
@@ -3032,6 +3394,18 @@ button:disabled {
   .weekday {
     font-size: 0.625rem;
     padding: 0.35rem;
+  }
+
+  .day-total-block {
+    padding: 0.75rem;
+  }
+
+  .day-total-value {
+    font-size: 1.15rem;
+  }
+
+  .day-total-label {
+    font-size: 0.75rem;
   }
 }
 

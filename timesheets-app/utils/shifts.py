@@ -1,11 +1,10 @@
 from datetime import datetime, timedelta
 
+from crud.get_data import get_salary_for_day
+from crud.many import add_many_shifts
+from crud.statistics import get_info_by_date, get_information_for_month
 from fastapi import HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
-
-from crud.many import add_many_shifts
-from crud.statistics import get_information_for_month, get_info_by_date
-from crud.get_data import get_salary_for_day
 from utils.salary import (
     get_settings,
     normalization_salary_for_month,
@@ -58,11 +57,19 @@ async def dictionary_formation(shift: dict) -> dict:
         "earned_hours": shift.get("earned_hours"),
         "period": shift.get("period"),
         "valute": shift.get("valute"),
-        "award_amount": shift.get("award_amount", 0),
-        "count_operations": shift.get("count_operations", 0),
+        "motivation_collect": shift.get("motivation_collect", 0),
+        "count_operations_collect": shift.get("count_operations_collect", 0),
+        "motivation_replenishment": shift.get("motivation_replenishment", 0),
+        "count_operations_replenishment": shift.get(
+            "count_operations_replenishment", 0
+        ),
+        "motivation_placement": shift.get("motivation_placement", 0),
+        "count_operations_placement": shift.get("count_operations_placement", 0),
         "earned_overtime": shift.get("earned_overtime", 0),
-        "earned_for_non_productive_work": shift.get("earned_for_non_productive_work", 0),
-        "hours_non_productive": shift.get("hours_non_productive", 0)
+        "earned_for_non_productive_work": shift.get(
+            "earned_for_non_productive_work", 0
+        ),
+        "hours_non_productive": shift.get("hours_non_productive", 0),
     }
 
 
@@ -161,7 +168,7 @@ async def save_shifts_all(
         await add_many_shifts(salaries, db)
         await normalization_salary_for_month(user_id, settings, data, db)
 
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"result": False, "description": "Ошибка при сохранении."},

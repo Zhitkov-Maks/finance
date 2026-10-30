@@ -478,10 +478,10 @@ class ApiService {
     }
 
     // Добавление премии за конкретный день
-    async addAward(dayId, countOperations) {
+    async addAward(dayId, countOperations, typeOperations) {
         try {
             const response = await this.client.post(
-                `/timesheets/shifts/${dayId}/?count_operations=${countOperations}`,
+                `/timesheets/shifts/${dayId}/?count_operations=${countOperations}&type_operations=${typeOperations}`,
                 {}
             )
             return response.data

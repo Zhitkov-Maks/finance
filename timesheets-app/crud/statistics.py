@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from dateutil.relativedelta import relativedelta
 from fastapi import HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -62,7 +63,7 @@ async def statistics_for_year(
             "$match": {
                 "user_id": user_id,
                 "date": {"$gte": start_date, "$lt": end_date},
-                "earned": {"$gt": 0}
+                "earned": {"$gt": 0},
             }
         },
         {
@@ -70,7 +71,9 @@ async def statistics_for_year(
                 "_id": None,
                 "total_hours": {"$sum": "$base_hours"},
                 "total_earned": {"$sum": "$earned"},
-                "total_award": {"$sum": "$award_amount"},
+                "total_earned_collect": {"$sum": "$motivation_collect"},
+                "total_earned_replenishment": {"$sum": "$motivation_replenishment"},
+                "total_earned_placement": {"$sum": "$motivation_placement"},
                 "dollar": {"$sum": "$valute.dollar"},
                 "euro": {"$sum": "$valute.euro"},
                 "yena": {"$sum": "$valute.yena"},
@@ -81,7 +84,11 @@ async def statistics_for_year(
             "$project": {
                 "total_hours": {"$round": ["$total_hours", 2]},
                 "total_earned": {"$round": ["$total_earned", 2]},
-                "total_award": {"$round": ["$total_award", 2]},
+                "total_earned_collect": {"$round": ["$total_earned_collect", 2]},
+                "total_earned_replenishment": {
+                    "$round": ["$total_earned_replenishment", 2]
+                },
+                "total_earned_placement": {"$round": ["$total_earned_placement", 2]},
                 "dollar": {"$round": ["$dollar", 2]},
                 "euro": {"$round": ["$euro", 2]},
                 "yena": {"$round": ["$yena", 2]},
@@ -142,12 +149,20 @@ async def aggregate_data(
                 "total_earned": {"$sum": "$earned"},
                 "total_earned_hours": {"$sum": "$earned_hours"},
                 "total_earned_cold": {"$sum": "$earned_cold"},
-                "total_award": {"$sum": "$award_amount"},
-                "total_operations": {"$sum": "$count_operations"},
+                "total_earned_collect": {"$sum": "$motivation_collect"},
+                "total_operations_collect": {"$sum": "$count_operations_collect"},
+                "total_earned_placement": {"$sum": "$motivation_placement"},
+                "total_operations_placement": {"$sum": "$count_operations_placement"},
+                "total_earned_replenishment": {"$sum": "$motivation_replenishment"},
+                "total_operations_replenishment": {
+                    "$sum": "$count_operations_replenishment"
+                },
                 "total_overtime": {"$sum": "$earned_overtime"},
                 "total_hours_overtime": {"$sum": "$hours_overtime"},
                 "total_hours_for_non_production": {"$sum": "$hours_non_productive"},
-                "total_earned_for_non_production": {"$sum": "$earned_for_non_productive_work"},
+                "total_earned_for_non_production": {
+                    "$sum": "$earned_for_non_productive_work"
+                },
                 "dollar": {"$sum": "$valute.dollar"},
                 "euro": {"$sum": "$valute.euro"},
                 "yena": {"$sum": "$valute.yena"},

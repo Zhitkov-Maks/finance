@@ -1,17 +1,17 @@
-from datetime import datetime, UTC
-from pprint import pprint
+from datetime import UTC, datetime
 
+from crud.create import delete_record, write_salary
+from crud.get_data import get_hours_for_month, get_salary_for_day, update_salary
+from crud.many import add_many_shifts
+from crud.settings import get_settings_user_by_id
+from crud.statistics import get_information_for_month
 from fastapi import HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from starlette import status
-
-from crud.many import add_many_shifts
-from crud.settings import get_settings_user_by_id
-from crud.get_data import get_hours_for_month, get_salary_for_day, update_salary
-from crud.create import write_salary, delete_record
-from crud.statistics import get_information_for_month
-from utils.valute import get_valute_info
 from utils.calculate import calc_valute
+from utils.valute import get_valute_info
+
+TYPE_MOTIVATION = ("placement", "collect", "replenishment")
 
 
 async def get_settings(user_id: int, db: AsyncIOMotorDatabase) -> tuple:
@@ -141,13 +141,20 @@ async def critical_data(data: dict) -> tuple:
     """
     old_need_data: dict[str, float] = {}
     if data.get("earned") in (-1, -2):
-        return data.get("base_hours"), data.get("_id"), data.get("date"), data.get("earned")
-
-    if data.get("count_operations", 0) > 0:
-        old_need_data.update(
-            award_amount=data.get("award_amount", 0),
-            count_operations=data.get("count_operations", 0),
+        return (
+            data.get("base_hours"),
+            data.get("_id"),
+            data.get("date"),
+            data.get("earned"),
         )
+
+    for _type in TYPE_MOTIVATION:
+        if data.get(f"count_operations_{_type}"):
+            old_need_data[f"count_operations_{_type}"] = data.get(
+                f"count_operations_{_type}", 0
+            )
+            old_need_data[f"motivation_{_type}"] = data.get(f"motivation_{_type}", 0)
+
     if data.get("earned_for_non_productive_work"):
         old_need_data.update(
             earned_for_non_productive_work=data.get("earned_for_non_productive_work", 0),
@@ -224,20 +231,20 @@ async def recalculation_salary(
     )
     if old_data:
         salary.update(
-            earned=(
-                salary.get("earned") +
-                old_data.get("award_amount", 0)) +
-                old_data.get("earned_for_non_productive_work", 0)
-            )
+            earned=salary.get("earned")
+            + old_data.get("motivation_collect", 0)
+            + old_data.get("earned_for_non_productive_work", 0)
+            + old_data.get("motivation_replenishment", 0)
+            + old_data.get("motivation_placement", 0)
+        )
     salary.update(
         user_id=user_id,
         date=date,
         period=1 if date.day <= 15 else 2,
         valute=await calc_valute(salary.get("earned"), valute_data),
         date_write=datetime.now(),
-        **old_data
+        **old_data,
     )
-    pprint(salary)
     return salary
 
 
@@ -253,7 +260,11 @@ async def calc_in_currency(earned: float) -> dict:
 
 
 async def earned_for_award(
-    count_operations: int, user_id: int, day_id: str, db: AsyncIOMotorDatabase
+    count_operations: int,
+    type_operations: str,
+    user_id: int,
+    day_id: str,
+    db: AsyncIOMotorDatabase,
 ) -> dict:
     """
     Calculate the bonus and update the salary record.
@@ -265,25 +276,26 @@ async def earned_for_award(
     :return dict: Dictionary with shift data.
     """
     settings: dict = await get_settings_user_by_id(user_id, db)
-    cost_award = settings.get("price_award")
-    if cost_award is None:
+    cost_type_operations = settings.get(f"price_{type_operations}")
+    if cost_type_operations is None:
         raise ValueError("Нет данных о стоимости операции!")
 
-    earned_award: float = round(count_operations * float(cost_award), 2)
+    earned_award: float = round(count_operations * float(cost_type_operations), 2)
     current_day: dict = await get_salary_for_day(day_id, db)
 
-    if current_day.get("award_amount"):
-        earned = current_day["earned"] - current_day["award_amount"] + earned_award
+    if current_day.get(f"motivation_{type_operations}"):
+        earned = (
+            current_day["earned"]
+            - current_day[f"motivation_{type_operations}"]
+            + earned_award
+        )
     else:
         earned = earned_award + current_day["earned"]
 
     currency: dict = await calc_in_currency(earned)
-    current_day.update(
-        award_amount=earned_award,
-        count_operations=count_operations,
-        earned=earned,
-        valute=currency,
-    )
+    current_day[f"motivation_{type_operations}"] = earned_award
+    current_day[f"count_operations_{type_operations}"] = count_operations
+    current_day.update(earned=earned, valute=currency)
     await update_salary(day_id, current_day, db)
     current_day.update(
         date=str(current_day.get("date")), day_id=str(current_day.get("_id"))

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import Field, BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class ShiftSchema(BaseModel):
@@ -116,10 +116,24 @@ class SpecificShift(BaseModel):
     valute: Valute = Field(
         ..., description="Describes how much the user earned in a foreign currency."
     )
-    award_amount: float | None = Field(
+    motivation_collect: float | None = Field(
         None, description="How much the user earned in the form of a bonus."
     )
-    count_operations: float | None = Field(
+    motivation_replenishment: float | None = Field(
+        None, description="How much the user earned in the form of a bonus."
+    )
+    motivation_placement: float | None = Field(
+        None, description="How much the user earned in the form of a bonus."
+    )
+    count_operations_collect: float | None = Field(
+        None, description="How many operations the user performed per shift."
+    )
+
+    count_operations_replenishment: float | None = Field(
+        None, description="How many operations the user performed per shift."
+    )
+
+    count_operations_placement: float | None = Field(
         None, description="How many operations the user performed per shift."
     )
     earned_for_non_productive_work: float | None = Field(

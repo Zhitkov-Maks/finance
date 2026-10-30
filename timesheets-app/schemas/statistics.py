@@ -6,7 +6,13 @@ class StatisticForYearSchema(BaseModel):
 
     total_hours: float = Field(..., description="How many hours worked in a year.")
     total_earned: float = Field(..., description="How much you earned in a year.")
-    total_award: float | None = Field(
+    total_earned_collect: float | None = Field(
+        None, description="How much is earned in the form of a bonus."
+    )
+    total_earned_replenishment: float | None = Field(
+        None, description="How much is earned in the form of a bonus."
+    )
+    total_earned_placement: float | None = Field(
         None, description="How much is earned in the form of a bonus."
     )
     dollar: float
@@ -26,10 +32,22 @@ class AggregateSchema(BaseModel):
     total_earned_cold: float | None = Field(
         None, description="How much is the surcharge for working in the cold."
     )
-    total_award: float | None = Field(
+    total_earned_collect: float | None = Field(
         None, description="How much is earned in the form of a bonus."
     )
-    total_operations: int | None = Field(
+    total_operations_collect: int | None = Field(
+        None, description="How many operations were performed during the period."
+    )
+    total_earned_replenishment: float | None = Field(
+        None, description="How much is earned in the form of a bonus."
+    )
+    total_operations_replenishment: int | None = Field(
+        None, description="How many operations were performed during the period."
+    )
+    total_earned_placement: float | None = Field(
+        None, description="How much is earned in the form of a bonus."
+    )
+    total_operations_placement: int | None = Field(
         None, description="How many operations were performed during the period."
     )
     total_overtime: float | None = Field(

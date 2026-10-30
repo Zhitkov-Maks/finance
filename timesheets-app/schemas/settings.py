@@ -1,5 +1,4 @@
-from pydantic import Field
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class SettingsSchema(BaseModel):
@@ -13,6 +12,10 @@ class SettingsSchema(BaseModel):
     price_cold: float = Field(
         ..., description="Additional payment for working in the cold"
     )
-    price_award: float = Field(..., description="The cost of the operation")
-    price_non_productive_work: float = Field(..., description="The cost of non-production work.")
+    price_collect: float = Field(..., description="The cost of the operation")
+    price_replenishment: float = Field(..., description="The cost of the operation")
+    price_placement: float = Field(..., description="The cost of the operation")
+    price_non_productive_work: float = Field(
+        ..., description="The cost of non-production work."
+    )
 

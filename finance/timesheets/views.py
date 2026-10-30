@@ -1,23 +1,24 @@
 import os
+
 import requests
 from django.http import HttpResponse
-
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics
 from rest_framework.authentication import (
+    BasicAuthentication,
     SessionAuthentication,
     TokenAuthentication,
-    BasicAuthentication,
 )
 from rest_framework.permissions import IsAuthenticated
 
 from .schemas import (
     ManyAddSchemas,
     StatisticForMonthSchema,
+    StatisticForYearSchema,
     TimeSheetsForDaySchema,
     TimeSheetsSchema,
     TimeSheetsSettingsSchema,
-    StatisticForYearSchema, VacationAddSchemas
+    VacationAddSchemas,
 )
 
 HOST = os.getenv('FINANCE_FASTAPI_URL', 'http://fastapi:8080')
@@ -145,8 +146,11 @@ class GetShiftsForDay(generics.GenericAPIView):
     def post(self, request, day_id):
         data = request.GET.dict()
         user_id = request.user.id
-        url = f"{BASE_URL}shifts/{day_id}/award/?user_id={user_id}"\
-              f"&count_operations={data.get('count_operations', 0)}"
+        url = (
+            f"{BASE_URL}shifts/{day_id}/award/?user_id={user_id}"
+            f"&count_operations={data.get('count_operations', 0)}"
+            f"&type_operations={data.get('type_operations', 0)}"
+        )
         response = requests.post(url=url)
         return HttpResponse(
             response.content,
