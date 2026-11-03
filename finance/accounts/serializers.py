@@ -2,6 +2,7 @@ from rest_framework import serializers
 from transactions.models import Transaction
 
 from accounts.models import Account
+from accounts.services import maybe_start_grace_period
 
 
 class BaseAccountSerializer(serializers.ModelSerializer):
@@ -17,7 +18,6 @@ class BaseAccountSerializer(serializers.ModelSerializer):
             "name",
             "balance",
             "is_active",
-            # ДОБАВЛЯЕМ ЭТИ ПОЛЯ:
             "account_type",
             "interest_rate",
             "credit_limit",
@@ -50,9 +50,22 @@ class AccountSerializer(serializers.ModelSerializer):
             "account_type",
             "interest_rate",
             "credit_limit",
+            "credit_rate",
             "grace_period_days",
             "grace_period_start",
         ]
+
+    def create(self, validated_data):
+        instance = super().create(validated_data)
+        # Если карта создана с долгом — стартуем таймер сразу
+        maybe_start_grace_period(instance)
+        return instance
+
+    def update(self, instance, validated_data):
+        instance = super().update(instance, validated_data)
+        # Если пользователь поправил баланс с 0 на -5000 — тоже стартуем
+        maybe_start_grace_period(instance)
+        return instance
 
     def validate(self, attrs):
         acc_type = attrs.get(

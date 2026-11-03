@@ -12,6 +12,13 @@ from transactions.models import Category, Transaction
 
 from .models import Account
 
+DEFAULT_CREDIT_RATE = Decimal("30.0")
+
+
+def _get_credit_rate(account: Account) -> Decimal:
+    """Возвращает годовую ставку по кредитке или дефолт 30%."""
+    return account.credit_rate if account.credit_rate else DEFAULT_CREDIT_RATE
+
 
 def _get_transaction_time() -> datetime:
     """Возвращает timezone-aware время (23:59) для корректной записи в историю."""
@@ -101,32 +108,59 @@ def _reset_grace_period(account: Account) -> None:
 
 
 def _notify_grace_period_ending(account: Account, today: date) -> None:
-    """Отправляет push-уведомление о скором конце льготного периода."""
+    """
+    Напоминание за 3 дня до конца льготного периода — с практическим советом.
+
+    Ключевая мысль: большинство пользователей не знают, что
+    частичное погашение НЕ сбрасывает таймер. Только полное.
+    """
     if _notification_exists(account.user, "payment_upcoming", account.id, today):
         return
+
+    debt = abs(account.balance)
+    rate = _get_credit_rate(account)
+    monthly_estimate = (debt * rate / Decimal("100") / Decimal("12")).quantize(
+        Decimal("0.01")
+    )
+
+    advice = (
+        f"Погасите долг {debt} ₽ полностью, чтобы сохранить льготный период. "
+        f"Важно: частичное погашение НЕ продлевает беспроцентный период — "
+        f"таймер сбрасывается только при полном погашении. "
+        f"Если полной суммы нет, внесите минимальный платёж "
+        f"(обычно 5–8% от долга), чтобы избежать просрочки. "
+        f"После истечения периода проценты начнут начисляться на всю сумму долга — "
+        f"около {monthly_estimate} ₽ в месяц при ставке {rate}%."
+    )
 
     create_notification(
         user=account.user,
         notification_type="payment_upcoming",
-        title="Скоро конец льготного периода",
-        message=f"Через 3 дня истекает льготный период по карте "
-        f"«{account.name}». Погасите долг {abs(account.balance)} ₽, "
-        f"чтобы избежать процентов.",
-        data={"url": "/accounts", "account_id": account.id, "for_date": str(today)},
+        title=f"⚡ 3 дня до конца льготного периода: {account.name}",
+        message=advice,
+        data={
+            "url": "/accounts",
+            "account_id": account.id,
+            "for_date": str(today),
+            "debt": str(debt),
+            "rate": str(rate),
+            "days_left": 3,
+        },
     )
 
 
 def _apply_late_penalty(account: Account, today: date, create_at: datetime) -> None:
-    """Начисляет штраф за просрочку и уведомляет об этом."""
-    penalty_rate = Decimal("30.0") / Decimal("100") / Decimal("365")
+    """Начисляет проценты за пользование кредитом после льготного периода."""
+    rate = _get_credit_rate(account)
+    daily_rate = rate / Decimal("100") / Decimal("365")
     debt = abs(account.balance)
-    penalty = (debt * penalty_rate).quantize(Decimal("0.01"))
+    penalty = (debt * daily_rate).quantize(Decimal("0.01"))
 
     if penalty <= 0:
         return
 
     category = _get_or_create_category(
-        account.user, "Штраф по кредитной карте", "expense"
+        account.user, "Проценты по кредитной карте", "expense"
     )
 
     _apply_balance_operation(
@@ -134,19 +168,32 @@ def _apply_late_penalty(account: Account, today: date, create_at: datetime) -> N
         amount=penalty,
         category=category,
         create_at=create_at,
-        comment="Начисление пени за просрочку льготного периода (30% годовых)",
-        is_income=False,  # Вычитаем, увеличивая долг
+        comment=f"Начисление процентов по кредитной карте "
+        f"({rate}% годовых после льготного периода)",
+        is_income=False,
     )
 
-    # Отправляем уведомление о штрафе (раз в день)
+    # Уведомление раз в день
     if not _notification_exists(account.user, "budget_warning", account.id, today):
+        monthly_estimate = (debt * rate / Decimal("100") / Decimal("12")).quantize(
+            Decimal("0.01")
+        )
         create_notification(
             user=account.user,
             notification_type="budget_warning",
-            title="Штраф по кредитной карте",
-            message=f"Льготный период по карте «{account.name}» истек. "
-            f"Начислена пеня: {penalty} ₽.",
-            data={"url": "/accounts", "account_id": account.id, "for_date": str(today)},
+            title="Проценты по кредитной карте",
+            message=(
+                f"Льготный период по карте «{account.name}» истёк. "
+                f"Начислено за день: {penalty} ₽ (ставка {rate}% годовых). "
+                f"За месяц набежит ~{monthly_estimate} ₽. "
+                f"Погасите долг полностью, чтобы остановить начисление."
+            ),
+            data={
+                "url": "/accounts",
+                "account_id": account.id,
+                "for_date": str(today),
+                "rate": str(rate),
+            },
         )
 
 

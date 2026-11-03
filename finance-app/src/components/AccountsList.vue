@@ -64,7 +64,9 @@
                 <strong>{{ truncateText(account.name, 25) }}</strong>
                 <span v-if="account.account_type === 'deposit'" class="badge badge-info">Вклад {{ account.interest_rate }}% (день)</span>
                 <span v-if="account.account_type === 'deposit_monthly'" class="badge badge-info">Вклад {{ account.interest_rate }}% (мес.)</span>
-                <span v-if="account.account_type === 'credit_card'" class="badge badge-danger">Кредитка</span>
+                <span v-if="account.account_type === 'credit_card'" class="badge badge-danger">
+                  Кредитка<template v-if="account.credit_rate"> · {{ account.credit_rate }}%</template>
+                </span>
               </div>
               <div class="account-subtext" v-if="account.account_type === 'credit_card' && getGraceDaysLeft(account) !== null" :class="getGraceDaysLeft(account) <= 3 ? 'text-danger' : 'text-muted'">
                 <i class="fas fa-clock"></i> Льготный период: {{ getGraceDaysLeft(account) }} дн.
@@ -123,7 +125,9 @@
                   <strong>{{ account.name }}</strong>
                   <span v-if="account.account_type === 'deposit'" class="badge badge-info" style="margin-left:8px; font-size:0.65rem;">📈 {{ account.interest_rate }}% (день)</span>
                   <span v-if="account.account_type === 'deposit_monthly'" class="badge badge-info" style="margin-left:8px; font-size:0.65rem;">📈 {{ account.interest_rate }}% (мес.)</span>
-                  <span v-if="account.account_type === 'credit_card'" class="badge badge-danger" style="margin-left:8px; font-size:0.65rem;">💳 Кредитка</span>
+                  <span v-if="account.account_type === 'credit_card'" class="badge badge-danger" style="margin-left:8px; font-size:0.65rem;">
+                    💳 Кредитка<template v-if="account.credit_rate"> · {{ account.credit_rate }}%</template>
+                  </span>
                 </div>
                 <div v-if="account.account_type === 'credit_card' && getGraceDaysLeft(account) !== null" style="font-size:0.75rem; margin-top:4px;" :class="getGraceDaysLeft(account) <= 3 ? 'text-danger' : 'text-muted'">
                   <i class="fas fa-hourglass-half"></i> До конца льготного периода: {{ getGraceDaysLeft(account) }} дн.
@@ -179,7 +183,9 @@
                 <strong>{{ truncateText(account.name, 25) }}</strong>
                 <span v-if="account.account_type === 'deposit'" class="badge badge-info">Вклад (день)</span>
                 <span v-if="account.account_type === 'deposit_monthly'" class="badge badge-info">Вклад (мес.)</span>
-                <span v-if="account.account_type === 'credit_card'" class="badge badge-danger">Кредитка</span>
+                <span v-if="account.account_type === 'credit_card'" class="badge badge-danger">
+                  Кредитка<template v-if="account.credit_rate"> · {{ account.credit_rate }}%</template>
+                </span>
               </div>
               <span class="badge badge-secondary">Неактивен</span>
             </div>
@@ -235,7 +241,9 @@
                   <strong>{{ account.name }}</strong>
                   <span v-if="account.account_type === 'deposit'" class="badge badge-info" style="margin-left:8px; font-size:0.65rem;">📈 Вклад (день)</span>
                   <span v-if="account.account_type === 'deposit_monthly'" class="badge badge-info" style="margin-left:8px; font-size:0.65rem;">📈 Вклад (мес.)</span>
-                  <span v-if="account.account_type === 'credit_card'" class="badge badge-danger" style="margin-left:8px; font-size:0.65rem;">💳 Кредитка</span>
+                  <span v-if="account.account_type === 'credit_card'" class="badge badge-danger" style="margin-left:8px; font-size:0.65rem;">
+                    💳 Кредитка<template v-if="account.credit_rate"> · {{ account.credit_rate }}%</template>
+                  </span>
                 </div>
               </td>
               <td class="text-muted">
@@ -726,6 +734,22 @@
               <label class="form-label required">Льготный период (дней)</label>
               <input v-model="formData.grace_period_days" type="number" class="form-control" required placeholder="Например: 120">
             </div>
+            <div class="form-group">
+              <label class="form-label">Ставка после льготного периода, %</label>
+              <input
+                v-model="formData.credit_rate"
+                type="number"
+                step="0.1"
+                min="0"
+                max="100"
+                class="form-control"
+                placeholder="Например: 25.9"
+              >
+              <small class="form-hint text-muted">
+                Указана в договоре или приложении банка. Обычно 20–40%.
+                Если не знаете — оставьте пустым, будет использоваться 30%.
+              </small>
+            </div>
           </template>
 
           <div class="modal-footer">
@@ -919,7 +943,7 @@ export default {
     // --- ТЕМНАЯ ТЕМА ДЛЯ CANVAS ---
     const isDarkTheme = ref(document.documentElement.getAttribute('data-theme') === 'dark')
 
-    // Добавлены новые поля в форму
+    // Поля формы
     const formData = ref({
       name: '',
       balance: 0,
@@ -927,6 +951,7 @@ export default {
       account_type: 'standard',
       interest_rate: null,
       credit_limit: null,
+      credit_rate: null,           // ← НОВОЕ
       grace_period_days: 120,
       grace_period_start: null
     })
@@ -997,7 +1022,7 @@ export default {
       return 'счетов'
     }
 
-    // Карусель теперь из 4 карточек
+    // Карусель из 4 карточек
     const statCards = computed(() => [
       {
         key: 'total',
@@ -1227,13 +1252,13 @@ export default {
         const angle = percent * 2 * Math.PI
         const endAngle = startAngle + angle
         ctx.beginPath(); ctx.fillStyle = item.color; ctx.moveTo(centerX, centerY); ctx.arc(centerX, centerY, radius, startAngle, endAngle); ctx.closePath(); ctx.fill()
-        ctx.strokeStyle = colors.donutHole; ctx.lineWidth = 2; ctx.stroke() // Разделитель сегментов
+        ctx.strokeStyle = colors.donutHole; ctx.lineWidth = 2; ctx.stroke()
         if (percent > 0.08) {
           const midAngle = startAngle + angle / 2
           const textRadius = radius * 0.68
           const x = centerX + Math.cos(midAngle) * textRadius
           const y = centerY + Math.sin(midAngle) * textRadius
-          ctx.fillStyle = '#ffffff' // Внутри цветных сегментов текст всегда белый
+          ctx.fillStyle = '#ffffff'
           ctx.font = `bold ${size < 260 ? 11 : 13}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`
           ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 3
           ctx.fillText(`${item.percent}%`, x, y); ctx.shadowBlur = 0
@@ -1260,7 +1285,6 @@ export default {
       const inactiveAngle = inactivePercent * 2 * Math.PI
       ctx.beginPath(); ctx.fillStyle = '#9ca3af'; ctx.moveTo(centerX, centerY); ctx.arc(centerX, centerY, radius, -Math.PI / 2 + activeAngle, -Math.PI / 2 + activeAngle + inactiveAngle); ctx.closePath(); ctx.fill()
 
-      // Вырезаем центр (зависит от темы)
       ctx.beginPath(); ctx.fillStyle = colors.donutHole; ctx.arc(centerX, centerY, radius * 0.6, 0, 2 * Math.PI); ctx.fill()
     }
 
@@ -1334,10 +1358,8 @@ export default {
         const bgX = isSource ? pos.x - nodeWidth - 8 - bgW : pos.x + nodeWidth + 8
         const bgY = pos.y + pos.h / 2 - bgH / 2
 
-        // Фон подписи (светлый/темный)
         ctx.fillStyle = colors.sankeyBg; ctx.beginPath(); const r = 6
         ctx.moveTo(bgX + r, bgY); ctx.arcTo(bgX + bgW, bgY, bgX + bgW, bgY + bgH, r); ctx.arcTo(bgX + bgW, bgY + bgH, bgX, bgY + bgH, r); ctx.arcTo(bgX, bgY + bgH, bgX, bgY, r); ctx.arcTo(bgX, bgY, bgX + bgW, bgY, r); ctx.closePath(); ctx.fill()
-        // Тень для контраста
         ctx.shadowColor = 'rgba(0,0,0,0.2)'; ctx.shadowBlur = 4;
         ctx.fill(); ctx.shadowBlur = 0;
 
@@ -1467,7 +1489,8 @@ export default {
       editingAccount.value = null
       formData.value = {
         name: '', balance: 0, is_active: true,
-        account_type: 'standard', interest_rate: null, credit_limit: null,
+        account_type: 'standard',
+        interest_rate: null, credit_limit: null, credit_rate: null,
         grace_period_days: 120, grace_period_start: null
       }
       showAccountModal.value = true
@@ -1482,6 +1505,7 @@ export default {
         account_type: account.account_type || 'standard',
         interest_rate: account.interest_rate,
         credit_limit: account.credit_limit,
+        credit_rate: account.credit_rate,           // ← НОВОЕ
         grace_period_days: account.grace_period_days || 120,
         grace_period_start: account.grace_period_start
       }
@@ -1499,7 +1523,11 @@ export default {
         const isDeposit = ['deposit', 'deposit_monthly'].includes(payload.account_type)
 
         if (!isDeposit) payload.interest_rate = null
-        if (payload.account_type !== 'credit_card') { payload.credit_limit = null; payload.grace_period_days = null }
+        if (payload.account_type !== 'credit_card') {
+          payload.credit_limit = null
+          payload.credit_rate = null                 // ← НОВОЕ
+          payload.grace_period_days = null
+        }
 
         if (editingAccount.value) {
           await apiService.updateAccount(editingAccount.value.id, payload)
@@ -1510,7 +1538,7 @@ export default {
         await loadAccounts()
       } catch (error) {
         console.error('Error saving account:', error)
-        alert('Ошибка при сохранении счета: ' + (error.response?.data?.interest_rate || error.message))
+        alert('Ошибка при сохранении счета: ' + (error.response?.data?.credit_rate || error.response?.data?.interest_rate || error.message))
       }
     }
 
@@ -1729,22 +1757,18 @@ export default {
 .stat-value { font-size: 1.4rem; font-weight: 700; line-height: 1.2; word-break: break-word; }
 .stat-hint { font-size: 0.75rem; margin-top: 0.4rem; opacity: 0.75; }
 
-/* 1. Свободные деньги — подхватывает переменные темы */
 .stat-card-total { background: linear-gradient(135deg, var(--white) 0%, var(--light-color) 100%); border: 1px solid var(--light-color); }
 .stat-card-total .stat-title { color: var(--gray-color); }
 .stat-card-total .stat-value { color: var(--dark-color); }
 .stat-card-total .stat-hint { color: var(--gray-color); }
 
-/* 2. Долг по кредиткам — темная */
 .stat-card-credit { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); }
 .stat-card-credit .stat-title, .stat-card-credit .stat-value, .stat-card-credit .stat-hint { color: #ffffff; }
 
-/* 3. Баланс активных — красная */
 .stat-card-active { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
 .stat-card-active .stat-title, .stat-card-active .stat-value, .stat-card-active .stat-hint { color: #ffffff; }
 .stat-card-active .stat-hint { opacity: 0.85; }
 
-/* 4. Баланс неактивных — синяя */
 .stat-card-inactive { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
 .stat-card-inactive .stat-title, .stat-card-inactive .stat-value, .stat-card-inactive .stat-hint { color: #ffffff; }
 .stat-card-inactive .stat-hint { opacity: 0.85; }
@@ -1854,7 +1878,6 @@ export default {
 .turnover-fill { height: 100%; background: linear-gradient(90deg, #3b82f6 0%, #93c5fd 100%); border-radius: 9999px; transition: width 0.4s ease; }
 .turnover-percent { font-size: 0.75rem; font-weight: 600; color: var(--gray-color); min-width: 40px; text-align: right; }
 
-/* Мобильные карточки топов */
 .top-account-card,
 .pair-card {
   background: var(--white);
@@ -2097,7 +2120,6 @@ export default {
    HOVER-ЭФФЕКТЫ
    ============================================================ */
 
-/* --- 1. Карточки статистики (desktop): подъём, увеличение, цветная тень --- */
 .stats-carousel:not(.is-mobile) .stat-card {
   position: relative;
   overflow: hidden;
@@ -2125,7 +2147,6 @@ export default {
   box-shadow: 0 16px 32px rgba(59, 130, 246, 0.45), 0 6px 12px rgba(37, 99, 235, 0.3);
 }
 
-/* --- 1.1 Shimmer-блик (только для цветных карточек: тёмной, красной, синей) --- */
 @keyframes shimmer-sweep {
   from { transform: translateX(-100%) skewX(-12deg); }
   to   { transform: translateX(100%) skewX(-12deg); }
@@ -2158,7 +2179,6 @@ export default {
   animation: shimmer-sweep 0.85s ease-out;
 }
 
-/* --- 2. Карточки счетов (мобильные) --- */
 .account-card {
   transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
@@ -2173,7 +2193,6 @@ export default {
   transform: translateY(-2px);
 }
 
-/* --- 3. Карточки переводов (мобильные) --- */
 .transfer-card {
   transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
@@ -2183,7 +2202,6 @@ export default {
   transform: translateY(-2px);
 }
 
-/* --- 4. Строки таблиц (desktop): подсветка фона + акцентная полоса слева --- */
 .table tbody tr {
   transition: background-color 0.18s ease;
 }

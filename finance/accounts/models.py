@@ -61,6 +61,14 @@ class Account(models.Model):
     grace_period_start = models.DateField(
         null=True, blank=True, verbose_name="Начало льготного периода"
     )
+    credit_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Ставка по кредиту после льготного периода, %",
+        help_text="Если не указана, используется 30% (среднее значение)",
+    )
 
     def __str__(self):
         return self.name

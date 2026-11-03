@@ -4,6 +4,7 @@ from datetime import datetime as dt
 
 from accounts.cache import invalidate_balance_history_cache
 from accounts.models import Account
+from accounts.services import maybe_start_grace_period
 from app_user.models import CustomUser
 from django.db.models import Count, QuerySet
 from django_filters.rest_framework.backends import DjangoFilterBackend
@@ -202,12 +203,14 @@ class RetrieveUpdateDeleteTransaction(generics.RetrieveUpdateDestroyAPIView):
             Account.objects.bulk_update(
                 (new_account, old_account), ["balance"]
             )
+            maybe_start_grace_period(new_account)
         else:
             if type_transaction.startswith("inc"):
                 old_account.balance += new_amount - old_amount
             else:
                 old_account.balance += old_amount - new_amount
             old_account.save()
+            maybe_start_grace_period(old_account)
 
         # Сбрасываем кэш истории баланса
         invalidate_balance_history_cache(self.request.user.pk)
