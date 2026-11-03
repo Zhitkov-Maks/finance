@@ -42,12 +42,8 @@
     <!-- ============================================================ -->
     <InsightsWidget ref="insightsWidgetRef" />
 
-    <!-- Панель действий и курсы валют -->
+    <!-- Курсы валют (кнопка «Добавить транзакцию» теперь FAB в App.vue) -->
     <div class="actions-panel">
-      <button @click="showAddTransaction = true" class="btn btn-success">
-        <i class="fas fa-exchange-alt"></i> Добавить транзакцию
-      </button>
-
       <div class="exchange-rates" v-if="exchangeRates.length > 0">
         <div
           v-for="rate in exchangeRates"
@@ -468,91 +464,6 @@
       </div>
     </div>
 
-    <!-- Modal: Добавить транзакцию -->
-    <div
-      v-if="showAddTransaction"
-      class="modal"
-      @click.self="showAddTransaction = false"
-    >
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Добавить транзакцию</h3>
-          <button class="modal-close" @click="showAddTransaction = false">
-            &times;
-          </button>
-        </div>
-
-        <form @submit.prevent="addTransaction">
-          <div class="form-group">
-            <label class="form-label">Тип</label>
-            <select v-model="newTransaction.type" class="form-control" required>
-              <option value="income">Доход</option>
-              <option value="expense">Расход</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Сумма</label>
-            <input
-              type="number"
-              v-model="newTransaction.amount"
-              class="form-control"
-              step="0.01"
-              required
-            >
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Категория</label>
-            <select v-model="newTransaction.category" class="form-control" required>
-              <option value="">Выберите категорию</option>
-              <option
-                v-for="cat in availableCategories"
-                :key="cat.id"
-                :value="cat.id"
-              >
-                {{ '—'.repeat(cat.level) }} {{ cat.name }}
-              </option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Счет</label>
-            <select v-model="newTransaction.account" class="form-control" required>
-              <option value="">Выберите счет</option>
-              <option
-                v-for="acc in activeAccounts"
-                :key="acc.id"
-                :value="acc.id"
-              >
-                {{ acc.name }} ({{ formatCurrency(acc.balance) }})
-              </option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Комментарий</label>
-            <textarea
-              v-model="newTransaction.comment"
-              class="form-control"
-              rows="2"
-            ></textarea>
-          </div>
-
-          <div class="modal-footer">
-            <button
-              type="button"
-              @click="showAddTransaction = false"
-              class="btn btn-secondary"
-            >
-              Отмена
-            </button>
-            <button type="submit" class="btn btn-primary">Добавить</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
     <!-- Modal: Установка цели -->
     <GoalModal
         v-if="showGoalModal"
@@ -616,13 +527,10 @@ export default {
   components: { InsightsWidget, GoalModal },
   setup() {
     // =========================================================================
-    // Состояние — счета
+    // Состояние
     // =========================================================================
     const accounts = ref([])
-    const incomeCategories = ref([])
-    const expenseCategories = ref([])
     const loading = ref(false)
-    const showAddTransaction = ref(false)
     const showGoalModal = ref(false)
     const monthlyIncome = ref(0)
     const monthlyExpense = ref(0)
@@ -635,23 +543,11 @@ export default {
     let ratesUpdateInterval = null
     let insightsRefreshInterval = null
 
-    // Ссылка на дочерний виджет инсайтов
     const insightsWidgetRef = ref(null)
-
-    // --- ТЕМНАЯ ТЕМА ДЛЯ CANVAS ---
     const isDarkTheme = ref(document.documentElement.getAttribute('data-theme') === 'dark')
 
-    // Бюджет
     const budgetSummary = ref(null)
     const budgetLoading = ref(false)
-
-    const newTransaction = ref({
-      type: 'expense',
-      amount: '',
-      category: '',
-      account: '',
-      comment: ''
-    })
 
     const previousMonthData = ref({
       income: 0,
@@ -666,7 +562,6 @@ export default {
     const touchDeltaX = ref(0)
     const isDragging = ref(false)
     const SWIPE_THRESHOLD = 50
-
     const isMobileView = ref(false)
 
     const updateViewport = () => {
@@ -696,21 +591,11 @@ export default {
 
     const cardPosition = (index) => {
       if (!isMobileView.value) return {}
-
       const offset = index - currentStatIndex.value
-
-      if (Math.abs(offset) > 1) {
-        return { display: 'none' }
-      }
-
+      if (Math.abs(offset) > 1) return { display: 'none' }
       if (offset === 0) {
-        return {
-          transform: 'translateX(-50%) scale(1)',
-          zIndex: 3,
-          opacity: 1
-        }
+        return { transform: 'translateX(-50%) scale(1)', zIndex: 3, opacity: 1 }
       }
-
       const direction = offset > 0 ? 1 : -1
       return {
         transform: `translateX(calc(-50% + ${direction * 20}px)) scale(0.94)`,
@@ -734,7 +619,6 @@ export default {
     const onTouchEnd = () => {
       if (!isDragging.value) return
       isDragging.value = false
-
       if (touchDeltaX.value < -SWIPE_THRESHOLD && currentStatIndex.value < 2) {
         currentStatIndex.value++
       } else if (touchDeltaX.value > SWIPE_THRESHOLD && currentStatIndex.value > 0) {
@@ -743,12 +627,33 @@ export default {
       touchDeltaX.value = 0
     }
 
+    const onMouseDown = (e) => {
+      if (!isMobileView.value) return
+      touchStartX.value = e.clientX
+      touchDeltaX.value = 0
+      isDragging.value = true
+      const onMouseMove = (ev) => {
+        if (!isDragging.value) return
+        touchDeltaX.value = ev.clientX - touchStartX.value
+      }
+      const onMouseUp = () => {
+        onTouchEnd()
+        window.removeEventListener('mousemove', onMouseMove)
+        window.removeEventListener('mouseup', onMouseUp)
+      }
+      window.addEventListener('mousemove', onMouseMove)
+      window.addEventListener('mouseup', onMouseUp)
+    }
+
+    // =========================================================================
+    // Геймификация
+    // =========================================================================
     const loadGamification = async () => {
       try {
-          gamification.value = await apiService.getGamificationDashboard()
-        } catch (e) {
-          console.error('Gamification load error', e)
-        }
+        gamification.value = await apiService.getGamificationDashboard()
+      } catch (e) {
+        console.error('Gamification load error', e)
+      }
     }
 
     const onGoalSaved = () => {
@@ -765,25 +670,6 @@ export default {
           alert('Не удалось удалить цель')
         }
       }
-    }
-
-    const onMouseDown = (e) => {
-      if (!isMobileView.value) return
-      touchStartX.value = e.clientX
-      touchDeltaX.value = 0
-      isDragging.value = true
-
-      const onMouseMove = (ev) => {
-        if (!isDragging.value) return
-        touchDeltaX.value = ev.clientX - touchStartX.value
-      }
-      const onMouseUp = () => {
-        onTouchEnd()
-        window.removeEventListener('mousemove', onMouseMove)
-        window.removeEventListener('mouseup', onMouseUp)
-      }
-      window.addEventListener('mousemove', onMouseMove)
-      window.addEventListener('mouseup', onMouseUp)
     }
 
     // =========================================================================
@@ -807,22 +693,16 @@ export default {
 
     const formatDate = (dateString) => {
       if (!dateString) return ''
-      const date =
-        typeof dateString === 'string' ? new Date(dateString) : dateString
+      const date = typeof dateString === 'string' ? new Date(dateString) : dateString
       return date.toLocaleDateString('ru-RU', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
+        day: '2-digit', month: '2-digit', year: 'numeric'
       })
     }
 
     const formatShortDate = (dateString) => {
       if (!dateString) return ''
       return new Date(dateString).toLocaleDateString('ru-RU', {
-        day: '2-digit',
-        month: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
+        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
       })
     }
 
@@ -830,7 +710,6 @@ export default {
       const nowDate = new Date()
       const currentMonth = nowDate.getMonth() + 1
       const currentYear = nowDate.getFullYear()
-
       let prevMonth = currentMonth - 1
       let prevYear = currentYear
       if (prevMonth === 0) {
@@ -887,7 +766,7 @@ export default {
     }
 
     // =========================================================================
-    // Динамика баланса — состояние
+    // Динамика баланса
     // =========================================================================
     const historyCanvas = ref(null)
     const historyRange = ref(30)
@@ -983,9 +862,6 @@ export default {
       })
     }
 
-    // =========================================================================
-    // Динамика баланса — отрисовка
-    // =========================================================================
     const getCanvasColors = () => ({
       grid: isDarkTheme.value ? '#374151' : '#e5e7eb',
       text: isDarkTheme.value ? '#9ca3af' : '#9ca3af',
@@ -1104,7 +980,6 @@ export default {
         }
       })
 
-      // Подписи по оси X
       ctx.fillStyle = colors.textBold
       ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       ctx.textAlign = 'center'
@@ -1122,9 +997,7 @@ export default {
         if (!isFirst && !isLast && !showByStep) return
 
         const x = paddingLeft + i * xStep
-        if (x - lastLabelX < MIN_LABEL_SPACING * 0.9) {
-          if (!isFirst) return
-        }
+        if (x - lastLabelX < MIN_LABEL_SPACING * 0.9 && !isFirst) return
 
         const label = new Date(p.date).toLocaleDateString('ru-RU', {
           day: '2-digit', month: '2-digit'
@@ -1249,6 +1122,24 @@ export default {
       }
     }
 
+    const loadMonthlyStatistics = async () => {
+      const nowDate = new Date()
+      const month = nowDate.getMonth() + 1
+      const year = nowDate.getFullYear()
+
+      try {
+        const expenseStats = await apiService.getStatistics(month, year, 'expense')
+        monthlyExpense.value = parseFloat(expenseStats.total_amount) || 0
+
+        const incomeStats = await apiService.getStatistics(month, year, 'income')
+        monthlyIncome.value = parseFloat(incomeStats.total_amount) || 0
+      } catch (error) {
+        console.error('Error loading monthly statistics:', error)
+        monthlyIncome.value = 0
+        monthlyExpense.value = 0
+      }
+    }
+
     // =========================================================================
     // Прогноз
     // =========================================================================
@@ -1258,7 +1149,6 @@ export default {
     })
 
     const daysPassed = computed(() => new Date().getDate())
-
     const daysLeftInMonth = computed(() => daysInMonth.value - daysPassed.value)
 
     const averageDailyIncome = computed(() => {
@@ -1277,8 +1167,7 @@ export default {
     })
 
     const forecastBalance = computed(() => {
-      const projectedExpenses =
-        averageDailyExpense.value * daysLeftInMonth.value
+      const projectedExpenses = averageDailyExpense.value * daysLeftInMonth.value
       return Math.round((totalBalance.value - projectedExpenses) * 100) / 100
     })
 
@@ -1293,25 +1182,16 @@ export default {
       const diff = forecastBalance.value - totalBalance.value
 
       if (daysLeftInMonth.value === 0) {
-        return {
-          class: 'status-neutral',
-          icon: 'fas fa-minus',
-          message: 'Месяц завершен'
-        }
+        return { class: 'status-neutral', icon: 'fas fa-minus', message: 'Месяц завершен' }
       }
 
       if (averageDailyExpense.value === 0) {
-        return {
-          class: 'status-neutral',
-          icon: 'fas fa-minus',
-          message: 'Расходы не зафиксированы'
-        }
+        return { class: 'status-neutral', icon: 'fas fa-minus', message: 'Расходы не зафиксированы' }
       }
 
-      const percentChange =
-        totalBalance.value !== 0
-          ? (diff / totalBalance.value) * 100
-          : 0
+      const percentChange = totalBalance.value !== 0
+        ? (diff / totalBalance.value) * 100
+        : 0
 
       if (percentChange > 5) {
         return {
@@ -1346,10 +1226,7 @@ export default {
     })
 
     const dailyProgress = computed(() => {
-      return Math.min(
-        100,
-        Math.round((daysPassed.value / daysInMonth.value) * 100)
-      )
+      return Math.min(100, Math.round((daysPassed.value / daysInMonth.value) * 100))
     })
 
     const progressClass = computed(() => {
@@ -1369,7 +1246,6 @@ export default {
     // =========================================================================
     const goalProgress = computed(() => {
       if (!gamification.value?.goal) return null
-
       const g = gamification.value.goal
       const amount = g.amount
 
@@ -1377,8 +1253,8 @@ export default {
         const current = g.spent_on_backend || 0
         const percent = amount > 0 ? Math.min(100, (current / amount) * 100) : 0
         return {
-          current: current,
-          percent: percent,
+          current,
+          percent,
           is_completed: current <= amount,
           status_text: current > amount
             ? '⚠️ Лимит превышен!'
@@ -1387,7 +1263,6 @@ export default {
         }
       }
 
-      // Для 'save' прогноз на конец месяца
       const avgDailyExpense = daysPassed.value > 0 ? monthlyExpense.value / daysPassed.value : 0
       const projectedExpense = avgDailyExpense * daysInMonth.value
       const projectedSavings = monthlyIncome.value - projectedExpense
@@ -1397,7 +1272,7 @@ export default {
 
       return {
         current: projectedSavings,
-        percent: percent,
+        percent,
         is_completed: isCompleted,
         status_text: projectedSavings < 0
           ? '⚠️ При текущем темпе трат вы уйдете в минус'
@@ -1439,8 +1314,7 @@ export default {
 
     const savingsChange = computed(() => {
       const current = monthlyIncome.value - monthlyExpense.value
-      const previous =
-        previousMonthData.value.income - previousMonthData.value.expense
+      const previous = previousMonthData.value.income - previousMonthData.value.expense
       if (previous === 0) return 'Нет данных'
       const diff = current - previous
       const percent = (diff / Math.abs(previous)) * 100
@@ -1449,36 +1323,13 @@ export default {
 
     const savingsChangeClass = computed(() => {
       const current = monthlyIncome.value - monthlyExpense.value
-      const previous =
-        previousMonthData.value.income - previousMonthData.value.expense
+      const previous = previousMonthData.value.income - previousMonthData.value.expense
       if (previous === 0) return ''
       return current > previous ? 'text-success' : 'text-danger'
     })
 
     // =========================================================================
-    // Категории
-    // =========================================================================
-    const availableCategories = computed(() => {
-      const categories =
-        newTransaction.value.type === 'income'
-          ? incomeCategories.value
-          : expenseCategories.value
-      return flattenCategories(categories)
-    })
-
-    const flattenCategories = (categories, level = 0) => {
-      let result = []
-      for (const cat of categories) {
-        result.push({ ...cat, level, name: cat.name })
-        if (cat.children && cat.children.length) {
-          result = result.concat(flattenCategories(cat.children, level + 1))
-        }
-      }
-      return result
-    }
-
-    // =========================================================================
-    // Методы
+    // Курсы валют
     // =========================================================================
     const fetchExchangeRates = async () => {
       exchangeRatesLoading.value = true
@@ -1512,39 +1363,15 @@ export default {
       }
     }
 
-    const loadMonthlyStatistics = async () => {
-      const nowDate = new Date()
-      const month = nowDate.getMonth() + 1
-      const year = nowDate.getFullYear()
-
-      try {
-        const expenseStats = await apiService.getStatistics(month, year, 'expense')
-        monthlyExpense.value = parseFloat(expenseStats.total_amount) || 0
-
-        const incomeStats = await apiService.getStatistics(month, year, 'income')
-        monthlyIncome.value = parseFloat(incomeStats.total_amount) || 0
-      } catch (error) {
-        console.error('Error loading monthly statistics:', error)
-        monthlyIncome.value = 0
-        monthlyExpense.value = 0
-      }
-    }
-
+    // =========================================================================
+    // Загрузка данных
+    // =========================================================================
     const loadData = async () => {
       loading.value = true
       try {
-        // Счета и категории не зависят друг от друга — грузим параллельно
-        const [accountsData, incomeCatData, expenseCatData] = await Promise.all([
-          apiService.getAccounts(1, 100),
-          apiService.getCategories('income', 1, 100, true),
-          apiService.getCategories('expense', 1, 100, true),
-        ])
+        const accountsData = await apiService.getAccounts(1, 100)
+        accounts.value = accountsData.results?.[0]?.accounts || []
 
-        accounts.value = accountsData.results[0]?.accounts || []
-        incomeCategories.value = incomeCatData.results || []
-        expenseCategories.value = expenseCatData.results || []
-
-        // Статистика и бюджет — параллельно
         await Promise.all([
           loadMonthlyStatistics(),
           loadPreviousMonthStatistics(),
@@ -1558,38 +1385,12 @@ export default {
       }
     }
 
-    const addTransaction = async () => {
-      if (!newTransaction.value.category || !newTransaction.value.account) {
-        alert('Заполните все поля')
-        return
-      }
-
-      try {
-        await apiService.createTransaction(newTransaction.value.type, {
-          amount: newTransaction.value.amount,
-          create_at: new Date().toISOString(),
-          category: parseInt(newTransaction.value.category),
-          account: parseInt(newTransaction.value.account),
-          comment: newTransaction.value.comment
-        })
-        showAddTransaction.value = false
-        newTransaction.value = {
-          type: 'expense',
-          amount: '',
-          category: '',
-          account: '',
-          comment: ''
-        }
-        await loadData()
-        await loadGamification()
-
-        // Обновляем инсайты (могут появиться дубликаты/скачки)
-        if (insightsWidgetRef.value?.loadInsights) {
-          await insightsWidgetRef.value.loadInsights()
-        }
-      } catch (error) {
-        console.error('Error creating transaction:', error)
-        alert('Ошибка при создании транзакции')
+    // Обработчик события от FAB (QuickAddTransaction)
+    const onTransactionCreated = async () => {
+      await loadData()
+      await loadGamification()
+      if (insightsWidgetRef.value?.loadInsights) {
+        await insightsWidgetRef.value.loadInsights()
       }
     }
 
@@ -1602,8 +1403,7 @@ export default {
         if (list.length === 0) return
         const ids = list.map((a) => a.id)
         const currentIds = Array.from(visibleHistoryAccounts.value)
-        const sameSet =
-          currentIds.length === ids.length && ids.every((id) => currentIds.includes(id))
+        const sameSet = currentIds.length === ids.length && ids.every((id) => currentIds.includes(id))
         if (!sameSet) visibleHistoryAccounts.value = new Set(ids)
       },
       { immediate: true }
@@ -1615,7 +1415,6 @@ export default {
 
     const handleResize = () => scheduleHistoryDraw()
 
-    // Слушатель изменения темы
     const themeObserver = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.attributeName === 'data-theme') {
@@ -1632,6 +1431,7 @@ export default {
       updateViewport()
       window.addEventListener('resize', updateViewport)
       window.addEventListener('resize', handleResize)
+      window.addEventListener('transaction-created', onTransactionCreated)
       themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
 
       loadData()
@@ -1639,7 +1439,6 @@ export default {
       fetchExchangeRates()
       ratesUpdateInterval = setInterval(fetchExchangeRates, 3600000)
 
-      // Автообновление инсайтов раз в 5 минут
       insightsRefreshInterval = setInterval(() => {
         insightsWidgetRef.value?.loadInsights?.()
       }, 5 * 60 * 1000)
@@ -1648,10 +1447,9 @@ export default {
     onBeforeUnmount(() => {
       window.removeEventListener('resize', updateViewport)
       window.removeEventListener('resize', handleResize)
+      window.removeEventListener('transaction-created', onTransactionCreated)
       themeObserver.disconnect()
-      if (ratesUpdateInterval) {
-        clearInterval(ratesUpdateInterval)
-      }
+      if (ratesUpdateInterval) clearInterval(ratesUpdateInterval)
       if (insightsRefreshInterval) {
         clearInterval(insightsRefreshInterval)
         insightsRefreshInterval = null
@@ -1661,14 +1459,11 @@ export default {
     return {
       accounts,
       loading,
-      showAddTransaction,
       showGoalModal,
-      newTransaction,
       totalBalance,
       activeAccounts,
       monthlyIncome,
       monthlyExpense,
-      availableCategories,
       exchangeRates,
       exchangeRatesLoading,
       exchangeRatesError,
@@ -1691,7 +1486,6 @@ export default {
       expenseChangeClass,
       savingsChange,
       savingsChangeClass,
-      addTransaction,
       formatCurrency,
       formatCompactCurrency,
       formatDate,
@@ -1701,7 +1495,6 @@ export default {
       goalProgress,
       onGoalSaved,
       deleteGoal,
-      // Карусель
       currentStatIndex,
       isMobileView,
       statCards,
@@ -1710,11 +1503,9 @@ export default {
       onTouchMove,
       onTouchEnd,
       onMouseDown,
-      // Бюджет
       budgetSummary,
       budgetLoading,
       budgetPercentClass,
-      // Динамика баланса
       historyCanvas,
       historyRange,
       historyRanges,
@@ -1737,7 +1528,6 @@ export default {
       toggleHistoryAccount,
       onHistoryMouseMove,
       onHistoryMouseLeave,
-      // Инсайты
       insightsWidgetRef,
       showBreakdown
     }
@@ -1759,14 +1549,14 @@ export default {
   color: var(--dark-color);
 }
 
-/* ---------- Панель действий и курсы ---------- */
+/* ---------- Панель курсов валют ---------- */
 .actions-panel {
   display: flex;
   gap: 1.5rem;
   margin-bottom: 2rem;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;   /* курсы — справа, т.к. кнопка ушла в FAB */
 }
 
 .exchange-rates {
@@ -1852,7 +1642,6 @@ export default {
 
 .stats-carousel-track {
   display: grid;
-  /* minmax(0, 1fr) не даёт карточкам раздуваться шире контейнера */
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1.5rem;
 }
@@ -1882,7 +1671,6 @@ export default {
   word-break: break-word;
 }
 
-/* Карточка баланса — использует переменные темы */
 .stat-card-balance {
   background: linear-gradient(135deg, var(--white) 0%, var(--light-color) 100%);
   border: 1px solid var(--light-color);
@@ -1982,13 +1770,11 @@ export default {
    ============================================================ */
 .insights-grid {
   display: grid;
-  /* minmax(0, 2fr) minmax(0, 1fr) — колонки могут сжиматься */
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: 1.5rem;
   margin-bottom: 2rem;
 }
 
-/* Карточка прогноза — фиолетовый градиент отлично смотрится в обеих темах */
 .forecast-card {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
@@ -2121,134 +1907,132 @@ export default {
    ГЕЙМИФИКАЦИЯ
    ============================================================ */
 .gamification-grid {
-    display: grid;
-    /* minmax(0, 1fr) не даёт карточкам раздуваться шире контейнера */
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .goal-card, .literacy-card {
-    background: var(--white);
-    min-width: 0;
+  background: var(--white);
+  min-width: 0;
 }
 
 .goal-content {
-    padding: 0.5rem 0;
+  padding: 0.5rem 0;
 }
 
 .goal-amounts {
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-    /* flex-wrap: wrap — суммы перенесутся, если не влезут в одну строку */
-    flex-wrap: wrap;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .goal-current {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--dark-color);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--dark-color);
 }
 
 .goal-target {
-    color: var(--gray-color);
+  color: var(--gray-color);
 }
 
 .goal-subtitle {
-    font-size: 0.75rem;
-    color: var(--gray-color);
-    margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--gray-color);
+  margin-bottom: 0.25rem;
 }
 
 .goal-status {
-    font-size: 0.8rem;
-    margin-top: 0.5rem;
-    margin-bottom: 0.5rem;
-    color: var(--gray-color);
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--gray-color);
 }
 
 .goal-empty {
-    text-align: center;
-    padding: 1rem 0;
-    color: var(--gray-color);
+  text-align: center;
+  padding: 1rem 0;
+  color: var(--gray-color);
 }
 
 .goal-empty p {
-    margin-bottom: 1rem;
+  margin-bottom: 1rem;
 }
 
 .literacy-stars {
-    display: flex;
-    flex-wrap: wrap; /* звёзды перенесутся, если не влезут в один ряд */
-    gap: 0.25rem;
-    font-size: 1.1rem;
-    color: #d1d5db; /* Серый для неактивных звезд */
-    margin-bottom: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  font-size: 1.1rem;
+  color: #d1d5db;
+  margin-bottom: 1rem;
 }
 
 .literacy-stars .active {
-    color: #fbbf24; /* Золотой для активных */
+  color: #fbbf24;
 }
 
 .literacy-hint {
-    background: rgba(59, 130, 246, 0.1);
-    color: #3b82f6;
-    padding: 0.75rem;
-    border-radius: var(--radius);
-    font-size: 0.85rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    word-break: break-word; /* перенос длинных слов внутри подсказки */
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  padding: 0.75rem;
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  word-break: break-word;
 }
 
 .literacy-hint.hint-danger {
-    background: rgba(239, 68, 68, 0.1);
-    color: var(--danger-color);
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger-color);
 }
 
 .literacy-breakdown {
-    margin-top: 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    font-size: 0.8rem;
-    border-top: 1px dashed var(--light-color);
-    padding-top: 0.75rem;
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  border-top: 1px dashed var(--light-color);
+  padding-top: 0.75rem;
 }
 
 .breakdown-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
 }
 
 .breakdown-item.positive {
-    background: rgba(16, 185, 129, 0.1);
-    color: #059669;
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
 }
 
 .breakdown-item.negative {
-    background: rgba(239, 68, 68, 0.1);
-    color: #dc2626;
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
 }
 
 :global(:root[data-theme="dark"]) .breakdown-item.positive {
-    color: #6ee7b7;
+  color: #6ee7b7;
 }
 :global(:root[data-theme="dark"]) .breakdown-item.negative {
-    color: #fca5a5;
+  color: #fca5a5;
 }
 
 .breakdown-action {
-    flex: 1;
+  flex: 1;
 }
 
 .breakdown-points {
-    font-weight: 700;
+  font-weight: 700;
 }
 
 /* Карточка сравнения */
@@ -2344,7 +2128,7 @@ export default {
   align-items: baseline;
   gap: 0.5rem;
   margin-bottom: 0.75rem;
-  flex-wrap: wrap; /* суммы перенесутся, если не влезут */
+  flex-wrap: wrap;
 }
 
 .budget-widget-spent {
@@ -2640,80 +2424,8 @@ export default {
 }
 
 /* ============================================================
-   МОДАЛКА
+   КНОПКИ / УТИЛИТЫ
    ============================================================ */
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: var(--white);
-  border-radius: var(--radius);
-  padding: 2rem;
-  width: 100%;
-  max-width: 500px;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.modal-header h3 {
-  color: var(--dark-color);
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: var(--gray-color);
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--light-color);
-}
-
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.form-label {
-  display: block;
-  margin-bottom: 0.25rem;
-  font-weight: 500;
-  color: var(--dark-color);
-}
-
-.form-control {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid var(--gray-color);
-  border-radius: var(--radius);
-  font-size: 1rem;
-  background: var(--white);
-  color: var(--dark-color);
-}
-
 .btn {
   padding: 0.5rem 1rem;
   border: none;
@@ -2772,7 +2484,6 @@ export default {
   .insights-grid {
     grid-template-columns: 1fr;
   }
-  /* Теперь геймификация складывается в колонку уже на планшетах */
   .gamification-grid {
     grid-template-columns: 1fr;
   }
@@ -2877,7 +2588,6 @@ export default {
    HOVER-ЭФФЕКТЫ
    ============================================================ */
 
-/* --- 1. Карточки статистики (desktop): подъём, увеличение, цветная тень --- */
 .stats-carousel:not(.is-mobile) .stat-card {
   position: relative;
   overflow: hidden;
@@ -2902,7 +2612,6 @@ export default {
   box-shadow: 0 16px 32px rgba(59, 130, 246, 0.45), 0 6px 12px rgba(37, 99, 235, 0.3);
 }
 
-/* --- 1.1 Shimmer-блик (только для цветных карточек: расходы и доходы) --- */
 @keyframes shimmer-sweep {
   from { transform: translateX(-100%) skewX(-12deg); }
   to   { transform: translateX(100%) skewX(-12deg); }
@@ -2933,12 +2642,10 @@ export default {
   animation: shimmer-sweep 0.85s ease-out;
 }
 
-/* --- 2. Виджет бюджета (кликабельный) — синяя тень при hover --- */
 .budget-widget:hover {
   box-shadow: var(--shadow-lg), 0 6px 20px rgba(59, 130, 246, 0.15);
 }
 
-/* --- 3. Пункты сравнения — мягкий hover-фидбэк --- */
 .comparison-item {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -2947,7 +2654,6 @@ export default {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-/* --- 4. Плашки прогноза — подсветка фона при hover --- */
 .forecast-item {
   transition: transform 0.2s ease, background 0.2s ease;
 }
@@ -2956,7 +2662,6 @@ export default {
   background: rgba(255, 255, 255, 0.18);
 }
 
-/* --- 5. Легенда динамики баланса — акцентная рамка при hover --- */
 .history-legend-item:hover {
   border-color: var(--primary-color);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);

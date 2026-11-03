@@ -105,24 +105,36 @@
       </div>
       <router-view />
     </div>
+    <QuickAddTransaction v-if="!hideFab" />
   </div>
 </template>
 
 <script>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import apiService from './services/api.js'
 import { notificationStore } from './stores/notifications.js'
+import QuickAddTransaction from './components/QuickAddTransaction.vue'
 
 export default {
   name: 'App',
+  components: { QuickAddTransaction },
   setup() {
     const router = useRouter()
+    const route = useRoute()
     const mobileMenuOpen = ref(false)
     const isMobile = ref(window.innerWidth <= 768)
     const unreadCount = computed(() => notificationStore.unreadCount)
 
     const isDarkMode = ref(false)
+
+    const isAuthPage = computed(() => {
+      return route.path === '/login' || route.path === '/register'
+    })
+
+    const hideFab = computed(() => {
+      return isAuthPage.value || route.path === '/timesheets'
+    })
 
     const applyTheme = (dark) => {
       if (dark) {
@@ -200,8 +212,17 @@ export default {
     })
 
     return {
-      mobileMenuOpen, isMobile, unreadCount, isDarkMode,
-      toggleTheme, toggleMobileMenu, closeMobileMenu, goToProfile, logout
+      mobileMenuOpen,
+      isMobile,
+      unreadCount,
+      isDarkMode,
+      toggleTheme,
+      toggleMobileMenu,
+      closeMobileMenu,
+      goToProfile,
+      logout,
+      isAuthPage,
+      hideFab
     }
   }
 }
