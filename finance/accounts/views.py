@@ -1,8 +1,11 @@
+from decimal import Decimal
+
 from asgiref.sync import async_to_sync
 from django.core.cache import cache
-from django.db.models import QuerySet, Sum
+from django.db import transaction
+from django.db.models import Q, QuerySet, Sum
 from drf_spectacular.utils import extend_schema
-from rest_framework import generics, status
+from rest_framework import generics, serializers, status
 from rest_framework.authentication import (
     BasicAuthentication,
     SessionAuthentication,
@@ -13,6 +16,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from transfer.models import Transfer
 
 from accounts.balance_history.service import build_balance_history
 from accounts.cache import (
@@ -28,6 +32,7 @@ from accounts.serializers import (
     BalanceHistoryQuerySerializer,
     BaseAccountSerializer,
 )
+from accounts.services import reconcile_grace_period
 
 
 class AccountPagination(PageNumberPagination):
@@ -36,11 +41,19 @@ class AccountPagination(PageNumberPagination):
     max_page_size = 100
 
 
+def _schedule_account_cache_invalidation(user_id: int) -> None:
+    """
+    Инвалидация кэша истории баланса только после успешного коммита.
+    Если транзакция откатится — кэш останется нетронутым.
+    """
+    transaction.on_commit(lambda: invalidate_balance_history_cache(user_id))
+
+
 @extend_schema(tags=["Accounts"])
 @listAccountSchema
 class ListAccounts(generics.ListCreateAPIView):
     """
-    Класс для получения списка счетов или создания нового счета пользователя.
+    Список счетов пользователя или создание нового счёта.
     """
 
     pagination_class = AccountPagination
@@ -53,27 +66,28 @@ class ListAccounts(generics.ListCreateAPIView):
     )
 
     def get_serializer_class(self):
-        if self.request.method == 'GET':
+        if self.request.method == "GET":
             return BaseAccountSerializer
         return super().get_serializer_class()
 
     def get_queryset(self) -> QuerySet:
-        """
-        Переопределил метод для показа счетов только конкретного пользователя.
-        :return Queryset: Список счетов пользователя.
-        """
-        return (Account.objects
-                .filter(user=self.request.user.pk)
-                .filter(is_system_account=False).order_by("-balance"))
+        return Account.objects.filter(
+            user=self.request.user.pk, is_system_account=False
+        ).order_by("-balance")
 
-    def perform_create(self, serializer):
+    @transaction.atomic
+    def perform_create(self, serializer: AccountSerializer) -> None:
         """
-        Метод переопределяется, чтобы включить текущего пользователя
-        в качестве дополнительного аргумента при сохранении сериализатора
+        Создаёт счёт. Если это кредитка с готовым долгом,
+        сразу стартует grace period.
         """
-        serializer.save(user=self.request.user)
-        # Создание счёта влияет на историю баланса
-        invalidate_balance_history_cache(self.request.user.pk)
+        account: Account = serializer.save(user=self.request.user)
+
+        # Для нового счёта старый баланс — это 0.
+        # Если баланс отрицательный, таймер запустится.
+        reconcile_grace_period(account, old_balance=Decimal("0"))
+
+        _schedule_account_cache_invalidation(self.request.user.pk)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -85,49 +99,29 @@ class ListAccounts(generics.ListCreateAPIView):
         )
 
     def list(self, request, *args, **kwargs):
-        """
-        Переопределяем метод list для добавления общего баланса счетов в ответ.
-        """
         queryset = self.get_queryset()
 
-        # Calculate total balance across all accounts once
-        total_balance = queryset.filter(
-            is_active=True, is_system_account=False
-        ).aggregate(
-            total=Sum("balance")
-        )["total"] or 0
+        total_balance = (
+            queryset.filter(is_active=True).aggregate(total=Sum("balance"))["total"]
+            or 0
+        )
 
-        # Paginate the queryset using DRF's pagination class
         page = self.paginate_queryset(queryset)
-
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(
-                [
-                    {
-                        "accounts": serializer.data,
-                        "total_balance": total_balance,
-                    }
-                ]
+                [{"accounts": serializer.data, "total_balance": total_balance}]
             )
 
-        # Fallback if pagination is not used (not typical)
         serializer = self.get_serializer(queryset, many=True)
-        return Response(
-            [
-                {
-                    "accounts": serializer.data,
-                    "total_balance": total_balance,
-                }
-            ]
-        )
+        return Response([{"accounts": serializer.data, "total_balance": total_balance}])
 
 
 @extend_schema(tags=["Accounts"])
 @RetrieveUpdateDeleteAccountSchema
 class RetrieveUpdateDeleteAccount(generics.RetrieveUpdateDestroyAPIView):
     """
-    Класс для редактирования, удаления и просмотра конкретного счета.
+    Редактирование, удаление и просмотр конкретного счёта.
     """
 
     serializer_class = AccountSerializer
@@ -139,27 +133,56 @@ class RetrieveUpdateDeleteAccount(generics.RetrieveUpdateDestroyAPIView):
     )
 
     def get_queryset(self) -> QuerySet:
-        """
-        Переопределен метод для фильтрации по пользователю.
-        """
         return Account.objects.filter(user=self.request.user)
 
-    def perform_update(self, serializer):
-        """Сброс кэша при изменении счёта (в т.ч. баланса)."""
-        serializer.save()
-        invalidate_balance_history_cache(self.request.user.pk)
+    @transaction.atomic
+    def perform_update(self, serializer: AccountSerializer) -> None:
+        """
+        Сохраняет счёт. Если баланс кредитки изменился с положительного
+        (или нуля) на отрицательный — перезапускает grace period.
+        """
+        # Запоминаем баланс ДО сохранения
+        old_balance = serializer.instance.balance
 
-    def perform_destroy(self, instance):
-        """Сброс кэша при удалении счёта."""
+        account: Account = serializer.save()
+
+        # Передаем old_balance для корректного определения "нового долга"
+        reconcile_grace_period(account, old_balance=old_balance)
+
+        _schedule_account_cache_invalidation(self.request.user.pk)
+
+    @transaction.atomic
+    def perform_destroy(self, instance: Account) -> None:
+        """
+        Удаляет счёт. Запрещает удаление, если есть связанные переводы,
+        чтобы не сломать балансы других счетов.
+        """
+        has_transfers = Transfer.objects.filter(
+            Q(source_account=instance) | Q(destination_account=instance)
+        ).exists()
+
+        if has_transfers:
+            raise serializers.ValidationError(
+                {
+                    "detail": (
+                        f"Нельзя удалить счёт «{instance.name}»: с ним связаны "
+                        f"переводы. Удаление счёта удалит переводы и оставит "
+                        f"балансы других счетов некорректными. Сначала удалите "
+                        f"связанные переводы."
+                    )
+                }
+            )
+
         user_id = instance.user_id
         instance.delete()
-        invalidate_balance_history_cache(user_id)
+        _schedule_account_cache_invalidation(user_id)
 
 
 @extend_schema(tags=["Accounts"])
 class ToggleAccountActiveStatusView(generics.UpdateAPIView):
     """
-    Класс для переключения активности счета.
+    Переключение активности счёта. Использует select_for_update
+    для защиты от race condition при двойном клике.
     """
 
     permission_classes = (IsAuthenticated,)
@@ -175,42 +198,34 @@ class ToggleAccountActiveStatusView(generics.UpdateAPIView):
         return Account.objects.filter(user=self.request.user.pk)
 
     def get_object(self):
-        """
-        Переопределяем метод для получения счета пользователя.
-        """
-        account = super().get_object()
-        if account.user != self.request.user:
+        qs = self.get_queryset()
+        if self.request.method == "PATCH":
+            qs = qs.select_for_update()
+        obj = generics.get_object_or_404(qs, pk=self.kwargs.get("pk"))
+        if obj.user_id != self.request.user.pk:
             raise PermissionDenied(
                 "You do not have permission to modify this account."
             )
-        return account
+        return obj
 
+    @transaction.atomic
     def patch(self, request, *args, **kwargs):
-        """
-        Обновляет статус активности счета.
-        """
         account = self.get_object()
         account.is_active = not account.is_active
-        account.save()
+        account.save(update_fields=["is_active"])
 
-        # Активность счёта влияет на историю баланса
-        invalidate_balance_history_cache(request.user.pk)
+        _schedule_account_cache_invalidation(request.user.pk)
 
         return Response(
             AccountToggleStatusSerializer(account).data,
-            status=status.HTTP_200_OK
+            status=status.HTTP_200_OK,
         )
 
 
 class BalanceHistoryView(APIView):
     """
-    Возвращает ежедневный баланс счетов пользователя за указанный период.
-
-    Баланс восстанавливается от текущего баланса счёта путём отката
-    всех операций (транзакций и переводов) после указанной даты.
-
-    Результат кэшируется на 1 час. Ключ кэша включает user_id,
-    параметры запроса и версию. Заголовок X-Cache показывает HIT/MISS.
+    Ежедневный баланс счетов пользователя за период.
+    Включает IDOR-защиту и кэширование.
     """
 
     permission_classes = (IsAuthenticated,)
@@ -229,6 +244,14 @@ class BalanceHistoryView(APIView):
         date_to = data["date_to"]
         account_id = data.get("account_id")
         include_inactive = data.get("include_inactive", False)
+
+        # Защита: пользователь может запросить историю только своих счетов
+        if account_id is not None:
+            if not Account.objects.filter(pk=account_id, user=request.user).exists():
+                return Response(
+                    {"detail": "Счёт не найден."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
 
         cache_key = make_balance_history_cache_key(
             user_id=request.user.pk,

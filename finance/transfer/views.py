@@ -5,11 +5,7 @@ Views для переводов между счетами и аналитики.
     - Любая мутация баланса идёт через TransferViewMixin + @transaction.atomic.
     - Счета блокируются через select_for_update в детерминированном порядке
       (по PK) — это защищает от дедлоков при встречных переводах.
-    - Инвалидация кэшей откладывается через transaction.on_commit, чтобы
-      не заполнять кэш устаревшими данными до коммита и не трогать его
-      при откате транзакции.
-    - Баланс проверяется по заблокированному инстансу (свежее значение),
-      а не по данным из validated_data (они могут быть устаревшими).
+    - Инвалидация кэшей откладывается через transaction.on_commit.
 """
 
 from collections import defaultdict
@@ -72,18 +68,13 @@ def _median(values: list[Decimal]) -> Decimal:
 class TransferViewMixin:
     """
     Общие хелперы для любых операций, меняющих балансы счетов.
-
-    Все методы рассчитаны на вызов внутри @transaction.atomic —
-    сами по себе они транзакцию не открывают.
     """
 
     @staticmethod
     def _lock_accounts(*account_ids: int) -> dict[int, Account]:
         """
         Заблокировать счета и вернуть их keyed by PK.
-
-        Сортировка PK — детерминированный порядок блокировки,
-        чтобы встречные переводы A→B и B→A не привели к дедлоку.
+        Сортировка PK защищает от дедлоков.
         """
         ids = sorted(set(account_ids))
         return {
@@ -92,16 +83,29 @@ class TransferViewMixin:
         }
 
     @staticmethod
+    def _reconcile_grace_period(
+        account: Account, old_balance: Decimal, force_date: date = None
+    ) -> None:
+        """
+        Вызывается после _apply_deltas с балансом ДО применения.
+        force_date используется, чтобы таймер стартовал с даты перевода.
+        """
+        if account.account_type != Account.TYPE_CREDIT:
+            return
+
+        from accounts.services import maybe_start_grace_period
+
+        if account.balance < 0:
+            maybe_start_grace_period(
+                account, old_balance=old_balance, force_date=force_date
+            )
+
+    @staticmethod
     def _apply_deltas(
         accounts: dict[int, Account],
         deltas: dict[int, Decimal],
     ) -> None:
-        """
-        Применить дельты к заблокированным счетам и сохранить только изменённые.
-
-        Нулевые дельты пропускаются — при отсутствии реальных изменений
-        (например, PUT с теми же значениями) не будет лишних UPDATE.
-        """
+        """Применить дельты к заблокированным счетам и сохранить только изменённые."""
         for acc_id, delta in deltas.items():
             if not delta:
                 continue
@@ -111,13 +115,7 @@ class TransferViewMixin:
 
     @staticmethod
     def _schedule_cache_invalidation(accounts: Iterable[Account]) -> None:
-        """
-        Инвалидировать кэши всех пользователей, чьи счета затронуты.
-
-        Колбэк выполнится только после успешного коммита транзакции —
-        при откате кэш остаётся нетронутым, а при коммите читатели
-        увидят актуальные данные.
-        """
+        """Инвалидировать кэши всех пользователей, чьи счета затронуты."""
         user_ids = {acc.user_id for acc in accounts if acc.user_id is not None}
         if not user_ids:
             return
@@ -149,6 +147,9 @@ class TransferFundsView(TransferViewMixin, generics.CreateAPIView):
 
         locked = self._lock_accounts(source.pk, destination.pk)
 
+        # 1. Запоминаем балансы ДО изменений
+        old_balances = {acc_id: acc.balance for acc_id, acc in locked.items()}
+
         deltas: dict[int, Decimal] = {
             source.pk: -amount,
             destination.pk: +amount,
@@ -160,8 +161,16 @@ class TransferFundsView(TransferViewMixin, generics.CreateAPIView):
 
         transfer = serializer.save()
         self._apply_deltas(locked, deltas)
-        self._schedule_cache_invalidation(locked.values())
 
+        # 2. Пересчитываем grace period с учетом старых балансов
+        for acc_id, account in locked.items():
+            self._reconcile_grace_period(
+                account,
+                old_balance=old_balances[acc_id],
+                force_date=transfer.timestamp.date(),
+            )
+
+        self._schedule_cache_invalidation(locked.values())
         return transfer
 
 
@@ -205,13 +214,6 @@ class TransferDetailView(TransferViewMixin, generics.RetrieveUpdateDestroyAPIVie
     http_method_names = ["get", "put", "patch", "delete"]
 
     def get_queryset(self) -> QuerySet:
-        """
-        Только переводы, где текущий пользователь — владелец счёта списания.
-
-        Сознательно ограничиваем update/delete источником: если бы получатель
-        мог удалить перевод, это забрало бы деньги с его же счёта обратно
-        отправителю без его согласия.
-        """
         user: CustomUser = self.request.user
         return Transfer.objects.filter(source_account__user=user).order_by("-timestamp")
 
@@ -223,7 +225,6 @@ class TransferDetailView(TransferViewMixin, generics.RetrieveUpdateDestroyAPIVie
         old_source_id: int = transfer.source_account_id
         old_destination_id: int = transfer.destination_account_id
 
-        # PUT пришлёт всё, PATCH — только изменённое; fallback на текущее.
         new_amount: Decimal = serializer.validated_data.get("amount", old_amount)
         new_source: Account = serializer.validated_data.get(
             "source_account", transfer.source_account
@@ -246,8 +247,9 @@ class TransferDetailView(TransferViewMixin, generics.RetrieveUpdateDestroyAPIVie
             new_destination.pk,
         )
 
-        # Откат старого перевода + применение нового — через накопление дельт.
-        # Один паттерн покрывает смену суммы, смену счёта, смену обоих и swap.
+        # 1. Запоминаем балансы ДО изменений для всех затронутых счетов
+        old_balances = {acc_id: acc.balance for acc_id, acc in locked.items()}
+
         deltas: dict[int, Decimal] = defaultdict(Decimal)
         deltas[old_source_id] += old_amount
         deltas[old_destination_id] -= old_amount
@@ -259,8 +261,22 @@ class TransferDetailView(TransferViewMixin, generics.RetrieveUpdateDestroyAPIVie
                 {"amount": "Недостаточно средств на счёте списания."}
             )
 
-        serializer.save()
+        if locked[new_destination.pk].balance + deltas[new_destination.pk] < 0:
+            raise serializers.ValidationError(
+                {"amount": "На счёте зачисления недостаточно средств для отката."}
+            )
+
+        transfer = serializer.save()
         self._apply_deltas(locked, deltas)
+
+        # 2. Пересчитываем grace period
+        for acc_id, account in locked.items():
+            self._reconcile_grace_period(
+                account,
+                old_balance=old_balances[acc_id],
+                force_date=transfer.timestamp.date(),
+            )
+
         self._schedule_cache_invalidation(locked.values())
 
     @transaction.atomic
@@ -271,12 +287,29 @@ class TransferDetailView(TransferViewMixin, generics.RetrieveUpdateDestroyAPIVie
 
         locked = self._lock_accounts(source_id, destination_id)
 
+        # 1. Запоминаем балансы ДО изменений
+        old_balances = {acc_id: acc.balance for acc_id, acc in locked.items()}
+
         instance.delete()
         self._apply_deltas(
             locked,
             {source_id: +amount, destination_id: -amount},
         )
+
+        # 2. Пересчитываем grace period
+        for acc_id, account in locked.items():
+            self._reconcile_grace_period(
+                account,
+                old_balance=old_balances[acc_id],
+                force_date=instance.timestamp.date(),
+            )
+
         self._schedule_cache_invalidation(locked.values())
+
+
+# =============================================================================
+# АНАЛИТИКА (без изменений)
+# =============================================================================
 
 
 @extend_schema(
@@ -301,17 +334,6 @@ class TransferDetailView(TransferViewMixin, generics.RetrieveUpdateDestroyAPIVie
 class TransferAnalyticsView(generics.GenericAPIView):
     """
     Аналитика переводов пользователя за период.
-
-    По умолчанию — последние 90 дней. Всё считается в SQL, кроме медианы
-    (отдельный лёгкий запрос values_list).
-
-    Возвращает:
-        - period: границы периода
-        - metrics: count, total_amount, average, median, max, min
-        - top_accounts: топ счетов по обороту (входящие + исходящие)
-        - top_pairs: топ пар source → destination
-        - sankey: nodes + links для диаграммы
-        - daily_activity: активность по дням (включая пустые дни)
     """
 
     permission_classes = (IsAuthenticated,)
@@ -324,7 +346,6 @@ class TransferAnalyticsView(generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
         user: CustomUser = request.user
 
-        # --- Период ---
         date_to: date = _parse_date(request.query_params.get("date_to")) or date.today()
         date_from: date = _parse_date(request.query_params.get("date_from")) or (
             date_to - timedelta(days=89)
@@ -332,12 +353,10 @@ class TransferAnalyticsView(generics.GenericAPIView):
         if date_from > date_to:
             date_from, date_to = date_to, date_from
 
-        # --- Пробуем достать из кэша ---
         cached = get_analytics_cache(user.id, date_from, date_to)
         if cached is not None:
             return Response(cached)
 
-        # --- Считаем ---
         qs = Transfer.objects.filter(
             Q(source_account__user=user) | Q(destination_account__user=user),
             source_account__is_system_account=False,
@@ -393,10 +412,6 @@ class TransferAnalyticsView(generics.GenericAPIView):
 
     @staticmethod
     def _build_top_accounts(qs: QuerySet) -> list[dict]:
-        """
-        Список счетов с входящими/исходящими/оборотом.
-        Один счёт может быть и источником, и получателем — суммируем.
-        """
         outgoing_rows = qs.values("source_account_id", "source_account__name").annotate(
             total=Sum("amount"), cnt=Count("id")
         )
@@ -494,10 +509,6 @@ class TransferAnalyticsView(generics.GenericAPIView):
         top_pairs: list[dict],
         node_limit: int = 8,
     ) -> dict:
-        """
-        Строит nodes/links для Sankey из уже посчитанных top_accounts и top_pairs.
-        Ограничиваем топ-N узлов, связи — только между ними.
-        """
         top_nodes = top_accounts[:node_limit]
         node_ids = {n["id"] for n in top_nodes}
 
@@ -530,9 +541,6 @@ class TransferAnalyticsView(generics.GenericAPIView):
         date_from: date,
         date_to: date,
     ) -> list[dict]:
-        """
-        Массив по каждому дню периода, включая дни без переводов.
-        """
         rows = (
             qs.annotate(day=TruncDate("timestamp"))
             .values("day")

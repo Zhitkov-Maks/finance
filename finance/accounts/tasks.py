@@ -13,6 +13,7 @@ from transactions.models import Category, Transaction
 from .models import Account
 
 DEFAULT_CREDIT_RATE = Decimal("30.0")
+MONTHLY_INTEREST_COMMENT = "Ежемесячное начисление процентов по вкладу"
 
 
 def _get_credit_rate(account: Account) -> Decimal:
@@ -235,7 +236,6 @@ def check_credit_card_overdue():
     for account in credit_cards:
         # 1. Если баланс >= 0, долг погашен
         if account.balance >= 0:
-            _reset_grace_period(account)
             continue
 
         end_date = account.grace_period_start + timedelta(
@@ -250,9 +250,6 @@ def check_credit_card_overdue():
         # 3. Льготный период истек! Начисляем пеню
         elif today > end_date:
             _apply_late_penalty(account, today, create_at)
-
-
-MONTHLY_INTEREST_COMMENT = "Ежемесячное начисление процентов по вкладу"
 
 
 def _monthly_interest_already_accrued(account: Account, today: date) -> bool:
