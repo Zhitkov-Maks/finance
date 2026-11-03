@@ -1,6 +1,7 @@
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
+from app_user.models import CustomUser
 from celery import shared_task
 from django.db import transaction
 from django.db.models import F
@@ -20,7 +21,9 @@ def _get_transaction_time() -> datetime:
     )
 
 
-def _get_or_create_category(user, name: str, category_type: str) -> Category:
+def _get_or_create_category(
+    user: CustomUser, name: str, category_type: str
+) -> Category:
     """Ищет или создает системную категорию (доход/расход)."""
     category, _ = Category.objects.get_or_create(
         user=user, name=name, type_transaction=category_type
@@ -41,7 +44,6 @@ def _apply_balance_operation(
     is_income: True - прибавить, False - вычесть.
     """
     with transaction.atomic():
-        # 1. Создаем транзакцию
         Transaction.objects.create(
             user=account.user,
             account=account,
@@ -51,7 +53,6 @@ def _apply_balance_operation(
             comment=comment,
         )
 
-        # 2. Обновляем баланс на уровне БД (безопасно от race condition)
         balance_delta = amount if is_income else -amount
         Account.objects.filter(pk=account.pk).update(
             balance=F("balance") + balance_delta
@@ -71,8 +72,10 @@ def _notification_exists(
 
 
 def _accrue_interest_for_account(account: Account, create_at: datetime) -> None:
-    """Начисляет ежедневный процент для одного вклада."""
-    # Формула: Баланс * (Ставка / 100) / 365 дней
+    """
+    Начисляет ежедневный процент для одного вклада(Ежедневный процент).
+    Формула: Баланс * (Ставка / 100) / 365 дней.
+    """
     daily_rate = account.interest_rate / Decimal("100") / Decimal("365")
     interest_amount = (account.balance * daily_rate).quantize(Decimal("0.01"))
 
@@ -115,7 +118,6 @@ def _notify_grace_period_ending(account: Account, today: date) -> None:
 
 def _apply_late_penalty(account: Account, today: date, create_at: datetime) -> None:
     """Начисляет штраф за просрочку и уведомляет об этом."""
-    # Пеня (например, 30% годовых)
     penalty_rate = Decimal("30.0") / Decimal("100") / Decimal("365")
     debt = abs(account.balance)
     penalty = (debt * penalty_rate).quantize(Decimal("0.01"))
@@ -201,3 +203,72 @@ def check_credit_card_overdue():
         # 3. Льготный период истек! Начисляем пеню
         elif today > end_date:
             _apply_late_penalty(account, today, create_at)
+
+
+MONTHLY_INTEREST_COMMENT = "Ежемесячное начисление процентов по вкладу"
+
+
+def _monthly_interest_already_accrued(account: Account, today: date) -> bool:
+    """
+    Идемпотентность: одна транзакция начисления в календарный месяц на счёт.
+    Защищает от двойного запуска celery beat / ручного перезапуска.
+    """
+    return Transaction.objects.filter(
+        user=account.user,
+        account=account,
+        comment=MONTHLY_INTEREST_COMMENT,
+        create_at__year=today.year,
+        create_at__month=today.month,
+    ).exists()
+
+
+def _accrue_monthly_interest_for_account(account: Account, create_at: datetime) -> None:
+    """
+    Начисляет месячный процент для одного вклада
+    с ежемесячной капитализацией.
+    Формула: Баланс * (Ставка / 100) / 12 месяцев.
+    """
+    monthly_rate = account.interest_rate / Decimal("100") / Decimal("12")
+    interest_amount = (account.balance * monthly_rate).quantize(Decimal("0.01"))
+
+    if interest_amount <= 0:
+        return
+
+    category = _get_or_create_category(account.user, "Проценты по вкладу", "income")
+
+    _apply_balance_operation(
+        account=account,
+        amount=interest_amount,
+        category=category,
+        create_at=create_at,
+        comment=MONTHLY_INTEREST_COMMENT,
+        is_income=True,
+    )
+
+
+@shared_task
+def accrue_monthly_deposit_interest():
+    """
+    Ежемесячная задача: начисляет проценты по вкладам с ежемесячной капитализацией.
+
+    Запускается celery beat 1-го числа каждого месяца в 00:05.
+    Начисление идёт за прошедший месяц по текущему балансу счёта
+    (т.е. по балансу на конец предыдущего месяца).
+    """
+    today = date.today()
+    if today.day != 1:
+        return
+
+    create_at = _get_transaction_time()
+
+    deposits = Account.objects.filter(
+        account_type=Account.TYPE_DEPOSIT_MONTHLY,
+        is_active=True,
+        balance__gt=0,
+        interest_rate__gt=0,
+    )
+
+    for account in deposits:
+        if _monthly_interest_already_accrued(account, today):
+            continue
+        _accrue_monthly_interest_for_account(account, create_at)

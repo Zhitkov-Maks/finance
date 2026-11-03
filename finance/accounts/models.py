@@ -8,12 +8,14 @@ class Account(models.Model):
     """
 
     TYPE_STANDARD = "standard"
-    TYPE_DEPOSIT = "deposit"  # Вклад (ежедневный процент)
-    TYPE_CREDIT = "credit_card"  # Кредитная карта (льготный период)
+    TYPE_DEPOSIT = "deposit"
+    TYPE_CREDIT = "credit_card"
+    TYPE_DEPOSIT_MONTHLY = "deposit_monthly"
 
     ACCOUNT_TYPES = [
         (TYPE_STANDARD, "Обычный"),
         (TYPE_DEPOSIT, "Вклад (проценты)"),
+        (TYPE_DEPOSIT_MONTHLY, "Вклад (ежемесячный %)"),
         (TYPE_CREDIT, "Кредитная карта"),
     ]
 

@@ -62,7 +62,8 @@
             <div class="compact-left">
               <div class="account-name-compact">
                 <strong>{{ truncateText(account.name, 25) }}</strong>
-                <span v-if="account.account_type === 'deposit'" class="badge badge-info">Вклад {{ account.interest_rate }}%</span>
+                <span v-if="account.account_type === 'deposit'" class="badge badge-info">Вклад {{ account.interest_rate }}% (день)</span>
+                <span v-if="account.account_type === 'deposit_monthly'" class="badge badge-info">Вклад {{ account.interest_rate }}% (мес.)</span>
                 <span v-if="account.account_type === 'credit_card'" class="badge badge-danger">Кредитка</span>
               </div>
               <div class="account-subtext" v-if="account.account_type === 'credit_card' && getGraceDaysLeft(account) !== null" :class="getGraceDaysLeft(account) <= 3 ? 'text-danger' : 'text-muted'">
@@ -120,7 +121,8 @@
               <td>
                 <div>
                   <strong>{{ account.name }}</strong>
-                  <span v-if="account.account_type === 'deposit'" class="badge badge-info" style="margin-left:8px; font-size:0.65rem;">📈 {{ account.interest_rate }}%</span>
+                  <span v-if="account.account_type === 'deposit'" class="badge badge-info" style="margin-left:8px; font-size:0.65rem;">📈 {{ account.interest_rate }}% (день)</span>
+                  <span v-if="account.account_type === 'deposit_monthly'" class="badge badge-info" style="margin-left:8px; font-size:0.65rem;">📈 {{ account.interest_rate }}% (мес.)</span>
                   <span v-if="account.account_type === 'credit_card'" class="badge badge-danger" style="margin-left:8px; font-size:0.65rem;">💳 Кредитка</span>
                 </div>
                 <div v-if="account.account_type === 'credit_card' && getGraceDaysLeft(account) !== null" style="font-size:0.75rem; margin-top:4px;" :class="getGraceDaysLeft(account) <= 3 ? 'text-danger' : 'text-muted'">
@@ -175,7 +177,8 @@
             <div class="compact-left">
               <div class="account-name-compact">
                 <strong>{{ truncateText(account.name, 25) }}</strong>
-                <span v-if="account.account_type === 'deposit'" class="badge badge-info">Вклад</span>
+                <span v-if="account.account_type === 'deposit'" class="badge badge-info">Вклад (день)</span>
+                <span v-if="account.account_type === 'deposit_monthly'" class="badge badge-info">Вклад (мес.)</span>
                 <span v-if="account.account_type === 'credit_card'" class="badge badge-danger">Кредитка</span>
               </div>
               <span class="badge badge-secondary">Неактивен</span>
@@ -230,7 +233,8 @@
               <td>
                 <div>
                   <strong>{{ account.name }}</strong>
-                  <span v-if="account.account_type === 'deposit'" class="badge badge-info" style="margin-left:8px; font-size:0.65rem;">📈 Вклад</span>
+                  <span v-if="account.account_type === 'deposit'" class="badge badge-info" style="margin-left:8px; font-size:0.65rem;">📈 Вклад (день)</span>
+                  <span v-if="account.account_type === 'deposit_monthly'" class="badge badge-info" style="margin-left:8px; font-size:0.65rem;">📈 Вклад (мес.)</span>
                   <span v-if="account.account_type === 'credit_card'" class="badge badge-danger" style="margin-left:8px; font-size:0.65rem;">💳 Кредитка</span>
                 </div>
               </td>
@@ -679,7 +683,8 @@
             <label class="form-label required">Тип счета</label>
             <select v-model="formData.account_type" class="form-control" :disabled="!!editingAccount" required>
               <option value="standard">Обычный (Дебетовая карта, Наличные)</option>
-              <option value="deposit">Вклад (Начисление процентов)</option>
+              <option value="deposit">Вклад (ежедневный процент)</option>
+              <option value="deposit_monthly">Вклад (ежемесячный процент)</option>
               <option value="credit_card">Кредитная карта</option>
             </select>
           </div>
@@ -699,9 +704,17 @@
             </small>
           </div>
 
-          <div v-if="formData.account_type === 'deposit'" class="form-group">
+          <div v-if="formData.account_type === 'deposit' || formData.account_type === 'deposit_monthly'" class="form-group">
             <label class="form-label required">Годовая ставка (%)</label>
             <input v-model="formData.interest_rate" type="number" step="0.1" class="form-control" required placeholder="Например: 8.5">
+            <small class="form-hint text-muted">
+              <template v-if="formData.account_type === 'deposit'">
+                Проценты начисляются ежедневно.
+              </template>
+              <template v-else>
+                Проценты начисляются раз в месяц, 1-го числа.
+              </template>
+            </small>
           </div>
 
           <template v-if="formData.account_type === 'credit_card'">
@@ -1483,7 +1496,9 @@ export default {
     const saveAccount = async () => {
       try {
         const payload = { ...formData.value }
-        if (payload.account_type !== 'deposit') payload.interest_rate = null
+        const isDeposit = ['deposit', 'deposit_monthly'].includes(payload.account_type)
+
+        if (!isDeposit) payload.interest_rate = null
         if (payload.account_type !== 'credit_card') { payload.credit_limit = null; payload.grace_period_days = null }
 
         if (editingAccount.value) {
