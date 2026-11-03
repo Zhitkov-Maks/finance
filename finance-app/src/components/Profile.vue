@@ -209,6 +209,110 @@
       </form>
     </div>
 
+    <!-- Экспорт данных -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-download"></i> Экспорт данных
+        </h3>
+      </div>
+
+      <p class="export-description">
+        Скачайте все свои данные: счета, транзакции, переводы, бюджеты, категории,
+        регулярные операции, долги и уведомления.
+      </p>
+
+      <!-- Счётчики / пустое состояние / загрузка -->
+      <div v-if="exportInfoLoading" class="export-info-loading">
+        <i class="fas fa-spinner fa-spin"></i>
+        <span>Проверяем данные...</span>
+      </div>
+
+      <div v-else-if="exportInfo && !hasExportData" class="export-empty">
+        <i class="fas fa-inbox"></i>
+        <p>Нет данных для экспорта</p>
+        <small class="text-muted">
+          Создайте счёт, категорию или транзакцию — они появятся здесь
+        </small>
+      </div>
+
+      <div v-else-if="nonEmptyExportSections.length > 0" class="export-summary">
+        <div class="export-summary-label">Будет выгружено:</div>
+        <div class="export-chips">
+          <span
+            v-for="section in nonEmptyExportSections"
+            :key="section.name"
+            class="export-chip"
+          >
+            {{ section.label }}:
+            <template v-if="section.truncated">
+              <strong>{{ exportRowLimitFormatted }}</strong>
+              <span class="export-chip-of">из {{ formatNumber(section.count) }}</span>
+            </template>
+            <strong v-else>{{ formatNumber(section.count) }}</strong>
+            <i
+              v-if="section.truncated"
+              class="fas fa-exclamation-triangle text-warning"
+              :title="`Слишком много записей — будет выгружено только ${exportRowLimitFormatted}`"
+            ></i>
+          </span>
+        </div>
+      </div>
+
+      <!-- Предупреждение об обрезке -->
+      <div v-if="hasTruncatedSections" class="alert alert-warning export-warning">
+        <i class="fas fa-exclamation-triangle"></i>
+        <div>
+          <strong>Выгрузка ограничена.</strong>
+          Некоторые разделы содержат слишком много записей и будут обрезаны до {{ exportRowLimitFormatted }}.
+          <ul class="truncated-list">
+            <li v-for="s in truncatedExportSections" :key="s.name">
+              {{ s.label }}: всего {{ formatNumber(s.count) }},
+              выгрузится {{ exportRowLimitFormatted }}
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="export-actions">
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="exportLoading || !hasExportData"
+          @click="downloadExport('csv')"
+        >
+          <i
+            class="fas"
+            :class="exportLoading && exportFormat === 'csv' ? 'fa-spinner fa-spin' : 'fa-file-archive'"
+          ></i>
+          {{ exportLoading && exportFormat === 'csv' ? 'Подготовка...' : 'CSV (ZIP-архив)' }}
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="exportLoading || !hasExportData"
+          @click="downloadExport('json')"
+        >
+          <i
+            class="fas"
+            :class="exportLoading && exportFormat === 'json' ? 'fa-spinner fa-spin' : 'fa-file-code'"
+          ></i>
+          {{ exportLoading && exportFormat === 'json' ? 'Подготовка...' : 'JSON' }}
+        </button>
+      </div>
+
+      <div v-if="exportError" class="error-message" style="margin-top: 1rem;">
+        <i class="fas fa-exclamation-circle"></i> {{ exportError }}
+      </div>
+
+      <p class="export-hint">
+        <i class="fas fa-info-circle"></i>
+        CSV-архив открывается в Excel и Google Sheets без настройки кодировки.
+        JSON содержит полные данные и подойдёт для переноса в другое приложение.
+      </p>
+    </div>
+
     <!-- Уведомления -->
     <div v-if="showSuccess" class="alert alert-success success-toast">
       <i class="fas fa-check-circle"></i>
@@ -223,8 +327,12 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import apiService from '../services/api.js'
+
+// Должно совпадать с MAX_ROWS_PER_SECTION в exports/services.py.
+// Если поменяете на бэкенде — поменяйте здесь.
+const EXPORT_ROW_LIMIT = 50000
 
 export default {
   name: 'Profile',
@@ -256,11 +364,26 @@ export default {
       confirm_email: ''
     })
 
+    // State for data export
+    const exportLoading = ref(false)
+    const exportFormat = ref('')
+    const exportError = ref('')
+    const exportInfo = ref(null)         // { sections: [...], total: N } | null
+    const exportInfoLoading = ref(false)
+
     // Notification state
     const showSuccess = ref(false)
     const showError = ref(false)
     const successMessage = ref('')
     const errorMessage = ref('')
+
+    // Форматирование чисел с неразрывным пробелом: 60000 → «60 000»
+    const formatNumber = (n) => {
+      if (n == null) return '—'
+      return n.toLocaleString('ru-RU')
+    }
+
+    const exportRowLimitFormatted = EXPORT_ROW_LIMIT.toLocaleString('ru-RU')
 
     // Email validation
     const emailError = computed(() => {
@@ -310,10 +433,7 @@ export default {
         text = 'Отличный'
       }
 
-      return {
-        percentage: strength,
-        text: text
-      }
+      return { percentage: strength, text }
     })
 
     const strengthClass = computed(() => {
@@ -356,7 +476,28 @@ export default {
              !passwordMismatch.value
     })
 
-    // Validation functions
+    // Export: computed
+    const hasExportData = computed(() => {
+      if (!exportInfo.value) return true  // ещё не загрузились — не блокируем
+      return exportInfo.value.total > 0
+    })
+
+    const nonEmptyExportSections = computed(() => {
+      if (!exportInfo.value) return []
+      return exportInfo.value.sections.filter(s => s.available && s.count > 0)
+    })
+
+    const hasTruncatedSections = computed(() => {
+      if (!exportInfo.value) return false
+      return exportInfo.value.sections.some(s => s.truncated)
+    })
+
+    const truncatedExportSections = computed(() => {
+      if (!exportInfo.value) return []
+      return exportInfo.value.sections.filter(s => s.truncated)
+    })
+
+    // Validation no-op handlers (оставлены для явности @input)
     const validatePassword = () => {}
     const checkPasswordMatch = () => {}
     const validateEmail = () => {}
@@ -372,6 +513,32 @@ export default {
       }
     }
 
+    const loadExportInfo = async () => {
+      // Защита от параллельных вызовов (двойной mount, быстрые переключения таба)
+      if (exportInfoLoading.value) return
+
+      exportInfoLoading.value = true
+      try {
+        exportInfo.value = await apiService.getExportInfo()
+      } catch (error) {
+        // Не критично: кнопки работают как раньше
+        console.error('Error loading export info:', error)
+        exportInfo.value = null
+      } finally {
+        exportInfoLoading.value = false
+      }
+    }
+
+    // Обновляем счётчики при возврате в таб — вдруг данные изменились
+    // (например, пользователь только что импортировал транзакции
+    // в другом окне). Не критично для работы, но убирает рассинхрон
+    // между UI и реальным состоянием БД.
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadExportInfo()
+      }
+    }
+
     const handleChangeEmail = async () => {
       if (!isEmailFormValid.value) return
 
@@ -382,10 +549,8 @@ export default {
           emailForm.value.new_email
         )
 
-        // Обновляем информацию о пользователе
         await loadUserInfo()
 
-        // Очищаем форму
         emailForm.value = {
           current_password: '',
           new_email: '',
@@ -417,7 +582,6 @@ export default {
           passwordForm.value.new_password
         )
 
-        // Очищаем форму
         passwordForm.value = {
           current_password: '',
           new_password: '',
@@ -439,6 +603,47 @@ export default {
       }
     }
 
+    const downloadExport = async (fmt) => {
+      exportLoading.value = true
+      exportFormat.value = fmt
+      exportError.value = ''
+
+      try {
+        const { blob, filename } = await apiService.downloadExport(fmt)
+
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+
+        const fallbackName = `finances_${new Date().toISOString().slice(0, 10)}.${fmt === 'csv' ? 'zip' : 'json'}`
+        link.download = filename || fallbackName
+
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        URL.revokeObjectURL(url)
+
+        showSuccessToast(
+          fmt === 'csv'
+            ? 'Архив CSV готов, скачивание начато'
+            : 'JSON готов, скачивание начато'
+        )
+      } catch (error) {
+        if (error.response?.status === 401) {
+          exportError.value = 'Сессия истекла. Войдите заново.'
+        } else if (error.response?.status === 403) {
+          exportError.value = 'Нет доступа к экспорту.'
+        } else if (error.response?.status === 400) {
+          exportError.value = 'Неверный формат запроса.'
+        } else {
+          exportError.value = error.message || 'Не удалось подготовить экспорт'
+        }
+      } finally {
+        exportLoading.value = false
+        exportFormat.value = ''
+      }
+    }
+
     const showSuccessToast = (message) => {
       successMessage.value = message
       showSuccess.value = true
@@ -457,6 +662,12 @@ export default {
 
     onMounted(() => {
       loadUserInfo()
+      loadExportInfo()
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+    })
+
+    onUnmounted(() => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     })
 
     return {
@@ -489,6 +700,19 @@ export default {
       handleChangePassword,
       validatePassword,
       checkPasswordMatch,
+      // Export
+      exportLoading,
+      exportFormat,
+      exportError,
+      exportInfo,
+      exportInfoLoading,
+      hasExportData,
+      nonEmptyExportSections,
+      hasTruncatedSections,
+      truncatedExportSections,
+      downloadExport,
+      exportRowLimitFormatted,
+      formatNumber,
       // Notifications
       showSuccess,
       showError,
@@ -500,7 +724,6 @@ export default {
 </script>
 
 <style scoped>
-/* Добавьте стили для email валидации */
 .email-input-wrapper {
   position: relative;
   display: flex;
@@ -516,7 +739,6 @@ export default {
   gap: 0.25rem;
 }
 
-/* Остальные стили остаются без изменений */
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -583,7 +805,7 @@ export default {
   color: var(--dark-color);
 }
 
-/* Стили для поля пароля */
+/* Поля пароля */
 .password-input-wrapper {
   position: relative;
   display: flex;
@@ -610,14 +832,11 @@ export default {
   color: var(--dark-color);
 }
 
-/* Стили для индикатора силы пароля */
-.password-strength {
-  margin-top: 0.5rem;
-}
+.password-strength { margin-top: 0.5rem; }
 
 .strength-bar {
   height: 4px;
-  background: var(--light-color); /* Заменили #e5e7eb */
+  background: var(--light-color);
   border-radius: 2px;
   overflow: hidden;
   margin-bottom: 0.25rem;
@@ -628,31 +847,13 @@ export default {
   transition: width 0.3s, background-color 0.3s;
 }
 
-.strength-text {
-  font-size: 0.75rem;
-}
+.strength-text { font-size: 0.75rem; }
 
-.strength-weak {
-  background: #ef4444;
-  color: #ef4444;
-}
+.strength-weak { background: #ef4444; color: #ef4444; }
+.strength-medium { background: #f59e0b; color: #f59e0b; }
+.strength-good { background: #10b981; color: #10b981; }
+.strength-excellent { background: #059669; color: #059669; }
 
-.strength-medium {
-  background: #f59e0b;
-  color: #f59e0b;
-}
-
-.strength-good {
-  background: #10b981;
-  color: #10b981;
-}
-
-.strength-excellent {
-  background: #059669;
-  color: #059669;
-}
-
-/* Стили для требований к паролю */
 .password-requirements {
   margin-top: 1rem;
   padding: 1rem;
@@ -682,13 +883,8 @@ export default {
   gap: 0.5rem;
 }
 
-.password-requirements li i {
-  font-size: 0.7rem;
-}
-
-.password-requirements li.valid {
-  color: var(--secondary-color);
-}
+.password-requirements li i { font-size: 0.7rem; }
+.password-requirements li.valid { color: var(--secondary-color); }
 
 .error-message {
   margin-top: 0.5rem;
@@ -697,6 +893,146 @@ export default {
   display: flex;
   align-items: center;
   gap: 0.25rem;
+}
+
+/* Экспорт */
+.export-description {
+  font-size: 0.9rem;
+  color: var(--gray-color);
+  margin-bottom: 1.25rem;
+  line-height: 1.5;
+}
+
+.export-info-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 0;
+  color: var(--gray-color);
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.export-empty {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  background: var(--light-color);
+  border-radius: var(--radius);
+  color: var(--gray-color);
+  margin-bottom: 1rem;
+}
+
+.export-empty i {
+  font-size: 2rem;
+  opacity: 0.5;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.export-empty p {
+  font-weight: 600;
+  color: var(--dark-color);
+  margin-bottom: 0.25rem;
+}
+
+.export-summary { margin-bottom: 1.25rem; }
+
+.export-summary-label {
+  font-size: 0.8rem;
+  color: var(--gray-color);
+  margin-bottom: 0.5rem;
+}
+
+.export-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.export-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.625rem;
+  background: var(--light-color);
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  color: var(--dark-color);
+  white-space: nowrap;
+}
+
+.export-chip strong { color: var(--primary-color); }
+.export-chip i { margin-left: 0.125rem; font-size: 0.75rem; }
+
+/* «из 60 000» — приглушённый текст рядом с «50 000» */
+.export-chip-of {
+  color: var(--gray-color);
+  font-size: 0.75rem;
+}
+
+.export-warning {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+:global(:root[data-theme="dark"]) .export-warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.export-warning i {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+  font-size: 1.1rem;
+}
+
+.truncated-list {
+  margin: 0.5rem 0 0 1rem;
+  padding: 0;
+  font-size: 0.8rem;
+}
+
+.truncated-list li { margin-bottom: 0.25rem; }
+
+.export-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.export-actions .btn {
+  min-width: 180px;
+  justify-content: center;
+}
+
+.export-actions .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.export-hint {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--light-color);
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  color: var(--gray-color);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  line-height: 1.5;
+}
+
+.export-hint i {
+  color: var(--primary-color);
+  margin-top: 0.15rem;
+  flex-shrink: 0;
 }
 
 .modal-footer {
@@ -708,16 +1044,8 @@ export default {
   border-top: 1px solid var(--light-color);
 }
 
-/* Уведомления */
-.success-toast {
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  z-index: 1000;
-  animation: slideIn 0.3s ease;
-  box-shadow: var(--shadow-lg);
-}
-
+/* Тосты */
+.success-toast,
 .error-toast {
   position: fixed;
   bottom: 2rem;
@@ -728,14 +1056,8 @@ export default {
 }
 
 @keyframes slideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
 }
 
 .alert {
@@ -747,7 +1069,6 @@ export default {
   gap: 0.5rem;
 }
 
-/* --- Светлая тема для алертов --- */
 .alert-success {
   background: #d1fae5;
   color: #065f46;
@@ -760,7 +1081,6 @@ export default {
   border: 1px solid #fecaca;
 }
 
-/* --- Темная тема для алертов --- */
 :global(:root[data-theme="dark"]) .alert-success {
   background: rgba(16, 185, 129, 0.15);
   color: #6ee7b7;
@@ -773,56 +1093,26 @@ export default {
   border-color: rgba(239, 68, 68, 0.3);
 }
 
-/* Адаптивные стили */
+/* Адаптив */
 @media (max-width: 768px) {
-  .page-header {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .page-header h1 {
-    font-size: 1.5rem;
-  }
-
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .stat-card {
-    padding: 1rem;
-  }
-
-  .stat-value {
-    font-size: 1.25rem;
-  }
-
-  .card {
-    padding: 1rem;
-  }
-
+  .page-header { flex-direction: column; text-align: center; }
+  .page-header h1 { font-size: 1.5rem; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .stat-card { padding: 1rem; }
+  .stat-value { font-size: 1.25rem; }
+  .card { padding: 1rem; }
   .success-toast,
-  .error-toast {
-    bottom: 1rem;
-    right: 1rem;
-    left: 1rem;
-  }
+  .error-toast { bottom: 1rem; right: 1rem; left: 1rem; }
+  .export-actions { flex-direction: column; }
+  .export-actions .btn { width: 100%; min-width: 0; }
+  .export-chips { flex-direction: column; align-items: stretch; }
+  .export-chip { justify-content: space-between; white-space: normal; }
 }
 
 @media (max-width: 480px) {
-  h1 {
-    font-size: 1.25rem;
-  }
-
-  .stat-value {
-    font-size: 1rem;
-  }
-
-  .password-requirements ul {
-    display: block;
-  }
-
-  .password-requirements li {
-    margin-bottom: 0.25rem;
-  }
+  h1 { font-size: 1.25rem; }
+  .stat-value { font-size: 1rem; }
+  .password-requirements ul { display: block; }
+  .password-requirements li { margin-bottom: 0.25rem; }
 }
 </style>

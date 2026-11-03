@@ -387,6 +387,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "accounts.tasks.accrue_deposit_interest",
         "schedule": crontab(hour=23, minute=55),  # <-- сдвинули на 23:55
     },
+    "accrue-monthly-deposit-interest": {  # ← НОВОЕ
+        "task": "accounts.tasks.accrue_monthly_deposit_interest",
+        "schedule": crontab(minute=5, hour=0, day_of_month=1),
+    },
     "detect-category-spikes": {
         "task": "insights.tasks.detect_category_spikes_all",
         "schedule": crontab(hour=10, minute=0),

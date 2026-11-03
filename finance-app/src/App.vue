@@ -210,9 +210,6 @@ export default {
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-/* ============================================================
-   ПЕРЕМЕННЫЕ (Светлая тема по умолчанию)
-   ============================================================ */
 :root {
   --primary-color: #101010;
   --secondary-color: #10b981;
@@ -242,9 +239,6 @@ body {
 
 .app { display: flex; min-height: 100vh; position: relative; }
 
-/* ============================================================
-   МОБИЛЬНАЯ КНОПКА
-   ============================================================ */
 .mobile-menu-btn {
   position: fixed; top: 1rem; left: 1rem; z-index: 1000;
   background: #1e293b; color: white; border: 1px solid rgba(255,255,255,0.1);
@@ -253,9 +247,6 @@ body {
   font-size: 1.25rem; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
-/* ============================================================
-   САЙДБАР (СУПЕР-СОВРЕМЕННЫЙ)
-   ============================================================ */
 .sidebar {
   width: 260px;
   background: var(--sidebar-bg);
@@ -263,12 +254,13 @@ body {
   flex-direction: column;
   position: fixed;
   height: 100vh;
+  height: 100dvh;
   z-index: 100;
   transition: transform 0.3s ease, background-color 0.3s ease;
   border-right: 1px solid rgba(255, 255, 255, 0.05);
+  overflow: hidden;
 }
 
-/* Красивый скроллбар внутри сайдбара */
 .sidebar::-webkit-scrollbar { width: 4px; }
 .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
 
@@ -309,6 +301,8 @@ body {
   flex-direction: column;
   padding: 1rem 0.75rem;
   gap: 0.25rem;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .nav-group {
@@ -316,6 +310,20 @@ body {
   flex-direction: column;
   gap: 0.25rem;
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+
+.nav-group::-webkit-scrollbar { width: 4px; }
+.nav-group::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 10px;
 }
 
 .nav-item {
@@ -390,16 +398,13 @@ body {
   100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 
-/* ============================================================
-   НИЖНЯЯ ПАНЕЛЬ (Тема и Выход)
-   ============================================================ */
 .nav-footer {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
   padding-top: 1rem;
-  margin-top: auto;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
 }
 
 .theme-toggle-btn {
@@ -460,9 +465,6 @@ body {
   color: var(--primary-color);
 }
 
-/* ============================================================
-   МОБИЛЬНАЯ ВЕРСИЯ
-   ============================================================ */
 @media (max-width: 768px) {
   .mobile-menu-btn { display: flex; }
 
@@ -470,6 +472,8 @@ body {
     transform: translateX(-100%);
     width: 280px;
     box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+    height: 100vh;
+    height: 100dvh;
   }
 
   .sidebar.mobile-open { transform: translateX(0); }
@@ -484,14 +488,11 @@ body {
   .mobile-overlay {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
     background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px); /* Размытие под оверлеем */
+    backdrop-filter: blur(4px);
     z-index: 99;
   }
 }
 
-/* ============================================================
-   ОБЩИЕ СТИЛИ (Карточки, кнопки, формы и т.д.)
-   ============================================================ */
 .card {
   background: var(--white);
   border-radius: var(--radius);

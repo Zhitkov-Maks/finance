@@ -701,6 +701,58 @@ class ApiService {
         const response = await this.client.patch('/insights/settings/', data)
         return response.data
     }
+        // ==================== Экспорт данных ====================
+    async downloadExport(format = 'json') {
+        try {
+            const response = await this.client.get('/export/', {
+                params: { export_format: format },
+                responseType: 'blob',
+            })
+
+            // Имя файла — из Content-Disposition (сервер отдаёт
+            // `attachment; filename="finances_user_example_com_YYYYMMDD_HHMMSS.zip"`).
+            const contentDisposition = response.headers['content-disposition'] || ''
+            let filename = null
+            const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(contentDisposition)
+            if (match) {
+                try {
+                    filename = decodeURIComponent(match[1])
+                } catch {
+                    filename = match[1]
+                }
+            }
+
+            return { blob: response.data, filename }
+        } catch (error) {
+            // При responseType: 'blob' тело 4xx/5xx тоже приходит Blob,
+            // а не JSON. Читаем его вручную, чтобы получить detail.
+            if (error.response?.data instanceof Blob) {
+                try {
+                    const text = await error.response.data.text()
+                    const parsed = JSON.parse(text)
+                    error.message =
+                        parsed.detail ||
+                        (Array.isArray(parsed.format) ? parsed.format[0] : null) ||
+                        text
+                } catch {
+                    // не JSON — оставляем оригинальное сообщение
+                }
+            }
+            console.error('Error downloading export:', error.response?.data || error.message)
+            throw error
+        }
+    }
+    async getExportInfo() {
+        try {
+            const response = await this.client.get('/export/', {
+                params: { format: 'info' },
+            })
+            return response.data
+        } catch (error) {
+            console.error('Error fetching export info:', error.response?.data || error.message)
+            throw error
+        }
+    }
 }
 
 export default new ApiService()
