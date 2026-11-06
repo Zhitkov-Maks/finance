@@ -36,12 +36,28 @@
         ></span>
       </div>
     </div>
+    <div class="card safe-to-spend-card" v-if="forecastData">
+      <div class="safe-content">
+        <div class="safe-icon" :class="safeToSpend > 0 ? 'bg-success-light' : 'bg-danger-light'">
+          <i class="fas" :class="safeToSpend > 0 ? 'fa-shield-alt' : 'fa-exclamation-triangle'"></i>
+        </div>
 
-    <!-- ============================================================ -->
-    <!-- ИНСАЙТЫ                                                       -->
-    <!-- ============================================================ -->
+        <div class="safe-text">
+          <h3>Безопасно тратить в день</h3>
+          <p v-if="safeToSpend > 0">
+            Чтобы дожить до конца месяца ({{ forecastData.days_left }} дн.) и без проблем оплатить обязательные платежи.
+          </p>
+          <p v-else class="text-danger">
+            ⚠️ Внимание! С учетом обязательных платежей свободных денег до конца месяца не остается.
+          </p>
+        </div>
+
+        <div class="safe-amount" :class="safeToSpend > 0 ? 'text-success' : 'text-danger'">
+          {{ formatCurrency(safeToSpend) }}
+        </div>
+      </div>
+    </div>
     <InsightsWidget ref="insightsWidgetRef" />
-
     <!-- Курсы валют -->
     <div class="actions-panel">
       <div class="exchange-rates" v-if="exchangeRates.length > 0">
@@ -189,10 +205,6 @@
         </div>
       </div>
     </div>
-
-    <!-- ============================================================ -->
-    <!-- ГЕЙМИФИКАЦИЯ И ЦЕЛИ                                          -->
-    <!-- ============================================================ -->
     <div v-if="gamification" class="gamification-grid">
         <!-- 1. Цель месяца -->
         <div class="card goal-card">
@@ -246,8 +258,6 @@
                 <button @click="showGoalModal = true" class="btn btn-primary btn-sm">Установить цель</button>
             </div>
         </div>
-
-        <!-- 2. Уровень грамотности -->
         <div class="card literacy-card">
             <div class="card-header">
                 <h3 class="card-title">🏆 Уровень {{ gamification.level.score }} / 10</h3>
@@ -288,10 +298,6 @@
             </div>
         </div>
     </div>
-
-    <!-- ============================================================ -->
-    <!-- ВИДЖЕТ БЮДЖЕТА МЕСЯЦА                                         -->
-    <!-- ============================================================ -->
     <div
       v-if="budgetSummary && budgetSummary.total_budget"
       class="card budget-widget"
@@ -337,9 +343,6 @@
       </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- ДИНАМИКА БАЛАНСА                                              -->
-    <!-- ============================================================ -->
     <div v-if="activeAccounts.length > 0" class="card balance-history-card">
       <div class="card-header">
         <h3 class="card-title">
@@ -489,18 +492,12 @@ import apiService from '../services/api.js'
 import InsightsWidget from './InsightsWidget.vue'
 import GoalModal from './GoalModal.vue'
 
-// =============================================================================
-// Константы
-// =============================================================================
 const DISTRIBUTION_COLORS = [
   '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
   '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#6366f1',
   '#14b8a6', '#a855f7'
 ]
 
-// =============================================================================
-// Утилиты
-// =============================================================================
 const formatDateKey = (d) => {
   const year = d.getFullYear()
   const month = String(d.getMonth() + 1).padStart(2, '0')
@@ -535,9 +532,6 @@ export default {
   name: 'Dashboard',
   components: { InsightsWidget, GoalModal },
   setup() {
-    // =========================================================================
-    // Состояние
-    // =========================================================================
     const accounts = ref([])
     const loading = ref(false)
     const showGoalModal = ref(false)
@@ -563,9 +557,6 @@ export default {
       expense: 0
     })
 
-    // =========================================================================
-    // Карусель статистики
-    // =========================================================================
     const currentStatIndex = ref(0)
     const touchStartX = ref(0)
     const touchDeltaX = ref(0)
@@ -574,6 +565,12 @@ export default {
     const isMobileView = ref(false)
 
     const forecastData = ref(null)
+
+    const safeToSpend = computed(() => {
+      if (!forecastData.value || forecastData.value.days_left <= 0) return 0
+        const dailyLimit = forecastData.value.guaranteed_balance / forecastData.value.days_left
+        return Math.max(0, dailyLimit)
+    })
 
     const loadForecast = async () => {
       try {
@@ -664,9 +661,6 @@ export default {
       window.addEventListener('mouseup', onMouseUp)
     }
 
-    // =========================================================================
-    // Геймификация
-    // =========================================================================
     const loadGamification = async () => {
       try {
         gamification.value = await apiService.getGamificationDashboard()
@@ -690,10 +684,6 @@ export default {
         }
       }
     }
-
-    // =========================================================================
-    // Форматирование
-    // =========================================================================
     const formatCurrency = (value) => {
       if (value === null || value === undefined || isNaN(value)) return '0 ₽'
       return new Intl.NumberFormat('ru-RU', {
@@ -739,9 +729,6 @@ export default {
       return `${monthNames[date.month - 1]} ${date.year}`
     }
 
-    // =========================================================================
-    // Computed — счета
-    // =========================================================================
     const totalBalance = computed(() => {
       return accounts.value
         .filter(acc => acc.is_active)
@@ -752,9 +739,6 @@ export default {
       return accounts.value.filter(acc => acc.is_active)
     })
 
-    // =========================================================================
-    // Виджет бюджета
-    // =========================================================================
     const budgetPercentClass = computed(() => {
       const p = budgetSummary.value?.total_budget?.percent || 0
       if (p >= 100) return 'progress-danger'
@@ -777,9 +761,6 @@ export default {
       }
     }
 
-    // =========================================================================
-    // Динамика баланса
-    // =========================================================================
     const historyCanvas = ref(null)
     const historyRange = ref(30)
     const historyRanges = [
@@ -1138,7 +1119,6 @@ export default {
       const nowDate = new Date()
       const month = nowDate.getMonth() + 1
       const year = nowDate.getFullYear()
-
       try {
         const expenseStats = await apiService.getStatistics(month, year, 'expense')
         monthlyExpense.value = parseFloat(expenseStats.total_amount) || 0
@@ -1151,10 +1131,6 @@ export default {
         monthlyExpense.value = 0
       }
     }
-
-    // =========================================================================
-    // Прогресс и вспомогательные переменные
-    // =========================================================================
     const daysInMonth = computed(() => {
       const date = new Date()
       return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
@@ -1171,10 +1147,6 @@ export default {
       if (dailyProgress.value < 70) return 'progress-medium'
       return 'progress-high'
     })
-
-    // =========================================================================
-    // Расчёт цели месяца (умный, на основе прогноза)
-    // =========================================================================
     const goalProgress = computed(() => {
       if (!gamification.value?.goal) return null
       const g = gamification.value.goal
@@ -1475,7 +1447,8 @@ export default {
       onHistoryMouseLeave,
       insightsWidgetRef,
       showBreakdown,
-      forecastData
+      forecastData,
+      safeToSpend
     }
   }
 }
@@ -2416,9 +2389,74 @@ export default {
   color: var(--primary-color);
 }
 
-/* ============================================================
-   АДАПТИВНОСТЬ
-   ============================================================ */
+.safe-to-spend-card {
+  background: linear-gradient(135deg, var(--white) 0%, var(--light-color) 100%);
+  border-left: 4px solid var(--secondary-color);
+  margin-bottom: 2rem;
+  padding: 1.25rem 1.5rem;
+}
+
+.safe-content {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.safe-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.bg-success-light {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--secondary-color);
+}
+
+.bg-danger-light {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger-color);
+}
+
+.safe-text {
+  flex: 1;
+}
+
+.safe-text h3 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.1rem;
+  color: var(--dark-color);
+}
+
+.safe-text p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--gray-color);
+  line-height: 1.4;
+}
+
+.safe-amount {
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .safe-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+  .safe-amount {
+    font-size: 2.5rem;
+  }
+}
 @media (max-width: 1024px) {
   .insights-grid {
     grid-template-columns: 1fr;
