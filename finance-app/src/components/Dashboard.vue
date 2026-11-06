@@ -42,7 +42,7 @@
     <!-- ============================================================ -->
     <InsightsWidget ref="insightsWidgetRef" />
 
-    <!-- Курсы валют (кнопка «Добавить транзакцию» теперь FAB в App.vue) -->
+    <!-- Курсы валют -->
     <div class="actions-panel">
       <div class="exchange-rates" v-if="exchangeRates.length > 0">
         <div
@@ -70,7 +70,7 @@
 
     <!-- Финансовые метрики и прогноз -->
     <div class="insights-grid">
-      <!-- Карточка прогноза -->
+      <!-- Умный прогноз (на основе данных с бэкенда) -->
       <div class="card forecast-card" v-if="forecastData">
         <div class="card-header">
           <h3 class="card-title">📈 Умный прогноз</h3>
@@ -88,26 +88,26 @@
 
           <!-- ДЕТАЛИЗАЦИЯ -->
           <div class="forecast-details" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem;">
-            <div class="forecast-item" style="display: flex; justify-content: space-between; background: rgba(255,255,255,0.1); padding: 0.5rem; border-radius: 0.5rem;">
+            <div class="forecast-item" style="display: flex; justify-content: space-between; background: rgba(255,255,255,0.1); padding: 0.75rem; border-radius: 0.5rem; font-weight: 600;">
               <span class="forecast-item-label">Гарантированный остаток</span>
-              <span class="forecast-item-value text-success">
+              <span class="forecast-item-value text-success" style="font-size: 1.1rem;">
                 {{ formatCurrency(forecastData.guaranteed_balance) }}
               </span>
             </div>
 
-            <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 0.5rem; display: flex; justify-content: space-between;">
+            <div style="font-size: 0.8rem; opacity: 0.9; margin-top: 0.5rem; display: flex; justify-content: space-between;">
               <span>Текущий баланс:</span>
               <span>{{ formatCurrency(forecastData.current_balance) }}</span>
             </div>
-            <div style="font-size: 0.8rem; opacity: 0.8; display: flex; justify-content: space-between; color: #34d399;">
+            <div style="font-size: 0.8rem; opacity: 0.9; display: flex; justify-content: space-between; color: #34d399;">
               <span>+ Ожидаемый доход:</span>
               <span>{{ formatCurrency(forecastData.expected_income) }}</span>
             </div>
-            <div style="font-size: 0.8rem; opacity: 0.8; display: flex; justify-content: space-between; color: #f87171;">
+            <div style="font-size: 0.8rem; opacity: 0.9; display: flex; justify-content: space-between; color: #f87171;">
               <span>- Обязательные траты:</span>
               <span>{{ formatCurrency(forecastData.obligatory_expenses) }}</span>
             </div>
-            <div style="font-size: 0.8rem; opacity: 0.8; display: flex; justify-content: space-between; color: #fbbf24;">
+            <div style="font-size: 0.8rem; opacity: 0.9; display: flex; justify-content: space-between; color: #fbbf24;">
               <span>- Переменные траты ({{ forecastData.days_left }} дн.):</span>
               <span>{{ formatCurrency(forecastData.variable_expenses) }}</span>
             </div>
@@ -225,6 +225,11 @@
                         :class="goalProgress.is_completed ? 'progress-success' : 'progress-warning'"
                         :style="{ width: goalProgress.percent + '%' }"
                     ></div>
+                </div>
+
+                <!-- Прогноз для лимита (показывает, сколько потратится к концу месяца) -->
+                <div v-if="gamification.goal.goal_type === 'limit' && goalProgress.projected && forecastData" style="margin-top: 0.75rem; font-size: 0.8rem; background: var(--light-color); padding: 0.5rem; border-radius: 0.5rem; color: var(--gray-color);">
+                  <i class="fas fa-chart-line"></i> Прогноз трат: <strong :class="goalProgress.projected > gamification.goal.amount ? 'text-danger' : 'text-success'">{{ formatCurrency(goalProgress.projected) }}</strong>
                 </div>
 
                 <p class="goal-status" :class="goalProgress.is_negative ? 'text-danger' : ''">
@@ -572,7 +577,6 @@ export default {
 
     const loadForecast = async () => {
       try {
-        // Предполагается, что ты добавил метод в api.js: getForecast()
         forecastData.value = await apiService.getForecast()
       } catch (error) {
         console.error('Failed to load forecast', error)
@@ -711,13 +715,6 @@ export default {
       const date = typeof dateString === 'string' ? new Date(dateString) : dateString
       return date.toLocaleDateString('ru-RU', {
         day: '2-digit', month: '2-digit', year: 'numeric'
-      })
-    }
-
-    const formatShortDate = (dateString) => {
-      if (!dateString) return ''
-      return new Date(dateString).toLocaleDateString('ru-RU', {
-        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
       })
     }
 
@@ -1156,7 +1153,7 @@ export default {
     }
 
     // =========================================================================
-    // Прогноз
+    // Прогресс и вспомогательные переменные
     // =========================================================================
     const daysInMonth = computed(() => {
       const date = new Date()
@@ -1164,81 +1161,6 @@ export default {
     })
 
     const daysPassed = computed(() => new Date().getDate())
-    const daysLeftInMonth = computed(() => daysInMonth.value - daysPassed.value)
-
-    const averageDailyIncome = computed(() => {
-      if (daysPassed.value === 0) return 0
-      return monthlyIncome.value / daysPassed.value
-    })
-
-    const averageDailyExpense = computed(() => {
-      if (daysPassed.value === 0) return 0
-      return monthlyExpense.value / daysPassed.value
-    })
-
-    const dailyBudget = computed(() => {
-      if (daysLeftInMonth.value === 0) return 0
-      return totalBalance.value / daysLeftInMonth.value
-    })
-
-    const forecastBalance = computed(() => {
-      const projectedExpenses = averageDailyExpense.value * daysLeftInMonth.value
-      return Math.round((totalBalance.value - projectedExpenses) * 100) / 100
-    })
-
-    const forecastWithExpectedIncome = computed(() => {
-      const projectedIncome = averageDailyIncome.value * daysLeftInMonth.value
-      const projectedExpenses = averageDailyExpense.value * daysLeftInMonth.value
-      const forecast = totalBalance.value + projectedIncome - projectedExpenses
-      return Math.max(0, Math.round(forecast * 100) / 100)
-    })
-
-    const forecastStatus = computed(() => {
-      const diff = forecastBalance.value - totalBalance.value
-
-      if (daysLeftInMonth.value === 0) {
-        return { class: 'status-neutral', icon: 'fas fa-minus', message: 'Месяц завершен' }
-      }
-
-      if (averageDailyExpense.value === 0) {
-        return { class: 'status-neutral', icon: 'fas fa-minus', message: 'Расходы не зафиксированы' }
-      }
-
-      const percentChange = totalBalance.value !== 0
-        ? (diff / totalBalance.value) * 100
-        : 0
-
-      if (percentChange > 5) {
-        return {
-          class: 'status-positive',
-          icon: 'fas fa-arrow-up',
-          message: `Ожидается рост на ${formatCurrency(diff)} (${percentChange.toFixed(1)}%)`
-        }
-      } else if (percentChange < -5) {
-        return {
-          class: 'status-negative',
-          icon: 'fas fa-arrow-down',
-          message: `Ожидается снижение на ${formatCurrency(Math.abs(diff))} (${Math.abs(percentChange).toFixed(1)}%)`
-        }
-      } else {
-        const dailyCost = averageDailyExpense.value
-        const totalProjectedCost = dailyCost * daysLeftInMonth.value
-
-        if (totalProjectedCost > totalBalance.value) {
-          return {
-            class: 'status-negative',
-            icon: 'fas fa-exclamation-triangle',
-            message: `Бюджет превышен на ${formatCurrency(totalProjectedCost - totalBalance.value)}`
-          }
-        } else {
-          return {
-            class: 'status-positive',
-            icon: 'fas fa-check-circle',
-            message: `Денег хватит на ${Math.floor(totalBalance.value / dailyCost)} дней`
-          }
-        }
-      }
-    })
 
     const dailyProgress = computed(() => {
       return Math.min(100, Math.round((daysPassed.value / daysInMonth.value) * 100))
@@ -1250,44 +1172,60 @@ export default {
       return 'progress-high'
     })
 
-    const dailyBudgetClass = computed(() => {
-      if (dailyBudget.value > 0) return 'text-success'
-      if (dailyBudget.value < 0) return 'text-danger'
-      return ''
-    })
-
     // =========================================================================
-    // Расчёт цели месяца
+    // Расчёт цели месяца (умный, на основе прогноза)
     // =========================================================================
     const goalProgress = computed(() => {
       if (!gamification.value?.goal) return null
       const g = gamification.value.goal
       const amount = g.amount
 
+      // 1. ЦЕЛЬ: ПОТРАТИТЬ НЕ БОЛЬШЕ ЛИМИТА
       if (g.goal_type === 'limit') {
-        const current = g.spent_on_backend || 0
-        const percent = amount > 0 ? Math.min(100, (current / amount) * 100) : 0
+        const currentSpent = g.spent_on_backend || 0
+
+        // Если есть прогноз, считаем сколько мы потратим к концу месяца
+        let projectedSpent = currentSpent
+        if (forecastData.value) {
+          projectedSpent += forecastData.value.obligatory_expenses + forecastData.value.variable_expenses
+        }
+
+        const percent = amount > 0 ? Math.min(100, (currentSpent / amount) * 100) : 0
+        const isOverLimit = projectedSpent > amount
+
         return {
-          current,
-          percent,
-          is_completed: current <= amount,
-          status_text: current > amount
-            ? '⚠️ Лимит превышен!'
-            : `Потрачено ${percent.toFixed(1)}% от лимита`,
-          is_negative: false
+          current: currentSpent,
+          projected: projectedSpent,
+          percent: percent,
+          is_completed: !isOverLimit,
+          status_text: isOverLimit
+            ? `⚠️ Риск перерасхода! Прогноз: ${formatCurrency(projectedSpent)}`
+            : (currentSpent > amount ? '⚠️ Лимит превышен!' : `Потрачено ${percent.toFixed(1)}% от лимита`),
+          is_negative: currentSpent > amount
         }
       }
 
-      const avgDailyExpense = daysPassed.value > 0 ? monthlyExpense.value / daysPassed.value : 0
-      const projectedExpense = avgDailyExpense * daysInMonth.value
-      const projectedSavings = monthlyIncome.value - projectedExpense
+      // 2. ЦЕЛЬ: НАКОПИТЬ (СЭКОНОМИТЬ) ОПРЕДЕЛЁННУЮ СУММУ
+      let projectedSavings = 0
+
+      if (forecastData.value) {
+        // Умный прогноз: (Доходы текущие + Ожидаемые доходы) - (Траты текущие + Обяз. траты + Переменные траты)
+        const totalIncome = monthlyIncome.value + forecastData.value.expected_income
+        const totalExpense = monthlyExpense.value + forecastData.value.obligatory_expenses + forecastData.value.variable_expenses
+        projectedSavings = totalIncome - totalExpense
+      } else {
+        // Фоллбэк на старую логику (если прогноз не загрузился)
+        const avgDailyExpense = daysPassed.value > 0 ? monthlyExpense.value / daysPassed.value : 0
+        const projectedExpense = avgDailyExpense * daysInMonth.value
+        projectedSavings = monthlyIncome.value - projectedExpense
+      }
 
       const percent = amount > 0 ? Math.min(100, Math.max(0, (projectedSavings / amount) * 100)) : 0
       const isCompleted = projectedSavings >= amount
 
       return {
         current: projectedSavings,
-        percent,
+        percent: percent,
         is_completed: isCompleted,
         status_text: projectedSavings < 0
           ? '⚠️ При текущем темпе трат вы уйдете в минус'
@@ -1486,16 +1424,8 @@ export default {
       now,
       previousMonth,
       previousMonthData,
-      daysLeftInMonth,
-      averageDailyIncome,
-      averageDailyExpense,
-      dailyBudget,
-      forecastBalance,
-      forecastWithExpectedIncome,
-      forecastStatus,
       dailyProgress,
       progressClass,
-      dailyBudgetClass,
       incomeChange,
       incomeChangeClass,
       expenseChange,
@@ -1505,7 +1435,6 @@ export default {
       formatCurrency,
       formatCompactCurrency,
       formatDate,
-      formatShortDate,
       formatMonthYear,
       gamification,
       goalProgress,
@@ -1547,7 +1476,6 @@ export default {
       insightsWidgetRef,
       showBreakdown,
       forecastData
-
     }
   }
 }
@@ -1574,7 +1502,7 @@ export default {
   margin-bottom: 2rem;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;   /* курсы — справа, т.к. кнопка ушла в FAB */
+  justify-content: flex-end;
 }
 
 .exchange-rates {
@@ -1784,7 +1712,7 @@ export default {
 }
 
 /* ============================================================
-   ИНСАЙТЫ
+   ИНСАЙТЫ И ПРОГНОЗ
    ============================================================ */
 .insights-grid {
   display: grid;
@@ -1832,31 +1760,29 @@ export default {
 }
 
 .forecast-details {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   margin-bottom: 1.5rem;
 }
 
 .forecast-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   background: rgba(255, 255, 255, 0.1);
   padding: 0.75rem;
   border-radius: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
 }
 
 .forecast-item-label {
-  font-size: 0.75rem;
-  opacity: 0.8;
-  margin-bottom: 0.25rem;
+  font-size: 0.85rem;
+  opacity: 0.9;
 }
 
 .forecast-item-value {
   font-size: 1.1rem;
-  font-weight: 600;
-  word-break: break-word;
+  font-weight: 700;
 }
 
 .forecast-item-value.text-success {
@@ -1914,11 +1840,6 @@ export default {
 .forecast-status.status-negative {
   background: rgba(248, 113, 113, 0.2);
   color: #f87171;
-}
-
-.forecast-status.status-neutral {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fbbf24;
 }
 
 /* ============================================================
@@ -2512,10 +2433,6 @@ export default {
     text-align: center;
   }
 
-  .forecast-details {
-    grid-template-columns: 1fr 1fr;
-  }
-
   .forecast-value {
     font-size: 2rem;
   }
@@ -2565,10 +2482,6 @@ export default {
 }
 
 @media (max-width: 480px) {
-  .forecast-details {
-    grid-template-columns: 1fr;
-  }
-
   .forecast-value {
     font-size: 1.5rem;
   }
