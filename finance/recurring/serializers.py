@@ -35,6 +35,7 @@ class RecurringTransactionSerializer(serializers.ModelSerializer):
             "next_run_date",
             "last_run_date",
             "is_active",
+            "is_subscription",
             "created_at",
         )
         read_only_fields = ("id", "last_run_date", "created_at")

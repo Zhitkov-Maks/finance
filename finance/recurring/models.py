@@ -66,6 +66,11 @@ class RecurringTransaction(models.Model):
     last_run_date = models.DateField(null=True, blank=True)
 
     is_active = models.BooleanField(default=True)
+    is_subscription = models.BooleanField(
+        default=False,
+        verbose_name="Это подписка",
+        help_text="Отметьте, если это подписка на сервис (Netflix, Яндекс Плюс и т.д.)",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

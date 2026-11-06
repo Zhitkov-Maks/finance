@@ -308,6 +308,13 @@
             </label>
           </div>
 
+          <div class="form-group">
+            <label class="form-checkbox">
+              <input type="checkbox" v-model="formData.is_subscription">
+              <span> Это подписка (учитывать в трекере подписок)</span>
+            </label>
+          </div>
+
           <div class="alert alert-info">
             <i class="fas fa-info-circle"></i>
             Задача создаст транзакцию, обновит баланс счёта и перенесёт «Следующий запуск» на следующий период.
@@ -380,7 +387,8 @@ export default {
         end_date: '',
         next_run_date: new Date().toISOString().slice(0, 10),
         comment: '',
-        is_active: true
+        is_active: true,
+        is_subscription: false
       }
     }
 
@@ -541,7 +549,8 @@ export default {
         end_date: item.end_date || '',
         next_run_date: item.next_run_date,
         comment: item.comment || '',
-        is_active: item.is_active
+        is_active: item.is_active,
+        is_subscription: item.is_subscription
       }
       showModal.value = true
     }
@@ -554,7 +563,6 @@ export default {
     const saveRecurring = async () => {
       saving.value = true
       try {
-        // Payload строго под RecurringTransactionSerializer
         const payload = {
           title: formData.value.title,
           account: parseInt(formData.value.account),
@@ -565,7 +573,8 @@ export default {
           schedule_type: formData.value.schedule_type,
           start_date: formData.value.start_date,
           next_run_date: formData.value.next_run_date,
-          is_active: formData.value.is_active
+          is_active: formData.value.is_active,
+          is_subscription: !!formData.value.is_subscription
         }
 
         // day_of_month — только для monthly

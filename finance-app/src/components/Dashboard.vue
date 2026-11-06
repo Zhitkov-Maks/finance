@@ -37,7 +37,7 @@
       </div>
     </div>
 
-    <div class="card safe-to-spend-card" v-if="forecastData">
+    <div class="card safe-to-spend-card hoverable-card" v-if="forecastData">
       <div class="safe-content">
         <div class="safe-icon" :class="safeToSpend > 0 ? 'bg-success-light' : 'bg-danger-light'">
           <i class="fas" :class="safeToSpend > 0 ? 'fa-shield-alt' : 'fa-exclamation-triangle'"></i>
@@ -90,7 +90,7 @@
     <!-- Финансовые метрики и прогноз -->
     <div class="insights-grid">
       <!-- Умный прогноз (на основе данных с бэкенда) -->
-      <div class="card forecast-card" v-if="forecastData">
+      <div class="card forecast-card hoverable-card" v-if="forecastData">
         <div class="card-header">
           <h3 class="card-title">📈 Умный прогноз</h3>
           <span class="forecast-date">{{ formatDate(now) }}</span>
@@ -155,7 +155,7 @@
       </div>
 
       <!-- Карточка сравнения с прошлым месяцем -->
-      <div class="card comparison-card">
+      <div class="card comparison-card hoverable-card">
         <div class="card-header">
           <h3 class="card-title">📊 Сравнение с прошлым месяцем</h3>
           <span class="comparison-period">
@@ -211,7 +211,7 @@
 
     <div v-if="gamification" class="gamification-grid">
         <!-- 1. Цель месяца -->
-        <div class="card goal-card">
+        <div class="card goal-card hoverable-card">
             <div class="card-header">
                 <h3 class="card-title">🎯 Цель месяца</h3>
                 <button v-if="gamification.goal" @click="showGoalModal = true" class="btn-icon" title="Редактировать">
@@ -252,7 +252,7 @@
                     {{ goalProgress.status_text }}
                 </p>
 
-                <button @click="deleteGoal" class="btn btn-sm btn-outline-danger" style="margin-top: 10px;">
+                <button @click="deleteGoal" class="btn btn-sm btn-outline-danger" style="margin-top: auto;">
                     Удалить цель
                 </button>
             </div>
@@ -264,7 +264,7 @@
         </div>
 
         <!-- 2. Уровень грамотности -->
-        <div class="card literacy-card">
+        <div class="card literacy-card hoverable-card">
             <div class="card-header">
                 <h3 class="card-title">🏆 Уровень {{ gamification.level.score }} / 10</h3>
                 <button
@@ -307,7 +307,7 @@
 
     <div
       v-if="budgetSummary && budgetSummary.total_budget"
-      class="card budget-widget"
+      class="card budget-widget hoverable-card"
       @click="$router.push('/budgets')"
     >
       <div class="budget-widget-header">
@@ -349,8 +349,8 @@
         </div>
       </div>
     </div>
-
-    <div v-if="activeAccounts.length > 0" class="card balance-history-card">
+    <SubscriptionWidget class="hoverable-card" />
+    <div v-if="activeAccounts.length > 0" class="card balance-history-card hoverable-card">
       <div class="card-header">
         <h3 class="card-title">
           <i class="fas fa-chart-line"></i> Динамика баланса
@@ -498,6 +498,7 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import apiService from '../services/api.js'
 import InsightsWidget from './InsightsWidget.vue'
 import GoalModal from './GoalModal.vue'
+import SubscriptionWidget from './SubscriptionWidget.vue'
 
 const DISTRIBUTION_COLORS = [
   '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -537,7 +538,7 @@ const setupCanvas = (canvas, cssWidth, cssHeight) => {
 
 export default {
   name: 'Dashboard',
-  components: { InsightsWidget, GoalModal },
+  components: { InsightsWidget, GoalModal, SubscriptionWidget },
   setup() {
     const accounts = ref([])
     const loading = ref(false)
@@ -1544,6 +1545,36 @@ export default {
 }
 
 /* ============================================================
+   УНИВЕРСАЛЬНЫЙ HOVER-ЭФФЕКТ ДЛЯ ВИДЖЕТОВ
+   ============================================================ */
+.hoverable-card {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
+  will-change: transform;
+}
+
+.hoverable-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg), 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* В темной теме тень должна быть глубже и темнее, чтобы карточка не сливалась с фоном */
+:global(:root[data-theme="dark"]) .hoverable-card:hover {
+  box-shadow: var(--shadow-lg), 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Карточка подписок (дочерний компонент) */
+:deep(.subscription-card) {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
+}
+:deep(.subscription-card:hover) {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg), 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+:global(:root[data-theme="dark"]) :deep(.subscription-card:hover) {
+  box-shadow: var(--shadow-lg), 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* ============================================================
    СТАТИСТИКА
    ============================================================ */
 .stats-carousel {
@@ -1687,6 +1718,14 @@ export default {
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: 1.5rem;
   margin-bottom: 2rem;
+  align-items: stretch;
+}
+
+.insights-grid > .card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
 }
 
 .forecast-card {
@@ -1694,8 +1733,6 @@ export default {
   color: var(--dark-color);
   border: 1px solid var(--light-color);
   border-top: 4px solid var(--primary-color);
-  box-shadow: var(--shadow);
-  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 :global(:root[data-theme="dark"]) .forecast-card {
@@ -1831,6 +1868,25 @@ export default {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1.5rem;
   margin-bottom: 1.5rem;
+  align-items: stretch;
+}
+
+.gamification-grid > .card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+.goal-content,
+.literacy-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.goal-content .btn-outline-danger {
+  margin-top: auto;
 }
 
 .goal-card, .literacy-card {
@@ -1961,9 +2017,10 @@ export default {
 }
 
 .comparison-content {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  justify-content: space-evenly;
 }
 
 .comparison-item {
@@ -1976,6 +2033,12 @@ export default {
   color: var(--dark-color);
   flex-wrap: wrap;
   gap: 0.5rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.comparison-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .comparison-item.highlight {
@@ -2017,14 +2080,7 @@ export default {
    ============================================================ */
 .budget-widget {
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  margin-bottom: 1.5rem;
   background: var(--white);
-}
-
-.budget-widget:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
 }
 
 .budget-widget-header {
@@ -2099,7 +2155,6 @@ export default {
    ДИНАМИКА БАЛАНСА
    ============================================================ */
 .balance-history-card {
-  margin-bottom: 1.5rem;
   background: var(--white);
 }
 
@@ -2270,7 +2325,9 @@ export default {
 }
 
 .history-legend-item:hover {
-  background: var(--light-color);
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  transform: translateY(-1px);
 }
 
 .history-legend-item.is-off {
@@ -2617,23 +2674,5 @@ export default {
 .stats-carousel:not(.is-mobile) .stat-card-expense:hover::after,
 .stats-carousel:not(.is-mobile) .stat-card-income:hover::after {
   animation: shimmer-sweep 0.85s ease-out;
-}
-
-.budget-widget:hover {
-  box-shadow: var(--shadow-lg), 0 6px 20px rgba(59, 130, 246, 0.15);
-}
-
-.comparison-item {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.comparison-item:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-.history-legend-item:hover {
-  border-color: var(--primary-color);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
-  transform: translateY(-1px);
 }
 </style>
