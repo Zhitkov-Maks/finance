@@ -71,45 +71,49 @@
     <!-- Финансовые метрики и прогноз -->
     <div class="insights-grid">
       <!-- Карточка прогноза -->
-      <div class="card forecast-card">
+      <div class="card forecast-card" v-if="forecastData">
         <div class="card-header">
-          <h3 class="card-title">📈 Прогноз на конец месяца</h3>
+          <h3 class="card-title">📈 Умный прогноз</h3>
           <span class="forecast-date">{{ formatDate(now) }}</span>
         </div>
 
         <div class="forecast-content">
+          <!-- ГЛАВНАЯ ЦИФРА -->
           <div class="forecast-main">
-            <div class="forecast-value" :class="forecastStatus.class">
-              {{ formatCurrency(forecastBalance) }}
+            <div class="forecast-value" :class="forecastData.expected_balance >= 0 ? 'text-success' : 'text-danger'">
+              {{ formatCurrency(forecastData.expected_balance) }}
             </div>
-            <div class="forecast-label">Прогнозируемый остаток</div>
+            <div class="forecast-label">Ожидаемый остаток (с учетом трат)</div>
           </div>
 
-          <div class="forecast-details">
-            <div class="forecast-item">
-              <span class="forecast-item-label">Средний доход в день</span>
+          <!-- ДЕТАЛИЗАЦИЯ -->
+          <div class="forecast-details" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem;">
+            <div class="forecast-item" style="display: flex; justify-content: space-between; background: rgba(255,255,255,0.1); padding: 0.5rem; border-radius: 0.5rem;">
+              <span class="forecast-item-label">Гарантированный остаток</span>
               <span class="forecast-item-value text-success">
-                {{ formatCurrency(averageDailyIncome) }}
+                {{ formatCurrency(forecastData.guaranteed_balance) }}
               </span>
             </div>
-            <div class="forecast-item">
-              <span class="forecast-item-label">Средний расход в день</span>
-              <span class="forecast-item-value text-danger">
-                {{ formatCurrency(averageDailyExpense) }}
-              </span>
+
+            <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 0.5rem; display: flex; justify-content: space-between;">
+              <span>Текущий баланс:</span>
+              <span>{{ formatCurrency(forecastData.current_balance) }}</span>
             </div>
-            <div class="forecast-item">
-              <span class="forecast-item-label">Осталось дней</span>
-              <span class="forecast-item-value">{{ daysLeftInMonth }}</span>
+            <div style="font-size: 0.8rem; opacity: 0.8; display: flex; justify-content: space-between; color: #34d399;">
+              <span>+ Ожидаемый доход:</span>
+              <span>{{ formatCurrency(forecastData.expected_income) }}</span>
             </div>
-            <div class="forecast-item">
-              <span class="forecast-item-label">Дневной бюджет</span>
-              <span class="forecast-item-value" :class="dailyBudgetClass">
-                {{ formatCurrency(dailyBudget) }}
-              </span>
+            <div style="font-size: 0.8rem; opacity: 0.8; display: flex; justify-content: space-between; color: #f87171;">
+              <span>- Обязательные траты:</span>
+              <span>{{ formatCurrency(forecastData.obligatory_expenses) }}</span>
+            </div>
+            <div style="font-size: 0.8rem; opacity: 0.8; display: flex; justify-content: space-between; color: #fbbf24;">
+              <span>- Переменные траты ({{ forecastData.days_left }} дн.):</span>
+              <span>{{ formatCurrency(forecastData.variable_expenses) }}</span>
             </div>
           </div>
 
+          <!-- ПРОГРЕСС -->
           <div class="daily-progress">
             <div class="progress-label">
               <span>Прогресс месяца</span>
@@ -124,9 +128,9 @@
             </div>
           </div>
 
-          <div class="forecast-status" :class="forecastStatus.class">
-            <i :class="forecastStatus.icon"></i>
-            {{ forecastStatus.message }}
+          <div class="forecast-status" :class="forecastData.expected_balance >= 0 ? 'status-positive' : 'status-negative'">
+            <i :class="forecastData.expected_balance >= 0 ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle'"></i>
+            {{ forecastData.expected_balance >= 0 ? 'Бюджет сходится. Можно тратить спокойно.' : 'Внимание! Траты превышают доходы.' }}
           </div>
         </div>
       </div>
@@ -563,6 +567,17 @@ export default {
     const isDragging = ref(false)
     const SWIPE_THRESHOLD = 50
     const isMobileView = ref(false)
+
+    const forecastData = ref(null)
+
+    const loadForecast = async () => {
+      try {
+        // Предполагается, что ты добавил метод в api.js: getForecast()
+        forecastData.value = await apiService.getForecast()
+      } catch (error) {
+        console.error('Failed to load forecast', error)
+      }
+    }
 
     const updateViewport = () => {
       isMobileView.value = window.innerWidth <= 1024
@@ -1376,7 +1391,8 @@ export default {
           loadMonthlyStatistics(),
           loadPreviousMonthStatistics(),
           loadBalanceHistory(),
-          loadBudgetSummary()
+          loadBudgetSummary(),
+          loadForecast()
         ])
       } catch (error) {
         console.error('Error loading data:', error)
@@ -1529,7 +1545,9 @@ export default {
       onHistoryMouseMove,
       onHistoryMouseLeave,
       insightsWidgetRef,
-      showBreakdown
+      showBreakdown,
+      forecastData
+
     }
   }
 }

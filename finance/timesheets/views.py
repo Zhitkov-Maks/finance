@@ -1,6 +1,7 @@
 import os
 
 import requests
+from django.core.cache import cache
 from django.http import HttpResponse
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics
@@ -11,6 +12,7 @@ from rest_framework.authentication import (
 )
 from rest_framework.permissions import IsAuthenticated
 
+from .cache import CACHE_TTL, invalidate_timesheets_cache, make_timesheets_key
 from .schemas import (
     ManyAddSchemas,
     StatisticForMonthSchema,
@@ -21,16 +23,23 @@ from .schemas import (
     VacationAddSchemas,
 )
 
-HOST = os.getenv('FINANCE_FASTAPI_URL', 'http://fastapi:8080')
-
+HOST = os.getenv("FINANCE_FASTAPI_URL", "http://fastapi:8080")
 BASE_URL = f"{HOST}/api/v1/"
+
+
+def _request_fastapi(method: str, url: str, **kwargs) -> requests.Response:
+    """Хелпер для безопасного вызова FastAPI с таймаутом."""
+    try:
+        return requests.request(method, url, timeout=10, **kwargs)
+    except requests.RequestException as e:
+        from rest_framework.exceptions import APIException
+
+        raise APIException(f"Service unavailable: {e}")
 
 
 @extend_schema(tags=["TimeSheetsSettings"])
 @TimeSheetsSettingsSchema
 class GetTimesheetsSettings(generics.GenericAPIView):
-    """A class for working with user settings."""
-
     permission_classes = [IsAuthenticated]
     authentication_classes = (
         TokenAuthentication,
@@ -40,24 +49,47 @@ class GetTimesheetsSettings(generics.GenericAPIView):
     http_method_names = ["get", "post", "delete"]
 
     def get(self, request, *args, **kwargs):
-        """Get monthly cost or income analytics."""
-        user = request.user.id
-        external_response = requests.get(url=(BASE_URL + f"settings/?user_id={user}"))
+        user_id = request.user.id
+        cache_key = make_timesheets_key(user_id, "settings")
 
-        return HttpResponse(
-            external_response.content,
-            content_type='application/json',
-            status=external_response.status_code
+        # 1. Пробуем достать из кэша
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            response = HttpResponse(
+                cached_data, content_type="application/json", status=200
+            )
+            response["X-Cache"] = "HIT"
+            return response
+
+        # 2. Если нет — идем в FastAPI
+        external_response = _request_fastapi(
+            "get", f"{BASE_URL}settings/?user_id={user_id}"
         )
+
+        if external_response.status_code == 200:
+            cache.set(cache_key, external_response.content, timeout=CACHE_TTL)
+
+        response = HttpResponse(
+            external_response.content,
+            content_type="application/json",
+            status=external_response.status_code,
+        )
+        response["X-Cache"] = "MISS"
+        return response
 
     def post(self, request):
-        user = request.user.id
+        user_id = request.user.id
         data = request.data
-        response = requests.post(
-            url=f"{BASE_URL}settings/?user_id={user}",
+        response = _request_fastapi(
+            "post",
+            f"{BASE_URL}settings/?user_id={user_id}",
             json=data if isinstance(data, dict) else dict(data),
-            timeout=30
         )
+
+        # Сбрасываем кэш при успешном изменении
+        if response.status_code < 400:
+            invalidate_timesheets_cache(user_id)
+
         return HttpResponse(
             response.content,
             status=response.status_code,
@@ -65,10 +97,13 @@ class GetTimesheetsSettings(generics.GenericAPIView):
         )
 
     def delete(self, request, *args, **kwargs):
-        user = request.user.id
-        response = requests.delete(
-            url=(BASE_URL + f"settings/?user_id={user}")
-        )
+        user_id = request.user.id
+        response = _request_fastapi("delete", f"{BASE_URL}settings/?user_id={user_id}")
+
+        # Сбрасываем кэш при успешном удалении
+        if response.status_code < 400:
+            invalidate_timesheets_cache(user_id)
+
         return HttpResponse(
             response.content,
             status=response.status_code,
@@ -79,8 +114,6 @@ class GetTimesheetsSettings(generics.GenericAPIView):
 @extend_schema(tags=["Shifts"])
 @TimeSheetsSchema
 class GetShifts(generics.GenericAPIView):
-    """A class for working with user settings."""
-
     permission_classes = [IsAuthenticated]
     authentication_classes = (
         TokenAuthentication,
@@ -90,17 +123,34 @@ class GetShifts(generics.GenericAPIView):
     http_method_names = ["get", "post", "put"]
 
     def get(self, request):
-        """Get monthly cost or income analytics."""
-        user = request.user.id
+        user_id = request.user.id
         data = request.GET.dict()
-        url = f"{BASE_URL}shifts/?user_id={user}&year={data["year"]}&month={data["month"]}"
-        response = requests.get(url=url)
+        year = data.get("year")
+        month = data.get("month")
 
-        return HttpResponse(
-            response.content,
-            content_type='application/json',
-            status=response.status_code
+        cache_key = make_timesheets_key(user_id, "shifts", year, month)
+
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            response = HttpResponse(
+                cached_data, content_type="application/json", status=200
+            )
+            response["X-Cache"] = "HIT"
+            return response
+
+        url = f"{BASE_URL}shifts/?user_id={user_id}&year={year}&month={month}"
+        external_response = _request_fastapi("get", url)
+
+        if external_response.status_code == 200:
+            cache.set(cache_key, external_response.content, timeout=CACHE_TTL)
+
+        response = HttpResponse(
+            external_response.content,
+            content_type="application/json",
+            status=external_response.status_code,
         )
+        response["X-Cache"] = "MISS"
+        return response
 
     def post(self, request):
         return self._handle_shifts_request(request)
@@ -109,13 +159,17 @@ class GetShifts(generics.GenericAPIView):
         return self._handle_shifts_request(request)
 
     def _handle_shifts_request(self, request):
-        user = request.user.id
+        user_id = request.user.id
         data = request.data
-        response = requests.post(
-            url=f"{BASE_URL}shifts/?user_id={user}",
+        response = _request_fastapi(
+            "post",
+            f"{BASE_URL}shifts/?user_id={user_id}",
             json=data if isinstance(data, dict) else dict(data),
-            timeout=30
         )
+
+        if response.status_code < 400:
+            invalidate_timesheets_cache(user_id)
+
         return HttpResponse(
             response.content,
             status=response.status_code,
@@ -135,23 +189,43 @@ class GetShiftsForDay(generics.GenericAPIView):
     http_method_names = ["get", "post", "put", "delete"]
 
     def get(self, request, day_id: str):
-        print(f"{BASE_URL}shifts/{day_id}/")
-        response = requests.get(url=f"{BASE_URL}shifts/{day_id}/")
-        return HttpResponse(
-            response.content,
-            status=response.status_code,
-            content_type='application/json',
+        user_id = request.user.id
+        cache_key = make_timesheets_key(user_id, "shift", day_id)
+
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            response = HttpResponse(
+                cached_data, content_type="application/json", status=200
+            )
+            response["X-Cache"] = "HIT"
+            return response
+
+        external_response = _request_fastapi("get", f"{BASE_URL}shifts/{day_id}/")
+
+        if external_response.status_code == 200:
+            cache.set(cache_key, external_response.content, timeout=CACHE_TTL)
+
+        response = HttpResponse(
+            external_response.content,
+            status=external_response.status_code,
+            content_type="application/json",
         )
+        response["X-Cache"] = "MISS"
+        return response
 
     def post(self, request, day_id):
-        data = request.GET.dict()
         user_id = request.user.id
+        data = request.GET.dict()
         url = (
             f"{BASE_URL}shifts/{day_id}/award/?user_id={user_id}"
             f"&count_operations={data.get('count_operations', 0)}"
             f"&type_operations={data.get('type_operations', 0)}"
         )
-        response = requests.post(url=url)
+        response = _request_fastapi("post", url)
+
+        if response.status_code < 400:
+            invalidate_timesheets_cache(user_id)
+
         return HttpResponse(
             response.content,
             status=response.status_code,
@@ -159,11 +233,17 @@ class GetShiftsForDay(generics.GenericAPIView):
         )
 
     def put(self, request, day_id):
-        data = request.GET.dict()
         user_id = request.user.id
-        url = f"{BASE_URL}shifts/{day_id}/hours/?user_id={user_id}" \
-              f"&hours={data.get('hours', 0)}"
-        response = requests.put(url=url)
+        data = request.GET.dict()
+        url = (
+            f"{BASE_URL}shifts/{day_id}"
+            f"/hours/?user_id={user_id}&hours={data.get('hours', 0)}"
+        )
+        response = _request_fastapi("put", url)
+
+        if response.status_code < 400:
+            invalidate_timesheets_cache(user_id)
+
         return HttpResponse(
             response.content,
             status=response.status_code,
@@ -171,7 +251,12 @@ class GetShiftsForDay(generics.GenericAPIView):
         )
 
     def delete(self, request, day_id):
-        response = requests.delete(url=f"{BASE_URL}shifts/{day_id}/")
+        user_id = request.user.id
+        response = _request_fastapi("delete", f"{BASE_URL}shifts/{day_id}/")
+
+        if response.status_code < 400:
+            invalidate_timesheets_cache(user_id)
+
         return HttpResponse(
             response.content,
             status=response.status_code,
@@ -192,11 +277,14 @@ class ManyAddShifts(generics.GenericAPIView):
 
     def post(self, request):
         data, user_id = request.data, request.user.id
-        response = requests.post(
-            url=f"{BASE_URL}shifts/many/?user_id={user_id}",
+        response = _request_fastapi(
+            "post",
+            f"{BASE_URL}shifts/many/?user_id={user_id}",
             json=data if isinstance(data, dict) else dict(data),
-            timeout=30
         )
+
+        if response.status_code < 400:
+            invalidate_timesheets_cache(user_id)
 
         return HttpResponse(
             response.content,
@@ -218,16 +306,35 @@ class StatisticForMonth(generics.GenericAPIView):
 
     def get(self, request):
         data = request.GET.dict()
-        user_id, year, month = request.user.id, data["year"], data["month"]
-        response = requests.get(
-            url=f"{BASE_URL}statistic/month/?user_id={user_id}&year={year}&month={month}"
+        user_id = request.user.id
+        year = data.get("year")
+        month = data.get("month")
+
+        cache_key = make_timesheets_key(user_id, "stats", year, month)
+
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            response = HttpResponse(
+                cached_data, content_type="application/json", status=200
+            )
+            response["X-Cache"] = "HIT"
+            return response
+
+        response = _request_fastapi(
+            "get",
+            f"{BASE_URL}statistic/month/?user_id={user_id}&year={year}&month={month}",
         )
 
-        return HttpResponse(
+        if response.status_code == 200:
+            cache.set(cache_key, response.content, timeout=CACHE_TTL)
+
+        http_resp = HttpResponse(
             response.content,
             status=response.status_code,
-            content_type='application/json',
+            content_type="application/json",
         )
+        http_resp["X-Cache"] = "MISS"
+        return http_resp
 
 
 @extend_schema(tags=["Statistic"])
@@ -243,16 +350,33 @@ class StatisticForYear(generics.GenericAPIView):
 
     def get(self, request):
         data = request.GET.dict()
-        user_id, year = request.user.id, data["year"]
-        response = requests.get(
-            url=f"{BASE_URL}statistic/year/?user_id={user_id}&year={year}"
+        user_id = request.user.id
+        year = data.get("year")
+
+        cache_key = make_timesheets_key(user_id, "stats", year)
+
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            response = HttpResponse(
+                cached_data, content_type="application/json", status=200
+            )
+            response["X-Cache"] = "HIT"
+            return response
+
+        response = _request_fastapi(
+            "get", f"{BASE_URL}statistic/year/?user_id={user_id}&year={year}"
         )
 
-        return HttpResponse(
+        if response.status_code == 200:
+            cache.set(cache_key, response.content, timeout=CACHE_TTL)
+
+        http_resp = HttpResponse(
             response.content,
             status=response.status_code,
-            content_type='application/json',
+            content_type="application/json",
         )
+        http_resp["X-Cache"] = "MISS"
+        return http_resp
 
 
 @extend_schema(tags=["Vacation"])
@@ -268,15 +392,19 @@ class VacationView(generics.GenericAPIView):
 
     def post(self, request):
         data, user_id = request.data, request.user.id
-        response = requests.post(
-            url=f"{BASE_URL}shifts/vacation/?user_id={user_id}",
+        response = _request_fastapi(
+            "post",
+            f"{BASE_URL}shifts/vacation/?user_id={user_id}",
             json={
                 "start_date": data.get("start_date"),
                 "number_of_days": data.get("number_of_days"),
-                "type_days": data.get("type_days")
+                "type_days": data.get("type_days"),
             },
-            timeout=30
         )
+
+        if response.status_code < 400:
+            invalidate_timesheets_cache(user_id)
+
         return HttpResponse(
             response.content,
             status=response.status_code,

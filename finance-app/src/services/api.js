@@ -753,6 +753,11 @@ class ApiService {
             throw error
         }
     }
+
+    async getForecast() {
+        const response = await this.client.get('/analitycs/forecast/')
+        return response.data
+    }
 }
 
 export default new ApiService()
