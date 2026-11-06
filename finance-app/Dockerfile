@@ -1,37 +1,31 @@
-# Dockerfile
-FROM node:18-alpine as build-stage
+# syntax=docker/dockerfile:1
+
+# ============================================================
+#  BUILD STAGE — собираем Vite/SPA
+# ============================================================
+FROM node:18-alpine AS build
 
 WORKDIR /app
 
-# Копируем package.json и устанавливаем зависимости
+# package.json / lock-файл отдельно — чтобы слой npm ci кешировался
+# и не инвалидировался при каждой правке исходников
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --no-audit --no-fund
 
-# Копируем исходный код и собираем
+# Исходники и сборка
 COPY . .
 RUN npm run build
 
-# Production stage
+# ============================================================
+#  RUNTIME STAGE — nginx раздаёт статику
+# ============================================================
 FROM nginx:1.25-alpine
 
-# Копируем собранное приложение
-COPY --from=build-stage /app/dist /usr/share/nginx/html
+# Свой конфиг вместо дефолтного
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Копируем простую конфигурацию nginx
-RUN echo 'server { \
-    listen 80; \
-    server_name localhost; \
-    root /usr/share/nginx/html; \
-    index index.html; \
-    location / { \
-        try_files $uri $uri/ /index.html; \
-    } \
-    location /api { \
-        proxy_pass http://django_app:8001; \
-        proxy_set_header Host $host; \
-        proxy_set_header X-Real-IP $remote_addr; \
-    } \
-}' > /etc/nginx/conf.d/default.conf
+# Собранное приложение
+COPY --from=build /app/dist /usr/share/nginx/html
 
 EXPOSE 80
 
