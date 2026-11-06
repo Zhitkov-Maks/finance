@@ -36,6 +36,7 @@
         ></span>
       </div>
     </div>
+
     <div class="card safe-to-spend-card" v-if="forecastData">
       <div class="safe-content">
         <div class="safe-icon" :class="safeToSpend > 0 ? 'bg-success-light' : 'bg-danger-light'">
@@ -57,7 +58,9 @@
         </div>
       </div>
     </div>
+
     <InsightsWidget ref="insightsWidgetRef" />
+
     <!-- Курсы валют -->
     <div class="actions-panel">
       <div class="exchange-rates" v-if="exchangeRates.length > 0">
@@ -103,27 +106,27 @@
           </div>
 
           <!-- ДЕТАЛИЗАЦИЯ -->
-          <div class="forecast-details" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem;">
-            <div class="forecast-item" style="display: flex; justify-content: space-between; background: rgba(255,255,255,0.1); padding: 0.75rem; border-radius: 0.5rem; font-weight: 600;">
+          <div class="forecast-details">
+            <div class="forecast-item">
               <span class="forecast-item-label">Гарантированный остаток</span>
-              <span class="forecast-item-value text-success" style="font-size: 1.1rem;">
+              <span class="forecast-item-value text-success">
                 {{ formatCurrency(forecastData.guaranteed_balance) }}
               </span>
             </div>
 
-            <div style="font-size: 0.8rem; opacity: 0.9; margin-top: 0.5rem; display: flex; justify-content: space-between;">
+            <div class="forecast-line">
               <span>Текущий баланс:</span>
               <span>{{ formatCurrency(forecastData.current_balance) }}</span>
             </div>
-            <div style="font-size: 0.8rem; opacity: 0.9; display: flex; justify-content: space-between; color: #34d399;">
+            <div class="forecast-line income-line">
               <span>+ Ожидаемый доход:</span>
               <span>{{ formatCurrency(forecastData.expected_income) }}</span>
             </div>
-            <div style="font-size: 0.8rem; opacity: 0.9; display: flex; justify-content: space-between; color: #f87171;">
+            <div class="forecast-line expense-line">
               <span>- Обязательные траты:</span>
               <span>{{ formatCurrency(forecastData.obligatory_expenses) }}</span>
             </div>
-            <div style="font-size: 0.8rem; opacity: 0.9; display: flex; justify-content: space-between; color: #fbbf24;">
+            <div class="forecast-line variable-line">
               <span>- Переменные траты ({{ forecastData.days_left }} дн.):</span>
               <span>{{ formatCurrency(forecastData.variable_expenses) }}</span>
             </div>
@@ -135,7 +138,7 @@
               <span>Прогресс месяца</span>
               <span>{{ dailyProgress }}%</span>
             </div>
-            <div class="progress-bar">
+            <div class="progress-bar bg-light">
               <div
                 class="progress-fill"
                 :style="{ width: dailyProgress + '%' }"
@@ -205,6 +208,7 @@
         </div>
       </div>
     </div>
+
     <div v-if="gamification" class="gamification-grid">
         <!-- 1. Цель месяца -->
         <div class="card goal-card">
@@ -258,6 +262,8 @@
                 <button @click="showGoalModal = true" class="btn btn-primary btn-sm">Установить цель</button>
             </div>
         </div>
+
+        <!-- 2. Уровень грамотности -->
         <div class="card literacy-card">
             <div class="card-header">
                 <h3 class="card-title">🏆 Уровень {{ gamification.level.score }} / 10</h3>
@@ -298,6 +304,7 @@
             </div>
         </div>
     </div>
+
     <div
       v-if="budgetSummary && budgetSummary.total_budget"
       class="card budget-widget"
@@ -568,8 +575,8 @@ export default {
 
     const safeToSpend = computed(() => {
       if (!forecastData.value || forecastData.value.days_left <= 0) return 0
-        const dailyLimit = forecastData.value.guaranteed_balance / forecastData.value.days_left
-        return Math.max(0, dailyLimit)
+      const dailyLimit = forecastData.value.guaranteed_balance / forecastData.value.days_left
+      return Math.max(0, dailyLimit)
     })
 
     const loadForecast = async () => {
@@ -684,6 +691,7 @@ export default {
         }
       }
     }
+
     const formatCurrency = (value) => {
       if (value === null || value === undefined || isNaN(value)) return '0 ₽'
       return new Intl.NumberFormat('ru-RU', {
@@ -1087,9 +1095,6 @@ export default {
       scheduleHistoryDraw()
     }
 
-    // =========================================================================
-    // Загрузка статистики
-    // =========================================================================
     const loadPreviousMonthStatistics = async () => {
       const nowDate = new Date()
       const currentMonth = nowDate.getMonth() + 1
@@ -1131,6 +1136,7 @@ export default {
         monthlyExpense.value = 0
       }
     }
+
     const daysInMonth = computed(() => {
       const date = new Date()
       return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
@@ -1147,6 +1153,7 @@ export default {
       if (dailyProgress.value < 70) return 'progress-medium'
       return 'progress-high'
     })
+
     const goalProgress = computed(() => {
       if (!gamification.value?.goal) return null
       const g = gamification.value.goal
@@ -1206,9 +1213,6 @@ export default {
       }
     })
 
-    // =========================================================================
-    // Сравнение
-    // =========================================================================
     const incomeChange = computed(() => {
       if (previousMonthData.value.income === 0) return 'Нет данных'
       const diff = monthlyIncome.value - previousMonthData.value.income
@@ -1253,9 +1257,6 @@ export default {
       return current > previous ? 'text-success' : 'text-danger'
     })
 
-    // =========================================================================
-    // Курсы валют
-    // =========================================================================
     const fetchExchangeRates = async () => {
       exchangeRatesLoading.value = true
       exchangeRatesError.value = false
@@ -1288,9 +1289,6 @@ export default {
       }
     }
 
-    // =========================================================================
-    // Загрузка данных
-    // =========================================================================
     const loadData = async () => {
       loading.value = true
       try {
@@ -1311,7 +1309,6 @@ export default {
       }
     }
 
-    // Обработчик события от FAB (QuickAddTransaction)
     const onTransactionCreated = async () => {
       await loadData()
       await loadGamification()
@@ -1320,9 +1317,6 @@ export default {
       }
     }
 
-    // =========================================================================
-    // Watchers
-    // =========================================================================
     watch(
       historyAccounts,
       (list) => {
@@ -1350,9 +1344,6 @@ export default {
       })
     })
 
-    // =========================================================================
-    // Lifecycle
-    // =========================================================================
     onMounted(() => {
       updateViewport()
       window.addEventListener('resize', updateViewport)
@@ -1684,6 +1675,10 @@ export default {
   color: var(--danger-color);
 }
 
+.text-warning {
+  color: var(--warning-color);
+}
+
 /* ============================================================
    ИНСАЙТЫ И ПРОГНОЗ
    ============================================================ */
@@ -1695,21 +1690,30 @@ export default {
 }
 
 .forecast-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--white) 0%, rgba(99, 102, 241, 0.05) 100%);
+  color: var(--dark-color);
+  border: 1px solid var(--light-color);
+  border-top: 4px solid var(--primary-color);
+  box-shadow: var(--shadow);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+:global(:root[data-theme="dark"]) .forecast-card {
+  background: linear-gradient(135deg, #1f2937 0%, rgba(99, 102, 241, 0.1) 100%);
+  border-color: #374151;
 }
 
 .forecast-card .card-header {
-  border-bottom-color: rgba(255, 255, 255, 0.2);
+  border-bottom-color: var(--light-color);
 }
 
 .forecast-card .card-title {
-  color: white;
+  color: var(--dark-color);
 }
 
 .forecast-date {
   font-size: 0.875rem;
-  opacity: 0.8;
+  color: var(--gray-color);
 }
 
 .forecast-content {
@@ -1729,7 +1733,7 @@ export default {
 
 .forecast-label {
   font-size: 0.875rem;
-  opacity: 0.8;
+  color: var(--gray-color);
 }
 
 .forecast-details {
@@ -1743,14 +1747,15 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--light-color);
   padding: 0.75rem;
   border-radius: 0.5rem;
+  font-weight: 600;
 }
 
 .forecast-item-label {
   font-size: 0.85rem;
-  opacity: 0.9;
+  color: var(--dark-color);
 }
 
 .forecast-item-value {
@@ -1758,13 +1763,16 @@ export default {
   font-weight: 700;
 }
 
-.forecast-item-value.text-success {
-  color: #34d399;
+.forecast-line {
+  font-size: 0.8rem;
+  display: flex;
+  justify-content: space-between;
+  color: var(--gray-color);
 }
 
-.forecast-item-value.text-danger {
-  color: #f87171;
-}
+.forecast-line.income-line { color: var(--secondary-color); }
+.forecast-line.expense-line { color: var(--danger-color); }
+.forecast-line.variable-line { color: var(--warning-color); }
 
 .daily-progress {
   margin-bottom: 1rem;
@@ -1775,13 +1783,11 @@ export default {
   justify-content: space-between;
   font-size: 0.875rem;
   margin-bottom: 0.25rem;
+  color: var(--gray-color);
 }
 
-.progress-bar {
-  height: 8px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 9999px;
-  overflow: hidden;
+.progress-bar.bg-light {
+  background: var(--light-color);
 }
 
 .progress-fill {
@@ -1806,13 +1812,15 @@ export default {
 }
 
 .forecast-status.status-positive {
-  background: rgba(52, 211, 153, 0.2);
-  color: #34d399;
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--secondary-color);
+  border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .forecast-status.status-negative {
-  background: rgba(248, 113, 113, 0.2);
-  color: #f87171;
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger-color);
+  border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 /* ============================================================
@@ -2621,14 +2629,6 @@ export default {
 .comparison-item:hover {
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-.forecast-item {
-  transition: transform 0.2s ease, background 0.2s ease;
-}
-.forecast-item:hover {
-  transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.18);
 }
 
 .history-legend-item:hover {
