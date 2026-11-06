@@ -22,15 +22,12 @@ jobs:
           port: 22
           script: |
             cd /home/botuser/finance || exit 1
-            
-            echo "📦 Stopping containers..."
-            docker compose down
-            
+
             echo "📥 Pulling latest code..."
             git pull origin main
-            
+
             echo "🔄 Rebuilding and starting containers..."
             docker compose up --build -d
-            
+
             echo "✅ Deployment complete!"
             docker compose ps
