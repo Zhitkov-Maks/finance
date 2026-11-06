@@ -57,21 +57,15 @@ def _schedule_cache_invalidation(user_id: int) -> None:
 def _apply_transaction_to_balance(
     transaction: Transaction, old_balance: Decimal = None
 ) -> None:
-    """
-    Применяет транзакцию к балансу счёта.
-    old_balance — баланс счёта ДО применения операции.
-    Нужен для умного старта льготного периода.
-    """
-    is_income = transaction.category.type_transaction == "income"
+    """Применяет транзакцию к балансу счёта."""
+    is_income = transaction.type_transaction == "income"
     delta = transaction.amount if is_income else -transaction.amount
 
     Account.objects.filter(pk=transaction.account_id).update(
         balance=F("balance") + delta
     )
-
     account = Account.objects.get(pk=transaction.account_id)
 
-    # Если это кредитка, и баланс ушёл в минус — проверяем, не нужно ли запустить таймер
     if account.account_type == Account.TYPE_CREDIT and account.balance < 0:
         maybe_start_grace_period(
             account, old_balance=old_balance, force_date=transaction.create_at.date()
@@ -79,12 +73,8 @@ def _apply_transaction_to_balance(
 
 
 def _revert_transaction_from_balance(transaction: Transaction) -> None:
-    """
-    Откатывает транзакцию. ВАЖНО: grace_period_start НЕ трогаем.
-    Если долг вернулся, таймер сам продолжит тикать с прошлой даты.
-    Если долг ушел (баланс >= 0) — фронт просто скроет таймер.
-    """
-    is_income = transaction.category.type_transaction == "income"
+    """Откатывает транзакцию."""
+    is_income = transaction.type_transaction == "income"
     delta = -transaction.amount if is_income else transaction.amount
 
     Account.objects.filter(pk=transaction.account_id).update(
@@ -118,15 +108,11 @@ class TransactionView(generics.ListCreateAPIView):
     )
 
     def get_queryset(self) -> QuerySet:
-        """
-        Транзакции пользователя. select_related убирает N+1
-        при рендере вложенных category/account.
-        """
         queryset = Transaction.objects.filter(user=self.request.user).select_related(
             "category", "account"
         )
         if transaction_type := self.request.query_params.get("type"):
-            queryset = queryset.filter(category__type_transaction=transaction_type)
+            queryset = queryset.filter(type_transaction=transaction_type)
         return queryset
 
     def get_serializer_class(self):
@@ -135,29 +121,9 @@ class TransactionView(generics.ListCreateAPIView):
         return TransactionSerializer
 
     def perform_create(self, serializer) -> None:
-        """
-        Создаёт транзакцию и атомарно применяет её к балансу.
-        """
-        declared_type = self.request.query_params.get("type")
-
         with db_transaction.atomic():
             transaction: Transaction = serializer.save(user=self.request.user)
-
-            # Запоминаем баланс ДО применения транзакции
             old_balance = transaction.account.balance
-
-            actual_type = transaction.category.type_transaction
-            if declared_type and declared_type != actual_type:
-                raise serializers.ValidationError(
-                    {
-                        "type": (
-                            f"Параметр type='{declared_type}' не совпадает "
-                            f"с типом категории '{actual_type}'. "
-                            f"Выберите категорию правильного типа."
-                        )
-                    }
-                )
-
             _apply_transaction_to_balance(transaction, old_balance=old_balance)
             _schedule_cache_invalidation(self.request.user.pk)
 
@@ -331,20 +297,6 @@ class RetrieveUpdateDeleteCategory(generics.RetrieveUpdateDestroyAPIView):
         return Category.objects.filter(user=self.request.user)
 
     def perform_destroy(self, instance: Category) -> None:
-        has_transactions = Transaction.objects.filter(
-            Q(category=instance) | Q(category__parent=instance)
-        ).exists()
-        if has_transactions:
-            raise serializers.ValidationError(
-                {
-                    "detail": (
-                        "Нельзя удалить категорию: в ней (или в её подкатегориях) "
-                        "есть транзакции. Сначала перекатегоризируйте или "
-                        "удалите их."
-                    )
-                }
-            )
-
         has_budgets = Budget.objects.filter(
             Q(category=instance) | Q(category__parent=instance)
         ).exists()

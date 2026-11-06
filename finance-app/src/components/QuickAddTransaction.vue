@@ -44,7 +44,7 @@
         <form v-else @submit.prevent="submit">
           <div class="form-group">
             <label class="form-label required">Тип</label>
-            <select v-model="form.type" class="form-control" required>
+            <select v-model="form.type" class="form-control" required @change="onTypeChange">
               <option value="income">Доход</option>
               <option value="expense">Расход</option>
             </select>
@@ -64,9 +64,9 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label required">Категория</label>
-            <select v-model="form.category" class="form-control" required>
-              <option value="">Выберите категорию</option>
+            <label class="form-label">Категория</label>
+            <select v-model="form.category" class="form-control">
+              <option value="">Без категории</option>
               <option
                 v-for="cat in availableCategories"
                 :key="cat.id"
@@ -183,6 +183,12 @@ export default {
       }).format(value)
     }
 
+    const onTypeChange = () => {
+      // При смене типа сбрасываем выбранную категорию, чтобы не отправить
+      // доход с категорией расхода
+      form.value.category = ''
+    }
+
     const loadData = async () => {
       loadingData.value = true
       loadError.value = ''
@@ -209,8 +215,6 @@ export default {
       loadError.value = ''
       loadingData.value = true
       showModal.value = true
-      // Всегда подтягиваем свежие данные при открытии — балансы счетов
-      // могли измениться с прошлого раза
       await loadData()
     }
 
@@ -222,8 +226,8 @@ export default {
     const submit = async () => {
       error.value = ''
 
-      if (!form.value.category || !form.value.account) {
-        error.value = 'Выберите категорию и счёт'
+      if (!form.value.account) {
+        error.value = 'Выберите счёт'
         return
       }
       const amount = parseFloat(form.value.amount)
@@ -237,7 +241,8 @@ export default {
         await apiService.createTransaction(form.value.type, {
           amount: form.value.amount,
           create_at: new Date().toISOString(),
-          category: parseInt(form.value.category, 10),
+          type_transaction: form.value.type, // <--- КРИТИЧЕСКИ ВАЖНО
+          category: form.value.category ? parseInt(form.value.category, 10) : null, // <--- Отправляем null, если не выбрана
           account: parseInt(form.value.account, 10),
           comment: form.value.comment
         })
@@ -248,7 +253,13 @@ export default {
         showModal.value = false
       } catch (e) {
         console.error('QuickAdd: failed to create transaction', e)
-        error.value = 'Не удалось создать транзакцию. Попробуйте ещё раз.'
+        // Показываем ошибку валидации от бэкенда, если она есть
+        if (e.response?.data) {
+          const firstError = Object.values(e.response.data)[0];
+          error.value = Array.isArray(firstError) ? firstError[0] : firstError;
+        } else {
+          error.value = 'Не удалось создать транзакцию. Попробуйте ещё раз.'
+        }
       } finally {
         submitting.value = false
       }
@@ -267,6 +278,7 @@ export default {
       openModal,
       closeModal,
       loadData,
+      onTypeChange,
       submit
     }
   }

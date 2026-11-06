@@ -1,8 +1,7 @@
-from rest_framework import serializers
-from django.db import models
-
-from .models import Transaction, Category
 from accounts.serializers import AccountSerializer
+from rest_framework import serializers
+
+from .models import Category, Transaction
 
 
 class ParentSerializers(serializers.ModelSerializer):
@@ -57,7 +56,8 @@ class TransactionSerializer(serializers.ModelSerializer):
             "create_at",
             "category",
             "account",
-            "comment"
+            "type_transaction",
+            "comment",
         ]
 
 
@@ -73,8 +73,15 @@ class TransactionSerializersAdd(serializers.ModelSerializer):
             "create_at",
             "category",
             "account",
-            "comment"
+            "type_transaction",
+            "comment",
         ]
+        extra_kwargs = {
+            "category": {
+                "required": False,
+                "allow_null": True,
+            }
+        }
 
 
 class TransactionSerializerGet(serializers.ModelSerializer):
@@ -89,7 +96,8 @@ class TransactionSerializerGet(serializers.ModelSerializer):
             "create_at",
             "category",
             "account",
-            "comment"
+            "type_transaction",
+            "comment",
         ]
 
 

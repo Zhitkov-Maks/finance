@@ -110,10 +110,23 @@ class Category(models.Model):
         ordering = ("level", "name")
 
 
+from app_user.models import CustomUser
+from django.db import models
+
+# ... (Category оставляем без изменений) ...
+
+
 class Transaction(models.Model):
     """
     Модель для представления транзакций пользователя.
     """
+
+    TYPE_INCOME = "income"
+    TYPE_EXPENSE = "expense"
+    TYPE_CHOICES = [
+        (TYPE_INCOME, "Доход"),
+        (TYPE_EXPENSE, "Расход"),
+    ]
 
     amount = models.DecimalField(
         max_digits=10,
@@ -128,12 +141,22 @@ class Transaction(models.Model):
         db_index=True,
         verbose_name="Пользователь",
     )
+
+    type_transaction = models.CharField(
+        max_length=10,
+        choices=TYPE_CHOICES,
+        db_index=True,
+        verbose_name="Тип операции",
+    )
+
     category = models.ForeignKey(
         Category,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="transactions",
         db_index=True,
-        verbose_name="Тип расхода",
+        verbose_name="Категория",
     )
     account = models.ForeignKey(
         Account,
@@ -154,7 +177,7 @@ class Transaction(models.Model):
     def __str__(self):
         return (
             f"{self.amount} "
-            f"{self.category.type_transaction if self.category else 'unknown'}"
+            f"{self.type_transaction if self.type_transaction else 'unknown'}"
         )
 
     class Meta:

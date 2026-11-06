@@ -829,9 +829,15 @@ export default {
           page: modalCurrentPage.value,
           page_size: modalPageSize.value,
           type: currentType.value,
-          category_name: modalCategory.value.name,
           create_at_after: formatDateOnly(firstDay),
           create_at_before: formatDateOnly(lastDay),
+        }
+
+        // ← НОВАЯ ЛОГИКА: если id === 0, значит это виртуальная "Без категории"
+        if (modalCategory.value.id === 0) {
+          params.category_isnull = 'true'
+        } else {
+          params.category_id = modalCategory.value.id
         }
 
         const response = await apiService.getTransactions(params)
