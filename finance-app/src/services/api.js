@@ -758,6 +758,20 @@ class ApiService {
         const response = await this.client.get('/analitycs/forecast/')
         return response.data
     }
+
+        // ==================== Симуляция погашения кредиток ====================
+    async simulateCreditPlan(monthlyPayment, strategy) {
+        try {
+            const response = await this.client.post('/debts/credit-plan-simulate/', {
+                monthly_payment: monthlyPayment,
+                strategy: strategy
+            })
+            return response.data
+        } catch (error) {
+            console.error('Error simulating credit plan:', error.response?.data || error.message)
+            throw error
+        }
+    }
 }
 
 export default new ApiService()

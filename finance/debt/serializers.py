@@ -1,7 +1,7 @@
-from rest_framework import serializers
-
 from accounts.models import Account
+from rest_framework import serializers
 from transfer.models import Transfer
+
 from .models import Debt
 
 
@@ -99,3 +99,10 @@ class SuccessSerializer(serializers.Serializer):
 
     status = serializers.CharField(max_length=10)
     message = serializers.CharField(max_length=1000)
+
+
+class CreditPlanRequestSerializer(serializers.Serializer):
+    monthly_payment = serializers.DecimalField(max_digits=10, decimal_places=2)
+    strategy = serializers.ChoiceField(
+        choices=["avalanche", "snowball"], default="avalanche"
+    )

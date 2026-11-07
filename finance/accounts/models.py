@@ -69,6 +69,13 @@ class Account(models.Model):
         verbose_name="Ставка по кредиту после льготного периода, %",
         help_text="Если не указана, используется 30% (среднее значение)",
     )
+    min_payment_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=5.00,
+        verbose_name="Минимальный платеж, %",
+        help_text="Процент от суммы долга. Например, 5%",
+    )
 
     def __str__(self):
         return self.name

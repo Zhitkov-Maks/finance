@@ -24,11 +24,13 @@ from debt.util import create_debt_accounts, create_debt_or_lend_transfer, repay_
 from .models import Debt
 from .serializers import (
     AccountDebtSerializer,
+    CreditPlanRequestSerializer,
     DebtCreateSerializer,
     DebtDetailSerializer,
     DebtListSerializer,
     DebtRepaymentSerializer,
 )
+from .services import CreditStrategyService
 
 
 @DebtCreateAccountsSchema
@@ -207,3 +209,25 @@ class DebtDetailView(APIView):
 
         serializer = DebtDetailSerializer(debt)
         return Response(serializer.data)
+
+
+class CreditPlanSimulateView(APIView):
+    """Симулятор погашения кредиток."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = CreditPlanRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            service = CreditStrategyService(
+                user=request.user,
+                monthly_budget=serializer.validated_data["monthly_payment"],
+                strategy=serializer.validated_data["strategy"],
+            )
+            result = service.simulate()
+
+            if "error" in result:
+                return Response({"detail": result["error"]}, status=400)
+
+            return Response(result)
+        return Response(serializer.errors, status=400)

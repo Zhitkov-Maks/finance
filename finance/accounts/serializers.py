@@ -21,6 +21,8 @@ class BaseAccountSerializer(serializers.ModelSerializer):
             "account_type",
             "interest_rate",
             "credit_limit",
+            "credit_rate",
+            "min_payment_percent",
             "grace_period_days",
             "grace_period_start",
         ]
@@ -51,6 +53,7 @@ class AccountSerializer(serializers.ModelSerializer):
             "interest_rate",
             "credit_limit",
             "credit_rate",
+            "min_payment_percent",
             "grace_period_days",
             "grace_period_start",
         ]

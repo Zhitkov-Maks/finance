@@ -65,7 +65,8 @@
                 <span v-if="account.account_type === 'deposit'" class="badge badge-info">Вклад {{ account.interest_rate }}% (день)</span>
                 <span v-if="account.account_type === 'deposit_monthly'" class="badge badge-info">Вклад {{ account.interest_rate }}% (мес.)</span>
                 <span v-if="account.account_type === 'credit_card'" class="badge badge-danger">
-                  Кредитка<template v-if="account.credit_rate"> · {{ account.credit_rate }}%</template>
+                  💳 Кредитка<template v-if="account.credit_rate"> · {{ account.credit_rate }}%</template>
+                  <template v-if="account.min_payment_percent"> · мин. {{ account.min_payment_percent }}%</template>
                 </span>
               </div>
               <div class="account-subtext" v-if="account.account_type === 'credit_card' && getGraceDaysLeft(account) !== null" :class="getGraceDaysLeft(account) <= 3 ? 'text-danger' : 'text-muted'">
@@ -745,9 +746,21 @@
                 class="form-control"
                 placeholder="Например: 25.9"
               >
+            </div>
+            <div class="form-group">
+              <label class="form-label required">Минимальный платёж по карте (%)</label>
+              <input
+                v-model="formData.min_payment_percent"
+                type="number"
+                step="0.1"
+                min="1"
+                max="100"
+                class="form-control"
+                required
+                placeholder="Например: 5"
+              >
               <small class="form-hint text-muted">
-                Указана в договоре или приложении банка. Обычно 20–40%.
-                Если не знаете — оставьте пустым, будет использоваться 30%.
+                Банк требует вносить этот процент от долга каждый месяц. Обычно 3–8%.
               </small>
             </div>
           </template>
@@ -951,7 +964,8 @@ export default {
       account_type: 'standard',
       interest_rate: null,
       credit_limit: null,
-      credit_rate: null,           // ← НОВОЕ
+      credit_rate: null,
+      min_payment_percent: 5,
       grace_period_days: 120,
       grace_period_start: null
     })
@@ -1490,8 +1504,12 @@ export default {
       formData.value = {
         name: '', balance: 0, is_active: true,
         account_type: 'standard',
-        interest_rate: null, credit_limit: null, credit_rate: null,
-        grace_period_days: 120, grace_period_start: null
+        interest_rate: null,
+        credit_limit: null,
+        credit_rate: null,
+        min_payment_percent: 5,
+        grace_period_days: 120,
+        grace_period_start: null
       }
       showAccountModal.value = true
     }
@@ -1505,7 +1523,8 @@ export default {
         account_type: account.account_type || 'standard',
         interest_rate: account.interest_rate,
         credit_limit: account.credit_limit,
-        credit_rate: account.credit_rate,           // ← НОВОЕ
+        credit_rate: account.credit_rate,
+        min_payment_percent: account.min_payment_percent || 5,
         grace_period_days: account.grace_period_days || 120,
         grace_period_start: account.grace_period_start
       }
@@ -1525,7 +1544,8 @@ export default {
         if (!isDeposit) payload.interest_rate = null
         if (payload.account_type !== 'credit_card') {
           payload.credit_limit = null
-          payload.credit_rate = null                 // ← НОВОЕ
+          payload.credit_rate = null
+          payload.min_payment_percent = null
           payload.grace_period_days = null
         }
 
