@@ -1,12 +1,8 @@
-from django.db.models import Sum, Count, Avg
-from django.db.models.functions import ExtractYear, ExtractMonth
-
-from app_user.models import CustomUser
-from transactions.models import Transaction
-
 import os
+
 from django.conf import settings
 from django.db import connection
+
 
 class SQLQueryService:
     """A class for an sql query for analytics."""
@@ -41,6 +37,5 @@ class MonthlyAnalyticsService:
     @staticmethod
     def get_analytics(user_id, year=None, type_tr='expense'):
         return SQLQueryService.execute_query(
-            'monthly_analytics', 
-            [user_id, type_tr, year, year]
+            "monthly_analytics", [user_id, type_tr, year, year]
         )

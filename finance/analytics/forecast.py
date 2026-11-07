@@ -12,7 +12,7 @@ from transactions.models import Transaction
 
 logger = logging.getLogger(__name__)
 
-CACHE_TTL = 60 * 60 * 24 * 7  # Неделя
+CACHE_TTL = 60 * 60 * 27 * 7
 
 
 class ForecastService:
@@ -37,7 +37,7 @@ class ForecastService:
         tx_stats = self._get_transaction_stats()
         recurring_stats = self._get_recurring_stats()
 
-        # 3. Высчитываем доходы и расходы из полученной статистики
+        # 3. Высчитываем доходы и расходы
         expected_income = self._calculate_income(tx_stats, recurring_stats)
         obligatory_expenses = recurring_stats["rec_expense_this_month"]
         variable_expenses = self._calculate_variable_expenses(tx_stats, recurring_stats)
@@ -46,6 +46,17 @@ class ForecastService:
         guaranteed_balance = current_balance + expected_income - obligatory_expenses
         expected_balance = guaranteed_balance - variable_expenses
 
+        # 5. НОВОЕ: Расчет безопасной траты на сегодня
+        spent_today = tx_stats["today_expense"] or Decimal("0.00")
+        # Делим гарантированный остаток на количество дней
+        safe_daily = (
+            guaranteed_balance / Decimal(self.days_left)
+            if self.days_left > 0
+            else Decimal("0.00")
+        )
+        # Остаток на сегодня с учетом уже совершенных трат
+        remaining_today = max(Decimal("0.00"), safe_daily - spent_today)
+
         result = {
             "current_balance": float(current_balance),
             "expected_income": float(expected_income),
@@ -53,6 +64,9 @@ class ForecastService:
             "variable_expenses": float(variable_expenses),
             "guaranteed_balance": float(guaranteed_balance),
             "expected_balance": float(expected_balance),
+            "safe_to_spend_daily": float(safe_daily),
+            "spent_today": float(spent_today),
+            "remaining_safe_today": float(remaining_today),
             "days_left": self.days_left,
             "period": {
                 "date_from": self.today.isoformat(),
@@ -60,7 +74,7 @@ class ForecastService:
             },
         }
 
-        # 5. Сохраняем в кэш
+        # 6. Сохраняем в кэш
         cache.set(cache_key, result, timeout=CACHE_TTL)
         return result
 
@@ -70,13 +84,10 @@ class ForecastService:
         ).aggregate(total=Sum("balance"))["total"] or Decimal("0.00")
 
     def _get_transaction_stats(self) -> dict:
-        """Один запрос к БД вместо четырех."""
         six_months_ago = self.today - relativedelta(months=6)
         thirty_days_ago = self.today - timedelta(days=30)
 
-        # Условная агрегация: считаем все суммы за разные периоды в одном SQL-запросе
         return Transaction.objects.filter(user=self.user).aggregate(
-            # Доходы за 6 месяцев (без текущего месяца)
             past_income=Sum(
                 Case(
                     When(
@@ -89,7 +100,6 @@ class ForecastService:
                     output_field=DecimalField(),
                 )
             ),
-            # Дата первой транзакции за 6 месяцев (для подсчета месяцев)
             past_min_date=Min(
                 Case(
                     When(
@@ -100,7 +110,6 @@ class ForecastService:
                     )
                 )
             ),
-            # Доходы за текущий месяц
             current_income=Sum(
                 Case(
                     When(
@@ -113,7 +122,6 @@ class ForecastService:
                     output_field=DecimalField(),
                 )
             ),
-            # Переменные расходы за 30 дней
             past_30d_expense=Sum(
                 Case(
                     When(
@@ -126,16 +134,26 @@ class ForecastService:
                     output_field=DecimalField(),
                 )
             ),
+            # НОВОЕ: Расходы за сегодня
+            today_expense=Sum(
+                Case(
+                    When(
+                        type_transaction=Transaction.TYPE_EXPENSE,
+                        create_at__date=self.today,
+                        then="amount",
+                    ),
+                    default=0,
+                    output_field=DecimalField(),
+                )
+            ),
         )
 
     def _get_recurring_stats(self) -> dict:
-        """Один запрос к БД для всех регулярных операций."""
         next_30_days = self.today + timedelta(days=30)
 
         return RecurringTransaction.objects.filter(
             user=self.user, is_active=True
         ).aggregate(
-            # Доходы до конца месяца
             rec_income_this_month=Sum(
                 Case(
                     When(
@@ -148,7 +166,6 @@ class ForecastService:
                     output_field=DecimalField(),
                 )
             ),
-            # Обязательные расходы до конца месяца
             rec_expense_this_month=Sum(
                 Case(
                     When(
@@ -161,7 +178,6 @@ class ForecastService:
                     output_field=DecimalField(),
                 )
             ),
-            # Регулярные расходы на ближайшие 30 дней (для вычета из переменных)
             rec_expense_30d=Sum(
                 Case(
                     When(

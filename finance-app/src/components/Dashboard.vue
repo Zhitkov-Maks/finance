@@ -39,22 +39,37 @@
 
     <div class="card safe-to-spend-card hoverable-card" v-if="forecastData">
       <div class="safe-content">
-        <div class="safe-icon" :class="safeToSpend > 0 ? 'bg-success-light' : 'bg-danger-light'">
-          <i class="fas" :class="safeToSpend > 0 ? 'fa-shield-alt' : 'fa-exclamation-triangle'"></i>
+        <div class="safe-icon" :class="displaySafeToSpend > 0 ? 'bg-success-light' : 'bg-danger-light'">
+          <i class="fas" :class="displaySafeToSpend > 0 ? 'fa-shield-alt' : 'fa-exclamation-triangle'"></i>
         </div>
 
         <div class="safe-text">
           <h3>Безопасно тратить в день</h3>
-          <p v-if="safeToSpend > 0">
+          <p v-if="displaySafeToSpend > 0">
             Чтобы дожить до конца месяца ({{ forecastData.days_left }} дн.) и без проблем оплатить обязательные платежи.
           </p>
           <p v-else class="text-danger">
-            ⚠️ Внимание! С учетом обязательных платежей свободных денег до конца месяца не остается.
+            ⚠️ Лимит на сегодня исчерпан! Дальнейшие траты приведут к кассовому разрыву.
           </p>
+
+          <!-- ПРОГРЕСС-БАР ТРАТ ЗА СЕГОДНЯ -->
+          <div class="safe-daily-progress" v-if="displaySafeDaily > 0">
+            <div class="safe-progress-label">
+              <span>Потрачено сегодня: {{ formatCurrency(forecastData.spent_today || 0) }}</span>
+              <span>из {{ formatCurrency(displaySafeDaily) }}</span>
+            </div>
+            <div class="progress-bar">
+              <div
+                class="progress-fill"
+                :class="(forecastData.spent_today || 0) > displaySafeDaily ? 'progress-danger' : 'progress-success'"
+                :style="{ width: Math.min(100, ((forecastData.spent_today || 0) / displaySafeDaily) * 100) + '%' }"
+              ></div>
+            </div>
+          </div>
         </div>
 
-        <div class="safe-amount" :class="safeToSpend > 0 ? 'text-success' : 'text-danger'">
-          {{ formatCurrency(safeToSpend) }}
+        <div class="safe-amount" :class="displaySafeToSpend > 0 ? 'text-success' : 'text-danger'">
+          {{ formatCurrency(displaySafeToSpend) }}
         </div>
       </div>
     </div>
@@ -580,6 +595,27 @@ export default {
       return Math.max(0, dailyLimit)
     })
 
+    const displaySafeToSpend = computed(() => {
+      if (!forecastData.value) return 0
+      if (forecastData.value.remaining_safe_today !== undefined) {
+        return forecastData.value.remaining_safe_today
+      }
+      const guaranteed = forecastData.value.guaranteed_balance || 0
+      const days = forecastData.value.days_left || 1
+      const spent = forecastData.value.spent_today || 0
+      return guaranteed > 0 ? Math.max(0, (guaranteed / days) - spent) : 0
+    })
+
+    const displaySafeDaily = computed(() => {
+      if (!forecastData.value) return 0
+      if (forecastData.value.safe_to_spend_daily !== undefined) {
+        return forecastData.value.safe_to_spend_daily
+      }
+      const guaranteed = forecastData.value.guaranteed_balance || 0
+      const days = forecastData.value.days_left || 1
+      return guaranteed > 0 ? (guaranteed / days) : 0
+    })
+
     const loadForecast = async () => {
       try {
         forecastData.value = await apiService.getForecast()
@@ -595,7 +631,7 @@ export default {
     const statCards = computed(() => [
       {
         key: 'balance',
-        title: 'Общий баланс',
+        title: 'Свободные средства',
         value: totalBalance.value,
         class: 'stat-card-balance'
       },
@@ -740,7 +776,7 @@ export default {
 
     const totalBalance = computed(() => {
       return accounts.value
-        .filter(acc => acc.is_active)
+        .filter(acc => acc.is_active && acc.account_type !== 'credit_card')
         .reduce((sum, acc) => sum + parseFloat(acc.balance || 0), 0)
     })
 
@@ -1440,7 +1476,9 @@ export default {
       insightsWidgetRef,
       showBreakdown,
       forecastData,
-      safeToSpend
+      safeToSpend,
+      displaySafeToSpend,
+      displaySafeDaily
     }
   }
 }
@@ -1450,6 +1488,31 @@ export default {
 /* ============================================================
    БАЗОВЫЕ СТИЛИ
    ============================================================ */
+
+.safe-daily-progress {
+  margin-top: 0.75rem;
+  width: 100%;
+  max-width: 400px;
+}
+.safe-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--gray-color);
+  margin-bottom: 0.25rem;
+}
+.safe-daily-progress .progress-bar {
+  height: 6px;
+  background: var(--light-color);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+.safe-daily-progress .progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
+
 .dashboard-container {
   padding-top: 0.5rem;
 }
@@ -1544,9 +1607,6 @@ export default {
   font-weight: 500;
 }
 
-/* ============================================================
-   УНИВЕРСАЛЬНЫЙ HOVER-ЭФФЕКТ ДЛЯ ВИДЖЕТОВ
-   ============================================================ */
 .hoverable-card {
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
   will-change: transform;
@@ -1710,9 +1770,6 @@ export default {
   color: var(--warning-color);
 }
 
-/* ============================================================
-   ИНСАЙТЫ И ПРОГНОЗ
-   ============================================================ */
 .insights-grid {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
@@ -1860,9 +1917,6 @@ export default {
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
-/* ============================================================
-   ГЕЙМИФИКАЦИЯ
-   ============================================================ */
 .gamification-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

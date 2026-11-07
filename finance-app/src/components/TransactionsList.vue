@@ -297,6 +297,33 @@
         </div>
       </div>
     </div>
+
+    <!-- WARNING MODAL (Safe to spend exceeded) -->
+    <div v-if="showWarningModal" class="modal" @click.self="showWarningModal = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="text-danger"><i class="fas fa-exclamation-triangle"></i> Превышение лимита</h3>
+          <button class="modal-close" @click="showWarningModal = false">&times;</button>
+        </div>
+
+        <div class="warning-body">
+          <p class="warning-text">
+            Вы собираетесь потратить <strong>{{ formatCurrency(warningData.amount) }}</strong>,
+            но безопасный остаток на сегодня составляет всего
+            <strong class="text-success">{{ formatCurrency(warningData.limit) }}</strong>.
+          </p>
+          <div class="warning-alert">
+            <i class="fas fa-info-circle"></i>
+            <span>Эта трата может привести к нехватке денег до конца месяца на обязательные платежи (кредиты, подписки и т.д.).</span>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="showWarningModal = false">Отмена</button>
+          <button class="btn btn-danger" @click="confirmRiskySpend">Всё равно потратить</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -348,6 +375,10 @@ export default {
     const editingTransaction = ref(null)
     const transactionToDelete = ref(null)
 
+    // Состояние для предупреждения о безопасной трате
+    const showWarningModal = ref(false)
+    const warningData = ref({ amount: 0, limit: 0 })
+
     const formData = ref({
       type: 'expense',
       amount: '',
@@ -357,7 +388,6 @@ export default {
       comment: ''
     })
 
-    // Тип теперь железно берется из самой транзакции
     const getTransactionType = (transaction) => {
       if (!transaction) return 'expense'
       return transaction.type_transaction || 'expense'
@@ -542,20 +572,48 @@ export default {
       showAddModal.value = true
     }
 
+    // Проверка лимита перед сохранением
     const saveTransaction = async () => {
       if (!formData.value.account || !formData.value.amount) {
         alert('Заполните обязательные поля (сумма и счет)')
         return
       }
 
+      const amount = parseFloat(formData.value.amount)
+      const isExpense = formData.value.type === 'expense'
+
+      // Проверяем безопасный лимит только для НОВЫХ расходов
+      if (isExpense && !editingTransaction.value && amount > 0) {
+        try {
+          const forecast = await apiService.getForecast()
+
+          if (forecast && amount > forecast.remaining_safe_today) {
+            warningData.value = {
+              amount: amount,
+              limit: forecast.remaining_safe_today
+            }
+            showWarningModal.value = true
+            return // Прерываем сохранение, ждем подтверждения
+          }
+        } catch (error) {
+          console.error('Ошибка при проверке безопасного лимита:', error)
+          // Если бэкенд недоступен, не блокируем сохранение
+        }
+      }
+
+      await executeSaveTransaction()
+    }
+
+    // Само сохранение
+    const executeSaveTransaction = async () => {
       try {
         const data = {
           amount: parseFloat(formData.value.amount),
           create_at: new Date(formData.value.create_at).toISOString(),
-          category: formData.value.category ? parseInt(formData.value.category) : null, // Отправляем null, если не выбрана
+          category: formData.value.category ? parseInt(formData.value.category) : null,
           account: parseInt(formData.value.account),
           comment: formData.value.comment || '',
-          type_transaction: formData.value.type // НАШЕ НОВОЕ ПОЛЕ
+          type_transaction: formData.value.type
         }
 
         if (editingTransaction.value) {
@@ -571,6 +629,12 @@ export default {
         console.error('Error saving transaction:', error)
         alert('Ошибка при сохранении транзакции')
       }
+    }
+
+    // Подтверждение рискованной траты
+    const confirmRiskySpend = () => {
+      showWarningModal.value = false
+      executeSaveTransaction()
     }
 
     const editTransaction = (transaction) => {
@@ -619,6 +683,7 @@ export default {
     }
 
     const formatSignedAmount = (transaction) => {
+      if (!transaction) return '0 ₽'
       const type = getTransactionType(transaction)
       const sign = type === 'income' ? '+' : '−'
       const value = Math.abs(Number(transaction.amount) || 0)
@@ -651,7 +716,9 @@ export default {
       openAddModal, saveTransaction, editTransaction, confirmDelete,
       deleteTransaction, applyFilters, resetFilters, closeModal,
       prevPage, nextPage, onTypeChange, formatCurrency, formatDate,
-      formatShortDate, formatSignedAmount
+      formatShortDate, formatSignedAmount,
+      // Новые стейты для предупреждения
+      showWarningModal, warningData, confirmRiskySpend
     }
   }
 }
@@ -713,6 +780,37 @@ export default {
 .day-separator td { background: var(--light-color); font-weight: 600; font-size: 0.9rem; border-left: 3px solid var(--primary-color, #3b82f6); }
 .day-separator-date { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--dark-color); }
 .day-separator-total { float: right; }
+
+/* Стили для модалки предупреждения */
+.warning-body {
+  padding: 1rem 0;
+}
+.warning-text {
+  font-size: 1.05rem;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+  color: var(--dark-color);
+}
+.warning-alert {
+  background: rgba(59, 130, 246, 0.1);
+  color: #1e40af;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  font-size: 0.9rem;
+}
+.warning-alert i {
+  margin-top: 0.2rem;
+}
+:global(:root[data-theme="dark"]) .warning-alert {
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
 @media (max-width: 1024px) {
   .desktop-table { display: none; }
   .mobile-transactions { display: block; }
