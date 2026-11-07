@@ -73,6 +73,8 @@ class Account(models.Model):
         max_digits=5,
         decimal_places=2,
         default=5.00,
+        null=True,
+        blank=True,
         verbose_name="Минимальный платеж, %",
         help_text="Процент от суммы долга. Например, 5%",
     )
