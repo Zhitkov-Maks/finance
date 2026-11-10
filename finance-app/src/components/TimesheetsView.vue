@@ -9,21 +9,64 @@
       <div class="header-actions">
         <button class="btn btn-secondary" @click="openSettingsModal">
           <i class="fas fa-cog"></i>
-          Настройки
+          <span class="btn-text">Настройки</span>
         </button>
         <button class="btn btn-primary" @click="openAddManyModal">
           <i class="fas fa-layer-group"></i>
-          Проставить смены
+          <span class="btn-text">Проставить смены</span>
         </button>
         <button class="btn btn-info" @click="openYearStatsModal">
           <i class="fas fa-chart-line"></i>
-          Статистика за год
+          <span class="btn-text">Статистика за год</span>
         </button>
         <button class="btn btn-vacation" @click="openVacationModal">
           <i class="fas fa-umbrella-beach"></i>
-          Отпуск/Больничный
+          <span class="btn-text">Отпуск/Больничный</span>
         </button>
       </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- БЛОК ЦЕЛИ ПО МОТИВАЦИИ (над календарем)                       -->
+    <!-- ============================================================ -->
+    <!-- Если цель есть -->
+    <div v-if="currentGoal" class="goal-progress-card" :class="goalProgressClass">
+      <div class="goal-progress-header">
+        <div class="goal-title">
+          <span v-if="isGoalAchieved" class="goal-achieved-icon">🏆</span>
+          <span v-else>🎯</span>
+          Цель по мотивации
+        </div>
+        <div class="goal-values">
+          <strong>{{ formatNumber(goalCurrentAmount) }} ₽</strong> / {{ formatNumber(currentGoal.amount) }} ₽
+        </div>
+      </div>
+
+      <div class="goal-progress-bar">
+        <div class="goal-progress-fill" :style="{ width: Math.min(goalProgressPercent, 100) + '%' }"></div>
+        <span class="goal-percent-badge">{{ Math.round(goalProgressPercent) }}%</span>
+      </div>
+
+      <!-- Блок прогноза -->
+      <div v-if="goalForecastInfo" class="goal-forecast" :class="goalForecastInfo.status">
+        <i class="fas" :class="goalForecastInfo.icon"></i>
+        <span>{{ goalForecastInfo.text }}</span>
+      </div>
+
+      <div v-if="isGoalAchieved" class="goal-achieved-banner">
+        🎉 Цель достигнута! Отличная работа!
+      </div>
+
+      <button class="goal-edit-btn" @click="openGoalModal" title="Изменить цель">
+        <i class="fas fa-pen"></i>
+      </button>
+    </div>
+
+    <!-- Если цели нет -->
+    <div v-else class="goal-empty-card">
+      <button class="btn-add-goal" @click="openGoalModal">
+        <i class="fas fa-bullseye"></i> Поставить цель по мотивации на этот месяц
+      </button>
     </div>
 
     <!-- Навигация по месяцам -->
@@ -88,7 +131,6 @@
     <!-- Детальная статистика за месяц -->
     <div class="month-statistics">
       <div class="stats-container">
-        <!-- Период 1 -->
         <div class="stat-card" v-if="hasPeriodData(monthlyStats.period_one)">
           <div class="stat-card-header" @click="toggleSection('period1')">
             <i class="fas" :class="openSections.period1 ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
@@ -108,8 +150,6 @@
               <span class="stat-label">Доплата за холод:</span>
               <span class="stat-number">{{ formatNumber(monthlyStats.period_one.total_earned_cold) }} ₽</span>
             </div>
-
-            <!-- Блок мотивации (сумма 4 типов) -->
             <div v-if="getMotivationTotal(monthlyStats.period_one) > 0" class="stat-line award-line">
               <span class="stat-label">🏆 Мотивация (всего):</span>
               <span class="stat-number award">{{ formatNumber(getMotivationTotal(monthlyStats.period_one)) }} ₽</span>
@@ -130,7 +170,6 @@
               <span class="stat-label">— Непроизводственные:</span>
               <span class="stat-number">{{ formatNumber(monthlyStats.period_one.total_earned_for_non_production) }} ₽ ({{ formatNumber(monthlyStats.period_one.total_hours_for_non_production) }} ч)</span>
             </div>
-
             <div v-if="getOperationsTotal(monthlyStats.period_one)" class="stat-line">
               <span class="stat-label">Кол-во операций:</span>
               <span class="stat-number">{{ getOperationsTotal(monthlyStats.period_one) }}</span>
@@ -170,7 +209,6 @@
           </div>
         </div>
 
-        <!-- Период 2 -->
         <div class="stat-card" v-if="hasPeriodData(monthlyStats.period_two)">
           <div class="stat-card-header" @click="toggleSection('period2')">
             <i class="fas" :class="openSections.period2 ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
@@ -190,7 +228,6 @@
               <span class="stat-label">Доплата за холод:</span>
               <span class="stat-number">{{ formatNumber(monthlyStats.period_two.total_earned_cold) }} ₽</span>
             </div>
-
             <div v-if="getMotivationTotal(monthlyStats.period_two) > 0" class="stat-line award-line">
               <span class="stat-label">🏆 Мотивация (всего):</span>
               <span class="stat-number award">{{ formatNumber(getMotivationTotal(monthlyStats.period_two)) }} ₽</span>
@@ -211,7 +248,6 @@
               <span class="stat-label">— Непроизводственные:</span>
               <span class="stat-number">{{ formatNumber(monthlyStats.period_two.total_earned_for_non_production) }} ₽ ({{ formatNumber(monthlyStats.period_two.total_hours_for_non_production) }} ч)</span>
             </div>
-
             <div v-if="getOperationsTotal(monthlyStats.period_two)" class="stat-line">
               <span class="stat-label">Кол-во операций:</span>
               <span class="stat-number">{{ getOperationsTotal(monthlyStats.period_two) }}</span>
@@ -251,7 +287,6 @@
           </div>
         </div>
 
-        <!-- Итого за месяц -->
         <div class="stat-card total-card">
           <div class="stat-card-header" @click="toggleSection('total')">
             <i class="fas" :class="openSections.total ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
@@ -271,7 +306,6 @@
               <span class="stat-label">Доплата за холод:</span>
               <span class="stat-number">{{ formatNumber(monthlyStats.total.total_earned_cold) }} ₽</span>
             </div>
-
             <div v-if="getMotivationTotal(monthlyStats.total) > 0" class="stat-line award-line">
               <span class="stat-label">🏆 Мотивация (всего):</span>
               <span class="stat-number award">{{ formatNumber(getMotivationTotal(monthlyStats.total)) }} ₽</span>
@@ -292,7 +326,6 @@
               <span class="stat-label">— Непроизводственные:</span>
               <span class="stat-number">{{ formatNumber(monthlyStats.total.total_earned_for_non_production) }} ₽ ({{ formatNumber(monthlyStats.total.total_hours_for_non_production) }} ч)</span>
             </div>
-
             <div v-if="getOperationsTotal(monthlyStats.total)" class="stat-line">
               <span class="stat-label">Кол-во операций:</span>
               <span class="stat-number">{{ getOperationsTotal(monthlyStats.total) }}</span>
@@ -365,90 +398,123 @@
       </div>
     </div>
 
-    <!-- Модальное окно добавления смен -->
-    <div v-if="showAddManyModal" class="modal" @click.self="closeAddManyModal">
-      <div class="modal-content large">
+    <!-- ============================================================ -->
+    <!-- МОДАЛКА: Настройка цели                                      -->
+    <!-- ============================================================ -->
+    <div v-if="showGoalModal" class="modal modal-bottom-sheet" @click.self="closeGoalModal">
+      <div class="modal-content">
+        <div class="sheet-handle"></div>
+        <div class="modal-header">
+          <h3><i class="fas fa-bullseye"></i> Цель по мотивации</h3>
+          <button class="modal-close" @click="closeGoalModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="goal-modal-desc">Укажите желаемую сумму премии (мотивации) на этот месяц. Мы будем считать прогресс и прогноз по вашим сменам.</p>
+          <div class="form-group">
+            <label class="form-label required">Сумма цели (₽)</label>
+            <input type="number" v-model.number="goalData.amount" class="form-control" min="0" step="500" placeholder="Например, 20000" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button v-if="currentGoal" class="btn-icon btn-danger" @click="deleteGoal" :disabled="isSavingGoal" title="Удалить цель">
+            <i class="fas fa-trash"></i>
+          </button>
+          <button class="btn-primary btn-save" @click="saveGoal" :disabled="isSavingGoal || !goalData.amount">
+            <i :class="isSavingGoal ? 'fas fa-spinner fa-spin' : 'fas fa-save'"></i>
+            <span>{{ isSavingGoal ? 'Сохранение...' : 'Сохранить' }}</span>
+          </button>
+          <button class="btn-icon btn-secondary" @click="closeGoalModal">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- МОДАЛКА: Групповое проставление смен (bottom-sheet)          -->
+    <!-- ============================================================ -->
+    <div v-if="showAddManyModal" class="modal modal-bottom-sheet" @click.self="closeAddManyModal">
+      <div class="modal-content">
+        <div class="sheet-handle"></div>
         <div class="modal-header">
           <h3>
             <i class="fas fa-layer-group"></i>
             Отметить смены
           </h3>
-          <button class="modal-close" @click="closeAddManyModal">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label class="form-label required">Кол-во часов</label>
-            <input type="number" v-model.number="manyShiftsData.hours" class="form-control" step="0.5" required />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Выбор месяца</label>
-            <div class="month-selector">
-              <button class="btn-month-nav" @click="prevSelectionMonth">
-                <i class="fas fa-chevron-left"></i>
-              </button>
-              <span class="selected-month">{{ selectionMonthName }} {{ selectionYear }}</span>
-              <button class="btn-month-nav" @click="nextSelectionMonth">
-                <i class="fas fa-chevron-right"></i>
-              </button>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Выберите даты:</label>
-            <div class="selection-calendar">
-              <div class="selection-weekdays">
-                <div v-for="day in weekDays" :key="day" class="selection-weekday">{{ day }}</div>
-              </div>
-              <div class="selection-grid" :style="{ gridTemplateRows: `repeat(${selectionCalendarRows}, 1fr)` }">
-                <div
-                  v-for="(date, idx) in selectionDates"
-                  :key="idx"
-                  class="selection-day"
-                  :class="{
-                    'selected': isDateSelected(date.fullDate),
-                    'has-shift': date.hasShift || date.isVacation || date.isSick,
-                    'other-month-date': !date.isCurrentMonth
-                  }"
-                  @click="toggleDateSelection(date.fullDate)"
-                >
-                  <span class="selection-day-number">{{ date.dayNumber }}</span>
-                  <i v-if="isDateSelected(date.fullDate)" class="fas fa-check-circle check-icon"></i>
-                  <i v-else-if="date.hasShift" class="fas fa-calendar-check shift-icon"></i>
-                  <i v-else-if="date.isVacation" class="fas fa-umbrella-beach vacation-icon"></i>
-                  <i v-else-if="date.isSick" class="fas fa-thermometer-half sick-icon"></i>
-                </div>
-              </div>
-            </div>
-            <div class="selected-count">
-              Выбрано дат: <strong>{{ manyShiftsData.selectedDates.length }}</strong>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <div class="footer-buttons-grid four-buttons">
-            <button class="btn-success" @click="selectAllDatesInMonth">
+          <div class="header-tools">
+            <button class="btn-compact btn-success" @click="selectAllDatesInMonth" title="Выбрать все">
               <i class="fas fa-check-double"></i>
-              <span>Все</span>
+              <span class="btn-text-compact">Все</span>
             </button>
-            <button class="btn-warning" @click="clearAllDates">
+            <button class="btn-compact btn-warning" @click="clearAllDates" title="Очистить">
               <i class="fas fa-times"></i>
-              <span>Очистить</span>
+              <span class="btn-text-compact">Очистить</span>
             </button>
-            <button class="btn-primary" @click="saveManyShifts" :disabled="isSavingMany || !manyShiftsData.hours || manyShiftsData.selectedDates.length === 0">
-              <i :class="isSavingMany ? 'fas fa-spinner fa-spin' : 'fas fa-save'"></i>
-              <span>{{ isSavingMany ? 'Сохранение...' : 'Save (' + manyShiftsData.selectedDates.length + ')' }}</span>
+            <button class="modal-close" @click="closeAddManyModal">&times;</button>
+          </div>
+        </div>
+
+        <div class="compact-toolbar">
+          <div class="toolbar-row">
+            <label>Часов:</label>
+            <input type="number" v-model.number="manyShiftsData.hours" class="form-control toolbar-input" step="0.5" />
+          </div>
+          <div class="toolbar-row toolbar-month">
+            <button class="btn-month-nav" @click="prevSelectionMonth">
+              <i class="fas fa-chevron-left"></i>
             </button>
-            <button class="btn-secondary" @click="closeAddManyModal">
-              <i class="fas fa-times"></i>
-              <span>Отмена</span>
+            <span class="selected-month">{{ selectionMonthName }} {{ selectionYear }}</span>
+            <button class="btn-month-nav" @click="nextSelectionMonth">
+              <i class="fas fa-chevron-right"></i>
             </button>
           </div>
+        </div>
+
+        <div class="modal-body">
+          <div class="selection-calendar">
+            <div class="selection-weekdays">
+              <div v-for="day in weekDays" :key="day" class="selection-weekday">{{ day }}</div>
+            </div>
+            <div class="selection-grid">
+              <div
+                v-for="(date, idx) in selectionDates"
+                :key="idx"
+                class="selection-day"
+                :class="{
+                  'selected': isDateSelected(date.fullDate),
+                  'has-shift': date.hasShift || date.isVacation || date.isSick,
+                  'other-month-date': !date.isCurrentMonth
+                }"
+                @click="toggleDateSelection(date.fullDate)"
+              >
+                <span class="selection-day-number">{{ date.dayNumber }}</span>
+                <i v-if="isDateSelected(date.fullDate)" class="fas fa-check-circle check-icon"></i>
+                <i v-else-if="date.hasShift" class="fas fa-calendar-check shift-icon"></i>
+                <i v-else-if="date.isVacation" class="fas fa-umbrella-beach vacation-icon"></i>
+                <i v-else-if="date.isSick" class="fas fa-thermometer-half sick-icon"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-primary btn-save" @click="saveManyShifts" :disabled="isSavingMany || !manyShiftsData.hours || manyShiftsData.selectedDates.length === 0">
+            <i :class="isSavingMany ? 'fas fa-spinner fa-spin' : 'fas fa-save'"></i>
+            <span>{{ isSavingMany ? 'Сохранение...' : 'Сохранить (' + manyShiftsData.selectedDates.length + ')' }}</span>
+          </button>
+          <button class="btn-icon btn-secondary" @click="closeAddManyModal">
+            <i class="fas fa-times"></i>
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Модальное окно смены (детально по дню) -->
-    <div v-if="showShiftModal" class="modal" @click.self="closeShiftModal">
+    <!-- ============================================================ -->
+    <!-- МОДАЛКА: День (bottom-sheet с аккордеонами)                  -->
+    <!-- ============================================================ -->
+    <div v-if="showShiftModal" class="modal modal-bottom-sheet" @click.self="closeShiftModal">
       <div class="modal-content">
+        <div class="sheet-handle"></div>
         <div class="modal-header">
           <h3>
             <i class="fas fa-calendar-day"></i>
@@ -456,8 +522,35 @@
           </h3>
           <button class="modal-close" @click="closeShiftModal">&times;</button>
         </div>
+
+        <!-- Sticky summary-bar -->
+        <div
+          v-if="shiftDetails && !selectedDay?.isVacation && !selectedDay?.isSick"
+          class="day-summary-bar"
+        >
+          <div class="summary-chip">
+            <span>💰</span>
+            <span class="summary-chip-value">{{ formatNumber(shiftDetails.earned) }} ₽</span>
+          </div>
+          <div class="summary-chip">
+            <span>⏱</span>
+            <span class="summary-chip-value">{{ shiftDetails.base_hours }} ч</span>
+          </div>
+          <div
+            v-if="getOperationsTotal(shiftDetails) && shiftDetails.base_hours"
+            class="summary-chip"
+          >
+            <span>⚡</span>
+            <span class="summary-chip-value">
+              {{ getProductivity(getOperationsTotal(shiftDetails), shiftDetails.base_hours) }} оп/ч
+            </span>
+            <span class="summary-chip-extra">({{ getOperationsTotal(shiftDetails) }} оп)</span>
+          </div>
+        </div>
+
         <div class="modal-body">
-          <div v-if="selectedDay?.isVacation || selectedDay?.isSick" class="shift-details vacation-sick-details">
+          <!-- Отпуск / Больничный -->
+          <div v-if="selectedDay?.isVacation || selectedDay?.isSick" class="vacation-sick-details">
             <div class="vacation-sick-status">
               <i :class="selectedDay.isVacation ? 'fas fa-umbrella-beach' : 'fas fa-thermometer-half'"></i>
               <span>{{ selectedDay.isVacation ? 'Отпуск' : 'Больничный' }}</span>
@@ -466,153 +559,137 @@
               <span class="stat-label">Статус:</span>
               <span class="stat-number">{{ selectedDay.isVacation ? '📅 Отдых' : '🏥 Больничный' }}</span>
             </div>
-            <div class="shift-actions">
-              <button class="btn-danger" @click="deleteVacationOrSick" style="width: 100%;">
-                <i class="fas fa-trash"></i>
-                Удалить
-              </button>
-            </div>
           </div>
 
-          <div v-else-if="shiftDetails" class="shift-details">
-            <!-- ИТОГО ЗА ДЕНЬ (крупно вверху) -->
-            <div class="day-total-block">
-              <div class="day-total-info">
-                <span class="day-total-label">💰 Всего за день</span>
-                <span class="day-total-hours">{{ shiftDetails.base_hours }} ч</span>
-              </div>
-              <span class="day-total-value">{{ formatNumber(shiftDetails.earned) }} ₽</span>
-            </div>
+          <!-- Обычный день -->
+          <template v-else>
+            <div v-if="shiftDetails" class="day-details">
+              <div class="day-breakdown-header">📋 Из чего складывается:</div>
 
-            <!-- РАЗБИВКА: ЧТО К ЧЕМУ -->
-            <div class="day-breakdown-header">📋 Из чего складывается:</div>
-
-            <div v-if="shiftDetails.earned_hours" class="stat-line hours-percent-line">
-              <span class="stat-label">⏳ За отработанные часы:</span>
-              <span class="stat-number">
-                {{ formatNumber(shiftDetails.earned_hours) }} ₽
-                <span class="percent-badge">{{ getHoursPercent(shiftDetails.earned_hours, shiftDetails.earned) }}%</span>
-              </span>
-            </div>
-
-            <div v-if="shiftDetails.earned_cold" class="stat-line cold-percent-line">
-              <span class="stat-label">❄️ Доплата за холод:</span>
-              <span class="stat-number">
-                {{ formatNumber(shiftDetails.earned_cold) }} ₽
-                <span class="percent-badge">{{ getColdPercent(shiftDetails.earned_cold, shiftDetails.earned) }}%</span>
-              </span>
-            </div>
-
-            <div v-if="shiftDetails.earned_overtime" class="stat-line overtime-percent-line">
-              <span class="stat-label">⏱️ Доплата за переработку:</span>
-              <span class="stat-number overtime">
-                {{ formatNumber(shiftDetails.earned_overtime) }} ₽
-                <span class="percent-badge">{{ getOvertimePercent(shiftDetails.earned_overtime, shiftDetails.earned) }}%</span>
-              </span>
-            </div>
-
-            <!-- Блок мотивации (сумма 4 типов) -->
-            <div v-if="getMotivationTotal(shiftDetails) > 0" class="day-motivation-block">
-              <div class="day-motivation-header">
-                <span class="day-motivation-title">🏆 Мотивация / доп. работы</span>
-                <span class="day-motivation-total">
-                  {{ formatNumber(getMotivationTotal(shiftDetails)) }} ₽
-                  <span class="percent-badge">{{ getAwardPercent(getMotivationTotal(shiftDetails), shiftDetails.earned) }}%</span>
+              <div v-if="shiftDetails.earned_hours" class="simple-line">
+                <span class="simple-line-label">⏳ За отработанные часы</span>
+                <span class="simple-line-value">
+                  {{ formatNumber(shiftDetails.earned_hours) }} ₽
+                  <span class="percent-badge hours-percent-badge">{{ getHoursPercent(shiftDetails.earned_hours, shiftDetails.earned) }}%</span>
                 </span>
               </div>
-              <div v-if="shiftDetails.motivation_collect" class="stat-line sub-line">
-                <span class="stat-label">— Набор:</span>
-                <span class="stat-number">{{ formatNumber(shiftDetails.motivation_collect) }} ₽ ({{ shiftDetails.count_operations_collect || 0 }} оп)</span>
-              </div>
-              <div v-if="shiftDetails.motivation_replenishment" class="stat-line sub-line">
-                <span class="stat-label">— Пополнение:</span>
-                <span class="stat-number">{{ formatNumber(shiftDetails.motivation_replenishment) }} ₽ ({{ shiftDetails.count_operations_replenishment || 0 }} оп)</span>
-              </div>
-              <div v-if="shiftDetails.motivation_placement" class="stat-line sub-line">
-                <span class="stat-label">— Размещение:</span>
-                <span class="stat-number">{{ formatNumber(shiftDetails.motivation_placement) }} ₽ ({{ shiftDetails.count_operations_placement || 0 }} оп)</span>
-              </div>
-              <div v-if="shiftDetails.earned_for_non_productive_work" class="stat-line sub-line">
-                <span class="stat-label">— Непроизводственные:</span>
-                <span class="stat-number">{{ formatNumber(shiftDetails.earned_for_non_productive_work) }} ₽ ({{ formatNumber(shiftDetails.hours_non_productive) }} ч)</span>
-              </div>
-            </div>
 
-            <!-- Производительность дня -->
-            <div v-if="getOperationsTotal(shiftDetails) && shiftDetails.base_hours" class="day-productivity-block">
-              <div class="day-prod-line">
-                <span class="stat-label">⚡ Операций / производительность:</span>
-                <span class="stat-number productivity">
-                  {{ getOperationsTotal(shiftDetails) }} оп / {{ getProductivity(getOperationsTotal(shiftDetails), shiftDetails.base_hours) }} оп/ч
+              <div v-if="shiftDetails.earned_cold" class="simple-line">
+                <span class="simple-line-label">❄️ Доплата за холод</span>
+                <span class="simple-line-value">
+                  {{ formatNumber(shiftDetails.earned_cold) }} ₽
+                  <span class="percent-badge cold-percent-badge">{{ getColdPercent(shiftDetails.earned_cold, shiftDetails.earned) }}%</span>
                 </span>
               </div>
-              <div v-if="shiftDetails.hours_non_productive" class="day-prod-line">
-                <span class="stat-label">🪏 Непроизводственных часов:</span>
-                <span class="stat-number">{{ formatNumber(shiftDetails.hours_non_productive) }} ч</span>
+
+              <div v-if="shiftDetails.earned_overtime" class="simple-line">
+                <span class="simple-line-label">⏱️ Доплата за переработку</span>
+                <span class="simple-line-value">
+                  {{ formatNumber(shiftDetails.earned_overtime) }} ₽
+                  <span class="percent-badge overtime-percent-badge">{{ getOvertimePercent(shiftDetails.earned_overtime, shiftDetails.earned) }}%</span>
+                </span>
               </div>
-            </div>
-            <div v-else-if="shiftDetails.hours_non_productive" class="day-productivity-block">
-              <div class="day-prod-line">
-                <span class="stat-label">🪏 Непроизводственных часов:</span>
-                <span class="stat-number">{{ formatNumber(shiftDetails.hours_non_productive) }} ч</span>
+
+              <div v-if="getMotivationTotal(shiftDetails) > 0" class="accordion-item">
+                <div class="accordion-header" @click="toggleDaySection('motivation')">
+                  <span class="accordion-icon">🏆</span>
+                  <span class="accordion-title">Мотивация / доп. работы</span>
+                  <span class="accordion-value">
+                    {{ formatNumber(getMotivationTotal(shiftDetails)) }} ₽
+                    <span class="percent-badge award-percent-badge">{{ getAwardPercent(getMotivationTotal(shiftDetails), shiftDetails.earned) }}%</span>
+                  </span>
+                  <i class="fas" :class="openDaySections.motivation ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                </div>
+                <div v-show="openDaySections.motivation" class="accordion-body">
+                  <div v-if="shiftDetails.motivation_collect" class="stat-line sub-line">
+                    <span class="stat-label">— Набор:</span>
+                    <span class="stat-number">{{ formatNumber(shiftDetails.motivation_collect) }} ₽ ({{ shiftDetails.count_operations_collect || 0 }} оп)</span>
+                  </div>
+                  <div v-if="shiftDetails.motivation_replenishment" class="stat-line sub-line">
+                    <span class="stat-label">— Пополнение:</span>
+                    <span class="stat-number">{{ formatNumber(shiftDetails.motivation_replenishment) }} ₽ ({{ shiftDetails.count_operations_replenishment || 0 }} оп)</span>
+                  </div>
+                  <div v-if="shiftDetails.motivation_placement" class="stat-line sub-line">
+                    <span class="stat-label">— Размещение:</span>
+                    <span class="stat-number">{{ formatNumber(shiftDetails.motivation_placement) }} ₽ ({{ shiftDetails.count_operations_placement || 0 }} оп)</span>
+                  </div>
+                  <div v-if="shiftDetails.earned_for_non_productive_work" class="stat-line sub-line">
+                    <span class="stat-label">— Непроизводственные:</span>
+                    <span class="stat-number">{{ formatNumber(shiftDetails.earned_for_non_productive_work) }} ₽ ({{ formatNumber(shiftDetails.hours_non_productive) }} ч)</span>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="hasShiftCurrencyData(shiftDetails)" class="accordion-item">
+                <div class="accordion-header" @click="toggleDaySection('currency')">
+                  <span class="accordion-icon">💱</span>
+                  <span class="accordion-title">Заработано в валюте</span>
+                  <span class="accordion-value"></span>
+                  <i class="fas" :class="openDaySections.currency ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                </div>
+                <div v-show="openDaySections.currency" class="accordion-body">
+                  <div v-if="shiftDetails.valute?.dollar" class="currency-line">🇺🇸 Доллар: ${{ shiftDetails.valute.dollar }}</div>
+                  <div v-if="shiftDetails.valute?.euro" class="currency-line">🇪🇺 Евро: €{{ shiftDetails.valute.euro }}</div>
+                  <div v-if="shiftDetails.valute?.yena" class="currency-line">🇨🇳 Юань: ¥{{ shiftDetails.valute.yena }}</div>
+                  <div v-if="shiftDetails.valute?.som" class="currency-line">🇰🇬 Сом: {{ formatNumber(shiftDetails.valute.som) }}</div>
+                </div>
               </div>
             </div>
 
-            <!-- Валютная часть -->
-            <div class="currency-block" v-if="hasShiftCurrencyData(shiftDetails)">
-              <div class="currency-header" @click="toggleShiftCurrency">
-                <i class="fas" :class="showShiftCurrency ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
-                <span>💱 В валюте:</span>
+            <div class="edit-block">
+              <div class="form-group">
+                <label class="form-label">Количество часов</label>
+                <input type="number" v-model.number="editHours" class="form-control" min="0" step="0.5" />
               </div>
-              <div v-show="showShiftCurrency" class="currency-list">
-                <div v-if="shiftDetails.valute?.dollar" class="currency-line">🇺🇸 Доллар: ${{ shiftDetails.valute.dollar }}</div>
-                <div v-if="shiftDetails.valute?.euro" class="currency-line">🇪🇺 Евро: €{{ shiftDetails.valute.euro }}</div>
-                <div v-if="shiftDetails.valute?.yena" class="currency-line">🇨🇳 Юань: ¥{{ shiftDetails.valute.yena }}</div>
-                <div v-if="shiftDetails.valute?.som" class="currency-line">🇰🇬 Сом: {{ formatNumber(shiftDetails.valute.som) }}</div>
+              <div v-if="selectedDay?.hasShift" class="motivation-section">
+                <button
+                  v-if="!isFutureDay(selectedDay)"
+                  class="btn-motivation"
+                  @click="openMotivationModal"
+                >
+                  <i class="fas fa-star"></i> Добавить мотивацию / работы
+                </button>
+                <div v-else class="motivation-hint">
+                  <i class="fas fa-lock"></i>
+                  <span>Мотивацию можно добавить только после отработки смены</span>
+                </div>
               </div>
             </div>
-          </div>
-
-          <div class="shift-actions" v-if="!selectedDay?.isVacation && !selectedDay?.isSick">
-            <div class="form-group">
-              <label class="form-label">Количество часов</label>
-              <input type="number" v-model.number="editHours" class="form-control" min="0" step="0.5" />
-            </div>
-
-            <div v-if="selectedDay?.hasShift" class="motivation-section">
-              <button class="btn-motivation" @click="openMotivationModal">
-                <i class="fas fa-star"></i> Добавить мотивацию / работы
-              </button>
-            </div>
-          </div>
+          </template>
         </div>
-        <div class="modal-footer" v-if="!selectedDay?.isVacation && !selectedDay?.isSick">
-          <div class="footer-buttons-grid three-buttons">
-            <button class="btn-primary" @click="saveShift" :disabled="isSavingShift">
+
+        <div class="modal-footer">
+          <template v-if="!selectedDay?.isVacation && !selectedDay?.isSick">
+            <button class="btn-primary btn-save" @click="saveShift" :disabled="isSavingShift">
               <i :class="isSavingShift ? 'fas fa-spinner fa-spin' : 'fas fa-save'"></i>
+              <span>{{ isSavingShift ? 'Сохранение...' : 'Сохранить' }}</span>
             </button>
-            <button v-if="selectedDay?.hasShift" class="btn-danger" @click="deleteShift">
+            <button v-if="selectedDay?.hasShift" class="btn-icon btn-danger" @click="deleteShift" title="Удалить">
               <i class="fas fa-trash"></i>
             </button>
-            <button class="btn-secondary" @click="closeShiftModal">
+            <button class="btn-icon btn-secondary" @click="closeShiftModal" title="Закрыть">
               <i class="fas fa-times"></i>
             </button>
-          </div>
-        </div>
-        <div class="modal-footer" v-else>
-          <div class="footer-buttons-grid one-button">
-            <button class="btn-secondary" @click="closeShiftModal">
-              <i class="fas fa-times"></i>
-              <span>Закрыть</span>
+          </template>
+          <template v-else>
+            <button class="btn-danger btn-save" @click="deleteVacationOrSick">
+              <i class="fas fa-trash"></i>
+              <span>Удалить {{ selectedDay.isVacation ? 'отпуск' : 'больничный' }}</span>
             </button>
-          </div>
+            <button class="btn-icon btn-secondary" @click="closeShiftModal" title="Закрыть">
+              <i class="fas fa-times"></i>
+            </button>
+          </template>
         </div>
       </div>
     </div>
 
-    <!-- Модальное окно ДОБАВЛЕНИЯ МОТИВАЦИИ -->
-    <div v-if="showMotivationModal" class="modal" @click.self="closeMotivationModal">
+    <!-- ============================================================ -->
+    <!-- МОДАЛКА: Мотивация (bottom-sheet)                            -->
+    <!-- ============================================================ -->
+    <div v-if="showMotivationModal" class="modal modal-bottom-sheet" @click.self="closeMotivationModal">
       <div class="modal-content">
+        <div class="sheet-handle"></div>
         <div class="modal-header">
           <h3>
             <i class="fas fa-star"></i>
@@ -630,35 +707,33 @@
               <option value="non_productive">Непроизводственные работы</option>
             </select>
           </div>
-
           <div class="form-group" v-if="motivationData.type_operations !== 'non_productive'">
             <label class="form-label required">Кол-во операций</label>
             <input type="number" v-model.number="motivationData.count_operations" class="form-control" min="0" placeholder="Введите количество" />
           </div>
-
           <div class="form-group" v-else>
             <label class="form-label required">Кол-во часов</label>
             <input type="number" v-model.number="motivationData.hours" class="form-control" min="0" step="0.5" placeholder="Введите часы" />
           </div>
         </div>
         <div class="modal-footer">
-          <div class="footer-buttons-grid three-buttons">
-            <button class="btn-primary" @click="saveMotivation" :disabled="isSavingMotivation || isSaveMotivationDisabled">
-              <i :class="isSavingMotivation ? 'fas fa-spinner fa-spin' : 'fas fa-save'"></i>
-              <span>{{ isSavingMotivation ? 'Сохранение...' : 'Сохранить' }}</span>
-            </button>
-            <button class="btn-secondary" @click="closeMotivationModal">
-              <i class="fas fa-times"></i>
-              <span>Отмена</span>
-            </button>
-          </div>
+          <button class="btn-primary btn-save" @click="saveMotivation" :disabled="isSavingMotivation || isSaveMotivationDisabled">
+            <i :class="isSavingMotivation ? 'fas fa-spinner fa-spin' : 'fas fa-save'"></i>
+            <span>{{ isSavingMotivation ? 'Сохранение...' : 'Сохранить' }}</span>
+          </button>
+          <button class="btn-icon btn-secondary" @click="closeMotivationModal">
+            <i class="fas fa-times"></i>
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Модальное окно настроек -->
-    <div v-if="showSettingsModal" class="modal" @click.self="closeSettingsModal">
+    <!-- ============================================================ -->
+    <!-- МОДАЛКА: Настройки (bottom-sheet + аккордеон)                -->
+    <!-- ============================================================ -->
+    <div v-if="showSettingsModal" class="modal modal-bottom-sheet" @click.self="closeSettingsModal">
       <div class="modal-content">
+        <div class="sheet-handle"></div>
         <div class="modal-header">
           <h3>
             <i class="fas fa-cog"></i>
@@ -667,60 +742,90 @@
           <button class="modal-close" @click="closeSettingsModal">&times;</button>
         </div>
         <div class="modal-body">
-          <div class="form-group">
-            <label class="form-label required">Ставка за час</label>
-            <input type="number" v-model.number="settings.price_time" class="form-control" step="1" required />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Доплата за переработку</label>
-            <input type="number" v-model.number="settings.price_overtime" class="form-control" step="1" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Доплата за холод</label>
-            <input type="number" v-model.number="settings.price_cold" class="form-control" step="0.1" />
-          </div>
-
-          <div class="settings-divider">Мотивация (за операцию)</div>
-
-          <div class="form-group">
-            <label class="form-label">Стоимость набора</label>
-            <input type="number" v-model.number="settings.price_collect" class="form-control" step="0.1" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Стоимость пополнения</label>
-            <input type="number" v-model.number="settings.price_replenishment" class="form-control" step="0.1" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Стоимость размещения</label>
-            <input type="number" v-model.number="settings.price_placement" class="form-control" step="0.1" />
+          <div class="accordion-item">
+            <div class="accordion-header" @click="toggleSettingsSection('main')">
+              <span class="accordion-icon">⚙️</span>
+              <span class="accordion-title">Основное</span>
+              <span class="accordion-value">
+                {{ formatNumber(settings.price_time) }} ₽/ч
+              </span>
+              <i class="fas" :class="openSettingsSections.main ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+            </div>
+            <div v-show="openSettingsSections.main" class="accordion-body">
+              <div class="form-group">
+                <label class="form-label required">Ставка за час</label>
+                <input type="number" v-model.number="settings.price_time" class="form-control" step="1" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Доплата за переработку</label>
+                <input type="number" v-model.number="settings.price_overtime" class="form-control" step="1" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Доплата за холод</label>
+                <input type="number" v-model.number="settings.price_cold" class="form-control" step="0.1" />
+              </div>
+            </div>
           </div>
 
-          <div class="settings-divider">Прочее</div>
+          <div class="accordion-item">
+            <div class="accordion-header" @click="toggleSettingsSection('motivation')">
+              <span class="accordion-icon">🏆</span>
+              <span class="accordion-title">Мотивация (за операцию)</span>
+              <span class="accordion-value"></span>
+              <i class="fas" :class="openSettingsSections.motivation ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+            </div>
+            <div v-show="openSettingsSections.motivation" class="accordion-body">
+              <div class="form-group">
+                <label class="form-label">Стоимость набора</label>
+                <input type="number" v-model.number="settings.price_collect" class="form-control" step="0.1" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Стоимость пополнения</label>
+                <input type="number" v-model.number="settings.price_replenishment" class="form-control" step="0.1" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Стоимость размещения</label>
+                <input type="number" v-model.number="settings.price_placement" class="form-control" step="0.1" />
+              </div>
+            </div>
+          </div>
 
-          <div class="form-group">
-            <label class="form-label">Час непроизводственных работ.</label>
-            <input type="number" v-model.number="settings.price_non_productive_work" class="form-control" step="0.1" />
+          <div class="accordion-item">
+            <div class="accordion-header" @click="toggleSettingsSection('other')">
+              <span class="accordion-icon">🪏</span>
+              <span class="accordion-title">Прочее</span>
+              <span class="accordion-value"></span>
+              <i class="fas" :class="openSettingsSections.other ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+            </div>
+            <div v-show="openSettingsSections.other" class="accordion-body">
+              <div class="form-group">
+                <label class="form-label">Час непроизводственных работ.</label>
+                <input type="number" v-model.number="settings.price_non_productive_work" class="form-control" step="0.1" />
+              </div>
+            </div>
           </div>
         </div>
         <div class="modal-footer">
-          <div class="footer-buttons-grid three-buttons">
-            <button class="btn-danger" @click="deleteSettings" v-if="hasSettings" :disabled="isSavingSettings">
-              <i class="fas fa-trash"></i>
-            </button>
-            <button class="btn-primary" @click="saveSettings" :disabled="isSavingSettings">
-              <i :class="isSavingSettings ? 'fas fa-spinner fa-spin' : 'fas fa-save'"></i>
-            </button>
-            <button class="btn-secondary" @click="closeSettingsModal">
-              <i class="fas fa-times"></i>
-            </button>
-          </div>
+          <button v-if="hasSettings" class="btn-icon btn-danger" @click="deleteSettings" :disabled="isSavingSettings" title="Удалить настройки">
+            <i class="fas fa-trash"></i>
+          </button>
+          <button class="btn-primary btn-save" @click="saveSettings" :disabled="isSavingSettings">
+            <i :class="isSavingSettings ? 'fas fa-spinner fa-spin' : 'fas fa-save'"></i>
+            <span>{{ isSavingSettings ? 'Сохранение...' : 'Сохранить' }}</span>
+          </button>
+          <button class="btn-icon btn-secondary" @click="closeSettingsModal" title="Закрыть">
+            <i class="fas fa-times"></i>
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Модальное окно статистики за год -->
-    <div v-if="showYearStatsModal" class="modal" @click.self="closeYearStatsModal">
+    <!-- ============================================================ -->
+    <!-- МОДАЛКА: Статистика за год (bottom-sheet)                    -->
+    <!-- ============================================================ -->
+    <div v-if="showYearStatsModal" class="modal modal-bottom-sheet" @click.self="closeYearStatsModal">
       <div class="modal-content">
+        <div class="sheet-handle"></div>
         <div class="modal-header">
           <h3>
             <i class="fas fa-chart-line"></i>
@@ -728,7 +833,8 @@
           </h3>
           <button class="modal-close" @click="closeYearStatsModal">&times;</button>
         </div>
-        <div class="modal-body">
+
+        <div class="sticky-toolbar">
           <div class="year-selector">
             <button class="btn-year-nav" @click="prevYear">
               <i class="fas fa-chevron-left"></i>
@@ -742,7 +848,9 @@
               <i class="fas fa-chevron-right"></i>
             </button>
           </div>
+        </div>
 
+        <div class="modal-body">
           <div class="year-stats" v-if="yearStats">
             <div class="stat-big-card">
               <div class="stat-icon-large">
@@ -801,19 +909,20 @@
           </div>
         </div>
         <div class="modal-footer">
-          <div class="footer-buttons-grid one-button">
-            <button class="btn-secondary" @click="closeYearStatsModal">
-              <i class="fas fa-times"></i>
-              <span>Закрыть</span>
-            </button>
-          </div>
+          <button class="btn-primary btn-save" @click="closeYearStatsModal">
+            <i class="fas fa-times"></i>
+            <span>Закрыть</span>
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Модальное окно отпуска/больничного -->
-    <div v-if="showVacationModal" class="modal" @click.self="closeVacationModal">
+    <!-- ============================================================ -->
+    <!-- МОДАЛКА: Отпуск / Больничный (bottom-sheet)                  -->
+    <!-- ============================================================ -->
+    <div v-if="showVacationModal" class="modal modal-bottom-sheet" @click.self="closeVacationModal">
       <div class="modal-content">
+        <div class="sheet-handle"></div>
         <div class="modal-header">
           <h3>
             <i class="fas fa-umbrella-beach"></i>
@@ -842,16 +951,13 @@
           </div>
         </div>
         <div class="modal-footer">
-          <div class="footer-buttons-grid three-buttons">
-            <button class="btn-primary" @click="saveVacation" :disabled="isSavingVacation || !vacationData.start_date || !vacationData.number_of_days">
-              <i :class="isSavingVacation ? 'fas fa-spinner fa-spin' : 'fas fa-save'"></i>
-              <span>{{ isSavingVacation ? 'Сохранение...' : 'Сохранить' }}</span>
-            </button>
-            <button class="btn-secondary" @click="closeVacationModal">
-              <i class="fas fa-times"></i>
-              <span>Отмена</span>
-            </button>
-          </div>
+          <button class="btn-primary btn-save" @click="saveVacation" :disabled="isSavingVacation || !vacationData.start_date || !vacationData.number_of_days">
+            <i :class="isSavingVacation ? 'fas fa-spinner fa-spin' : 'fas fa-save'"></i>
+            <span>{{ isSavingVacation ? 'Сохранение...' : 'Сохранить' }}</span>
+          </button>
+          <button class="btn-icon btn-secondary" @click="closeVacationModal">
+            <i class="fas fa-times"></i>
+          </button>
         </div>
       </div>
     </div>
@@ -894,7 +1000,6 @@ export default {
     })
     const hasSettings = ref(false)
 
-    // Состояния загрузки и ошибок
     const isLoading = ref(true)
     const hasLoadError = ref(false)
     const isSavingShift = ref(false)
@@ -908,8 +1013,8 @@ export default {
     const showAddManyModal = ref(false)
     const showYearStatsModal = ref(false)
     const showVacationModal = ref(false)
-
     const showMotivationModal = ref(false)
+
     const motivationData = ref({
       type_operations: 'placement',
       count_operations: null,
@@ -939,8 +1044,17 @@ export default {
       total: false
     })
 
-    const selectionDate = ref(new Date())
+    const openDaySections = ref({
+      motivation: false,
+      currency: false
+    })
+    const openSettingsSections = ref({
+      main: true,
+      motivation: false,
+      other: false
+    })
 
+    const selectionDate = ref(new Date())
     const manyShiftsData = ref({
       hours: 12,
       selectedDates: []
@@ -950,7 +1064,103 @@ export default {
 
     const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
-    // --- Универсальные хелперы ---
+    // --- ЦЕЛИ ПО МОТИВАЦИИ ---
+    const currentGoal = ref(null)
+    const showGoalModal = ref(false)
+    const isSavingGoal = ref(false)
+    const goalData = ref({ amount: null })
+
+    const getTodayStr = () => {
+      const now = new Date()
+      const y = now.getFullYear()
+      const m = String(now.getMonth() + 1).padStart(2, '0')
+      const d = String(now.getDate()).padStart(2, '0')
+      return `${y}-${m}-${d}`
+    }
+
+    const isFutureDay = (day) => {
+      if (!day?.dateStr) return false
+      return day.dateStr > getTodayStr()
+    }
+
+    const goalCurrentAmount = computed(() => {
+      if (!currentGoal.value || !monthlyStats.value?.total) return 0
+      return getMotivationTotal(monthlyStats.value.total)
+    })
+
+    const goalProgressPercent = computed(() => {
+      if (!currentGoal.value || !currentGoal.value.amount) return 0
+      return (goalCurrentAmount.value / currentGoal.value.amount) * 100
+    })
+
+    const isGoalAchieved = computed(() => goalProgressPercent.value >= 100)
+
+    const goalProgressClass = computed(() => {
+      if (isGoalAchieved.value) return 'goal-success'
+      if (goalProgressPercent.value > 75) return 'goal-warning'
+      return 'goal-normal'
+    })
+
+    // Прогноз: средняя мотивация за прошедшую смену × количество будущих смен
+    const goalForecastInfo = computed(() => {
+      if (!currentGoal.value || !currentGoal.value.amount) return null
+
+      const todayStr = getTodayStr()
+
+      // Прошедшие/текущие смены — нужны только для подсчёта среднего
+      const workedShifts = shifts.value.filter(s => {
+        if (!s.date) return false
+        const shiftDate = s.date.split(' ')[0]
+        if (shiftDate > todayStr) return false
+        if (s.earned === -1 || s.earned === -2) return false // отпуск/больничный
+        return true
+      })
+
+      // Будущие проставленные смены — для экстраполяции
+      const futureShifts = shifts.value.filter(s => {
+        if (!s.date) return false
+        const shiftDate = s.date.split(' ')[0]
+        return shiftDate > todayStr
+      })
+
+      if (workedShifts.length === 0) {
+        return {
+          text: 'Нет отработанных смен для прогноза',
+          status: 'neutral',
+          icon: 'fa-info-circle'
+        }
+      }
+
+      if (futureShifts.length === 0) {
+        return {
+          text: 'Проставьте смены на будущее для прогноза',
+          status: 'neutral',
+          icon: 'fa-calendar-plus'
+        }
+      }
+
+      // Средняя мотивация за одну прошедшую смену
+      const avgPerShift = goalCurrentAmount.value / workedShifts.length
+      const forecast = goalCurrentAmount.value + (avgPerShift * futureShifts.length)
+
+      if (forecast >= currentGoal.value.amount) {
+        return {
+          text: `🔥 Отличный темп! Прогноз: ${formatNumber(forecast)} ₽`,
+          status: 'success',
+          icon: 'fa-chart-line'
+        }
+      } else {
+        const diff = currentGoal.value.amount - forecast
+        return {
+          text: `⚠️ Прогноз: ${formatNumber(forecast)} ₽ (не хватает ${formatNumber(diff)} ₽)`,
+          status: 'warning',
+          icon: 'fa-exclamation-triangle'
+        }
+      }
+    })
+
+    // -----------------------------------------
+
     const getMotivationTotal = (obj) => {
       if (!obj) return 0
       return (obj.motivation_collect ?? obj.total_earned_collect ?? 0) +
@@ -958,27 +1168,30 @@ export default {
              (obj.motivation_placement ?? obj.total_earned_placement ?? 0) +
              (obj.earned_for_non_productive_work ?? obj.total_earned_for_non_production ?? 0)
     }
-
     const getOperationsTotal = (obj) => {
       if (!obj) return 0
       return (obj.count_operations_collect ?? obj.total_operations_collect ?? 0) +
              (obj.count_operations_replenishment ?? obj.total_operations_replenishment ?? 0) +
              (obj.count_operations_placement ?? obj.total_operations_placement ?? 0)
     }
-
     const getYearMotivationTotal = (yearObj) => {
       if (!yearObj) return 0
       return (yearObj.total_earned_collect || 0) +
              (yearObj.total_earned_replenishment || 0) +
              (yearObj.total_earned_placement || 0)
     }
-
     const hasShiftCurrencyData = (shift) => {
       if (!shift?.valute) return false
       const v = shift.valute
       return !!(v.dollar || v.euro || v.yena || v.som)
     }
-    // ---------------------------------------------
+
+    const toggleDaySection = (section) => {
+      openDaySections.value[section] = !openDaySections.value[section]
+    }
+    const toggleSettingsSection = (section) => {
+      openSettingsSections.value[section] = !openSettingsSections.value[section]
+    }
 
     const getPeriodNumber = (dateStr) => {
       if (!dateStr) return 1
@@ -1034,7 +1247,6 @@ export default {
         const bestProd = getOperationsTotal(best) / best.base_hours
         return currentProd > bestProd ? current : best
       }, daysWithOps[0])
-
       if (!best) return null
       const date = new Date(best.date)
       return {
@@ -1077,55 +1289,36 @@ export default {
       return !!(period.dollar || period.euro || period.yena || period.som)
     }
 
-    // Безопасное уведомление (защита от XSS)
     const showNotification = (message, type = 'success') => {
       const notification = document.createElement('div')
       notification.className = `notification notification-${type}`
-
       const content = document.createElement('div')
       content.className = 'notification-content'
-
       const icon = document.createElement('i')
       icon.className = `fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}`
-
       const textSpan = document.createElement('span')
       textSpan.textContent = message
-
       content.appendChild(icon)
       content.appendChild(textSpan)
       notification.appendChild(content)
-
-      notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 10000;
-        animation: slideIn 0.3s ease;
-        cursor: pointer;
-      `
+      notification.style.cssText = `position: fixed; top: 20px; right: 20px; z-index: 10000; animation: slideIn 0.3s ease; cursor: pointer;`
       document.body.appendChild(notification)
       setTimeout(() => {
         notification.style.animation = 'slideOut 0.3s ease'
         setTimeout(() => {
-          if (document.body.contains(notification)) {
-            document.body.removeChild(notification)
-          }
+          if (document.body.contains(notification)) document.body.removeChild(notification)
         }, 300)
       }, 4000)
       notification.onclick = () => {
         notification.style.animation = 'slideOut 0.3s ease'
         setTimeout(() => {
-          if (document.body.contains(notification)) {
-            document.body.removeChild(notification)
-          }
+          if (document.body.contains(notification)) document.body.removeChild(notification)
         }, 300)
       }
     }
 
-    // Улучшенная обработка API ошибок
     const handleApiError = (error, defaultMessage = 'Произошла ошибка') => {
       console.error('API Error:', error)
-
       if (!error.response) {
         if (error.code === 'ECONNABORTED') {
           showNotification('Превышено время ожидания ответа от сервера', 'error')
@@ -1134,15 +1327,12 @@ export default {
         }
         return
       }
-
       if (error.response.status === 401 || error.response.status === 403) {
         showNotification('Сессия истекла или нет доступа. Пожалуйста, обновите страницу.', 'error')
         return
       }
-
       if (error.response?.data?.detail) {
         const detail = error.response.data.detail
-
         if (Array.isArray(detail)) {
           const errors = detail.map(err => {
             const field = err.loc?.filter(l => l !== 'body').join('.') || 'поле'
@@ -1163,6 +1353,8 @@ export default {
         showNotification(defaultMessage, 'error')
       }
     }
+
+    // --- ЗАГРУЗКА ДАННЫХ ---
 
     const loadShifts = async () => {
       try {
@@ -1188,7 +1380,6 @@ export default {
       }
     }
 
-    // Исправленная загрузка настроек (отличаем 404 от 500)
     const loadSettings = async () => {
       try {
         const response = await apiService.getTimesheetSettings()
@@ -1204,7 +1395,6 @@ export default {
         hasSettings.value = true
       } catch (error) {
         if (error.response?.status === 404) {
-          console.log('Настройки не найдены (404)')
           hasSettings.value = false
         } else {
           handleApiError(error, 'Не удалось загрузить настройки')
@@ -1212,6 +1402,21 @@ export default {
         }
       }
     }
+
+    const loadGoal = async () => {
+      try {
+        const monthStr = `${currentDate.value.getFullYear()}-${String(currentDate.value.getMonth() + 1).padStart(2, '0')}-01`
+        const goal = await apiService.getGoalCurrent(monthStr)
+        currentGoal.value = goal
+      } catch (error) {
+        if (error.response?.status !== 404) {
+          console.error('Ошибка загрузки цели:', error)
+        }
+        currentGoal.value = null
+      }
+    }
+
+    // -----------------------
 
     const calendarRows = computed(() => {
       const year = currentDate.value.getFullYear()
@@ -1224,83 +1429,55 @@ export default {
       const month = currentDate.value.getMonth()
       const weeksCount = calendarRows.value
       const totalCells = weeksCount * 7
-
       const firstDayOfMonth = new Date(year, month, 1)
       let startingDayOfWeek = firstDayOfMonth.getDay()
       startingDayOfWeek = startingDayOfWeek === 0 ? 7 : startingDayOfWeek
-
       const daysInMonth = new Date(year, month + 1, 0).getDate()
       const days = []
-
       const daysInPrevMonth = new Date(year, month, 0).getDate()
       for (let i = startingDayOfWeek - 1; i > 0; i--) {
         const date = daysInPrevMonth - i + 1
         const fullDate = new Date(year, month - 1, date)
         days.push({
-          dayNumber: date,
-          fullDate: fullDate,
-          isCurrentMonth: false,
-          isWeekend: isWeekendDay(fullDate),
-          isToday: false,
-          hasShift: false,
-          isVacation: false,
-          isSick: false
+          dayNumber: date, fullDate, isCurrentMonth: false,
+          isWeekend: isWeekendDay(fullDate), isToday: false,
+          hasShift: false, isVacation: false, isSick: false
         })
       }
-
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-
       for (let i = 1; i <= daysInMonth; i++) {
         const fullDate = new Date(year, month, i)
         const yearStr = fullDate.getFullYear()
         const monthStr = String(fullDate.getMonth() + 1).padStart(2, '0')
         const dayStr = String(fullDate.getDate()).padStart(2, '0')
         const dateStr = `${yearStr}-${monthStr}-${dayStr}`
-
         const shift = shifts.value.find(s => {
           const shiftDate = s.date ? s.date.split(' ')[0] : ''
           return shiftDate === dateStr
         })
-
         const isVacation = shift && shift.earned === -1
         const isSick = shift && shift.earned === -2
         const hasShift = !!shift && shift.earned > 0
-
-        const dayObject = {
-          dayNumber: i,
-          fullDate: fullDate,
-          isCurrentMonth: true,
+        days.push({
+          dayNumber: i, fullDate, isCurrentMonth: true,
           isWeekend: isWeekendDay(fullDate),
           isToday: fullDate.toDateString() === today.toDateString(),
-          hasShift: hasShift,
-          isVacation: isVacation,
-          isSick: isSick,
-          dateStr: dateStr,
-          day_id: shift?.day_id,
-          earned: shift?.earned || 0,
+          hasShift, isVacation, isSick, dateStr,
+          day_id: shift?.day_id, earned: shift?.earned || 0,
           base_hours: shift?.base_hours || 0,
           count_operations: getOperationsTotal(shift)
-        }
-
-        days.push(dayObject)
+        })
       }
-
       const remainingCells = totalCells - days.length
       for (let i = 1; i <= remainingCells; i++) {
         const fullDate = new Date(year, month + 1, i)
         days.push({
-          dayNumber: i,
-          fullDate: fullDate,
-          isCurrentMonth: false,
-          isWeekend: isWeekendDay(fullDate),
-          isToday: false,
-          hasShift: false,
-          isVacation: false,
-          isSick: false
+          dayNumber: i, fullDate, isCurrentMonth: false,
+          isWeekend: isWeekendDay(fullDate), isToday: false,
+          hasShift: false, isVacation: false, isSick: false
         })
       }
-
       return days
     })
 
@@ -1315,16 +1492,13 @@ export default {
       const month = selectionDate.value.getMonth()
       const weeksCount = selectionCalendarRows.value
       const totalCells = weeksCount * 7
-
       const firstDayOfMonth = new Date(year, month, 1)
       let startingDayOfWeek = firstDayOfMonth.getDay()
       startingDayOfWeek = startingDayOfWeek === 0 ? 7 : startingDayOfWeek
-
       const daysInMonth = new Date(year, month + 1, 0).getDate()
       const daysInPrevMonth = new Date(year, month, 0).getDate()
       const dates = []
       const currentShifts = shifts.value
-
       const makeSelectionDate = (dayNum, fullDateObj, isCurrentMonthFlag) => {
         const y = fullDateObj.getFullYear()
         const m = String(fullDateObj.getMonth() + 1).padStart(2, '0')
@@ -1332,15 +1506,13 @@ export default {
         const ds = `${y}-${m}-${d}`
         const shift = currentShifts.find(s => (s.date ? s.date.split(' ')[0] : '') === ds)
         return {
-          dayNumber: dayNum,
-          fullDate: ds,
+          dayNumber: dayNum, fullDate: ds,
           hasShift: !!(shift && shift.earned > 0),
           isVacation: !!(shift && shift.earned === -1),
           isSick: !!(shift && shift.earned === -2),
           isCurrentMonth: isCurrentMonthFlag
         }
       }
-
       for (let i = startingDayOfWeek - 1; i > 0; i--) {
         const date = daysInPrevMonth - i + 1
         dates.push(makeSelectionDate(date, new Date(year, month - 1, date), false))
@@ -1352,71 +1524,40 @@ export default {
       for (let i = 1; i <= remainingCells; i++) {
         dates.push(makeSelectionDate(i, new Date(year, month + 1, i), false))
       }
-
       return dates
     })
 
-    const selectionMonthName = computed(() => {
-      return selectionDate.value.toLocaleString('ru', { month: 'long' })
-    })
-
-    const selectionYear = computed(() => {
-      return selectionDate.value.getFullYear()
-    })
-
-    const currentMonthName = computed(() => {
-      return currentDate.value.toLocaleString('ru', { month: 'long' })
-    })
-
-    const currentYear = computed(() => {
-      return currentDate.value.getFullYear()
-    })
+    const selectionMonthName = computed(() => selectionDate.value.toLocaleString('ru', { month: 'long' }))
+    const selectionYear = computed(() => selectionDate.value.getFullYear())
+    const currentMonthName = computed(() => currentDate.value.toLocaleString('ru', { month: 'long' }))
+    const currentYear = computed(() => currentDate.value.getFullYear())
 
     const previousMonth = () => {
       currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() - 1, 1)
       loadData()
     }
-
     const nextMonth = () => {
       currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() + 1, 1)
       loadData()
     }
-
     const goToToday = () => {
       currentDate.value = new Date()
       loadData()
     }
-
     const prevSelectionMonth = () => {
       selectionDate.value = new Date(selectionDate.value.getFullYear(), selectionDate.value.getMonth() - 1, 1)
       manyShiftsData.value.selectedDates = []
     }
-
     const nextSelectionMonth = () => {
       selectionDate.value = new Date(selectionDate.value.getFullYear(), selectionDate.value.getMonth() + 1, 1)
       manyShiftsData.value.selectedDates = []
     }
+    const toggleSection = (section) => { openSections.value[section] = !openSections.value[section] }
+    const toggleCurrency = (section) => { openCurrency.value[section] = !openCurrency.value[section] }
+    const toggleShiftCurrency = () => { showShiftCurrency.value = !showShiftCurrency.value }
+    const toggleYearCurrency = () => { showYearCurrency.value = !showYearCurrency.value }
 
-    const toggleSection = (section) => {
-      openSections.value[section] = !openSections.value[section]
-    }
-
-    const toggleCurrency = (section) => {
-      openCurrency.value[section] = !openCurrency.value[section]
-    }
-
-    const toggleShiftCurrency = () => {
-      showShiftCurrency.value = !showShiftCurrency.value
-    }
-
-    const toggleYearCurrency = () => {
-      showYearCurrency.value = !showYearCurrency.value
-    }
-
-    const isDateSelected = (date) => {
-      return manyShiftsData.value.selectedDates.includes(date)
-    }
-
+    const isDateSelected = (date) => manyShiftsData.value.selectedDates.includes(date)
     const toggleDateSelection = (date) => {
       const index = manyShiftsData.value.selectedDates.indexOf(date)
       if (index === -1) {
@@ -1425,23 +1566,19 @@ export default {
         manyShiftsData.value.selectedDates.splice(index, 1)
       }
     }
-
     const selectAllDatesInMonth = () => {
       manyShiftsData.value.selectedDates = selectionDates.value
         .filter(d => d.isCurrentMonth && !d.hasShift && !d.isVacation && !d.isSick)
         .map(d => d.fullDate)
     }
-
-    const clearAllDates = () => {
-      manyShiftsData.value.selectedDates = []
-    }
+    const clearAllDates = () => { manyShiftsData.value.selectedDates = [] }
 
     const openShiftModal = async (day) => {
       if (!day.isCurrentMonth) return
-
       selectedDay.value = day
       editHours.value = day.base_hours || 0
       showShiftCurrency.value = false
+      openDaySections.value = { motivation: false, currency: false }
 
       if ((day.hasShift || day.isVacation || day.isSick) && day.day_id) {
         try {
@@ -1454,7 +1591,6 @@ export default {
       } else {
         shiftDetails.value = null
       }
-
       showShiftModal.value = true
     }
 
@@ -1470,13 +1606,11 @@ export default {
         showNotification('Введите количество часов', 'error')
         return
       }
-
       const fullDate = selectedDay.value.fullDate
       const year = fullDate.getFullYear()
       const month = String(fullDate.getMonth() + 1).padStart(2, '0')
       const day = String(fullDate.getDate()).padStart(2, '0')
       const dateStr = `${year}-${month}-${day}`
-
       isSavingShift.value = true
       try {
         if (selectedDay.value.hasShift) {
@@ -1486,7 +1620,6 @@ export default {
           await apiService.createShift(dateStr, editHours.value)
           showNotification('Смена успешно создана', 'success')
         }
-
         closeShiftModal()
         await loadData()
       } catch (error) {
@@ -1498,7 +1631,6 @@ export default {
 
     const deleteShift = async () => {
       if (!selectedDay.value?.day_id) return
-
       if (confirm('Вы уверены, что хотите удалить эту смену?')) {
         try {
           await apiService.deleteShift(selectedDay.value.day_id)
@@ -1513,7 +1645,6 @@ export default {
 
     const deleteVacationOrSick = async () => {
       if (!selectedDay.value?.day_id) return
-
       if (confirm(`Вы уверены, что хотите удалить ${selectedDay.value.isVacation ? 'отпуск' : 'больничный'} за этот день?`)) {
         try {
           await apiService.deleteShift(selectedDay.value.day_id)
@@ -1534,20 +1665,23 @@ export default {
     })
 
     const openMotivationModal = () => {
-      motivationData.value = {
-        type_operations: 'placement',
-        count_operations: null,
-        hours: null
+      if (isFutureDay(selectedDay.value)) {
+        showNotification('Мотивацию можно добавить только после отработки смены', 'error')
+        return
       }
+      motivationData.value = { type_operations: 'placement', count_operations: null, hours: null }
       showMotivationModal.value = true
     }
-
-    const closeMotivationModal = () => {
-      showMotivationModal.value = false
-    }
+    const closeMotivationModal = () => { showMotivationModal.value = false }
 
     const saveMotivation = async () => {
       if (isSaveMotivationDisabled.value) return
+
+      if (isFutureDay(selectedDay.value)) {
+        showNotification('Нельзя добавить мотивацию на будущую смену', 'error')
+        closeMotivationModal()
+        return
+      }
 
       isSavingMotivation.value = true
       try {
@@ -1562,11 +1696,9 @@ export default {
           )
           showNotification('Мотивация успешно добавлена', 'success')
         }
-
         const updatedShift = await apiService.getShiftById(selectedDay.value.day_id)
         shiftDetails.value = updatedShift
         await loadData()
-
         closeMotivationModal()
       } catch (error) {
         handleApiError(error, 'Ошибка при добавлении')
@@ -1576,19 +1708,16 @@ export default {
     }
 
     const openSettingsModal = () => {
+      openSettingsSections.value = { main: true, motivation: false, other: false }
       showSettingsModal.value = true
     }
-
-    const closeSettingsModal = () => {
-      showSettingsModal.value = false
-    }
+    const closeSettingsModal = () => { showSettingsModal.value = false }
 
     const saveSettings = async () => {
       if (!settings.value.price_time) {
         showNotification('Цена за час обязательна для заполнения', 'error')
         return
       }
-
       isSavingSettings.value = true
       try {
         await apiService.updateTimesheetSettings(settings.value)
@@ -1607,13 +1736,9 @@ export default {
         try {
           await apiService.deleteTimesheetSettings()
           settings.value = {
-            price_time: 0,
-            price_overtime: 0,
-            price_cold: 0,
-            price_collect: 0,
-            price_replenishment: 0,
-            price_placement: 0,
-            price_non_productive_work: 0
+            price_time: 0, price_overtime: 0, price_cold: 0,
+            price_collect: 0, price_replenishment: 0,
+            price_placement: 0, price_non_productive_work: 0
           }
           hasSettings.value = false
           showNotification('Настройки удалены', 'success')
@@ -1629,10 +1754,7 @@ export default {
       selectionDate.value = new Date(currentDate.value)
       showAddManyModal.value = true
     }
-
-    const closeAddManyModal = () => {
-      showAddManyModal.value = false
-    }
+    const closeAddManyModal = () => { showAddManyModal.value = false }
 
     const saveManyShifts = async () => {
       if (!manyShiftsData.value.hours) {
@@ -1643,7 +1765,6 @@ export default {
         showNotification('Выберите хотя бы одну дату', 'error')
         return
       }
-
       isSavingMany.value = true
       try {
         await apiService.addManyShifts(manyShiftsData.value.hours, manyShiftsData.value.selectedDates)
@@ -1667,17 +1788,13 @@ export default {
       vacationData.value.type_days = 'Отпуск'
       showVacationModal.value = true
     }
-
-    const closeVacationModal = () => {
-      showVacationModal.value = false
-    }
+    const closeVacationModal = () => { showVacationModal.value = false }
 
     const saveVacation = async () => {
       if (!vacationData.value.start_date || !vacationData.value.number_of_days) {
         showNotification('Заполните все поля', 'error')
         return
       }
-
       isSavingVacation.value = true
       try {
         await apiService.addVacation({
@@ -1685,7 +1802,6 @@ export default {
           number_of_days: vacationData.value.number_of_days,
           type_days: vacationData.value.type_days
         })
-
         showNotification(`${vacationData.value.type_days} успешно добавлен`, 'success')
         closeVacationModal()
         await loadData()
@@ -1701,15 +1817,17 @@ export default {
       yearStats.value = null
     }
 
-    // Загрузка данных с защитой от падения
     const loadData = async () => {
       isLoading.value = true
       hasLoadError.value = false
       try {
-        await Promise.all([loadShifts(), loadStatistics(), loadSettings()])
-        if (!monthlyStats.value) {
-          hasLoadError.value = true
-        }
+        await Promise.all([
+          loadShifts(),
+          loadStatistics(),
+          loadSettings(),
+          loadGoal() // <-- ЗАГРУЗКА ЦЕЛИ
+        ])
+        if (!monthlyStats.value) hasLoadError.value = true
       } catch (e) {
         hasLoadError.value = true
       } finally {
@@ -1717,64 +1835,91 @@ export default {
       }
     }
 
+    // --- ОПЕРАЦИИ С ЦЕЛЬЮ ---
+    const openGoalModal = () => {
+      goalData.value.amount = currentGoal.value ? currentGoal.value.amount : null
+      showGoalModal.value = true
+    }
+
+    const closeGoalModal = () => {
+      showGoalModal.value = false
+    }
+
+    const getMonthStr = () => `${currentDate.value.getFullYear()}-${String(currentDate.value.getMonth() + 1).padStart(2, '0')}-01`
+
+    const saveGoal = async () => {
+      if (!goalData.value.amount || goalData.value.amount <= 0) return
+      isSavingGoal.value = true
+      try {
+        const payload = {
+          goal_type: 'motivation',
+          amount: goalData.value.amount,
+          category: null
+        }
+        const response = await apiService.saveGoalCurrent(payload, getMonthStr())
+        currentGoal.value = response
+        showNotification('Цель сохранена', 'success')
+        closeGoalModal()
+      } catch (error) {
+        handleApiError(error, 'Ошибка при сохранении цели')
+      } finally {
+        isSavingGoal.value = false
+      }
+    }
+
+    const deleteGoal = async () => {
+      if (!confirm('Удалить цель на этот месяц?')) return
+      try {
+        await apiService.deleteGoalCurrent('motivation', getMonthStr())
+        currentGoal.value = null
+        showNotification('Цель удалена', 'success')
+        closeGoalModal()
+      } catch (error) {
+        handleApiError(error, 'Ошибка при удалении цели')
+      }
+    }
+
+    // -------------------------
+
     const formatNumber = (num) => {
       if (!num && num !== 0) return '0'
       return num.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     }
-
     const formatNumberShort = (num) => {
       if (!num && num !== 0) return '0'
-      if (num >= 1000) {
-        return (num / 1000).toFixed(1) + 'k'
-      }
+      if (num >= 1000) return (num / 1000).toFixed(1) + 'k'
       return num.toLocaleString('ru-RU')
     }
-
     const formatDateShort = (date) => {
       if (!date) return ''
       const d = date instanceof Date ? date : new Date(date)
-      return d.toLocaleDateString('ru-RU', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      })
+      return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
     }
-
     const formatDateForDisplay = (dateStr) => {
       if (!dateStr) return ''
       const d = new Date(dateStr)
-      return d.toLocaleDateString('ru-RU', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      })
+      return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
     }
-
     const getProductivity = (operations, hours) => {
       if (!operations || !hours || hours === 0) return '0'
       return (operations / hours).toFixed(2)
     }
-
     const getColdPercent = (coldEarned, totalEarned) => {
       if (!coldEarned || !totalEarned || totalEarned === 0) return '0'
       return ((coldEarned / totalEarned) * 100).toFixed(1)
     }
-
     const getHoursPercent = (hoursEarned, totalEarned) => {
       if (!hoursEarned || !totalEarned || totalEarned === 0) return '0'
       return ((hoursEarned / totalEarned) * 100).toFixed(1)
     }
-
     const getNonProductivePercent = (nonProductiveEarned, totalEarned) => {
       if (!nonProductiveEarned || !totalEarned || totalEarned === 0) return '0'
       return ((nonProductiveEarned / totalEarned) * 100).toFixed(1)
     }
-
     const getAwardPercent = (award, totalEarned) => {
       if (!award || !totalEarned || totalEarned === 0) return '0'
       return ((award / totalEarned) * 100).toFixed(1)
     }
-
     const getOvertimePercent = (overtimeEarned, totalEarned) => {
       if (!overtimeEarned || !totalEarned || totalEarned === 0) return '0'
       return ((overtimeEarned / totalEarned) * 100).toFixed(1)
@@ -1783,9 +1928,7 @@ export default {
     const generateAvailableYears = () => {
       const currentYear = new Date().getFullYear()
       const years = []
-      for (let i = currentYear - 10; i <= currentYear + 2; i++) {
-        years.push(i)
-      }
+      for (let i = currentYear - 10; i <= currentYear + 2; i++) years.push(i)
       availableYears.value = years
     }
 
@@ -1796,9 +1939,7 @@ export default {
       } catch (error) {
         console.error('Error loading year statistics:', error)
         yearStats.value = null
-        if (error.response?.status === 404) {
-          return
-        }
+        if (error.response?.status === 404) return
         handleApiError(error, 'Ошибка при загрузке годовой статистики')
       }
     }
@@ -1809,62 +1950,26 @@ export default {
       await loadYearStatisticsForYear(selectedYear.value)
       showYearStatsModal.value = true
     }
-
-    const onYearChange = async () => {
-      await loadYearStatisticsForYear(selectedYear.value)
-    }
-
-    const prevYear = async () => {
-      selectedYear.value = selectedYear.value - 1
-      await loadYearStatisticsForYear(selectedYear.value)
-    }
-
-    const nextYear = async () => {
-      selectedYear.value = selectedYear.value + 1
-      await loadYearStatisticsForYear(selectedYear.value)
-    }
+    const onYearChange = async () => { await loadYearStatisticsForYear(selectedYear.value) }
+    const prevYear = async () => { selectedYear.value -= 1; await loadYearStatisticsForYear(selectedYear.value) }
+    const nextYear = async () => { selectedYear.value += 1; await loadYearStatisticsForYear(selectedYear.value) }
 
     const addNotificationStyles = () => {
       if (!document.querySelector('#notification-styles')) {
         const style = document.createElement('style')
         style.id = 'notification-styles'
         style.textContent = `
-          @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-          }
-          @keyframes slideOut {
-            from { transform: translateX(0); opacity: 1; }
-            to { transform: translateX(100%); opacity: 0; }
-          }
-          .notification {
-            background: var(--white, #ffffff);
-            color: var(--dark-color, #1e293b);
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            margin-bottom: 10px;
-            min-width: 300px;
-            max-width: 400px;
-          }
-          .notification-content {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 16px;
-          }
+          @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+          @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+          .notification { background: var(--white, #fff); color: var(--dark-color, #1e293b); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 10px; min-width: 300px; max-width: 400px; }
+          .notification-content { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
           .notification-success { border-left: 4px solid #10b981; }
           .notification-success i { color: #10b981; }
           .notification-error { border-left: 4px solid #ef4444; }
           .notification-error i { color: #ef4444; }
           .notification-info { border-left: 4px solid #3b82f6; }
           .notification-info i { color: #3b82f6; }
-          @media (max-width: 768px) {
-            .notification {
-              min-width: auto;
-              width: calc(100% - 40px);
-              max-width: none;
-            }
-          }
+          @media (max-width: 768px) { .notification { min-width: auto; width: calc(100% - 40px); max-width: none; } }
         `
         document.head.appendChild(style)
       }
@@ -1877,109 +1982,41 @@ export default {
     })
 
     return {
-      currentDate,
-      shifts,
-      monthlyStats,
-      yearStats,
-      yearStatsYear,
-      settings,
-      hasSettings,
-      isLoading,
-      hasLoadError,
-      isSavingShift,
-      isSavingMotivation,
-      isSavingSettings,
-      isSavingVacation,
-      isSavingMany,
-      showShiftModal,
-      showSettingsModal,
-      showAddManyModal,
-      showYearStatsModal,
-      showVacationModal,
-      showMotivationModal,
-      motivationData,
-      selectedDay,
-      shiftDetails,
-      editHours,
-      showShiftCurrency,
-      showYearCurrency,
-      openSections,
-      openCurrency,
-      manyShiftsData,
-      selectionDate,
-      weekDays,
-      calendarDays,
-      calendarRows,
-      selectionDates,
-      selectionCalendarRows,
-      selectionMonthName,
-      selectionYear,
-      currentMonthName,
-      currentYear,
-      previousMonth,
-      nextMonth,
-      goToToday,
-      prevSelectionMonth,
-      nextSelectionMonth,
-      toggleSection,
-      toggleCurrency,
-      toggleShiftCurrency,
-      toggleYearCurrency,
-      isDateSelected,
-      toggleDateSelection,
-      selectAllDatesInMonth,
-      clearAllDates,
-      openShiftModal,
-      closeShiftModal,
-      saveShift,
-      deleteShift,
-      deleteVacationOrSick,
-      openMotivationModal,
-      closeMotivationModal,
-      saveMotivation,
-      isSaveMotivationDisabled,
-      openSettingsModal,
-      closeSettingsModal,
-      saveSettings,
-      deleteSettings,
-      openAddManyModal,
-      closeAddManyModal,
-      saveManyShifts,
-      openVacationModal,
-      closeVacationModal,
-      saveVacation,
-      openYearStatsModal,
-      closeYearStatsModal,
-      formatNumber,
-      formatNumberShort,
-      formatDateShort,
-      formatDateForDisplay,
-      hasPeriodData,
-      hasCurrencyData,
-      hasShiftCurrencyData,
-      selectedYear,
-      availableYears,
-      prevYear,
-      nextYear,
-      onYearChange,
-      getProductivity,
-      getColdPercent,
-      getHoursPercent,
-      getNonProductivePercent,
-      getAwardPercent,
-      getOvertimePercent,
-      getMotivationTotal,
-      getOperationsTotal,
-      getYearMotivationTotal,
-      periodOneBestDay,
-      periodTwoBestDay,
-      monthBestDay,
-      periodOneProductivity,
-      periodTwoProductivity,
-      productivityChangePercent,
-      productivityChangeSymbol,
-      productivityChangeClass,
-      vacationData
+      currentDate, shifts, monthlyStats, yearStats, yearStatsYear, settings, hasSettings,
+      isLoading, hasLoadError, isSavingShift, isSavingMotivation, isSavingSettings,
+      isSavingVacation, isSavingMany,
+      showShiftModal, showSettingsModal, showAddManyModal, showYearStatsModal,
+      showVacationModal, showMotivationModal,
+      motivationData, selectedDay, shiftDetails, editHours,
+      showShiftCurrency, showYearCurrency, openSections, openCurrency,
+      openDaySections, openSettingsSections,
+      manyShiftsData, selectionDate, weekDays,
+      calendarDays, calendarRows, selectionDates, selectionCalendarRows,
+      selectionMonthName, selectionYear, currentMonthName, currentYear,
+      previousMonth, nextMonth, goToToday, prevSelectionMonth, nextSelectionMonth,
+      toggleSection, toggleCurrency, toggleShiftCurrency, toggleYearCurrency,
+      toggleDaySection, toggleSettingsSection,
+      isDateSelected, toggleDateSelection, selectAllDatesInMonth, clearAllDates,
+      openShiftModal, closeShiftModal, saveShift, deleteShift, deleteVacationOrSick,
+      openMotivationModal, closeMotivationModal, saveMotivation, isSaveMotivationDisabled,
+      openSettingsModal, closeSettingsModal, saveSettings, deleteSettings,
+      openAddManyModal, closeAddManyModal, saveManyShifts,
+      openVacationModal, closeVacationModal, saveVacation,
+      openYearStatsModal, closeYearStatsModal,
+      formatNumber, formatNumberShort, formatDateShort, formatDateForDisplay,
+      hasPeriodData, hasCurrencyData, hasShiftCurrencyData,
+      selectedYear, availableYears, prevYear, nextYear, onYearChange,
+      getProductivity, getColdPercent, getHoursPercent, getNonProductivePercent,
+      getAwardPercent, getOvertimePercent,
+      getMotivationTotal, getOperationsTotal, getYearMotivationTotal,
+      periodOneBestDay, periodTwoBestDay, monthBestDay,
+      periodOneProductivity, periodTwoProductivity,
+      productivityChangePercent, productivityChangeSymbol, productivityChangeClass,
+      vacationData,
+      // --- Цели ---
+      currentGoal, showGoalModal, isSavingGoal, goalData,
+      goalCurrentAmount, goalProgressPercent, isGoalAchieved, goalProgressClass, goalForecastInfo,
+      openGoalModal, closeGoalModal, saveGoal, deleteGoal, isFutureDay, getMonthStr
     }
   }
 }
@@ -1990,766 +2027,188 @@ export default {
   --radius: 8px;
 }
 
-/* --- Кнопка мотивации --- */
-.motivation-section {
-  margin-top: 1rem;
-}
-
-.btn-motivation {
+/* ================================================================
+   БАЗОВЫЙ LAYOUT МОДАЛОК: flex-column + sticky header/footer
+   ================================================================ */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
-  padding: 0.75rem;
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  color: white;
-  border: none;
-  border-radius: var(--radius);
-  cursor: pointer;
-  font-size: 0.95rem;
-  font-weight: 600;
-  transition: all 0.3s;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-}
-
-.btn-motivation:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(245,158,11,0.3);
-}
-
-.settings-divider {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--gray-color);
-  margin: 1rem 0 0.5rem 0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid var(--light-color);
-  padding-bottom: 0.25rem;
-}
-
-/* --- Детализация за день --- */
-.day-total-block {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  margin: -1rem -1rem 1rem -1rem;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-  border-radius: var(--radius) var(--radius) 0 0;
-}
-
-.day-total-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
-.day-total-label {
-  font-size: 0.85rem;
-  font-weight: 500;
-  opacity: 0.9;
-}
-
-.day-total-hours {
-  font-size: 0.75rem;
-  opacity: 0.85;
-}
-
-.day-total-value {
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: white;
-  letter-spacing: 0.5px;
-}
-
-.day-breakdown-header {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--gray-color, #94a3b8); /* Адаптивный цвет для темной темы */
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 0.35rem;
-  padding-top: 0.25rem;
-}
-
-/* Бейджи процентов */
-.percent-badge {
-  display: inline-block;
-  margin-left: 0.35rem;
-  padding: 0.1rem 0.4rem;
-  font-size: 0.7rem;
-  font-weight: 600;
-  background: rgba(148, 163, 184, 0.2); /* Нейтральный полупрозрачный */
-  color: var(--dark-color, #e2e8f0);
-  border-radius: 10px;
-  vertical-align: middle;
-}
-
-/* Конкретные бейджи для контраста */
-.hours-percent-line .percent-badge {
-  background: rgba(16, 185, 129, 0.25);
-  color: #34d399; /* Светло-зеленый */
-}
-
-.cold-percent-line .percent-badge {
-  background: rgba(59, 130, 246, 0.25);
-  color: #60a5fa; /* Светло-синий */
-}
-
-.overtime-percent-line .percent-badge {
-  background: rgba(239, 68, 68, 0.25);
-  color: #f87171; /* Светло-красный */
-}
-
-/* Блок мотивации */
-.day-motivation-block {
-  margin: 0.5rem 0;
-  padding: 0.75rem;
-  background: rgba(245, 158, 11, 0.1);
-  border-radius: var(--radius);
-  border-left: 3px solid #f59e0b;
-}
-
-.day-motivation-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.4rem;
-  padding-bottom: 0.4rem;
-  border-bottom: 1px dashed rgba(245, 158, 11, 0.4);
-}
-
-.day-motivation-title {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #fbbf24; /* Янтарный, хорошо виден на темном */
-}
-
-.day-motivation-total {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #fcd34d; /* Светло-янтарный */
-}
-
-.day-productivity-block {
-  margin-top: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  background: rgba(59, 130, 246, 0.08);
-  border-radius: var(--radius);
-  border-left: 3px solid #3b82f6;
-}
-
-.day-prod-line {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.25rem 0;
-  font-size: 0.8rem;
-}
-
-.day-prod-line .stat-label {
-  font-size: 0.78rem;
-  color: var(--gray-color, #94a3b8);
-}
-
-.day-prod-line .stat-number {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--dark-color, #e2e8f0);
-}
-
-/* Sub-line (детализация внутри блока) */
-.stat-line.sub-line {
-  padding-left: 1.25rem;
-  padding-top: 0.25rem;
-  padding-bottom: 0.25rem;
-  border-bottom: none;
-}
-
-.stat-line.sub-line .stat-label {
-  font-size: 0.75rem;
-  color: #94a3b8; /* Светло-серый, виден на темном фоне */
-}
-
-.stat-line.sub-line .stat-number {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #cbd5e1; /* Светло-серый, виден на темном фоне */
-}
-
-/* Годовая статистика — блок мотивации */
-.year-motivation-block {
-  margin-top: 1rem;
-  padding: 0.75rem;
-  background: rgba(245, 158, 11, 0.1);
-  border-radius: var(--radius);
-  border-left: 3px solid #f59e0b;
-}
-
-.year-motivation-header {
-  font-weight: 600;
-  font-size: 0.95rem;
-  color: #fbbf24; /* Адаптивный янтарный */
-  margin-bottom: 0.25rem;
-}
-
-/* --- Экран ошибки загрузки --- */
-.error-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  color: #ef4444;
-  text-align: center;
-}
-
-.error-state i {
-  font-size: 3rem;
-}
-
-.text-danger {
-  color: #ef4444 !important;
-}
-
-.mt-3 {
-  margin-top: 1rem;
-}
-
-.timesheets-container {
-  padding: 0.5rem;
-}
-
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 400px;
-  gap: 1rem;
-  color: var(--gray-color);
-}
-
-.loading-container i {
-  font-size: 2rem;
-  color: #3b82f6;
-}
-
-.loading-container p {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.page-title {
-  font-size: 1.5rem;
-  color: var(--dark-color);
-  margin: 0;
-}
-
-.header-actions {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.month-navigation {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.btn-nav {
-  background: var(--light-color);
-  border: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  color: #0284c7;
-}
-
-.btn-nav:hover {
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-  color: white;
-  transform: scale(1.05);
-}
-
-.current-month h2 {
-  font-size: 1.25rem;
-  text-transform: capitalize;
-  margin: 0;
-  color: var(--dark-color);
-}
-
-.btn-today {
-  padding: 0.5rem 1rem;
-  background: var(--light-color);
-  color: #0284c7;
-  border: none;
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.btn-today:hover {
-  background: #0284c7;
-  color: white;
-}
-
-.weekdays {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.weekday {
-  text-align: center;
-  padding: 0.75rem;
-  font-weight: 600;
-  background: var(--light-color);
-  border-radius: var(--radius);
-  color: var(--dark-color);
-}
-
-.weekday.weekend {
-  background: rgba(239, 68, 68, 0.15);
-  color: var(--danger-color);
-}
-
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.calendar-day {
-  border-radius: var(--radius);
-  padding: 0.5rem;
-  min-height: 80px;
-  cursor: pointer;
-  transition: all 0.3s;
-  border: 1px solid var(--light-color);
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  background: var(--white);
-  color: var(--dark-color);
-}
-
-.calendar-day:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow);
-}
-
-.calendar-day.other-month {
-  opacity: 0;
-  background: transparent;
-  border: 1px solid transparent;
-  cursor: default;
-  pointer-events: none;
-}
-
-.calendar-day.other-month .day-number {
-  visibility: hidden;
-}
-
-.calendar-day.weekend-day {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.2);
-  color: var(--danger-color);
-}
-
-.calendar-day.weekend-with-shift {
-  background: #8B0000;
-  color: white;
-}
-
-.calendar-day.has-shift {
-  background: linear-gradient(135deg, #3b82f6 0%, #000080 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(59,130,246,0.3);
-}
-
-.calendar-day.vacation-day {
-  background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%);
-  color: #1e293b;
-  border-color: #f59e0b;
-}
-
-.calendar-day.sick-day {
-  background: linear-gradient(135deg, #fca5a5 0%, #ef4444 100%);
-  color: white;
-  border-color: #ef4444;
-}
-
-.calendar-day.today {
-  border: 2px solid #f59e0b;
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
-}
-
-.day-number {
-  font-weight: 700;
-  font-size: 1.125rem;
-  margin-bottom: 0.25rem;
-}
-
-.day-earned {
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-align: right;
-  margin-top: auto;
-}
-
-.day-status {
-  font-size: 0.6rem;
-  font-weight: 600;
-  text-align: right;
-  margin-top: auto;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.25rem;
-}
-
-.vacation-status {
-  color: #92400e;
-}
-
-.sick-status {
-  color: #7f1d1d;
-}
-
-.day-empty {
-  text-align: right;
-  color: var(--gray-color);
-  margin-top: auto;
-}
-
-.stats-container {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  margin-top: 1.5rem;
-}
-
-.stat-card {
-  flex: 1;
-  min-width: 280px;
-  background: var(--white);
-  border-radius: var(--radius);
+  z-index: 1000;
   overflow: hidden;
-  box-shadow: var(--shadow);
+  padding: 0;
 }
 
-.stat-card-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  cursor: pointer;
-  background: #3cb371;
-  transition: background 0.3s;
-  border-radius: 10px;
-}
-
-.stat-card-header:hover {
-  filter: brightness(0.9);
-}
-
-.stat-card-header i {
-  color: #f0ffff;
-  font-size: 0.875rem;
-}
-
-.stat-card-header h3 {
-  flex: 1;
-  font-size: 0.9rem;
-  margin: 0;
-  font-weight: 600;
-  color: #f0ffff;
-}
-
-.total-earned {
-  font-weight: 700;
-  color: #f0ffff;
-  font-size: 1rem;
-}
-
-.stat-card-body {
-  padding: 0.75rem;
-}
-
-.stat-line {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid var(--light-color);
-}
-
-.stat-line:last-child {
-  border-bottom: none;
-}
-
-.stat-label {
-  font-size: 0.8rem;
-  color: var(--gray-color);
-}
-
-.stat-number {
-  font-weight: 600;
-  font-size: 0.85rem;
-  color: var(--dark-color);
-}
-
-.stat-number.award {
-  color: #fbbf24; /* Светло-янтарный */
-}
-
-.stat-number.overtime {
-  color: #f87171; /* Светло-красный */
-}
-
-.stat-number.total {
-  color: var(--secondary-color);
-  font-size: 1rem;
-}
-
-.award-line {
-  background: rgba(245, 158, 11, 0.1);
-  margin: 0.25rem 0;
-  padding: 0.5rem;
+.modal-content {
+  background: var(--white);
   border-radius: var(--radius);
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
 }
 
-.total-line {
-  margin-top: 0rem;
-  padding-top: 0.5rem;
+/* ================================================================
+   BOTTOM-SHEET (mobile) / центрированная (desktop)
+   ================================================================ */
+@media (max-width: 768px) {
+  .modal.modal-bottom-sheet {
+    align-items: flex-end;
+    justify-content: stretch;
+  }
+
+  .modal.modal-bottom-sheet .modal-content {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 16px 16px 0 0;
+    max-height: 92dvh;
+    animation: slideUp 0.25s ease;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .sheet-handle {
+    display: block;
+    width: 40px;
+    height: 4px;
+    background: #cbd5e1;
+    border-radius: 2px;
+    margin: 8px auto 2px;
+    flex-shrink: 0;
+  }
 }
 
-.total-card .stat-card-header {
-  background: linear-gradient(135deg, #3b82f6 0%, #1e3a8a 100%);
-  color: white;
+.sheet-handle {
+  display: none;
 }
 
-.total-card .stat-card-header i,
-.total-card .total-earned {
-  color: white;
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
 }
 
-.currency-block {
-  margin-top: 0rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--light-color);
+/* ================================================================
+   HEADER BUTTONS: (Иконки в ряд на мобилке)
+   ================================================================ */
+@media (max-width: 768px) {
+  .header-actions {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .header-actions .btn {
+    width: 100%;
+    padding: 0.5rem 0;
+    min-height: 44px;
+    font-size: 0.8rem;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .header-actions .btn .btn-text {
+    display: none;
+  }
+
+  .header-actions .btn i {
+    font-size: 1.25rem;
+    margin: 0;
+  }
 }
 
-.currency-header {
+/* ================================================================
+   КОМПАКТНЫЙ ТУЛБАР (для группового проставления)
+   ================================================================ */
+.header-tools {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.btn-compact {
+  padding: 0.4rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  min-height: 36px;
+  border: none;
+  border-radius: var(--radius);
   cursor: pointer;
-  padding: 0.3rem 0;
+  color: white;
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  color: #3b82f6;
-  font-size: 0.8rem;
-  font-weight: 500;
+  gap: 0.3rem;
+  transition: all 0.2s;
 }
 
-.currency-header:hover {
-  opacity: 0.7;
-}
+.btn-compact.btn-success { background: #10b981; }
+.btn-compact.btn-success:hover { background: #059669; }
+.btn-compact.btn-warning { background: #f59e0b; }
+.btn-compact.btn-warning:hover { background: #d97706; }
 
-.currency-list {
-  margin-top: 0.5rem;
+.compact-toolbar {
+  flex-shrink: 0;
+  padding: 0.6rem 1rem;
+  background: var(--white);
+  border-bottom: 1px solid var(--light-color);
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.5rem;
 }
 
-.currency-line {
-  font-size: 0.75rem;
-  padding: 0.3rem 0.5rem;
-  background: var(--light-color);
-  border-radius: var(--radius);
-  color: var(--dark-color);
-}
-
-.vacation-sick-details {
-  background: rgba(245, 158, 11, 0.1);
-  padding: 1rem;
-  border-radius: var(--radius);
-  margin-bottom: 1rem;
-}
-
-.vacation-sick-status {
-  font-size: 1.1rem;
-  font-weight: 600;
+.toolbar-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.5rem;
-  color: var(--dark-color);
 }
 
-.vacation-preview {
-  padding: 0.75rem;
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--dark-color);
-  border-radius: var(--radius);
-  margin-top: 0.5rem;
-  text-align: center;
-}
-
-.best-day-period {
-  margin-top: 0.75rem;
-  padding: 0.5rem;
-  background: rgba(16, 185, 129, 0.1);
-  border-radius: var(--radius);
-  border-left: 3px solid #10b981;
-}
-
-.best-day-month {
-  margin-top: 0.75rem;
-  padding: 0.75rem;
-  background: rgba(16, 185, 129, 0.1);
-  border-radius: var(--radius);
-  border-left: 3px solid #10b981;
-}
-
-.best-day-header {
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #059669;
-  margin-bottom: 0.25rem;
-  font-weight: 600;
-}
-
-.best-day-content {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.5rem;
-}
-
-.best-day-date {
-  font-weight: 600;
-  font-size: 0.8rem;
-  color: var(--dark-color);
-}
-
-.best-day-stats {
-  font-size: 0.7rem;
-  color: var(--gray-color);
-}
-
-.best-day-productivity {
-  background: #10b981;
-  color: white;
-  padding: 0.2rem 0.5rem;
-  border-radius: 20px;
-  font-size: 0.7rem;
-  font-weight: 600;
-}
-
-.dynamics-line {
-  margin-top: 0.75rem;
-  padding: 0.5rem;
-  background: var(--light-color);
-  border-radius: var(--radius);
-}
-
-.dynamics-header {
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--gray-color);
-  margin-bottom: 0.25rem;
-}
-
-.dynamics-content {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.period1-value, .period2-value {
-  font-weight: 600;
+.toolbar-row label {
   font-size: 0.85rem;
-  background: var(--white);
-  padding: 0.2rem 0.5rem;
-  border-radius: var(--radius);
+  font-weight: 500;
   color: var(--dark-color);
+  white-space: nowrap;
 }
 
-.dynamics-content i {
-  color: #3b82f6;
-  font-size: 0.7rem;
+.toolbar-input {
+  flex: 1;
+  max-width: 120px;
 }
 
-.dynamics-change {
-  font-weight: 600;
-  font-size: 0.8rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 20px;
+.toolbar-month {
+  justify-content: center;
 }
 
-.dynamics-change.positive {
-  background: rgba(16, 185, 129, 0.2);
-  color: #059669;
-}
-
-.dynamics-change.negative {
-  background: rgba(239, 68, 68, 0.2);
-  color: #dc2626;
-}
-
-.dynamics-change.neutral {
-  background: var(--white);
-  color: var(--gray-color);
-}
-
+/* ================================================================
+   АДАПТАЦИЯ КАЛЕНДАРЯ ВЫБОРА (Group Add)
+   ================================================================ */
 .selection-calendar {
   background: var(--white);
   border-radius: var(--radius);
-  padding: 1rem;
+  padding: 0.5rem;
   border: 1px solid var(--light-color);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .selection-weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 0.25rem;
+  gap: 4px;
   margin-bottom: 0.5rem;
+  width: 100%;
 }
 
 .selection-weekday {
   text-align: center;
-  padding: 0.5rem;
+  padding: 0.5rem 0;
   font-size: 0.75rem;
   font-weight: 600;
   background: var(--light-color);
@@ -2760,12 +2219,13 @@ export default {
 .selection-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 0.25rem;
+  gap: 4px;
+  width: 100%;
 }
 
 .selection-day {
   position: relative;
-  aspect-ratio: 1.7;
+  aspect-ratio: 1 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2776,6 +2236,8 @@ export default {
   font-size: 0.875rem;
   background: var(--white);
   color: var(--dark-color);
+  padding: 0;
+  width: 100%;
 }
 
 .selection-day:hover {
@@ -2813,14 +2275,14 @@ export default {
   position: absolute;
   bottom: 2px;
   right: 2px;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
 }
 
 .shift-icon {
   position: absolute;
   top: 2px;
   right: 2px;
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   color: #3b82f6;
 }
 
@@ -2828,7 +2290,7 @@ export default {
   position: absolute;
   top: 2px;
   right: 2px;
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   color: #f59e0b;
 }
 
@@ -2836,7 +2298,7 @@ export default {
   position: absolute;
   top: 2px;
   right: 2px;
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   color: #ef4444;
 }
 
@@ -2846,158 +2308,312 @@ export default {
   color: white;
 }
 
-.selected-count {
-  margin-top: 0.75rem;
-  padding: 0.5rem;
-  background: var(--light-color);
-  border-radius: var(--radius);
-  text-align: center;
-  font-size: 0.875rem;
-  color: var(--dark-color);
+@media (max-width: 480px) {
+  .selection-day {
+    font-size: 0.8rem;
+  }
 }
 
-.month-selector {
-  display: flex;
+/* ================================================================
+   КНОПКИ В ФУТЕРЕ
+   ================================================================ */
+.btn-save {
+  flex: 1;
+  min-height: 44px;
+}
+
+.btn-icon {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
-  padding: 0.5rem;
-  background: var(--light-color);
   border-radius: var(--radius);
-}
-
-.btn-month-nav {
-  background: var(--white);
-  border: 1px solid var(--light-color);
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  border: none;
   cursor: pointer;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #3b82f6;
-}
-
-.btn-month-nav:hover {
-  background: #3b82f6;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  flex-shrink: 0;
   color: white;
-  border-color: #3b82f6;
-  transform: scale(1.05);
 }
 
-.selected-month {
-  font-size: 1rem;
-  font-weight: 600;
-  min-width: 150px;
-  text-align: center;
-  text-transform: capitalize;
-  color: var(--dark-color);
-}
-
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: var(--white);
-  border-radius: var(--radius);
-  max-width: 500px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
-  padding: 0px;
-}
-
-.modal-content.large {
-  max-width: 700px;
-}
-
+/* ================================================================
+   БАЗОВЫЙ LAYOUT
+   ================================================================ */
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.3rem 1rem;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--light-color);
-  margin-bottom: 0.5rem;
+  flex-shrink: 0;
+  min-height: 56px;
+  gap: 0.5rem;
 }
 
 .modal-header h3 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   color: var(--dark-color);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .modal-close {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: 1.75rem;
+  line-height: 1;
   cursor: pointer;
   color: var(--gray-color);
+  padding: 0 0.25rem;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  flex-shrink: 0;
 }
 
 .modal-close:hover {
   color: var(--dark-color);
+  background: var(--light-color);
 }
 
 .modal-body {
-  padding: 0rem 1.5rem;
+  padding: 0.75rem 1rem;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  overscroll-behavior: contain;
 }
 
 .modal-footer {
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 1rem;
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
   border-top: 1px solid var(--light-color);
-  background: var(--light-color);
+  background: var(--white);
   display: flex;
-  justify-content: center;
-}
-
-.footer-buttons-grid {
-  display: flex;
-  gap: 0.75rem;
-  justify-content: center;
+  gap: 0.5rem;
   align-items: center;
-  flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
-.footer-buttons-grid.one-button {
-  justify-content: center;
+/* ================================================================
+   АККОРДЕОНЫ (день + настройки)
+   ================================================================ */
+.accordion-item {
+  border: 1px solid var(--light-color);
+  border-radius: var(--radius);
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+  background: var(--white);
 }
 
-.footer-buttons-grid.one-button button {
-  min-width: 120px;
-}
-
-.footer-buttons-grid.three-buttons {
+.accordion-header {
   display: flex;
-  flex-wrap: inherit;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+  user-select: none;
+  background: var(--light-color);
+  min-height: 44px;
+  transition: background 0.2s;
+}
+
+.accordion-header:hover {
+  filter: brightness(0.97);
+}
+
+.accordion-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.accordion-title {
+  flex: 1;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--dark-color);
+  text-align: left;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.accordion-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--dark-color);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.accordion-header > i {
+  color: var(--gray-color);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.accordion-body {
+  padding: 0.5rem 0.75rem;
+}
+
+.accordion-body .form-group:last-child {
+  margin-bottom: 0;
+}
+
+/* ================================================================
+   ПРОСТЫЕ СТРОКИ (часы/холод/переработка в модалке дня)
+   ================================================================ */
+.simple-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.75rem;
+  background: var(--white);
+  border: 1px solid var(--light-color);
+  border-radius: var(--radius);
+  margin-bottom: 0.5rem;
+  min-height: 44px;
+  font-size: 0.85rem;
+  color: var(--dark-color);
+  gap: 0.5rem;
+}
+
+.simple-line-label {
+  flex: 1;
+  text-align: left;
+  min-width: 0;
+}
+
+.simple-line-value {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+/* ================================================================
+   STICKY SUMMARY BAR (модалка дня)
+   ================================================================ */
+.day-summary-bar {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.6rem 1rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.day-summary-bar::-webkit-scrollbar { display: none; }
+
+.summary-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.7rem;
+  background: rgba(255,255,255,0.2);
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.summary-chip-value {
+  color: white;
+}
+
+.summary-chip-extra {
+  font-size: 0.72rem;
+  opacity: 0.85;
+  font-weight: 500;
+}
+
+/* ================================================================
+   EDIT BLOCK (модалка дня)
+   ================================================================ */
+.edit-block {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: var(--light-color);
+  border-radius: var(--radius);
+}
+
+.motivation-section {
+  margin-top: 0.5rem;
+}
+
+.btn-motivation {
+  width: 100%;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 0.75rem;
-  width: 100%;
+  gap: 0.5rem;
+  min-height: 44px;
 }
 
-.footer-buttons-grid.four-buttons {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
-  width: 100%;
+.btn-motivation:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245,158,11,0.3);
 }
 
-.footer-buttons-grid.four-buttons button {
-  width: 100%;
+/* ================================================================
+   БЕЙДЖИ ПРОЦЕНТОВ
+   ================================================================ */
+.percent-badge {
+  display: inline-block;
+  margin-left: 0.25rem;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: rgba(148, 163, 184, 0.2);
+  color: var(--dark-color, #e2e8f0);
+  border-radius: 10px;
+  vertical-align: middle;
 }
 
-.btn, button:not(.btn-nav):not(.btn-month-nav):not(.btn-award):not(.modal-close) {
+.hours-percent-badge { background: rgba(16, 185, 129, 0.25); color: #34d399; }
+.cold-percent-badge { background: rgba(59, 130, 246, 0.25); color: #60a5fa; }
+.overtime-percent-badge { background: rgba(239, 68, 68, 0.25); color: #f87171; }
+.award-percent-badge { background: rgba(245, 158, 11, 0.25); color: #fbbf24; }
+
+/* ================================================================
+   STICKY-ТУЛБАР (для года)
+   ================================================================ */
+.sticky-toolbar {
+  flex-shrink: 0;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--light-color);
+  background: var(--white);
+}
+
+/* ================================================================
+   ОБЩИЕ СТИЛИ
+   ================================================================ */
+.btn, button:not(.btn-nav):not(.btn-month-nav):not(.btn-award):not(.modal-close):not(.btn-icon):not(.btn-compact):not(.btn-year-nav) {
   padding: 0.6rem 1rem;
   border: none;
   border-radius: var(--radius);
@@ -3011,469 +2627,362 @@ export default {
   gap: 0.5rem;
 }
 
-.btn-primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
+.btn-primary { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; }
+.btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
+.btn-secondary { background: #8B0000; color: white; }
+.btn-secondary:hover { background: #FF0000; transform: translateY(-1px); }
+.btn-success { background: #10b981; color: white; }
+.btn-success:hover { background: #059669; transform: translateY(-1px); }
+.btn-warning { background: #f59e0b; color: white; }
+.btn-warning:hover { background: #d97706; transform: translateY(-1px); }
+.btn-danger { background: #ef4444; color: white; }
+.btn-danger:hover { background: #dc2626; transform: translateY(-1px); }
+.btn-info { background: #06b6d4; color: white; }
+.btn-info:hover { background: #0891b2; transform: translateY(-1px); }
+.btn-vacation { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; }
+.btn-vacation:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(245,158,11,0.3); }
+
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.timesheets-container { padding: 0.5rem; }
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+.page-title { font-size: 1.5rem; color: var(--dark-color); margin: 0; }
+.header-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.month-navigation { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.btn-nav { background: var(--light-color); border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: #0284c7; }
+.btn-nav:hover { background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; transform: scale(1.05); }
+.current-month h2 { font-size: 1.25rem; text-transform: capitalize; margin: 0; color: var(--dark-color); }
+.btn-today { padding: 0.5rem 1rem; background: var(--light-color); color: #0284c7; border: none; border-radius: var(--radius); cursor: pointer; transition: all 0.3s; }
+.btn-today:hover { background: #0284c7; color: white; }
+.weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; margin-bottom: 0.5rem; }
+.weekday { text-align: center; padding: 0.75rem; font-weight: 600; background: var(--light-color); border-radius: var(--radius); color: var(--dark-color); }
+.weekday.weekend { background: rgba(239, 68, 68, 0.15); color: var(--danger-color); }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; margin-bottom: 1.5rem; }
+.calendar-day { border-radius: var(--radius); padding: 0.5rem; min-height: 80px; cursor: pointer; transition: all 0.3s; border: 1px solid var(--light-color); position: relative; display: flex; flex-direction: column; justify-content: space-between; background: var(--white); color: var(--dark-color); }
+.calendar-day:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.calendar-day.other-month { opacity: 0; background: transparent; border: 1px solid transparent; cursor: default; pointer-events: none; }
+.calendar-day.other-month .day-number { visibility: hidden; }
+.calendar-day.weekend-day { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: var(--danger-color); }
+.calendar-day.weekend-with-shift { background: #8B0000; color: white; }
+.calendar-day.has-shift { background: linear-gradient(135deg, #3b82f6 0%, #000080 100%); color: white; box-shadow: 0 2px 8px rgba(59,130,246,0.3); }
+.calendar-day.vacation-day { background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%); color: #1e293b; border-color: #f59e0b; }
+.calendar-day.sick-day { background: linear-gradient(135deg, #fca5a5 0%, #ef4444 100%); color: white; border-color: #ef4444; }
+.calendar-day.today { border: 2px solid #f59e0b; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3); }
+.day-number { font-weight: 700; font-size: 1.125rem; margin-bottom: 0.25rem; }
+.day-earned { font-size: 0.75rem; font-weight: 500; text-align: right; margin-top: auto; }
+.day-status { font-size: 0.6rem; font-weight: 600; text-align: right; margin-top: auto; display: flex; align-items: center; justify-content: flex-end; gap: 0.25rem; }
+.vacation-status { color: #92400e; }
+.sick-status { color: #7f1d1d; }
+.day-empty { text-align: right; color: var(--gray-color); margin-top: auto; }
+
+.stats-container { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem; }
+.stat-card { flex: 1; min-width: 280px; background: var(--white); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+.stat-card-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; cursor: pointer; background: #3cb371; transition: background 0.3s; border-radius: 10px; }
+.stat-card-header:hover { filter: brightness(0.9); }
+.stat-card-header i { color: #f0ffff; font-size: 0.875rem; }
+.stat-card-header h3 { flex: 1; font-size: 0.9rem; margin: 0; font-weight: 600; color: #f0ffff; }
+.total-earned { font-weight: 700; color: #f0ffff; font-size: 1rem; }
+.stat-card-body { padding: 0.75rem; }
+.stat-line { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--light-color); }
+.stat-line:last-child { border-bottom: none; }
+.stat-label { font-size: 0.8rem; color: var(--gray-color); }
+.stat-number { font-weight: 600; font-size: 0.85rem; color: var(--dark-color); }
+.stat-number.award { color: #fbbf24; }
+.stat-number.overtime { color: #f87171; }
+.award-line { background: rgba(245, 158, 11, 0.1); margin: 0.25rem 0; padding: 0.5rem; border-radius: var(--radius); }
+.total-card .stat-card-header { background: linear-gradient(135deg, #3b82f6 0%, #1e3a8a 100%); color: white; }
+.total-card .stat-card-header i, .total-card .total-earned { color: white; }
+.stat-line.sub-line { padding-left: 1.25rem; padding-top: 0.25rem; padding-bottom: 0.25rem; border-bottom: none; }
+.stat-line.sub-line .stat-label { font-size: 0.75rem; color: #94a3b8; }
+.stat-line.sub-line .stat-number { font-size: 0.8rem; font-weight: 500; color: #cbd5e1; }
+
+.currency-block { margin-top: 0; padding-top: 0.5rem; border-top: 1px solid var(--light-color); }
+.currency-header { cursor: pointer; padding: 0.3rem 0; display: inline-flex; align-items: center; gap: 0.5rem; color: #3b82f6; font-size: 0.8rem; font-weight: 500; }
+.currency-header:hover { opacity: 0.7; }
+.currency-list { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.3rem; }
+.currency-line { font-size: 0.75rem; padding: 0.3rem 0.5rem; background: var(--light-color); border-radius: var(--radius); color: var(--dark-color); }
+
+.vacation-sick-details { background: rgba(245, 158, 11, 0.1); padding: 1rem; border-radius: var(--radius); margin-bottom: 1rem; }
+.vacation-sick-status { font-size: 1.1rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; color: var(--dark-color); }
+.vacation-preview { padding: 0.75rem; background: rgba(16, 185, 129, 0.1); color: var(--dark-color); border-radius: var(--radius); margin-top: 0.5rem; text-align: center; }
+
+.best-day-period { margin-top: 0.75rem; padding: 0.5rem; background: rgba(16, 185, 129, 0.1); border-radius: var(--radius); border-left: 3px solid #10b981; }
+.best-day-month { margin-top: 0.75rem; padding: 0.75rem; background: rgba(16, 185, 129, 0.1); border-radius: var(--radius); border-left: 3px solid #10b981; }
+.best-day-header { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: #059669; margin-bottom: 0.25rem; font-weight: 600; }
+.best-day-content { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; }
+.best-day-date { font-weight: 600; font-size: 0.8rem; color: var(--dark-color); }
+.best-day-stats { font-size: 0.7rem; color: var(--gray-color); }
+.best-day-productivity { background: #10b981; color: white; padding: 0.2rem 0.5rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
+
+.dynamics-line { margin-top: 0.75rem; padding: 0.5rem; background: var(--light-color); border-radius: var(--radius); }
+.dynamics-header { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gray-color); margin-bottom: 0.25rem; }
+.dynamics-content { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.period1-value, .period2-value { font-weight: 600; font-size: 0.85rem; background: var(--white); padding: 0.2rem 0.5rem; border-radius: var(--radius); color: var(--dark-color); }
+.dynamics-content i { color: #3b82f6; font-size: 0.7rem; }
+.dynamics-change { font-weight: 600; font-size: 0.8rem; padding: 0.2rem 0.5rem; border-radius: 20px; }
+.dynamics-change.positive { background: rgba(16, 185, 129, 0.2); color: #059669; }
+.dynamics-change.negative { background: rgba(239, 68, 68, 0.2); color: #dc2626; }
+.dynamics-change.neutral { background: var(--white); color: var(--gray-color); }
+
+.btn-month-nav { background: var(--white); border: 1px solid var(--light-color); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; color: #3b82f6; flex-shrink: 0; }
+.btn-month-nav:hover { background: #3b82f6; color: white; border-color: #3b82f6; }
+.selected-month { font-size: 0.95rem; font-weight: 600; min-width: 140px; text-align: center; text-transform: capitalize; color: var(--dark-color); }
+
+.form-group { margin-bottom: 0.75rem; }
+.form-label { display: block; margin-bottom: 0.4rem; font-weight: 500; font-size: 0.875rem; color: var(--dark-color); }
+.form-label.required:after { content: " *"; color: var(--danger-color); }
+.form-control { width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--gray-color); border-radius: var(--radius); font-size: 0.9rem; transition: border-color 0.3s; box-sizing: border-box; background: var(--white); color: var(--dark-color); min-height: 44px; }
+.form-control:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
+
+.year-selector { display: flex; align-items: center; justify-content: center; gap: 1rem; padding: 0.5rem; background: var(--light-color); border-radius: var(--radius); }
+.btn-year-nav { background: var(--white); border: 1px solid var(--light-color); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; color: #3b82f6; flex-shrink: 0; }
+.btn-year-nav:hover { background: #3b82f6; color: white; border-color: #3b82f6; }
+.year-select { padding: 0.5rem 1rem; font-size: 1rem; font-weight: 600; border: 1px solid var(--light-color); border-radius: var(--radius); background: var(--white); color: var(--dark-color); cursor: pointer; outline: none; min-width: 100px; text-align: center; }
+.year-select:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
+
+.year-stats { padding: 0.5rem 0; }
+.stat-big-card { display: flex; align-items: center; gap: 1rem; padding: 1rem; background: var(--light-color); border-radius: var(--radius); margin-bottom: 1rem; }
+.stat-icon-large { width: 60px; height: 60px; background: var(--white); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; color: #3b82f6; flex-shrink: 0; }
+.stat-info-large { flex: 1; }
+.stat-value-large { font-size: 1.5rem; font-weight: 600; color: var(--dark-color); }
+.year-currency { margin-top: 1rem; }
+
+.year-motivation-block { margin-top: 1rem; padding: 0.75rem; background: rgba(245, 158, 11, 0.1); border-radius: var(--radius); border-left: 3px solid #f59e0b; }
+.year-motivation-header { font-weight: 600; font-size: 0.95rem; color: #fbbf24; margin-bottom: 0.25rem; }
+
+.no-data { text-align: center; padding: 2rem; color: var(--gray-color); }
+.no-data i { font-size: 3rem; margin-bottom: 1rem; color: var(--light-color); }
+.no-data p { margin: 0; font-size: 1rem; }
+
+/* ================================================================
+   БЛОК ЦЕЛИ
+   ================================================================ */
+.goal-progress-card {
+  position: relative;
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+  border-left: 4px solid #3b82f6;
+  transition: all 0.3s ease;
 }
 
-.btn-primary:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+.goal-progress-card.goal-success {
+  border-left-color: #10b981;
+  background: linear-gradient(to right, rgba(16, 185, 129, 0.05), var(--white));
 }
 
-.btn-secondary {
-  background: #8B0000;
-  color: white;
+.goal-progress-card.goal-warning {
+  border-left-color: #f59e0b;
 }
 
-.btn-secondary:hover {
-  background: #FF0000;
-  transform: translateY(-1px);
+.goal-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  padding-right: 1.5rem;
 }
 
-.btn-success {
-  background: #10b981;
-  color: white;
+.goal-title {
+  font-weight: 600;
+  color: var(--dark-color);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.btn-success:hover {
-  background: #059669;
-  transform: translateY(-1px);
+.goal-values {
+  font-weight: 500;
+  color: var(--gray-color);
 }
 
-.btn-warning {
-  background: #f59e0b;
-  color: white;
+.goal-values strong {
+  color: var(--dark-color);
+  font-size: 1rem;
 }
 
-.btn-warning:hover {
-  background: #d97706;
-  transform: translateY(-1px);
+.goal-progress-bar {
+  position: relative;
+  height: 12px;
+  background: var(--light-color);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
 }
 
-.btn-danger {
-  background: #ef4444;
-  color: white;
+.goal-progress-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: #3b82f6;
+  transition: width 0.5s ease-out;
 }
 
-.btn-danger:hover {
-  background: #dc2626;
-  transform: translateY(-1px);
+.goal-success .goal-progress-fill {
+  background: linear-gradient(90deg, #10b981, #34d399);
 }
 
-.btn-info {
-  background: #06b6d4;
-  color: white;
+.goal-warning .goal-progress-fill {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
 }
 
-.btn-info:hover {
-  background: #0891b2;
-  transform: translateY(-1px);
+.goal-percent-badge {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--dark-color);
+  background: rgba(255, 255, 255, 0.8);
+  padding: 2px 6px;
+  border-radius: 10px;
 }
 
-.btn-vacation {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  color: white;
+.goal-forecast {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  padding: 0.5rem;
+  border-radius: var(--radius);
+  background: var(--light-color);
 }
 
-.btn-vacation:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(245,158,11,0.3);
+.goal-forecast.success {
+  color: #059669;
+  background: rgba(16, 185, 129, 0.1);
 }
 
-.btn-award {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  color: white;
-  padding: 0.6rem 1rem;
+.goal-forecast.warning {
+  color: #d97706;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.goal-forecast.neutral {
+  color: var(--gray-color);
+}
+
+.goal-achieved-banner {
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%);
+  color: #1e293b;
+  font-weight: 700;
+  text-align: center;
+  border-radius: var(--radius);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+.goal-edit-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
   border: none;
+  color: var(--gray-color);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.25rem;
+  transition: color 0.2s;
+}
+
+.goal-edit-btn:hover {
+  color: #3b82f6;
+}
+
+.goal-empty-card {
+  margin-bottom: 1.5rem;
+}
+
+.btn-add-goal {
+  background: var(--white);
+  border: 1px dashed #3b82f6;
+  color: #3b82f6;
+  padding: 0.8rem 1rem;
   border-radius: var(--radius);
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 0.9rem;
   font-weight: 500;
-  transition: all 0.3s;
+  width: 100%;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  width: 100%;
 }
 
-.btn-award:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(245,158,11,0.3);
+.btn-add-goal:hover {
+  background: rgba(59, 130, 246, 0.05);
+  border-style: solid;
 }
 
-.btn-award:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.shift-details {
-  margin-bottom: 0.5rem;
-  padding: 1rem;
-  background: var(--light-color);
-  border-radius: var(--radius);
-}
-
-.shift-actions {
-  margin-top: 0rem;
-}
-
-.form-group {
-  margin-bottom: 0.3rem;
-}
-
-.form-label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  font-size: 0.875rem;
-  color: var(--dark-color);
-}
-
-.form-label.required:after {
-  content: " *";
-  color: var(--danger-color);
-}
-
-.form-control {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--gray-color);
-  border-radius: var(--radius);
-  font-size: 0.875rem;
-  transition: border-color 0.3s;
-  box-sizing: border-box;
-  background: var(--white);
-  color: var(--dark-color);
-}
-
-.form-control:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59,130,246,0.1);
-}
-
-.year-stats {
-  padding: 0.5rem;
-}
-
-.stat-big-card {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  background: var(--light-color);
-  border-radius: var(--radius);
+.goal-modal-desc {
+  font-size: 0.85rem;
+  color: var(--gray-color);
   margin-bottom: 1rem;
+  line-height: 1.4;
 }
 
-.stat-icon-large {
-  width: 60px;
-  height: 60px;
-  background: var(--white);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.75rem;
-  color: #3b82f6;
-}
-
-.stat-info-large {
-  flex: 1;
-}
-
-.stat-value-large {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--dark-color);
-}
-
-.year-currency {
-  margin-top: 1rem;
-}
-
-.notification {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 10000;
-  animation: slideIn 0.3s ease;
-  cursor: pointer;
-}
-
-.notification-content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: var(--white);
-  color: var(--dark-color);
-  border-radius: 8px;
-  box-shadow: var(--shadow);
-}
-
-.notification-success {
-  border-left: 4px solid #10b981;
-}
-
-.notification-success i {
-  color: #10b981;
-}
-
-.notification-error {
-  border-left: 4px solid #ef4444;
-}
-
-.notification-error i {
-  color: #ef4444;
-}
-
-.productivity-line {
-  background: rgba(59, 130, 246, 0.1);
-  margin: 0.25rem 0;
-  padding: 0.5rem;
-  border-radius: var(--radius);
-}
-
-.productivity {
-  font-weight: 700;
-  color: var(--dark-color);
-  font-size: 1rem;
-}
-
-.cold-percent-line {
-  background: rgba(59, 130, 246, 0.1);
-  margin: 0.25rem 0;
-  padding: 0.5rem;
-  border-radius: var(--radius);
-}
-
-.award-percent-line {
-  background: rgba(16, 185, 129, 0.1);
-  margin: 0.25rem 0;
-  padding: 0.5rem;
-  border-radius: var(--radius);
-}
-
-.hours-percent-line {
-  background: rgba(16, 185, 129, 0.1);
-  margin: 0.25rem 0;
-  padding: 0.5rem;
-  border-radius: var(--radius);
-}
-
-.non-productive-percent-line {
-  background: rgba(245, 158, 11, 0.1);
-  margin: 0.25rem 0;
-  padding: 0.5rem;
-  border-radius: var(--radius);
-}
-
-.cold-boost-line {
-  background: rgba(16, 185, 129, 0.1);
-  margin: 0.25rem 0;
-  padding: 0.5rem;
-  border-radius: var(--radius);
-}
-
-.overtime-percent-line {
-  background: rgba(239, 68, 68, 0.1);
-  margin: 0.25rem 0;
-  padding: 0.5rem;
-  border-radius: var(--radius);
-}
-
-.footer-buttons-grid.three-buttons button {
-    width: 33%;
-  }
-
-@keyframes slideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes slideOut {
-  from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-}
-
+/* ================================================================
+   ЕДИНЫЙ МЕДИА-ЗАПРОС ДЛЯ МОБИЛЬНЫХ
+   ================================================================ */
 @media (max-width: 768px) {
-  .timesheets-container {
-    padding: 0.25rem;
-  }
-
-  .page-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .page-title {
-    text-align: center;
-  }
-
-  .header-actions {
-    flex-direction: column;
-  }
-
-  .header-actions .btn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .stats-container {
-    flex-direction: column;
-  }
-
-  .stat-card {
-    min-width: auto;
-  }
-
-  .calendar-day {
-    min-height: 65px;
-  }
-
-  .day-number {
-    font-size: 0.875rem;
-  }
-
-  .day-earned {
-    font-size: 0.625rem;
-  }
-
-  .day-total-value {
-    font-size: 1.3rem;
-  }
-
-  .footer-buttons-grid.three-buttons {
-    gap: 0.5rem;
-    width: 100%;
-  }
-
-  .footer-buttons-grid.four-buttons {
-    gap: 0.5rem;
-  }
+  .timesheets-container { padding: 0.25rem; }
+  .page-header { flex-direction: column; align-items: stretch; }
+  .page-title { text-align: center; }
+  .stats-container { flex-direction: column; }
+  .stat-card { min-width: auto; }
+  .calendar-day { min-height: 65px; }
+  .day-number { font-size: 0.875rem; }
+  .day-earned { font-size: 0.625rem; }
+  .header-actions { flex-wrap: nowrap; }
+  .goal-progress-card { padding: 0.75rem; }
+  .goal-values { font-size: 0.8rem; }
+  .goal-values strong { font-size: 0.9rem; }
 }
 
 @media (max-width: 480px) {
-  .calendar-day {
-    min-height: 55px;
-    padding: 0.25rem;
-  }
-
-  .selection-calendar {
-    padding: 0;
-  }
-
-  .selection-day {
-    aspect-ratio: 0;
-  }
-
-  .day-earned {
-    font-size: 0.5rem;
-  }
-
-  .weekday {
-    font-size: 0.625rem;
-    padding: 0.35rem;
-  }
-
-  .day-total-block {
-    padding: 0.75rem;
-  }
-
-  .day-total-value {
-    font-size: 1.15rem;
-  }
-
-  .day-total-label {
-    font-size: 0.75rem;
-  }
+  .calendar-day { min-height: 55px; padding: 0.25rem; }
+  .day-earned { font-size: 0.5rem; }
+  .weekday { font-size: 0.625rem; padding: 0.35rem; }
+  .simple-line { font-size: 0.78rem; padding: 0.5rem 0.6rem; }
+  .simple-line-label { font-size: 0.78rem; }
+  .simple-line-value { font-size: 0.78rem; }
+  .accordion-title { font-size: 0.8rem; }
+  .accordion-value { font-size: 0.8rem; }
+  .summary-chip { font-size: 0.78rem; padding: 0.3rem 0.6rem; }
+  .summary-chip-extra { display: none; }
+  .selected-month { min-width: 100px; font-size: 0.85rem; }
+  .header-actions { flex-wrap: nowrap; }
+  .goal-edit-btn { top: 0.5rem; right: 0.5rem; }
 }
 
-.year-selector {
+.motivation-hint {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  padding: 0.5rem;
-  background: var(--light-color);
+  gap: 0.5rem;
+  padding: 0.7rem 0.75rem;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px dashed var(--gray-color);
   border-radius: var(--radius);
-}
-
-.btn-year-nav {
-  background: var(--white);
-  border: 1px solid var(--light-color);
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #3b82f6;
-}
-
-.btn-year-nav:hover {
-  background: #3b82f6;
-  color: white;
-  border-color: #3b82f6;
-  transform: scale(1.05);
-}
-
-.year-select {
-  padding: 0.5rem 1rem;
-  font-size: 1rem;
-  font-weight: 600;
-  border: 1px solid var(--light-color);
-  border-radius: var(--radius);
-  background: var(--white);
-  color: var(--dark-color);
-  cursor: pointer;
-  outline: none;
-  min-width: 100px;
-  text-align: center;
-}
-
-.year-select:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59,130,246,0.1);
-}
-
-.no-data {
-  text-align: center;
-  padding: 2rem;
   color: var(--gray-color);
+  font-size: 0.8rem;
+  text-align: center;
+  line-height: 1.3;
 }
 
-.no-data i {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-  color: var(--light-color);
-}
-
-.no-data p {
-  margin: 0;
-  font-size: 1rem;
+.motivation-hint i {
+  flex-shrink: 0;
+  font-size: 0.85rem;
 }
 </style>

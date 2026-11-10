@@ -15,14 +15,15 @@ class ApiService {
         this.setupInterceptors()
     }
 
+    // ============================================================
+    // ИНФРАСТРУКТУРА
+    // ============================================================
     setupInterceptors() {
         this.client.interceptors.request.use(config => {
             const token = localStorage.getItem('auth_token')
-            // Добавляем токен для всех запросов, кроме логина и регистрации
             if (token && !config.url.includes('/auth/token/login/') && !config.url.includes('/auth/users/')) {
                 config.headers['Authorization'] = `Token ${token}`
             }
-            console.log(`Making request to: ${config.url}`, config.headers)
             return config
         })
     }
@@ -46,30 +47,16 @@ class ApiService {
         }
     }
 
-    async getBalanceHistory(dateFrom, dateTo, accountId = null, includeInactive = false) {
-        const response = await this.client.get('/accounts/balance-history/', {
-            params: {
-                date_from: dateFrom,
-                date_to: dateTo,
-                ...(accountId ? { account_id: accountId } : {}),
-                ...(includeInactive ? { include_inactive: 'true' } : {})
-            }
-        })
-        return response.data
+    clearAuth() {
+        this.clearToken()
+        delete this.client.defaults.headers.common['Authorization']
+        localStorage.removeItem('auth_token')
+        sessionStorage.clear()
     }
 
-    // Аналитика переводов
-    async getTransferAnalytics(dateFrom, dateTo) {
-        const response = await this.client.get('/transfer/analytics/', {
-            params: {
-                date_from: dateFrom,
-                date_to: dateTo,
-            }
-        })
-        return response.data
-    }
-
-    // Аутентификация
+    // ============================================================
+    // АУТЕНТИФИКАЦИЯ
+    // ============================================================
     async register(email, password, rePassword) {
         const response = await this.client.post('/auth/users/', {
             email,
@@ -99,61 +86,42 @@ class ApiService {
         }
     }
 
+    // ============================================================
+    // ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ
+    // ============================================================
     async getUserInfo() {
         const response = await this.client.get('/auth/users/')
         return response.data
     }
 
-    // ==================== User Profile ====================
     async getCurrentUser() {
-        try {
-            const token = localStorage.getItem('auth_token')
-            console.log('Getting current user with token:', token ? 'Token present' : 'No token')
-
-            const response = await this.client.get('/auth/users/me/', {
-                headers: {
-                    'Authorization': `Token ${token}`
-                }
-            })
-            console.log('User info response:', response.data)
-            return response.data
-        } catch (error) {
-            console.error('Error fetching current user:', error.response?.data || error.message)
-            throw error
-        }
+        const response = await this.client.get('/auth/users/me/')
+        return response.data
     }
 
     async changePassword(currentPassword, newPassword) {
-        try {
-            const token = localStorage.getItem('auth_token')
-            console.log('Changing password with token:', token ? 'Token present' : 'No token')
-
-            const response = await this.client.post('/auth/users/set_password/', {
-                current_password: currentPassword,
-                new_password: newPassword
-            }, {
-                headers: {
-                    'Authorization': `Token ${token}`
-                }
-            })
-            console.log('Password change response:', response.data)
-            return response.data
-        } catch (error) {
-            console.error('Error changing password:', error.response?.data || error.message)
-            throw error
-        }
-    }
-
-    // Счета
-    async getAccounts(page = 1, pageSize = 10) {
-        const response = await this.client.get('/accounts/', {
-            params: { page, page_size: pageSize }
+        const response = await this.client.post('/auth/users/set_password/', {
+            current_password: currentPassword,
+            new_password: newPassword
         })
         return response.data
     }
 
-    async createAccount(data) {
-        const response = await this.client.post('/accounts/', data)
+    async changeEmail(currentPassword, newEmail) {
+        const response = await this.client.post('/auth/users/set_email/', {
+            current_password: currentPassword,
+            new_email: newEmail
+        })
+        return response.data
+    }
+
+    // ============================================================
+    // СЧЕТА
+    // ============================================================
+    async getAccounts(page = 1, pageSize = 10) {
+        const response = await this.client.get('/accounts/', {
+            params: { page, page_size: pageSize }
+        })
         return response.data
     }
 
@@ -162,12 +130,12 @@ class ApiService {
         return response.data
     }
 
-    async updateAccount(id, data) {
-        const response = await this.client.patch(`/accounts/${id}/`, data) // <-- PATCH
+    async createAccount(data) {
+        const response = await this.client.post('/accounts/', data)
         return response.data
     }
 
-    async patchAccount(id, data) {
+    async updateAccount(id, data) {
         const response = await this.client.patch(`/accounts/${id}/`, data)
         return response.data
     }
@@ -183,7 +151,21 @@ class ApiService {
         return response.data
     }
 
-    // Категории
+    async getBalanceHistory(dateFrom, dateTo, accountId = null, includeInactive = false) {
+        const response = await this.client.get('/accounts/balance-history/', {
+            params: {
+                date_from: dateFrom,
+                date_to: dateTo,
+                ...(accountId ? { account_id: accountId } : {}),
+                ...(includeInactive ? { include_inactive: 'true' } : {})
+            }
+        })
+        return response.data
+    }
+
+    // ============================================================
+    // КАТЕГОРИИ
+    // ============================================================
     async getCategories(type, page = 1, pageSize = 10, parent = false) {
         const response = await this.client.get('/transaction/category/', {
             params: { type, page, page_size: pageSize, parent }
@@ -216,9 +198,16 @@ class ApiService {
         await this.client.delete(`/transaction/category/${id}/`)
     }
 
-    // Транзакции
+    // ============================================================
+    // ТРАНЗАКЦИИ
+    // ============================================================
     async getTransactions(params) {
         const response = await this.client.get('/transaction/', { params })
+        return response.data
+    }
+
+    async getTransaction(id) {
+        const response = await this.client.get(`/transaction/${id}/`)
         return response.data
     }
 
@@ -226,11 +215,6 @@ class ApiService {
         const response = await this.client.post('/transaction/', data, {
             params: { type }
         })
-        return response.data
-    }
-
-    async getTransaction(id) {
-        const response = await this.client.get(`/transaction/${id}/`)
         return response.data
     }
 
@@ -248,24 +232,17 @@ class ApiService {
         await this.client.delete(`/transaction/${id}/`)
     }
 
-    async getStatistics(month, year, type) {
+    // Статистика по категориям за месяц (объединено: getStatistics + getMonthStatistics)
+    async getMonthStatistics(month, year, type) {
         const response = await this.client.get('/transaction/statistics/', {
             params: { month, year, type }
         })
         return response.data
     }
 
-    // Переводы
-    async createTransfer(sourceAccount, destinationAccount, amount, timestamp) {
-        const response = await this.client.post('/transfer/', {
-            source_account: sourceAccount,
-            destination_account: destinationAccount,
-            amount,
-            timestamp
-        })
-        return response.data
-    }
-
+    // ============================================================
+    // ПЕРЕВОДЫ
+    // ============================================================
     async getTransferHistory(page = 1, pageSize = 10) {
         const response = await this.client.get('/transfer/history/', {
             params: { page, page_size: pageSize }
@@ -278,6 +255,16 @@ class ApiService {
         return response.data
     }
 
+    async createTransfer(sourceAccount, destinationAccount, amount, timestamp) {
+        const response = await this.client.post('/transfer/', {
+            source_account: sourceAccount,
+            destination_account: destinationAccount,
+            amount,
+            timestamp
+        })
+        return response.data
+    }
+
     async updateTransfer(id, data) {
         const response = await this.client.put(`/transfer/${id}/`, data)
         return response.data
@@ -287,7 +274,28 @@ class ApiService {
         await this.client.delete(`/transfer/${id}/`)
     }
 
-    // Долги
+    async getTransferAnalytics(dateFrom, dateTo) {
+        const response = await this.client.get('/transfer/analytics/', {
+            params: { date_from: dateFrom, date_to: dateTo }
+        })
+        return response.data
+    }
+
+    // ============================================================
+    // ДОЛГИ
+    // ============================================================
+    async getDebts(page = 1, pageSize = 10, type = null) {
+        const params = { page, page_size: pageSize }
+        if (type) params.type = type
+        const response = await this.client.get('/debts/', { params })
+        return response.data
+    }
+
+    async getDebt(id) {
+        const response = await this.client.get(`/debts/${id}/`)
+        return response.data
+    }
+
     async createDebtAccounts(name, userId) {
         const response = await this.client.post('/debts/create-debt-accounts/', {
             name,
@@ -308,18 +316,6 @@ class ApiService {
         return response.data
     }
 
-    async getDebt(id) {
-        const response = await this.client.get(`/debts/${id}/`)
-        return response.data
-    }
-
-    async getDebts(page = 1, pageSize = 10, type = null) {
-        const params = { page, page_size: pageSize }
-        if (type) params.type = type
-        const response = await this.client.get('/debts/', { params })
-        return response.data
-    }
-
     async repayDebt(debtId, amount, type) {
         const response = await this.client.post('/debts/repay-debt/', {
             debt_id: debtId,
@@ -329,233 +325,17 @@ class ApiService {
         return response.data
     }
 
-    // Аналитика
-    async getMonthlyAnalytics(year, type) {
-        const response = await this.client.get('/analitycs/month/', {
-            params: { year, type }
+    async simulateCreditPlan(monthlyPayment, strategy) {
+        const response = await this.client.post('/debts/credit-plan-simulate/', {
+            monthly_payment: monthlyPayment,
+            strategy: strategy
         })
         return response.data
     }
 
-    // Статистика по категориям за месяц
-    async getMonthStatistics(month, year, type) {
-        try {
-            const response = await this.client.get('/transaction/statistics/', {
-                params: {
-                    month: month,
-                    year: year,
-                    type: type
-                }
-            })
-            return response.data
-        } catch (error) {
-            console.error('Error loading month statistics:', error)
-            throw error
-        }
-    }
-
-    clearAuth() {
-        this.clearToken()
-        delete this.client.defaults.headers.common['Authorization']
-        localStorage.removeItem('auth_token')
-        sessionStorage.clear()
-    }
-
-    async changeEmail(currentPassword, newEmail) {
-        try {
-            const token = localStorage.getItem('auth_token')
-            console.log('Changing email with token:', token ? 'Token present' : 'No token')
-
-            const response = await this.client.post('/auth/users/set_email/', {
-                current_password: currentPassword,
-                new_email: newEmail
-            }, {
-                headers: {
-                    'Authorization': `Token ${token}`
-                }
-            })
-            console.log('Email change response:', response.data)
-            return response.data
-        } catch (error) {
-            console.error('Error changing email:', error.response?.data || error.message)
-            throw error
-        }
-    }
-
-    async getTimesheetSettings() {
-        try {
-            const response = await this.client.get('/timesheets/settings/')
-            return response.data
-        } catch (error) {
-            console.error('Error fetching timesheet settings:', error.response?.data || error.message)
-            throw error
-        }
-    }
-
-    // Создание/обновление настроек пользователя
-    async updateTimesheetSettings(settings) {
-        try {
-            const response = await this.client.post('/timesheets/settings/', settings)
-            return response.data
-        } catch (error) {
-            console.error('Error updating timesheet settings:', error.response?.data || error.message)
-            throw error
-        }
-    }
-
-    // Удаление настроек пользователя
-    async deleteTimesheetSettings() {
-        try {
-            await this.client.delete('/timesheets/settings/')
-            return true
-        } catch (error) {
-            console.error('Error deleting timesheet settings:', error.response?.data || error.message)
-            throw error
-        }
-    }
-
-    // Получение смен за выбранный месяц
-    async getShiftsByMonth(month, year) {
-        try {
-            const response = await this.client.get('/timesheets/shifts/', {
-                params: { month, year }
-            })
-            return response.data
-        } catch (error) {
-            console.error('Error fetching shifts:', error.response?.data || error.message)
-            throw error
-        }
-    }
-
-    // Добавление отпуска
-    async addVacation(data) {
-        try {
-            const response = await this.client.post('/timesheets/shifts/vacation/', data)
-            return response.data
-        } catch (error) {
-            console.error('Error adding vacation:', error.response?.data || error.message)
-            throw error
-        }
-    }
-
-    // Создание смены за выбранный день
-    async createShift(date, hours) {
-        try {
-            const response = await this.client.post('/timesheets/shifts/', {
-                date,
-                time: hours
-            })
-            return response.data
-        } catch (error) {
-            console.error('Error creating shift:', error.response?.data || error.message)
-            throw error
-        }
-    }
-
-    // Обновление данных смены
-    async updateShift(date, hours) {
-        try {
-            const response = await this.client.post('/timesheets/shifts/', {
-                date,
-                time: hours
-            })
-            return response.data
-        } catch (error) {
-            console.error('Error updating shift:', error.response?.data || error.message)
-            throw error
-        }
-    }
-
-    // Получение данных за конкретный день
-    async getShiftById(dayId) {
-        try {
-            const response = await this.client.get(`/timesheets/shifts/${dayId}/`)
-            return response.data
-        } catch (error) {
-            console.error('Error fetching shift details:', error.response?.data || error.message)
-            throw error
-        }
-    }
-
-    // Добавление премии за конкретный день
-    async addAward(dayId, countOperations, typeOperations) {
-        try {
-            const response = await this.client.post(
-                `/timesheets/shifts/${dayId}/?count_operations=${countOperations}&type_operations=${typeOperations}`,
-                {}
-            )
-            return response.data
-        } catch (error) {
-            console.error('Error adding award:', error.response?.data || error.message)
-            throw error
-        }
-    }
-
-    // Добавление непроизводственных работ.
-    async addNonProductiveWork(dayId, countHours) {
-        try {
-            const response = await this.client.put(
-                `/timesheets/shifts/${dayId}/?hours=${countHours}`,
-                {}
-            )
-            return response.data
-        } catch (error) {
-            console.error('Error adding non productive work:', error.response?.data || error.message)
-            throw error
-        }
-    }
-
-    // Удаление смены
-    async deleteShift(dayId) {
-        try {
-            await this.client.delete(`/timesheets/shifts/${dayId}/`)
-            return true
-        } catch (error) {
-            console.error('Error deleting shift:', error.response?.data || error.message)
-            throw error
-        }
-    }
-
-    // Массовое добавление смен за определенный месяц
-    async addManyShifts(hours, dates) {
-        try {
-            const response = await this.client.post('/timesheets/add-many-shifts/', {
-                hours,
-                dates
-            })
-            return response.data
-        } catch (error) {
-            console.error('Error adding many shifts:', error.response?.data || error.message)
-            throw error
-        }
-    }
-
-    // Статистика за месяц
-    async getMonthlyStatistics(month, year) {
-        try {
-            const response = await this.client.get('/timesheets/statistics/month/', {
-                params: { month, year }
-            })
-            return response.data
-        } catch (error) {
-            console.error('Error fetching monthly statistics:', error.response?.data || error.message)
-            throw error
-        }
-    }
-
-    // Статистика за год
-    async getYearlyStatistics(year) {
-        try {
-            const response = await this.client.get('/timesheets/statistics/year/', {
-                params: { year }
-            })
-            return response.data
-        } catch (error) {
-            console.error('Error fetching yearly statistics:', error.response?.data || error.message)
-            throw error
-        }
-    }
-    // Бюджеты
+    // ============================================================
+    // БЮДЖЕТЫ
+    // ============================================================
     async getBudgetSummary(periodType = 'monthly', date = null) {
         const params = { period_type: periodType }
         if (date) params.date = date
@@ -577,7 +357,9 @@ class ApiService {
         await this.client.delete(`/budgets/${id}/`)
     }
 
-        // ==================== Регулярные операции ====================
+    // ============================================================
+    // РЕГУЛЯРНЫЕ ОПЕРАЦИИ
+    // ============================================================
     async getRecurring(filters = {}) {
         const response = await this.client.get('/recurring/', { params: filters })
         return response.data
@@ -614,8 +396,124 @@ class ApiService {
         return response.data
     }
 
-    // ==================== Уведомления ====================
-    // api.js
+    // ============================================================
+    // АНАЛИТИКА
+    // ============================================================
+    async getMonthlyAnalytics(year, type) {
+        const response = await this.client.get('/analitycs/month/', {
+            params: { year, type }
+        })
+        return response.data
+    }
+
+    async getForecast() {
+        const response = await this.client.get('/analitycs/forecast/')
+        return response.data
+    }
+
+    // ============================================================
+    // ГРАФИК РАБОТЫ (TIMESHEETS)
+    // ============================================================
+
+    // --- Настройки оплаты ---
+    async getTimesheetSettings() {
+        const response = await this.client.get('/timesheets/settings/')
+        return response.data
+    }
+
+    async updateTimesheetSettings(settings) {
+        const response = await this.client.post('/timesheets/settings/', settings)
+        return response.data
+    }
+
+    async deleteTimesheetSettings() {
+        await this.client.delete('/timesheets/settings/')
+        return true
+    }
+
+    // --- Смены ---
+    async getShiftsByMonth(month, year) {
+        const response = await this.client.get('/timesheets/shifts/', {
+            params: { month, year }
+        })
+        return response.data
+    }
+
+    async getShiftById(dayId) {
+        const response = await this.client.get(`/timesheets/shifts/${dayId}/`)
+        return response.data
+    }
+
+    async createShift(date, hours) {
+        const response = await this.client.post('/timesheets/shifts/', {
+            date,
+            time: hours
+        })
+        return response.data
+    }
+
+    async updateShift(date, hours) {
+        const response = await this.client.post('/timesheets/shifts/', {
+            date,
+            time: hours
+        })
+        return response.data
+    }
+
+    async deleteShift(dayId) {
+        await this.client.delete(`/timesheets/shifts/${dayId}/`)
+        return true
+    }
+
+    async addManyShifts(hours, dates) {
+        const response = await this.client.post('/timesheets/add-many-shifts/', {
+            hours,
+            dates
+        })
+        return response.data
+    }
+
+    // --- Отпуска и больничные ---
+    async addVacation(data) {
+        const response = await this.client.post('/timesheets/shifts/vacation/', data)
+        return response.data
+    }
+
+    // --- Мотивация ---
+    async addAward(dayId, countOperations, typeOperations) {
+        const response = await this.client.post(
+            `/timesheets/shifts/${dayId}/?count_operations=${countOperations}&type_operations=${typeOperations}`,
+            {}
+        )
+        return response.data
+    }
+
+    async addNonProductiveWork(dayId, countHours) {
+        const response = await this.client.put(
+            `/timesheets/shifts/${dayId}/?hours=${countHours}`,
+            {}
+        )
+        return response.data
+    }
+
+    // --- Статистика ---
+    async getMonthlyStatistics(month, year) {
+        const response = await this.client.get('/timesheets/statistics/month/', {
+            params: { month, year }
+        })
+        return response.data
+    }
+
+    async getYearlyStatistics(year) {
+        const response = await this.client.get('/timesheets/statistics/year/', {
+            params: { year }
+        })
+        return response.data
+    }
+
+    // ============================================================
+    // УВЕДОМЛЕНИЯ
+    // ============================================================
     async getNotifications(unreadOnly = false, page = 1) {
         const params = { page }
         if (unreadOnly) params.unread = '1'
@@ -631,6 +529,14 @@ class ApiService {
         await this.client.post('/notifications/read-all/')
     }
 
+    async deleteNotification(id) {
+        await this.client.delete(`/notifications/${id}/`)
+    }
+
+    async clearReadNotifications() {
+        await this.client.post('/notifications/clear-read/')
+    }
+
     async getNotificationPreferences() {
         const response = await this.client.get('/notifications/preferences/')
         return response.data
@@ -639,6 +545,12 @@ class ApiService {
     async updateNotificationPreferences(data) {
         const response = await this.client.patch('/notifications/preferences/', data)
         return response.data
+    }
+
+    // Push-уведомления
+    async getVapidPublicKey() {
+        const response = await this.client.get('/notifications/vapid-public-key/')
+        return response.data.public_key
     }
 
     async subscribePush(subscription) {
@@ -650,20 +562,9 @@ class ApiService {
         await this.client.post('/notifications/push/unsubscribe/', { endpoint })
     }
 
-    async getVapidPublicKey() {
-        const response = await this.client.get('/notifications/vapid-public-key/')
-        return response.data.public_key
-    }
-
-    async deleteNotification(id) {
-        await this.client.delete(`/notifications/${id}/`)
-    }
-
-    async clearReadNotifications() {
-        await this.client.post('/notifications/clear-read/')
-    }
-
-    // ==================== Insights ====================
+    // ============================================================
+    // ИНСАЙТЫ И ГЕЙМИФИКАЦИЯ
+    // ============================================================
     async getInsights(activeOnly = true) {
         const params = activeOnly ? { active: '1' } : {}
         const response = await this.client.get('/insights/', { params })
@@ -679,29 +580,41 @@ class ApiService {
         return response.data
     }
 
-    async getCurrentGoal() {
-        const response = await this.client.get('/insights/goals/current/')
-        return response.data.goal // вернёт объект цели или null
-    }
-
-    async saveGoal(data) {
-        const response = await this.client.post('/insights/goals/current/', data)
-        return response.data
-    }
-
-    async deleteGoal() {
-        await this.client.delete('/insights/goals/current/')
-    }
-
     async getInsightSettings() {
         const response = await this.client.get('/insights/settings/')
         return response.data
     }
+
     async updateInsightSettings(data) {
         const response = await this.client.patch('/insights/settings/', data)
         return response.data
     }
-        // ==================== Экспорт данных ====================
+
+    // --- Цели на месяц ---
+    // Единый метод: если monthStr не передан — берётся текущий месяц на бэкенде
+    async getGoalCurrent(monthStr = null, goalType = 'motivation') {
+        const params = { goal_type: goalType }
+        if (monthStr) params.month = monthStr
+        const response = await this.client.get('/insights/goals/current/', { params })
+        return response.data.goal
+    }
+
+    async saveGoalCurrent(data, monthStr = null) {
+        const payload = { ...data, goal_type: data.goal_type || 'motivation' }
+        if (monthStr) payload.month = monthStr
+        const response = await this.client.post('/insights/goals/current/', payload)
+        return response.data
+    }
+
+    async deleteGoalCurrent(goalType, monthStr = null) {
+        const params = { goal_type: goalType }
+        if (monthStr) params.month = monthStr
+        await this.client.delete('/insights/goals/current/', { params })
+    }
+
+    // ============================================================
+    // ЭКСПОРТ ДАННЫХ
+    // ============================================================
     async downloadExport(format = 'json') {
         try {
             const response = await this.client.get('/export/', {
@@ -709,8 +622,6 @@ class ApiService {
                 responseType: 'blob',
             })
 
-            // Имя файла — из Content-Disposition (сервер отдаёт
-            // `attachment; filename="finances_user_example_com_YYYYMMDD_HHMMSS.zip"`).
             const contentDisposition = response.headers['content-disposition'] || ''
             let filename = null
             const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(contentDisposition)
@@ -724,8 +635,6 @@ class ApiService {
 
             return { blob: response.data, filename }
         } catch (error) {
-            // При responseType: 'blob' тело 4xx/5xx тоже приходит Blob,
-            // а не JSON. Читаем его вручную, чтобы получить detail.
             if (error.response?.data instanceof Blob) {
                 try {
                     const text = await error.response.data.text()
@@ -742,35 +651,12 @@ class ApiService {
             throw error
         }
     }
+
     async getExportInfo() {
-        try {
-            const response = await this.client.get('/export/', {
-                params: { format: 'info' },
-            })
-            return response.data
-        } catch (error) {
-            console.error('Error fetching export info:', error.response?.data || error.message)
-            throw error
-        }
-    }
-
-    async getForecast() {
-        const response = await this.client.get('/analitycs/forecast/')
+        const response = await this.client.get('/export/', {
+            params: { format: 'info' },
+        })
         return response.data
-    }
-
-        // ==================== Симуляция погашения кредиток ====================
-    async simulateCreditPlan(monthlyPayment, strategy) {
-        try {
-            const response = await this.client.post('/debts/credit-plan-simulate/', {
-                monthly_payment: monthlyPayment,
-                strategy: strategy
-            })
-            return response.data
-        } catch (error) {
-            console.error('Error simulating credit plan:', error.response?.data || error.message)
-            throw error
-        }
     }
 }
 

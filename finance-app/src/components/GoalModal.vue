@@ -43,7 +43,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import apiService from '../services/api.js'
 
 export default {
@@ -55,6 +55,8 @@ export default {
   setup(props, { emit }) {
     const saving = ref(false)
     const categories = ref([])
+    const isEditing = computed(() => !!props.existingGoal)
+
     const form = ref({
       goal_type: props.existingGoal?.goal_type || 'save',
       amount: props.existingGoal?.amount || 30000,
@@ -77,7 +79,8 @@ export default {
     const save = async () => {
       saving.value = true
       try {
-        await apiService.saveGoal(form.value)
+        // ✅ Переименовано: saveGoal → saveGoalCurrent
+        await apiService.saveGoalCurrent(form.value)
         emit('saved')
         emit('close')
       } catch (e) {
@@ -90,19 +93,65 @@ export default {
 
     onMounted(loadCategories)
 
-    return { form, saving, categories, onTypeChange, save }
+    return { form, saving, categories, isEditing, onTypeChange, save }
   }
 }
 </script>
 
 <style scoped>
-/* Стили можно скопировать из любого вашего модального окна */
-.modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-.modal-content { background: var(--white); border-radius: var(--radius); padding: 1.5rem; width: 100%; max-width: 400px; }
-.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-.modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--gray-color); }
-.form-group { margin-bottom: 1rem; }
-.form-label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--dark-color); }
-.form-control { width: 100%; padding: 0.5rem; border: 1px solid var(--gray-color); border-radius: var(--radius); background: var(--white); color: var(--dark-color); }
-.modal-footer { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; }
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-content {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 400px;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--gray-color);
+}
+.form-group {
+  margin-bottom: 1rem;
+}
+.form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--dark-color);
+}
+.form-control {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--gray-color);
+  border-radius: var(--radius);
+  background: var(--white);
+  color: var(--dark-color);
+}
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
 </style>

@@ -22,12 +22,14 @@ class GamificationDashboardView(APIView):
         month_start = today.replace(day=1)
 
         # ================= 1. ЦЕЛЬ МЕСЯЦА =================
-        goal = FinancialGoal.objects.filter(user=user, month=month_start).first()
+        goal = FinancialGoal.objects.filter(
+            user=user, month=month_start, is_motivation_goal=False
+        ).first()
         goal_data = None
 
         if goal:
             spent = 0
-            if goal.goal_type == "limit":
+            if goal.goal_type == FinancialGoal.GOAL_LIMIT:
                 qs = Transaction.objects.filter(
                     user=user,
                     category__type_transaction="expense",

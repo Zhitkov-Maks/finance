@@ -87,10 +87,12 @@ class Insight(models.Model):
 class FinancialGoal(models.Model):
     GOAL_SAVE = "save"
     GOAL_LIMIT = "limit"
+    GOAL_MOTIVATION = "motivation"
 
     GOAL_TYPES = [
         (GOAL_SAVE, "Сэкономить сумму"),
         (GOAL_LIMIT, "Не превысить лимит"),
+        (GOAL_MOTIVATION, "Цель по мотивации"),
     ]
 
     user = models.ForeignKey(
@@ -101,11 +103,12 @@ class FinancialGoal(models.Model):
     category = models.ForeignKey(
         "transactions.Category", on_delete=models.SET_NULL, null=True, blank=True
     )
+    is_motivation_goal = models.BooleanField(default=False)
     month = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ("user", "month")
+        unique_together = ("user", "month", "is_motivation_goal")
 
 
 class InsightSettings(models.Model):

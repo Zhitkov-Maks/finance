@@ -39,6 +39,7 @@ class FinancialGoalSerializer(serializers.ModelSerializer):
             "amount",
             "category",
             "category_name",
+            "is_motivation_goal",
             "month",
             "current",
             "percent",
@@ -46,6 +47,11 @@ class FinancialGoalSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "month")
 
     def get_current(self, obj):
+        # Для мотивации данные хранятся на стороннем сервисе,
+        # поэтому бэкенд не считает current. Фронт считает сам.
+        if obj.goal_type == FinancialGoal.GOAL_MOTIVATION:
+            return 0.0
+
         today = date.today()
         month_start = obj.month
 
@@ -63,6 +69,7 @@ class FinancialGoalSerializer(serializers.ModelSerializer):
                 create_at__date__lte=today,
             ).aggregate(s=Sum("amount"))["s"] or Decimal(0)
             return float(inc - exp)
+
         else:
             qs = Transaction.objects.filter(
                 user=obj.user,
@@ -76,12 +83,15 @@ class FinancialGoalSerializer(serializers.ModelSerializer):
             return float(spent)
 
     def get_percent(self, obj):
+        # Для мотивации процент считает фронтенд
+        if obj.goal_type == FinancialGoal.GOAL_MOTIVATION:
+            return 0.0
+
         current = self.get_current(obj)
         if obj.amount <= 0:
             return 0
         percent = (current / float(obj.amount)) * 100
-        # Для Save: прогресс не может быть больше 100 (если сэкономили больше цели - молодцы)
-        # Для Limit: если превысили - покажем >100 (например, 120%)
+
         if obj.goal_type == FinancialGoal.GOAL_SAVE:
             return round(min(100, max(0, percent)), 1)
         return round(max(0, percent), 1)

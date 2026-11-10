@@ -718,14 +718,15 @@ export default {
     }
 
     const deleteGoal = async () => {
-      if (confirm('Вы уверены, что хотите удалить текущую цель?')) {
-        try {
-          await apiService.deleteGoal()
-          loadGamification()
-        } catch (e) {
-          console.error('Delete goal error', e)
-          alert('Не удалось удалить цель')
-        }
+      if (!confirm('Вы уверены, что хотите удалить текущую цель?')) return
+      const goalType = gamification.value?.goal?.goal_type
+      if (!goalType) return
+      try {
+        await apiService.deleteGoalCurrent(goalType)
+        loadGamification()
+      } catch (e) {
+        console.error('Delete goal error', e)
+        alert('Не удалось удалить цель')
       }
     }
 
@@ -1145,10 +1146,10 @@ export default {
       }
 
       try {
-        const expenseStats = await apiService.getStatistics(prevMonth, prevYear, 'expense')
+        const expenseStats = await apiService.getMonthStatistics(prevMonth, prevYear, 'expense')
         previousMonthData.value.expense = parseFloat(expenseStats.total_amount) || 0
 
-        const incomeStats = await apiService.getStatistics(prevMonth, prevYear, 'income')
+        const incomeStats = await apiService.getMonthStatistics(prevMonth, prevYear, 'income')
         previousMonthData.value.income = parseFloat(incomeStats.total_amount) || 0
       } catch (error) {
         console.error('Error loading previous month statistics:', error)
@@ -1162,10 +1163,10 @@ export default {
       const month = nowDate.getMonth() + 1
       const year = nowDate.getFullYear()
       try {
-        const expenseStats = await apiService.getStatistics(month, year, 'expense')
+        const expenseStats = await apiService.getMonthStatistics(month, year, 'expense')
         monthlyExpense.value = parseFloat(expenseStats.total_amount) || 0
 
-        const incomeStats = await apiService.getStatistics(month, year, 'income')
+        const incomeStats = await apiService.getMonthStatistics(month, year, 'income')
         monthlyIncome.value = parseFloat(incomeStats.total_amount) || 0
       } catch (error) {
         console.error('Error loading monthly statistics:', error)
@@ -1194,6 +1195,8 @@ export default {
     const goalProgress = computed(() => {
       if (!gamification.value?.goal) return null
       const g = gamification.value.goal
+
+      if (g.is_motivation_goal || g.goal_type === 'motivation') return null
       const amount = g.amount
 
       // 1. ЦЕЛЬ: ПОТРАТИТЬ НЕ БОЛЬШЕ ЛИМИТА

@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
@@ -53,47 +53,82 @@ class InsightDismissView(APIView):
 class GoalCurrentView(APIView):
     permission_classes = (IsAuthenticated,)
 
+    def _parse_month(self, request):
+        month_str = request.query_params.get("month") or request.data.get("month")
+        if month_str:
+            try:
+                return datetime.strptime(month_str, "%Y-%m-%d").date().replace(day=1)
+            except (ValueError, TypeError):
+                pass
+        return date.today().replace(day=1)
+
+    def _is_motivation(self, request):
+        goal_type = request.query_params.get("goal_type") or request.data.get(
+            "goal_type"
+        )
+        return goal_type == FinancialGoal.GOAL_MOTIVATION
+
     def get(self, request):
-        today = date.today()
-        month_start = today.replace(day=1)
+        month_start = self._parse_month(request)
+        is_motivation = self._is_motivation(request)
+
         goal = FinancialGoal.objects.filter(
-            user=request.user, month=month_start
+            user=request.user,
+            month=month_start,
+            is_motivation_goal=is_motivation,
         ).first()
 
         if not goal:
             return Response({"goal": None})
 
-        serializer = FinancialGoalSerializer(goal)
-        return Response({"goal": serializer.data})
+        return Response({"goal": FinancialGoalSerializer(goal).data})
 
     def post(self, request):
-        today = date.today()
-        month_start = today.replace(day=1)
+        month_start = self._parse_month(request)
+        goal_type = request.data.get("goal_type")
 
-        # Ищем, есть ли уже цель на этот месяц
+        if goal_type not in dict(FinancialGoal.GOAL_TYPES):
+            return Response(
+                {"detail": "Некорректный goal_type"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        is_motivation = goal_type == FinancialGoal.GOAL_MOTIVATION
+
         goal = FinancialGoal.objects.filter(
-            user=request.user, month=month_start
+            user=request.user,
+            month=month_start,
+            is_motivation_goal=is_motivation,
         ).first()
 
+        data = request.data.copy()
+        data["is_motivation_goal"] = is_motivation
+
         if goal:
-            # Если есть, обновляем
-            serializer = FinancialGoalSerializer(goal, data=request.data, partial=True)
+            serializer = FinancialGoalSerializer(goal, data=data, partial=True)
         else:
-            # Если нет, создаем (month устанавливаем принудительно)
-            data = request.data.copy()
-            data["month"] = month_start
             serializer = FinancialGoalSerializer(data=data)
 
         if serializer.is_valid():
-            # Если тип 'limit' и категория не выбрана - это лимит на ВСЕ расходы
-            serializer.save(user=request.user, month=month_start)
+            serializer.save(
+                user=request.user,
+                month=month_start,
+                is_motivation_goal=is_motivation,  # ← явно
+            )
             return Response(serializer.data, status=status.HTTP_200_OK)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request):
-        today = date.today()
-        month_start = today.replace(day=1)
-        FinancialGoal.objects.filter(user=request.user, month=month_start).delete()
+        month_start = self._parse_month(request)
+        is_motivation = self._is_motivation(request)
+
+        FinancialGoal.objects.filter(
+            user=request.user,
+            month=month_start,
+            is_motivation_goal=is_motivation,
+        ).delete()
+
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
