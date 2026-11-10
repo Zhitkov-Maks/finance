@@ -14,6 +14,16 @@ class DebtCreateSerializer(serializers.Serializer):
     description = serializers.CharField(max_length=100)
     date = serializers.DateField()
 
+    def validate_account_id(self, value):
+        account = Account.objects.filter(pk=value).first()
+        if not account:
+            raise serializers.ValidationError("Счёт не найден.")
+        if account.deleted_at is not None:
+            raise serializers.ValidationError(
+                "Нельзя создавать долг с архивным счётом."
+            )
+        return value
+
 
 class DebtRepaymentSerializer(serializers.Serializer):
     """Нужен для работы с возвратом долгов."""

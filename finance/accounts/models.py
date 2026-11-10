@@ -1,12 +1,9 @@
 from app_user.models import CustomUser
 from django.db import models
+from django.db.models import Q
 
 
 class Account(models.Model):
-    """
-    Модель для представления счетов пользователя.
-    """
-
     TYPE_STANDARD = "standard"
     TYPE_DEPOSIT = "deposit"
     TYPE_CREDIT = "credit_card"
@@ -23,67 +20,47 @@ class Account(models.Model):
     user = models.ForeignKey(
         CustomUser, on_delete=models.CASCADE, db_index=True, related_name="accounts"
     )
-    balance = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0, verbose_name="Баланс"
-    )
+    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     is_active = models.BooleanField(default=True, verbose_name="Показать/Скрыть")
     is_system_account = models.BooleanField(default=False)
 
-    # --- НОВЫЕ ПОЛЯ ---
     account_type = models.CharField(
-        max_length=20,
-        choices=ACCOUNT_TYPES,
-        default=TYPE_STANDARD,
-        verbose_name="Тип счета",
+        max_length=20, choices=ACCOUNT_TYPES, default=TYPE_STANDARD
     )
 
-    # Для вкладов
     interest_rate = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        verbose_name="Годовая ставка, %",
+        max_digits=5, decimal_places=2, null=True, blank=True
     )
-
-    # Для кредитных карт
     credit_limit = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        verbose_name="Кредитный лимит",
+        max_digits=10, decimal_places=2, null=True, blank=True
     )
-    grace_period_days = models.PositiveIntegerField(
-        null=True, blank=True, verbose_name="Льготный период, дней"
-    )
-    # Дата, с которой начался текущий беспроцентный период
-    grace_period_start = models.DateField(
-        null=True, blank=True, verbose_name="Начало льготного периода"
-    )
+    grace_period_days = models.PositiveIntegerField(null=True, blank=True)
+    grace_period_start = models.DateField(null=True, blank=True)
     credit_rate = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        verbose_name="Ставка по кредиту после льготного периода, %",
-        help_text="Если не указана, используется 30% (среднее значение)",
+        max_digits=5, decimal_places=2, null=True, blank=True
     )
     min_payment_percent = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        default=5.00,
+        max_digits=5, decimal_places=2, default=5.00, null=True, blank=True
+    )
+
+    deleted_at = models.DateTimeField(
         null=True,
         blank=True,
-        verbose_name="Минимальный платеж, %",
-        help_text="Процент от суммы долга. Например, 5%",
+        db_index=True,
+        verbose_name="Дата архивации",
     )
 
     def __str__(self):
         return self.name
 
     class Meta:
-        unique_together = (("name", "user"),)
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name", "user"],
+                condition=Q(deleted_at__isnull=True),
+                name="unique_active_account_name_per_user",
+            ),
+        ]
         verbose_name = "счет"
         verbose_name_plural = "счета"
         ordering = ["name"]

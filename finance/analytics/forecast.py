@@ -46,7 +46,7 @@ class ForecastService:
         guaranteed_balance = current_balance + expected_income - obligatory_expenses
         expected_balance = guaranteed_balance - variable_expenses
 
-        # 5. НОВОЕ: Расчет безопасной траты на сегодня
+        # 5.Расчет безопасной траты на сегодня
         spent_today = tx_stats["today_expense"] or Decimal("0.00")
         # Делим гарантированный остаток на количество дней
         safe_daily = (
@@ -79,9 +79,11 @@ class ForecastService:
         return result
 
     def _get_liquid_balance(self) -> Decimal:
-        return Account.objects.filter(user=self.user, is_active=True).exclude(
-            account_type=Account.TYPE_CREDIT
-        ).aggregate(total=Sum("balance"))["total"] or Decimal("0.00")
+        return Account.objects.filter(
+            user=self.user, is_active=True, deleted_at__isnull=True
+        ).exclude(account_type=Account.TYPE_CREDIT).aggregate(total=Sum("balance"))[
+            "total"
+        ] or Decimal("0.00")
 
     def _get_transaction_stats(self) -> dict:
         six_months_ago = self.today - relativedelta(months=6)

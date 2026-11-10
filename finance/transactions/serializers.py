@@ -83,6 +83,14 @@ class TransactionSerializersAdd(serializers.ModelSerializer):
             }
         }
 
+    def validate(self, attrs):
+        account = attrs.get("account")
+        if account and account.deleted_at is not None:
+            raise serializers.ValidationError(
+                {"account": "Нельзя создавать транзакции на архивном счёте."}
+            )
+        return attrs
+
 
 class TransactionSerializerGet(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)

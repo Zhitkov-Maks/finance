@@ -118,10 +118,15 @@ class ApiService {
     // ============================================================
     // СЧЕТА
     // ============================================================
-    async getAccounts(page = 1, pageSize = 10) {
-        const response = await this.client.get('/accounts/', {
-            params: { page, page_size: pageSize }
-        })
+    async getAccounts(page = 1, pageSize = 10, includeArchived = false) {
+        const params = { page, page_size: pageSize }
+        if (includeArchived) params.include_archived = 'true'
+        const response = await this.client.get('/accounts/', { params })
+        return response.data
+    }
+
+    async restoreAccount(id) {
+        const response = await this.client.post(`/accounts/${id}/restore/`)
         return response.data
     }
 

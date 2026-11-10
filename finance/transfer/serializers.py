@@ -56,6 +56,15 @@ class TransferSerializer(serializers.ModelSerializer):
                 "Недостаточно средств на счете."
             )
 
+        if source_account and source_account.deleted_at is not None:
+            raise serializers.ValidationError(
+                {"source_account": "Нельзя переводить с архивного счёта."}
+            )
+        if destination_account and destination_account.deleted_at is not None:
+            raise serializers.ValidationError(
+                {"destination_account": "Нельзя переводить на архивный счёт."}
+            )
+
         return attrs
 
 

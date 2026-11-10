@@ -3,6 +3,7 @@ from django.urls import path
 from accounts.views import (
     BalanceHistoryView,
     ListAccounts,
+    RestoreAccountView,
     RetrieveUpdateDeleteAccount,
     ToggleAccountActiveStatusView,
 )
@@ -18,6 +19,11 @@ urlpatterns = [
         "<int:pk>/toggle-active/",
         ToggleAccountActiveStatusView.as_view(),
         name="toggle-account-active",
+    ),
+    path(
+        "<int:pk>/restore/",
+        RestoreAccountView.as_view(),
+        name="restore-account",
     ),
     path(
         "balance-history/",

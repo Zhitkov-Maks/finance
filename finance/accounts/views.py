@@ -1,9 +1,11 @@
 from decimal import Decimal
 
 from asgiref.sync import async_to_sync
+from debt.models import Debt
 from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Q, QuerySet, Sum
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, serializers, status
 from rest_framework.authentication import (
@@ -71,9 +73,14 @@ class ListAccounts(generics.ListCreateAPIView):
         return super().get_serializer_class()
 
     def get_queryset(self) -> QuerySet:
-        return Account.objects.filter(
+        qs = Account.objects.filter(
             user=self.request.user.pk, is_system_account=False
         ).order_by("-balance")
+
+        include_archived = self.request.query_params.get("include_archived") == "true"
+        if not include_archived:
+            qs = qs.filter(deleted_at__isnull=True)
+        return qs
 
     @transaction.atomic
     def perform_create(self, serializer: AccountSerializer) -> None:
@@ -102,7 +109,9 @@ class ListAccounts(generics.ListCreateAPIView):
         queryset = self.get_queryset()
 
         total_balance = (
-            queryset.filter(is_active=True).aggregate(total=Sum("balance"))["total"]
+            queryset.filter(is_active=True, deleted_at__isnull=True).aggregate(
+                total=Sum("balance")
+            )["total"]
             or 0
         )
 
@@ -133,7 +142,7 @@ class RetrieveUpdateDeleteAccount(generics.RetrieveUpdateDestroyAPIView):
     )
 
     def get_queryset(self) -> QuerySet:
-        return Account.objects.filter(user=self.request.user)
+        return Account.objects.filter(user=self.request.user, deleted_at__isnull=True)
 
     @transaction.atomic
     def perform_update(self, serializer: AccountSerializer) -> None:
@@ -154,28 +163,49 @@ class RetrieveUpdateDeleteAccount(generics.RetrieveUpdateDestroyAPIView):
     @transaction.atomic
     def perform_destroy(self, instance: Account) -> None:
         """
-        Удаляет счёт. Запрещает удаление, если есть связанные переводы,
-        чтобы не сломать балансы других счетов.
+        Soft delete: не удаляем физически — переносим в архив.
+        Проверяем: системный счёт, долги, кредитка с непогашенным долгом.
         """
-        has_transfers = Transfer.objects.filter(
-            Q(source_account=instance) | Q(destination_account=instance)
-        ).exists()
+        if instance.is_system_account:
+            raise serializers.ValidationError(
+                {"detail": "Системный счёт нельзя удалить."}
+            )
 
-        if has_transfers:
+        # Активные долги привязаны к счёту через Transfer
+        related_transfers = Transfer.objects.filter(
+            Q(source_account=instance) | Q(destination_account=instance)
+        )
+        active_debts_count = Debt.objects.filter(transfer__in=related_transfers).count()
+
+        if active_debts_count > 0:
             raise serializers.ValidationError(
                 {
                     "detail": (
-                        f"Нельзя удалить счёт «{instance.name}»: с ним связаны "
-                        f"переводы. Удаление счёта удалит переводы и оставит "
-                        f"балансы других счетов некорректными. Сначала удалите "
-                        f"связанные переводы."
+                        f"Нельзя архивировать счёт «{instance.name}»: "
+                        f"с ним связано {active_debts_count} долг(ов). "
+                        "Сначала погасите или удалите связанные долги."
                     )
                 }
             )
 
-        user_id = instance.user_id
-        instance.delete()
-        _schedule_account_cache_invalidation(user_id)
+        # Кредитка с непогашенным долгом — блокируем
+        if instance.account_type == Account.TYPE_CREDIT and instance.balance < 0:
+            raise serializers.ValidationError(
+                {
+                    "detail": (
+                        f"Нельзя архивировать кредитку «{instance.name}»: "
+                        f"есть непогашенный долг {abs(instance.balance):.2f} ₽. "
+                        "Сначала погасите задолженность."
+                    )
+                }
+            )
+
+        # ✅ Архивация
+        instance.deleted_at = timezone.now()
+        instance.is_active = False
+        instance.save(update_fields=["deleted_at", "is_active"])
+
+        _schedule_account_cache_invalidation(instance.user_id)
 
 
 @extend_schema(tags=["Accounts"])
@@ -211,11 +241,16 @@ class ToggleAccountActiveStatusView(generics.UpdateAPIView):
     @transaction.atomic
     def patch(self, request, *args, **kwargs):
         account = self.get_object()
+
+        if account.deleted_at is not None:
+            return Response(
+                {"detail": "Счёт в архиве. Сначала восстановите его."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         account.is_active = not account.is_active
         account.save(update_fields=["is_active"])
-
         _schedule_account_cache_invalidation(request.user.pk)
-
         return Response(
             AccountToggleStatusSerializer(account).data,
             status=status.HTTP_200_OK,
@@ -280,3 +315,36 @@ class BalanceHistoryView(APIView):
         response = Response(result)
         response["X-Cache"] = "MISS"
         return response
+
+
+@extend_schema(tags=["Accounts"])
+class RestoreAccountView(generics.GenericAPIView):
+    """
+    Восстанавливает счёт из архива.
+    Счёт вернётся в баланс (is_active=True), пользователь сможет его скрыть.
+    """
+
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (
+        TokenAuthentication,
+        BasicAuthentication,
+        SessionAuthentication,
+    )
+
+    def post(self, request, pk):
+        account = Account.objects.filter(
+            user=request.user, pk=pk, deleted_at__isnull=False
+        ).first()
+
+        if not account:
+            return Response(
+                {"detail": "Счёт не найден в архиве."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        account.deleted_at = None
+        account.is_active = True
+        account.save(update_fields=["deleted_at", "is_active"])
+        _schedule_account_cache_invalidation(request.user.pk)
+
+        return Response(AccountSerializer(account).data, status=status.HTTP_200_OK)

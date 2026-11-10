@@ -25,7 +25,9 @@ class BaseAccountSerializer(serializers.ModelSerializer):
             "min_payment_percent",
             "grace_period_days",
             "grace_period_start",
+            "deleted_at",
         ]
+        read_only_fields = ("deleted_at",)
 
 
 class AccountTransactionSerializer(serializers.ModelSerializer):
@@ -56,7 +58,9 @@ class AccountSerializer(serializers.ModelSerializer):
             "min_payment_percent",
             "grace_period_days",
             "grace_period_start",
+            "deleted_at",
         ]
+        read_only_fields = ("deleted_at",)
 
     def create(self, validated_data):
         instance = super().create(validated_data)

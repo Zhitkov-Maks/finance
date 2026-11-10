@@ -46,12 +46,12 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- 1. АКТИВНЫЕ СЧЕТА                                            -->
+    <!-- 1. СЧЕТА В БАЛАНСЕ                                            -->
     <!-- ============================================================ -->
     <div class="card">
       <div class="card-header">
         <h3 class="card-title">
-          <i class="fas fa-check-circle text-success"></i> Активные счета
+          <i class="fas fa-check-circle text-success"></i> В балансе
           <span class="badge badge-success">{{ activeAccounts.length }}</span>
         </h3>
       </div>
@@ -72,7 +72,7 @@
               <div class="account-subtext" v-if="account.account_type === 'credit_card' && getGraceDaysLeft(account) !== null" :class="getGraceDaysLeft(account) <= 3 ? 'text-danger' : 'text-muted'">
                 <i class="fas fa-clock"></i> Льготный период: {{ getGraceDaysLeft(account) }} дн.
               </div>
-              <span v-else class="badge badge-success">Активен</span>
+              <span v-else class="badge badge-success">В балансе</span>
             </div>
             <div class="compact-right">
               <div class="account-balance-compact" :class="toNumber(account.balance) < 0 ? 'text-danger' : 'text-success'">
@@ -93,7 +93,7 @@
                 <i class="fas fa-edit"></i> Редактировать
               </button>
               <button class="btn btn-sm btn-warning" @click="toggleVisibility(account)">
-                <i class="fas fa-eye-slash"></i> Скрыть
+                <i class="fas fa-eye-slash"></i> Скрыть из баланса
               </button>
               <button class="btn btn-sm btn-primary" @click="openBalanceModal(account)">
                 <i class="fas fa-chart-line"></i> Баланс
@@ -106,7 +106,7 @@
         </div>
         <div v-if="activeAccounts.length === 0" class="empty-state">
           <i class="fas fa-credit-card"></i>
-          <p>Нет активных счетов</p>
+          <p>Нет счетов в балансе</p>
         </div>
       </div>
 
@@ -145,7 +145,7 @@
                   <button class="btn btn-sm btn-info" title="Редактировать" @click="editAccount(account)">
                     <i class="fas fa-edit"></i>
                   </button>
-                  <button class="btn btn-sm btn-warning" title="Скрыть счет" @click="toggleVisibility(account)">
+                  <button class="btn btn-sm btn-warning" title="Скрыть из баланса" @click="toggleVisibility(account)">
                     <i class="fas fa-eye-slash"></i>
                   </button>
                   <button class="btn btn-sm btn-primary" title="Изменить баланс" @click="openBalanceModal(account)">
@@ -158,7 +158,7 @@
               </td>
             </tr>
             <tr v-if="activeAccounts.length === 0">
-              <td colspan="3" class="text-center">Нет активных счетов</td>
+              <td colspan="3" class="text-center">Нет счетов в балансе</td>
             </tr>
           </tbody>
         </table>
@@ -166,12 +166,12 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- 2. НЕАКТИВНЫЕ СЧЕТА                                          -->
+    <!-- 2. СКРЫТЫЕ ИЗ БАЛАНСА                                         -->
     <!-- ============================================================ -->
     <div class="card">
       <div class="card-header">
         <h3 class="card-title">
-          <i class="fas fa-eye-slash text-muted"></i> Неактивные счета
+          <i class="fas fa-eye-slash text-muted"></i> Скрытые из баланса
           <span class="badge badge-secondary">{{ inactiveAccounts.length }}</span>
         </h3>
       </div>
@@ -188,7 +188,7 @@
                   Кредитка<template v-if="account.credit_rate"> · {{ account.credit_rate }}%</template>
                 </span>
               </div>
-              <span class="badge badge-secondary">Неактивен</span>
+              <span class="badge badge-secondary">Скрыт</span>
             </div>
             <div class="compact-right">
               <div class="account-balance-compact text-muted">
@@ -209,7 +209,7 @@
                 <i class="fas fa-edit"></i> Редактировать
               </button>
               <button class="btn btn-sm btn-success" @click="toggleVisibility(account)">
-                <i class="fas fa-eye"></i> Показать
+                <i class="fas fa-eye"></i> Вернуть в баланс
               </button>
               <button class="btn btn-sm btn-primary" @click="openBalanceModal(account)">
                 <i class="fas fa-chart-line"></i> Баланс
@@ -221,8 +221,8 @@
           </div>
         </div>
         <div v-if="inactiveAccounts.length === 0" class="empty-state">
-          <i class="fas fa-credit-card"></i>
-          <p>Нет неактивных счетов</p>
+          <i class="fas fa-eye"></i>
+          <p>Нет скрытых счетов</p>
         </div>
       </div>
 
@@ -258,7 +258,7 @@
                   <button class="btn btn-sm btn-info" title="Редактировать" @click="editAccount(account)">
                     <i class="fas fa-edit"></i>
                   </button>
-                  <button class="btn btn-sm btn-success" title="Показать счет" @click="toggleVisibility(account)">
+                  <button class="btn btn-sm btn-success" title="Вернуть в баланс" @click="toggleVisibility(account)">
                     <i class="fas fa-eye"></i>
                   </button>
                   <button class="btn btn-sm btn-primary" title="Изменить баланс" @click="openBalanceModal(account)">
@@ -271,7 +271,7 @@
               </td>
             </tr>
             <tr v-if="inactiveAccounts.length === 0">
-              <td colspan="3" class="text-center">Нет неактивных счетов</td>
+              <td colspan="3" class="text-center">Нет скрытых счетов</td>
             </tr>
           </tbody>
         </table>
@@ -279,7 +279,81 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- 3. АНАЛИТИКА (сворачиваемая)                                 -->
+    <!-- 3. АРХИВ                                                     -->
+    <!-- ============================================================ -->
+    <section v-if="archivedAccounts.length > 0" class="archive-section">
+      <div class="archive-section-header" @click="archiveExpanded = !archiveExpanded">
+        <div class="archive-section-title">
+          <i class="fas fa-box-archive"></i>
+          <span>Архив</span>
+          <span class="badge badge-secondary">{{ archivedAccounts.length }}</span>
+        </div>
+        <button type="button" class="archive-toggle-btn" @click.stop="archiveExpanded = !archiveExpanded">
+          <span>{{ archiveExpanded ? 'Свернуть' : 'Развернуть' }}</span>
+          <i :class="archiveExpanded ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
+        </button>
+      </div>
+
+      <div v-show="archiveExpanded" class="archive-section-body">
+        <div class="mobile-accounts">
+          <div v-for="account in archivedAccounts" :key="account.id" class="account-card archived">
+            <div class="account-compact">
+              <div class="compact-left">
+                <div class="account-name-compact">
+                  <strong>{{ truncateText(account.name, 25) }}</strong>
+                  <span v-if="account.account_type === 'deposit'" class="badge badge-info">Вклад</span>
+                  <span v-if="account.account_type === 'deposit_monthly'" class="badge badge-info">Вклад (мес.)</span>
+                  <span v-if="account.account_type === 'credit_card'" class="badge badge-danger">Кредитка</span>
+                </div>
+                <span class="badge badge-secondary">
+                  <i class="fas fa-box-archive"></i> {{ formatArchivedDate(account.deleted_at) }}
+                </span>
+              </div>
+              <div class="compact-right">
+                <div class="account-balance-compact text-muted">
+                  {{ formatCurrency(account.balance) }}
+                </div>
+                <button class="btn btn-sm btn-success" @click="restoreAccount(account)">
+                  <i class="fas fa-undo"></i> Восстановить
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="desktop-table">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Название</th>
+                <th>Баланс</th>
+                <th>Дата архивации</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="account in archivedAccounts" :key="account.id">
+                <td>
+                  <strong>{{ account.name }}</strong>
+                  <span v-if="account.account_type === 'deposit'" class="badge badge-info" style="margin-left:8px; font-size:0.65rem;">Вклад</span>
+                  <span v-if="account.account_type === 'credit_card'" class="badge badge-danger" style="margin-left:8px; font-size:0.65rem;">Кредитка</span>
+                </td>
+                <td class="text-muted"><strong>{{ formatCurrency(account.balance) }}</strong></td>
+                <td class="text-muted">{{ formatArchivedDate(account.deleted_at) }}</td>
+                <td>
+                  <button class="btn btn-sm btn-success" @click="restoreAccount(account)">
+                    <i class="fas fa-undo"></i> Восстановить
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 4. АНАЛИТИКА (сворачиваемая)                                 -->
     <!-- ============================================================ -->
     <section class="analytics-section">
       <div class="analytics-section-header" @click="toggleAnalytics">
@@ -297,7 +371,7 @@
       </div>
 
       <div v-show="analyticsExpanded" class="analytics-section-body">
-        <!-- 3.1 Санкей -->
+        <!-- 4.1 Санкей -->
         <div v-if="sankeyData.nodes.length > 1" class="card sankey-card">
           <div class="card-header">
             <h3 class="card-title"><i class="fas fa-diagram-project"></i> Потоки между счетами</h3>
@@ -318,7 +392,7 @@
           </div>
         </div>
 
-        <!-- 3.2 Распределение + Активные/неактивные -->
+        <!-- 4.2 Распределение + В балансе / скрытые -->
         <div class="analytics-row">
           <div v-if="activeAccounts.length > 0" class="card distribution-card">
             <div class="card-header">
@@ -340,44 +414,44 @@
             </div>
             <div v-else class="distribution-empty">
               <i class="fas fa-chart-pie"></i>
-              <p>Нет активных счетов с положительным балансом</p>
+              <p>Нет счетов с положительным балансом в текущем обороте</p>
             </div>
           </div>
 
-          <div v-if="accounts.length > 0" class="card accounts-ratio-card">
+          <div v-if="aliveAccounts.length > 0" class="card accounts-ratio-card">
             <div class="card-header">
-              <h3 class="card-title"><i class="fas fa-toggle-on"></i> Активные и неактивные</h3>
+              <h3 class="card-title"><i class="fas fa-toggle-on"></i> В балансе и скрытые</h3>
             </div>
             <div class="accounts-ratio-body">
               <div class="ratio-chart-wrapper">
                 <canvas ref="ratioCanvas" class="ratio-canvas"></canvas>
                 <div class="ratio-center-label">
                   <div class="ratio-center-percent">{{ activeRatioPercent }}%</div>
-                  <div class="ratio-center-caption">активных</div>
+                  <div class="ratio-center-caption">в балансе</div>
                 </div>
               </div>
               <div class="ratio-stats">
                 <div class="ratio-stat-row">
                   <span class="ratio-color" style="background: #10b981;"></span>
-                  <span class="ratio-label">Активные</span>
+                  <span class="ratio-label">В балансе</span>
                   <span class="ratio-value">{{ activeAccounts.length }}</span>
                 </div>
                 <div class="ratio-stat-row">
                   <span class="ratio-color" style="background: #9ca3af;"></span>
-                  <span class="ratio-label">Неактивные</span>
+                  <span class="ratio-label">Скрытые</span>
                   <span class="ratio-value">{{ inactiveAccounts.length }}</span>
                 </div>
                 <div class="ratio-stat-row total">
                   <span class="ratio-color" style="background: transparent;"></span>
                   <span class="ratio-label">Всего</span>
-                  <span class="ratio-value">{{ accounts.length }}</span>
+                  <span class="ratio-value">{{ aliveAccounts.length }}</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 3.3 Топ счетов по обороту -->
+        <!-- 4.3 Топ счетов по обороту -->
         <div v-if="topAccountsByTurnover.length > 0" class="card top-accounts-card">
           <div class="card-header">
             <h3 class="card-title"><i class="fas fa-trophy"></i> Топ счетов по обороту</h3>
@@ -410,7 +484,6 @@
             </table>
           </div>
 
-          <!-- Мобильная версия Топ счетов -->
           <div class="mobile-cards">
             <div
               v-for="(item, index) in topAccountsByTurnover"
@@ -449,7 +522,7 @@
           </div>
         </div>
 
-        <!-- 3.4 Топ контрагентов -->
+        <!-- 4.4 Топ контрагентов -->
         <div v-if="topAccountPairs.length > 0" class="card top-pairs-card">
           <div class="card-header">
             <h3 class="card-title"><i class="fas fa-people-arrows"></i> Топ контрагентов</h3>
@@ -518,7 +591,7 @@
           </div>
         </div>
 
-        <!-- 3.5 Активность переводов -->
+        <!-- 4.5 Активность переводов -->
         <div v-if="activityData.length > 0" class="card activity-card">
           <div class="card-header">
             <h3 class="card-title"><i class="fas fa-chart-column"></i> Активность переводов</h3>
@@ -539,7 +612,7 @@
           </div>
         </div>
 
-        <!-- 3.6 Метрики переводов -->
+        <!-- 4.6 Метрики переводов -->
         <div v-if="analyticsLoading" class="card">
           <div class="history-loading"><i class="fas fa-spinner fa-spin"></i><span>Загрузка аналитики...</span></div>
         </div>
@@ -561,7 +634,7 @@
     </section>
 
     <!-- ============================================================ -->
-    <!-- 4. ПЕРЕВОДЫ                                                  -->
+    <!-- 5. ПЕРЕВОДЫ                                                  -->
     <!-- ============================================================ -->
     <div class="card">
       <div class="card-header">
@@ -574,9 +647,8 @@
             <label class="form-label required">Счет списания</label>
             <select v-model="transferData.source_account" class="form-control" required>
               <option value="">Выберите счет</option>
-              <option v-for="account in allAccounts" :key="account.id" :value="account.id">
-                {{ account.name }} ({{ formatCurrency(account.balance) }})
-                <template v-if="!account.is_active"> — неактивен</template>
+              <option v-for="account in aliveAccounts" :key="account.id" :value="account.id">
+                {{ account.name }} ({{ formatCurrency(account.balance) }})<template v-if="!account.is_active"> — скрыт</template>
               </option>
             </select>
           </div>
@@ -585,8 +657,7 @@
             <select v-model="transferData.destination_account" class="form-control" required>
               <option value="">Выберите счет</option>
               <option v-for="account in otherAccounts" :key="account.id" :value="account.id">
-                {{ account.name }} ({{ formatCurrency(account.balance) }})
-                <template v-if="!account.is_active"> — неактивен</template>
+                {{ account.name }} ({{ formatCurrency(account.balance) }})<template v-if="!account.is_active"> — скрыт</template>
               </option>
             </select>
           </div>
@@ -676,95 +747,97 @@
     </div>
 
     <!-- Модальное окно создания/редактирования счета -->
-    <div v-if="showAccountModal" class="modal" @click.self="closeModal">
+    <div v-if="showAccountModal" class="modal modal-bottom-sheet" @click.self="closeModal">
       <div class="modal-content">
+        <div class="sheet-handle"></div>
         <div class="modal-header">
           <h3>{{ editingAccount ? 'Редактировать счет' : 'Создать счет' }}</h3>
           <button class="modal-close" @click="closeModal">&times;</button>
         </div>
-        <form @submit.prevent="saveAccount">
-          <div class="form-group">
-            <label class="form-label required">Название счета</label>
-            <input v-model="formData.name" type="text" class="form-control" required placeholder="Например: Сбербанк">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label required">Тип счета</label>
-            <select v-model="formData.account_type" class="form-control" :disabled="!!editingAccount" required>
-              <option value="standard">Обычный (Дебетовая карта, Наличные)</option>
-              <option value="deposit">Вклад (ежедневный процент)</option>
-              <option value="deposit_monthly">Вклад (ежемесячный процент)</option>
-              <option value="credit_card">Кредитная карта</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label required">Начальный баланс</label>
-            <input
-              v-model="formData.balance"
-              type="number"
-              class="form-control"
-              step="0.01"
-              required
-              :placeholder="formData.account_type === 'credit_card' ? 'Укажите долг со знаком минус (например -15000)' : '0.00'"
-            >
-            <small v-if="formData.account_type === 'credit_card' && !editingAccount" class="form-hint text-muted">
-              Для кредитки указывайте отрицательный баланс, если есть долг.
-            </small>
-          </div>
-
-          <div v-if="formData.account_type === 'deposit' || formData.account_type === 'deposit_monthly'" class="form-group">
-            <label class="form-label required">Годовая ставка (%)</label>
-            <input v-model="formData.interest_rate" type="number" step="0.1" class="form-control" required placeholder="Например: 8.5">
-            <small class="form-hint text-muted">
-              <template v-if="formData.account_type === 'deposit'">
-                Проценты начисляются ежедневно.
-              </template>
-              <template v-else>
-                Проценты начисляются раз в месяц, 1-го числа.
-              </template>
-            </small>
-          </div>
-
-          <template v-if="formData.account_type === 'credit_card'">
+        <form @submit.prevent="saveAccount" class="modal-form">
+          <div class="modal-body">
             <div class="form-group">
-              <label class="form-label">Кредитный лимит</label>
-              <input v-model="formData.credit_limit" type="number" step="0.01" class="form-control" placeholder="Например: 100000">
+              <label class="form-label required">Название счета</label>
+              <input v-model="formData.name" type="text" class="form-control" required placeholder="Например: Сбербанк">
             </div>
+
             <div class="form-group">
-              <label class="form-label required">Льготный период (дней)</label>
-              <input v-model="formData.grace_period_days" type="number" class="form-control" required placeholder="Например: 120">
+              <label class="form-label required">Тип счета</label>
+              <select v-model="formData.account_type" class="form-control" :disabled="!!editingAccount" required>
+                <option value="standard">Обычный (Дебетовая карта, Наличные)</option>
+                <option value="deposit">Вклад (ежедневный процент)</option>
+                <option value="deposit_monthly">Вклад (ежемесячный процент)</option>
+                <option value="credit_card">Кредитная карта</option>
+              </select>
             </div>
+
             <div class="form-group">
-              <label class="form-label">Ставка после льготного периода, %</label>
+              <label class="form-label required">Начальный баланс</label>
               <input
-                v-model="formData.credit_rate"
+                v-model="formData.balance"
                 type="number"
-                step="0.1"
-                min="0"
-                max="100"
                 class="form-control"
-                placeholder="Например: 25.9"
-              >
-            </div>
-            <div class="form-group">
-              <label class="form-label required">Минимальный платёж по карте (%)</label>
-              <input
-                v-model="formData.min_payment_percent"
-                type="number"
-                step="0.1"
-                min="1"
-                max="100"
-                class="form-control"
+                step="0.01"
                 required
-                placeholder="Например: 5"
+                :placeholder="formData.account_type === 'credit_card' ? 'Долг со знаком минус (например -15000)' : '0.00'"
               >
-              <small class="form-hint text-muted">
-                Банк требует вносить этот процент от долга каждый месяц. Обычно 3–8%.
+              <small v-if="formData.account_type === 'credit_card' && !editingAccount" class="form-hint text-muted">
+                Для кредитки указывайте отрицательный баланс, если есть долг.
               </small>
             </div>
-          </template>
 
+            <div v-if="formData.account_type === 'deposit' || formData.account_type === 'deposit_monthly'" class="form-group">
+              <label class="form-label required">Годовая ставка (%)</label>
+              <input v-model="formData.interest_rate" type="number" step="0.1" class="form-control" required placeholder="Например: 8.5">
+              <small class="form-hint text-muted">
+                <template v-if="formData.account_type === 'deposit'">
+                  Проценты начисляются ежедневно.
+                </template>
+                <template v-else>
+                  Проценты начисляются раз в месяц, 1-го числа.
+                </template>
+              </small>
+            </div>
+
+            <template v-if="formData.account_type === 'credit_card'">
+              <div class="form-group">
+                <label class="form-label">Кредитный лимит</label>
+                <input v-model="formData.credit_limit" type="number" step="0.01" class="form-control" placeholder="Например: 100000">
+              </div>
+              <div class="form-group">
+                <label class="form-label required">Льготный период (дней)</label>
+                <input v-model="formData.grace_period_days" type="number" class="form-control" required placeholder="Например: 120">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Ставка после льготного периода, %</label>
+                <input
+                  v-model="formData.credit_rate"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  class="form-control"
+                  placeholder="Например: 25.9"
+                >
+              </div>
+              <div class="form-group">
+                <label class="form-label required">Минимальный платёж по карте (%)</label>
+                <input
+                  v-model="formData.min_payment_percent"
+                  type="number"
+                  step="0.1"
+                  min="1"
+                  max="100"
+                  class="form-control"
+                  required
+                  placeholder="Например: 5"
+                >
+                <small class="form-hint text-muted">
+                  Банк требует вносить этот процент от долга каждый месяц. Обычно 3–8%.
+                </small>
+              </div>
+            </template>
+          </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" @click="closeModal">Отмена</button>
             <button type="submit" class="btn btn-primary">{{ editingAccount ? 'Обновить' : 'Создать' }}</button>
@@ -774,20 +847,23 @@
     </div>
 
     <!-- Модальное окно изменения баланса -->
-    <div v-if="showBalanceModal" class="modal" @click.self="showBalanceModal = false">
+    <div v-if="showBalanceModal" class="modal modal-bottom-sheet" @click.self="showBalanceModal = false">
       <div class="modal-content">
+        <div class="sheet-handle"></div>
         <div class="modal-header">
-          <h3>Изменить баланс счета "{{ balanceAccount?.name }}"</h3>
+          <h3>Изменить баланс счёта "{{ balanceAccount?.name }}"</h3>
           <button class="modal-close" @click="showBalanceModal = false">&times;</button>
         </div>
-        <form @submit.prevent="updateBalance">
-          <div class="form-group">
-            <label class="form-label required">Текущий баланс</label>
-            <input type="text" class="form-control" :value="formatCurrency(balanceAccount?.balance)" disabled>
-          </div>
-          <div class="form-group">
-            <label class="form-label required">Новый баланс</label>
-            <input v-model="newBalance" type="number" class="form-control" step="0.01" required placeholder="Введите новую сумму">
+        <form @submit.prevent="updateBalance" class="modal-form">
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label required">Текущий баланс</label>
+              <input type="text" class="form-control" :value="formatCurrency(balanceAccount?.balance)" disabled>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">Новый баланс</label>
+              <input v-model="newBalance" type="number" class="form-control" step="0.01" required placeholder="Введите новую сумму">
+            </div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" @click="showBalanceModal = false">Отмена</button>
@@ -798,34 +874,41 @@
     </div>
 
     <!-- Модальное окно редактирования перевода -->
-    <div v-if="showEditTransferModal" class="modal" @click.self="closeEditTransferModal">
+    <div v-if="showEditTransferModal" class="modal modal-bottom-sheet" @click.self="closeEditTransferModal">
       <div class="modal-content">
+        <div class="sheet-handle"></div>
         <div class="modal-header">
           <h3>Редактировать перевод</h3>
           <button class="modal-close" @click="closeEditTransferModal">&times;</button>
         </div>
-        <form @submit.prevent="updateTransfer">
-          <div class="form-group">
-            <label class="form-label required">Счет списания</label>
-            <select v-model="editTransferData.source_account" class="form-control" required>
-              <option value="">Выберите счет</option>
-              <option v-for="account in allAccounts" :key="account.id" :value="account.id">{{ account.name }}</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label required">Счет зачисления</label>
-            <select v-model="editTransferData.destination_account" class="form-control" required>
-              <option value="">Выберите счет</option>
-              <option v-for="account in editOtherAccounts" :key="account.id" :value="account.id">{{ account.name }}</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label required">Сумма перевода</label>
-            <input v-model="editTransferData.amount" type="number" class="form-control" step="0.01" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label required">Дата и время</label>
-            <input v-model="editTransferData.timestamp" type="datetime-local" class="form-control" required>
+        <form @submit.prevent="updateTransfer" class="modal-form">
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label required">Счет списания</label>
+              <select v-model="editTransferData.source_account" class="form-control" required>
+                <option value="">Выберите счет</option>
+                <option v-for="account in allAccounts" :key="account.id" :value="account.id">
+                  {{ account.name }}<template v-if="account.deleted_at"> — архив</template><template v-else-if="!account.is_active"> — скрыт</template>
+                </option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">Счет зачисления</label>
+              <select v-model="editTransferData.destination_account" class="form-control" required>
+                <option value="">Выберите счет</option>
+                <option v-for="account in editOtherAccounts" :key="account.id" :value="account.id">
+                  {{ account.name }}<template v-if="!account.is_active"> — скрыт</template>
+                </option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">Сумма перевода</label>
+              <input v-model="editTransferData.amount" type="number" class="form-control" step="0.01" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label required">Дата и время</label>
+              <input v-model="editTransferData.timestamp" type="datetime-local" class="form-control" required>
+            </div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" @click="closeEditTransferModal">Отмена</button>
@@ -835,33 +918,43 @@
       </div>
     </div>
 
-    <!-- Модальное окно подтверждения удаления счета -->
-    <div v-if="showDeleteModal" class="modal" @click.self="showDeleteModal = false">
+    <!-- Модальное окно подтверждения архивации счета -->
+    <div v-if="showDeleteModal" class="modal modal-bottom-sheet" @click.self="showDeleteModal = false">
       <div class="modal-content">
+        <div class="sheet-handle"></div>
         <div class="modal-header">
-          <h3>Подтверждение удаления</h3>
+          <h3>Удалить счёт?</h3>
           <button class="modal-close" @click="showDeleteModal = false">&times;</button>
         </div>
-        <div class="alert alert-danger">
-          <i class="fas fa-exclamation-triangle"></i> Внимание! Удаление счета приведет к удалению всех связанных транзакций!
+        <div class="modal-body">
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i>
+            <span>Счёт будет перемещён в <strong>архив</strong>. Все транзакции и история сохранятся.</span>
+          </div>
+          <p>Вы уверены, что хотите удалить счёт <strong>"{{ accountToDelete?.name }}"</strong>?</p>
+          <p class="text-muted" style="font-size:0.85rem; margin-top:0.5rem;">
+            Восстановить его можно будет из раздела «Архив».
+          </p>
         </div>
-        <p>Вы уверены, что хотите удалить счет <strong>"{{ accountToDelete?.name }}"</strong>?</p>
         <div class="modal-footer">
           <button class="btn btn-secondary" @click="showDeleteModal = false">Отмена</button>
-          <button class="btn btn-danger" @click="deleteAccount">Да, удалить</button>
+          <button class="btn btn-danger" @click="deleteAccount">В архив</button>
         </div>
       </div>
     </div>
 
     <!-- Модальное окно подтверждения удаления перевода -->
-    <div v-if="showDeleteTransferModal" class="modal" @click.self="showDeleteTransferModal = false">
+    <div v-if="showDeleteTransferModal" class="modal modal-bottom-sheet" @click.self="showDeleteTransferModal = false">
       <div class="modal-content">
+        <div class="sheet-handle"></div>
         <div class="modal-header">
           <h3>Подтверждение удаления</h3>
           <button class="modal-close" @click="showDeleteTransferModal = false">&times;</button>
         </div>
-        <p>Вы уверены, что хотите удалить этот перевод?</p>
-        <p class="text-muted">Сумма: {{ formatCurrency(transferToDelete?.amount) }}</p>
+        <div class="modal-body">
+          <p>Вы уверены, что хотите удалить этот перевод?</p>
+          <p class="text-muted">Сумма: {{ formatCurrency(transferToDelete?.amount) }}</p>
+        </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" @click="showDeleteTransferModal = false">Отмена</button>
           <button class="btn btn-danger" @click="deleteTransfer">Да, удалить</button>
@@ -952,6 +1045,7 @@ export default {
     const accountToDelete = ref(null)
     const newBalance = ref(0)
     const expandedAccounts = ref(new Set())
+    const archiveExpanded = ref(false)
 
     // --- ТЕМНАЯ ТЕМА ДЛЯ CANVAS ---
     const isDarkTheme = ref(document.documentElement.getAttribute('data-theme') === 'dark')
@@ -970,10 +1064,20 @@ export default {
       grace_period_start: null
     })
 
-    const activeAccounts = computed(() => accounts.value.filter((a) => a.is_active))
-    const inactiveAccounts = computed(() => accounts.value.filter((a) => !a.is_active))
+    const activeAccounts = computed(() =>
+      accounts.value.filter(a => a.is_active && !a.deleted_at)
+    )
+
+    const inactiveAccounts = computed(() =>
+      accounts.value.filter(a => !a.is_active && !a.deleted_at)
+    )
+
+    const archivedAccounts = computed(() =>
+      accounts.value.filter(a => !!a.deleted_at)
+    )
+
     const allAccounts = computed(() => accounts.value)
-    const activeAccountsCount = computed(() => activeAccounts.value.length)
+    const aliveAccounts = computed(() => accounts.value.filter(a => !a.deleted_at))
 
     // Исключаем кредитки из общего баланса (считаем только реальные деньги)
     const standardAndDepositAccounts = computed(() =>
@@ -991,8 +1095,6 @@ export default {
     const totalBalanceInactive = computed(() =>
       inactiveAccounts.value.reduce((sum, a) => sum + toNumber(a.balance), 0)
     )
-
-    const totalBalanceAll = computed(() => totalBalanceActive.value + totalBalanceInactive.value)
 
     // Считаем общий долг по кредиткам (по модулю отрицательного баланса)
     const totalCreditDebt = computed(() => {
@@ -1039,10 +1141,10 @@ export default {
     // Карусель из 4 карточек
     const statCards = computed(() => [
       {
-        key: 'total',
+        key: 'free',
         title: 'Свободные деньги',
-        value: totalBalanceAll.value,
-        hint: `${standardAndDepositAccounts.value.length + inactiveAccounts.value.length} ${accountWord(standardAndDepositAccounts.value.length)}`,
+        value: totalBalanceActive.value,
+        hint: `${standardAndDepositAccounts.value.length} ${accountWord(standardAndDepositAccounts.value.length)} в балансе`,
         class: 'stat-card-total',
       },
       {
@@ -1053,15 +1155,15 @@ export default {
         class: 'stat-card-credit',
       },
       {
-        key: 'active',
-        title: 'Баланс активных',
-        value: totalBalanceActive.value,
-        hint: `${standardAndDepositAccounts.value.length} ${accountWord(standardAndDepositAccounts.value.length)}`,
+        key: 'net_worth',
+        title: 'Итого в балансе',
+        value: totalBalanceActive.value - totalCreditDebt.value,
+        hint: 'свободные − долг',
         class: 'stat-card-active',
       },
       {
-        key: 'inactive',
-        title: 'Баланс неактивных',
+        key: 'hidden',
+        title: 'Скрыто из баланса',
         value: totalBalanceInactive.value,
         hint: `${inactiveAccounts.value.length} ${accountWord(inactiveAccounts.value.length)}`,
         class: 'stat-card-inactive',
@@ -1148,8 +1250,8 @@ export default {
     })
 
     const activeRatioPercent = computed(() => {
-      if (accounts.value.length === 0) return 0
-      return ((activeAccounts.value.length / accounts.value.length) * 100).toFixed(0)
+      if (aliveAccounts.value.length === 0) return 0
+      return ((activeAccounts.value.length / aliveAccounts.value.length) * 100).toFixed(0)
     })
 
     const transfers = ref([])
@@ -1167,12 +1269,13 @@ export default {
     const editTransferData = ref({ source_account: '', destination_account: '', amount: '', timestamp: '' })
 
     const otherAccounts = computed(() => {
-      if (!transferData.value.source_account) return allAccounts.value
-      return allAccounts.value.filter((a) => a.id !== transferData.value.source_account)
+      if (!transferData.value.source_account) return aliveAccounts.value
+      return aliveAccounts.value.filter(a => a.id !== transferData.value.source_account)
     })
+
     const editOtherAccounts = computed(() => {
-      if (!editTransferData.value.source_account) return allAccounts.value
-      return allAccounts.value.filter((a) => a.id !== editTransferData.value.source_account)
+      if (!editTransferData.value.source_account) return aliveAccounts.value
+      return aliveAccounts.value.filter(a => a.id !== editTransferData.value.source_account)
     })
 
     const totalPages = computed(() => Math.ceil(totalCount.value / pageSize.value))
@@ -1284,7 +1387,7 @@ export default {
     const drawRatioChart = () => {
       const canvas = ratioCanvas.value
       if (!canvas) return
-      const total = accounts.value.length
+      const total = aliveAccounts.value.length
       const wrapper = canvas.parentElement
       const size = wrapper ? Math.min(wrapper.clientWidth, 200) : 180
       const colors = getCanvasColors()
@@ -1448,17 +1551,24 @@ export default {
     const loadAccounts = async () => {
       loading.value = true
       try {
-        const data = await apiService.getAccounts(1, 100)
-        if (data.results && Array.isArray(data.results)) accounts.value = data.results[0]?.accounts || data.results
-        else if (Array.isArray(data)) accounts.value = data
-        else if (data.accounts) accounts.value = data.accounts
-        else accounts.value = []
+        const data = await apiService.getAccounts(1, 100, true)
+        if (data.results && Array.isArray(data.results)) {
+          accounts.value = data.results[0]?.accounts || data.results
+        } else if (Array.isArray(data)) {
+          accounts.value = data
+        } else if (data.accounts) {
+          accounts.value = data.accounts
+        } else {
+          accounts.value = []
+        }
         scheduleAllDraws()
       } catch (error) {
         console.error('Error loading accounts:', error)
         alert('Ошибка при загрузке счетов')
         accounts.value = []
-      } finally { loading.value = false }
+      } finally {
+        loading.value = false
+      }
     }
 
     const loadTransfers = async () => {
@@ -1580,7 +1690,7 @@ export default {
 
     const updateBalance = async () => {
       try {
-        await apiService.patchAccount(balanceAccount.value.id, { balance: newBalance.value })
+        await apiService.updateAccount(balanceAccount.value.id, { balance: newBalance.value })
         showBalanceModal.value = false
         await loadAccounts()
       } catch (error) {
@@ -1590,14 +1700,33 @@ export default {
     }
 
     const confirmDelete = (account) => { accountToDelete.value = account; showDeleteModal.value = true }
+
     const deleteAccount = async () => {
       try {
         await apiService.deleteAccount(accountToDelete.value.id)
         showDeleteModal.value = false
         await loadAccounts()
       } catch (error) {
-        console.error('Error deleting account:', error)
-        alert('Ошибка при удалении счета')
+        console.error('Error archiving account:', error)
+        const detail = error.response?.data?.detail
+        if (detail) {
+          alert(detail)
+          showDeleteModal.value = false
+        } else {
+          alert('Ошибка при архивации счёта')
+        }
+      }
+    }
+
+    const restoreAccount = async (account) => {
+      if (!confirm(`Восстановить счёт «${account.name}» из архива?`)) return
+      try {
+        await apiService.restoreAccount(account.id)
+        await loadAccounts()
+      } catch (error) {
+        console.error('Error restoring account:', error)
+        const detail = error.response?.data?.detail || error.message
+        alert('Ошибка при восстановлении: ' + detail)
       }
     }
 
@@ -1702,6 +1831,13 @@ export default {
       return text.substring(0, maxLength) + '...'
     }
 
+    const formatArchivedDate = (iso) => {
+      if (!iso) return ''
+      return new Date(iso).toLocaleDateString('ru-RU', {
+        day: '2-digit', month: '2-digit', year: 'numeric'
+      })
+    }
+
     // Слушатель изменения темы (чтобы перерисовывать графики)
     const themeObserver = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
@@ -1732,11 +1868,12 @@ export default {
     })
 
     return {
-      accounts, activeAccounts, inactiveAccounts, allAccounts, loading,
+      accounts, activeAccounts, inactiveAccounts, allAccounts, aliveAccounts, loading,
+      archivedAccounts, archiveExpanded,
       showAccountModal, showBalanceModal, showDeleteModal,
       editingAccount, balanceAccount, accountToDelete, newBalance,
-      formData, activeAccountsCount, expandedAccounts,
-      totalBalanceActive, totalBalanceInactive, totalBalanceAll, totalCreditDebt,
+      formData, expandedAccounts,
+      totalBalanceActive, totalBalanceInactive, totalCreditDebt,
       creditCardAccounts, getGraceDaysLeft,
       currentStatIndex, isMobileView, statCards, cardPosition,
       onTouchStart, onTouchMove, onTouchEnd, onMouseDown,
@@ -1754,6 +1891,7 @@ export default {
       toggleExpand, toggleExpandTransfer, truncateText,
       openCreateModal, editAccount, saveAccount, toggleVisibility,
       openBalanceModal, updateBalance, confirmDelete, deleteAccount, closeModal,
+      restoreAccount, formatArchivedDate,
       openTransferFor, createTransfer, editTransfer, updateTransfer,
       confirmDeleteTransfer, deleteTransfer, closeEditTransferModal,
       prevPage, nextPage,
@@ -1764,6 +1902,15 @@ export default {
 </script>
 
 <style scoped>
+:global(:root[data-theme="dark"]) .alert-info {
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+}
+
+:global(:root[data-theme="dark"]) .alert-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
 .page-header h1 { font-size: 1.875rem; color: var(--dark-color); }
 
@@ -2034,10 +2181,22 @@ export default {
 .pagination { display: flex; justify-content: center; align-items: center; gap: 0.75rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--light-color); flex-wrap: wrap; }
 .page-info { font-size: 0.875rem; }
 
-/* Модальные окна */
-.modal-footer { display: flex; justify-content: center; gap: 1rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--light-color); }
+/* Утилиты */
 .required:after { content: " *"; color: var(--danger-color); }
-.alert { padding: 0.75rem; border-radius: var(--radius); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+.alert {
+  padding: 0.75rem;
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  line-height: 1.4;
+}
+
+.alert i {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
 .alert-info { background: #dbeafe; color: #1e40af; }
 .alert-danger { background: #fee2e2; color: #991b1b; }
 .form-hint { display: block; font-size: 0.75rem; margin-top: 0.25rem; }
@@ -2082,12 +2241,6 @@ export default {
   .account-name-compact { font-size: 0.8rem; }
   .account-balance-compact { font-size: 0.9rem; }
   .badge { font-size: 0.65rem; }
-  .modal-content { width: 95%; margin: 1rem; max-height: 85vh; }
-  .modal-header h3 { font-size: 1.1rem; }
-  .form-group { margin-bottom: 0.75rem; }
-  .form-label { font-size: 0.8rem; }
-  .form-control { font-size: 16px; padding: 0.5rem; }
-  .modal-footer { gap: 0.5rem; }
   .pagination { flex-direction: row; }
   .pagination button { width: auto; }
   .transfer-date-compact { min-width: 60px; font-size: 0.7rem; }
@@ -2120,7 +2273,6 @@ export default {
   .detail-value { max-width: 100%; text-align: left; }
   .transfer-actions-expanded { flex-direction: column; }
   .transfer-actions-expanded .btn-sm { width: 100%; margin: 0; }
-  .modal-footer { flex-direction: column; gap: 0.5rem; }
   .distribution-chart-wrapper { width: 200px; }
   .legend-value { display: none; }
   .legend-row { grid-template-columns: 12px 1fr auto; }
@@ -2230,5 +2382,269 @@ export default {
 }
 .table tbody tr:hover:not(:has(td[colspan])) td:first-child {
   box-shadow: inset 3px 0 0 var(--primary-color);
+}
+
+/* ============================================================
+   MODAL: base layout
+   ============================================================ */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  overflow: hidden;
+  padding: 0;
+}
+
+.modal-content {
+  background: var(--white);
+  border-radius: var(--radius);
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--light-color);
+  flex-shrink: 0;
+  min-height: 56px;
+  gap: 0.5rem;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--dark-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.75rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--gray-color);
+  padding: 0 0.25rem;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  flex-shrink: 0;
+  transition: background-color 0.15s ease;
+}
+
+.modal-close:hover {
+  color: var(--dark-color);
+  background: var(--light-color);
+}
+
+.modal-body {
+  padding: 0.75rem 1rem;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  overscroll-behavior: contain;
+}
+
+.modal-footer {
+  padding: 0.75rem 1rem;
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--light-color);
+  background: var(--white);
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sheet-handle { display: none; }
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* ============================================================
+   BOTTOM-SHEET + компактность на мобильных
+   ============================================================ */
+@media (max-width: 768px) {
+  .modal.modal-bottom-sheet {
+    align-items: flex-end;
+    justify-content: flex-start;
+  }
+
+  .modal.modal-bottom-sheet .modal-content {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    max-height: 92dvh;
+    animation: slideUp 0.25s ease;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .modal.modal-bottom-sheet .sheet-handle {
+    display: block;
+    width: 40px;
+    height: 4px;
+    background: #cbd5e1;
+    border-radius: 2px;
+    margin: 8px auto 2px;
+    flex-shrink: 0;
+  }
+
+  /* Компактнее формы в модалках */
+  .modal-body .form-group {
+    margin-bottom: 0.55rem;
+  }
+
+  .modal-body .form-label {
+    font-size: 0.8rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .modal-body .form-control {
+    min-height: 42px;
+    padding: 0.5rem 0.7rem;
+    font-size: 16px;
+  }
+
+  .modal-body .form-hint {
+    font-size: 0.7rem;
+    margin-top: 0.2rem;
+  }
+
+  .modal-footer {
+    justify-content: stretch;
+  }
+
+  .modal-footer .btn {
+    flex: 1;
+    min-height: 44px;
+  }
+
+  /* Компактнее карточки счетов */
+  .account-compact {
+    padding: 0.55rem 0.75rem;
+  }
+
+  .account-expanded {
+    padding: 0.75rem;
+  }
+
+  .account-actions-expanded .btn-sm {
+    min-width: calc(50% - 0.25rem);
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-footer {
+    flex-direction: column;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+  }
+
+  .account-compact {
+    padding: 0.5rem 0.65rem;
+  }
+
+  .account-balance-compact {
+    font-size: 0.9rem;
+  }
+
+  .compact-right {
+    gap: 0.5rem;
+  }
+}
+
+/* ============================================================
+   АРХИВ
+   ============================================================ */
+.archive-section { margin-bottom: 1.5rem; }
+
+.archive-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.archive-section-header:hover { background: var(--light-color); }
+
+.archive-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--dark-color);
+}
+.archive-section-title i { color: var(--gray-color); }
+
+.archive-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--light-color);
+  background: var(--white);
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--gray-color);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.archive-toggle-btn:hover { background: var(--light-color); }
+
+.archive-section-body { margin-top: 1rem; }
+
+.account-card.archived {
+  opacity: 0.7;
+  background: var(--light-color);
+}
+
+.account-card.archived:hover {
+  border-color: var(--gray-color);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  transform: none;
 }
 </style>

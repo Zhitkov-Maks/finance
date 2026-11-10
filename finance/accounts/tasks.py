@@ -210,7 +210,7 @@ def accrue_deposit_interest():
 
     deposits = Account.objects.filter(
         account_type=Account.TYPE_DEPOSIT,
-        is_active=True,
+        deleted_at__isnull=True,
         balance__gt=0,
         interest_rate__gt=0,
     )
@@ -230,6 +230,7 @@ def check_credit_card_overdue():
 
     credit_cards = Account.objects.filter(
         account_type=Account.TYPE_CREDIT,
+        deleted_at__isnull=True,
         grace_period_start__isnull=False,
     )
 
@@ -307,7 +308,7 @@ def accrue_monthly_deposit_interest():
 
     deposits = Account.objects.filter(
         account_type=Account.TYPE_DEPOSIT_MONTHLY,
-        is_active=True,
+        deleted_at__isnull=True,
         balance__gt=0,
         interest_rate__gt=0,
     )

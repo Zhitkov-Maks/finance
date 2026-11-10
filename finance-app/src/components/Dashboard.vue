@@ -777,12 +777,12 @@ export default {
 
     const totalBalance = computed(() => {
       return accounts.value
-        .filter(acc => acc.is_active && acc.account_type !== 'credit_card')
+        .filter(acc => acc.is_active && acc.account_type !== 'credit_card' && !acc.deleted_at)
         .reduce((sum, acc) => sum + parseFloat(acc.balance || 0), 0)
     })
 
     const activeAccounts = computed(() => {
-      return accounts.value.filter(acc => acc.is_active)
+      return accounts.value.filter(acc => acc.is_active && !acc.deleted_at)
     })
 
     const budgetPercentClass = computed(() => {
