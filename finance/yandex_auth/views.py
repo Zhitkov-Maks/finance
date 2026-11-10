@@ -1,19 +1,18 @@
+import logging
 import random
 import string
 from urllib.parse import urlencode
-import requests
-import logging
 
+import requests
+from app_user.models import CustomUser
 from django.conf import settings
-from django.http import HttpResponseRedirect
 from django.contrib.auth import get_user_model
-from rest_framework.views import APIView
-from rest_framework.response import Response
+from django.http import HttpResponseRedirect
+from djoser.utils import login_user
 from rest_framework import status
 from rest_framework.permissions import AllowAny
-from djoser.utils import login_user
-
-from app_user.models import CustomUser
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 # Настройка логирования
 logger = logging.getLogger(__name__)
@@ -57,7 +56,7 @@ class YandexCallbackView(APIView):
                 timeout=10,
             )
             request.raise_for_status()
-            logger.info(f"Token exchange successful")
+            logger.info("Token exchange successful")
             return request.json()
 
         except Exception as e:
@@ -180,7 +179,7 @@ class YandexCallbackView(APIView):
         # Генерируем токен
         try:
             tokens = login_user(request, user)
-            logger.info(f"Token generated successfully")
+            logger.info("Token generated successfully")
         except Exception as e:
             logger.error(f"Failed to generate token: {e}")
             return Response(

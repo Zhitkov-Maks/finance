@@ -215,6 +215,11 @@ class CreditPlanSimulateView(APIView):
     """Симулятор погашения кредиток."""
 
     permission_classes = [IsAuthenticated]
+    authentication_classes = (
+        TokenAuthentication,
+        BasicAuthentication,
+        SessionAuthentication,
+    )
 
     def post(self, request):
         serializer = CreditPlanRequestSerializer(data=request.data)

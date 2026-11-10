@@ -21,7 +21,15 @@ class ApiService {
     setupInterceptors() {
         this.client.interceptors.request.use(config => {
             const token = localStorage.getItem('auth_token')
-            if (token && !config.url.includes('/auth/token/login/') && !config.url.includes('/auth/users/')) {
+            if (!token) return config
+
+            const url = config.url || ''
+
+            // Только эти два эндпоинта НЕ требуют токена
+            const isLogin = url.includes('/auth/token/login/')
+            const isRegister = url === '/auth/users/' && config.method === 'post'
+
+            if (!isLogin && !isRegister) {
                 config.headers['Authorization'] = `Token ${token}`
             }
             return config
@@ -659,7 +667,7 @@ class ApiService {
 
     async getExportInfo() {
         const response = await this.client.get('/export/', {
-            params: { format: 'info' },
+            params: { export_format: 'info' },
         })
         return response.data
     }

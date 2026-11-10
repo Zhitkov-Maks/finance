@@ -52,6 +52,11 @@ class InsightDismissView(APIView):
 
 class GoalCurrentView(APIView):
     permission_classes = (IsAuthenticated,)
+    authentication_classes = (
+        TokenAuthentication,
+        BasicAuthentication,
+        SessionAuthentication,
+    )
 
     def _parse_month(self, request):
         month_str = request.query_params.get("month") or request.data.get("month")

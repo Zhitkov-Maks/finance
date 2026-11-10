@@ -16,9 +16,6 @@ from .serializers import BudgetSerializer
 from .services import compute_budget_summary
 
 
-# ============================================================================
-# CRUD бюджета
-# ============================================================================
 @extend_schema(tags=["Budget"])
 class BudgetListCreateView(generics.ListCreateAPIView):
     """Список бюджетов пользователя + создание."""
@@ -59,9 +56,6 @@ class BudgetDetailView(generics.RetrieveUpdateDestroyAPIView):
         return Budget.objects.filter(user=self.request.user).select_related("category")
 
 
-# ============================================================================
-# Сводка бюджета на период
-# ============================================================================
 @extend_schema(
     tags=["Budget"],
     parameters=[

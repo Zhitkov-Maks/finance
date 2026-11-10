@@ -37,7 +37,7 @@ class ExportView(APIView):
     )
 
     def get(self, request):
-        fmt = request.query_params.get("format", "json").lower()
+        fmt = request.query_params.get("export_format", "json").lower()
         if fmt == "info":
             return JsonResponse(ExportService(request.user).export_info())
 

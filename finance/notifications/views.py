@@ -1,6 +1,11 @@
 from django.conf import settings
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics
+from rest_framework.authentication import (
+    BasicAuthentication,
+    SessionAuthentication,
+    TokenAuthentication,
+)
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -13,6 +18,11 @@ from .serializers import NotificationPreferencesSerializer, NotificationSerializ
 class NotificationListView(generics.ListAPIView):
     serializer_class = NotificationSerializer
     permission_classes = (IsAuthenticated,)
+    authentication_classes = (
+        TokenAuthentication,
+        BasicAuthentication,
+        SessionAuthentication,
+    )
 
     def get_queryset(self):
         qs = Notification.objects.filter(user=self.request.user)
@@ -24,6 +34,11 @@ class NotificationListView(generics.ListAPIView):
 @extend_schema(tags=["Notifications"])
 class NotificationReadView(APIView):
     permission_classes = (IsAuthenticated,)
+    authentication_classes = (
+        TokenAuthentication,
+        BasicAuthentication,
+        SessionAuthentication,
+    )
 
     def post(self, request, pk):
         Notification.objects.filter(user=request.user, pk=pk).update(is_read=True)
@@ -33,6 +48,11 @@ class NotificationReadView(APIView):
 @extend_schema(tags=["Notifications"])
 class NotificationReadAllView(APIView):
     permission_classes = (IsAuthenticated,)
+    authentication_classes = (
+        TokenAuthentication,
+        BasicAuthentication,
+        SessionAuthentication,
+    )
 
     def post(self, request):
         Notification.objects.filter(user=request.user, is_read=False).update(
@@ -45,6 +65,11 @@ class NotificationReadAllView(APIView):
 class NotificationPreferencesView(generics.RetrieveUpdateAPIView):
     serializer_class = NotificationPreferencesSerializer
     permission_classes = (IsAuthenticated,)
+    authentication_classes = (
+        TokenAuthentication,
+        BasicAuthentication,
+        SessionAuthentication,
+    )
 
     def get_object(self):
         prefs, _ = NotificationPreferences.objects.get_or_create(user=self.request.user)
@@ -54,6 +79,11 @@ class NotificationPreferencesView(generics.RetrieveUpdateAPIView):
 @extend_schema(tags=["Notifications"])
 class PushSubscribeView(APIView):
     permission_classes = (IsAuthenticated,)
+    authentication_classes = (
+        TokenAuthentication,
+        BasicAuthentication,
+        SessionAuthentication,
+    )
 
     def post(self, request):
         data = request.data
@@ -72,6 +102,11 @@ class PushSubscribeView(APIView):
 @extend_schema(tags=["Notifications"])
 class PushUnsubscribeView(APIView):
     permission_classes = (IsAuthenticated,)
+    authentication_classes = (
+        TokenAuthentication,
+        BasicAuthentication,
+        SessionAuthentication,
+    )
 
     def post(self, request):
         PushSubscription.objects.filter(
@@ -97,6 +132,11 @@ class VapidPublicKeyView(APIView):
 @extend_schema(tags=["Notifications"])
 class NotificationDeleteView(generics.DestroyAPIView):
     permission_classes = (IsAuthenticated,)
+    authentication_classes = (
+        TokenAuthentication,
+        BasicAuthentication,
+        SessionAuthentication,
+    )
 
     def get_queryset(self):
         return Notification.objects.filter(user=self.request.user)
@@ -107,6 +147,11 @@ class NotificationClearReadView(APIView):
     """Удаляет все прочитанные уведомления пользователя"""
 
     permission_classes = (IsAuthenticated,)
+    authentication_classes = (
+        TokenAuthentication,
+        BasicAuthentication,
+        SessionAuthentication,
+    )
 
     def post(self, request):
         Notification.objects.filter(user=request.user, is_read=True).delete()
