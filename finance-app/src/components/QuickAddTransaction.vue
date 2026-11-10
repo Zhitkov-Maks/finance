@@ -11,8 +11,9 @@
     </button>
 
     <!-- Модальное окно -->
-    <div v-if="showModal" class="modal" @click.self="closeModal">
+    <div v-if="showModal" class="modal modal-bottom-sheet" @click.self="closeModal">
       <div class="modal-content">
+        <div class="sheet-handle"></div>
         <div class="modal-header">
           <h3>Добавить транзакцию</h3>
           <button class="modal-close" @click="closeModal" aria-label="Закрыть">
@@ -28,9 +29,11 @@
 
         <!-- Ошибка загрузки -->
         <div v-else-if="loadError" class="form-load-error">
-          <div class="alert alert-danger">
-            <i class="fas fa-exclamation-triangle"></i>
-            <span>{{ loadError }}</span>
+          <div class="modal-body">
+            <div class="alert alert-danger">
+              <i class="fas fa-exclamation-triangle"></i>
+              <span>{{ loadError }}</span>
+            </div>
           </div>
           <div class="modal-footer">
             <button type="button" @click="closeModal" class="btn btn-secondary">Отмена</button>
@@ -41,69 +44,71 @@
         </div>
 
         <!-- Форма -->
-        <form v-else @submit.prevent="submit">
-          <div class="form-group">
-            <label class="form-label required">Тип</label>
-            <select v-model="form.type" class="form-control" required @change="onTypeChange">
-              <option value="income">Доход</option>
-              <option value="expense">Расход</option>
-            </select>
-          </div>
+        <form v-else class="modal-form" @submit.prevent="submit">
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label required">Тип</label>
+              <select v-model="form.type" class="form-control" required @change="onTypeChange">
+                <option value="income">Доход</option>
+                <option value="expense">Расход</option>
+              </select>
+            </div>
 
-          <div class="form-group">
-            <label class="form-label required">Сумма</label>
-            <input
-              v-model="form.amount"
-              type="number"
-              class="form-control"
-              step="0.01"
-              min="0.01"
-              required
-              placeholder="0.00"
-            >
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Категория</label>
-            <select v-model="form.category" class="form-control">
-              <option value="">Без категории</option>
-              <option
-                v-for="cat in availableCategories"
-                :key="cat.id"
-                :value="cat.id"
+            <div class="form-group">
+              <label class="form-label required">Сумма</label>
+              <input
+                v-model="form.amount"
+                type="number"
+                class="form-control"
+                step="0.01"
+                min="0.01"
+                required
+                placeholder="0.00"
               >
-                {{ '—'.repeat(cat.level) }} {{ cat.name }}
-              </option>
-            </select>
-          </div>
+            </div>
 
-          <div class="form-group">
-            <label class="form-label required">Счет</label>
-            <select v-model="form.account" class="form-control" required>
-              <option value="">Выберите счет</option>
-              <option
-                v-for="acc in accounts"
-                :key="acc.id"
-                :value="acc.id"
-              >
-                {{ acc.name }} ({{ formatCurrency(acc.balance) }})
-              </option>
-            </select>
-          </div>
+            <div class="form-group">
+              <label class="form-label">Категория</label>
+              <select v-model="form.category" class="form-control">
+                <option value="">Без категории</option>
+                <option
+                  v-for="cat in availableCategories"
+                  :key="cat.id"
+                  :value="cat.id"
+                >
+                  {{ '—'.repeat(cat.level) }} {{ cat.name }}
+                </option>
+              </select>
+            </div>
 
-          <div class="form-group">
-            <label class="form-label">Комментарий</label>
-            <textarea
-              v-model="form.comment"
-              class="form-control"
-              rows="2"
-              placeholder="Необязательно"
-            ></textarea>
-          </div>
+            <div class="form-group">
+              <label class="form-label required">Счет</label>
+              <select v-model="form.account" class="form-control" required>
+                <option value="">Выберите счет</option>
+                <option
+                  v-for="acc in accounts"
+                  :key="acc.id"
+                  :value="acc.id"
+                >
+                  {{ acc.name }} ({{ formatCurrency(acc.balance) }})
+                </option>
+              </select>
+            </div>
 
-          <div v-if="error" class="alert alert-danger">
-            <i class="fas fa-exclamation-circle"></i>
-            {{ error }}
+            <div class="form-group">
+              <label class="form-label">Комментарий</label>
+              <textarea
+                v-model="form.comment"
+                class="form-control"
+                rows="2"
+                placeholder="Необязательно"
+              ></textarea>
+            </div>
+
+            <div v-if="error" class="alert alert-danger">
+              <i class="fas fa-exclamation-circle"></i>
+              <span>{{ error }}</span>
+            </div>
           </div>
 
           <div class="modal-footer">
@@ -184,8 +189,6 @@ export default {
     }
 
     const onTypeChange = () => {
-      // При смене типа сбрасываем выбранную категорию, чтобы не отправить
-      // доход с категорией расхода
       form.value.category = ''
     }
 
@@ -241,22 +244,20 @@ export default {
         await apiService.createTransaction(form.value.type, {
           amount: form.value.amount,
           create_at: new Date().toISOString(),
-          type_transaction: form.value.type, // <--- КРИТИЧЕСКИ ВАЖНО
-          category: form.value.category ? parseInt(form.value.category, 10) : null, // <--- Отправляем null, если не выбрана
+          type_transaction: form.value.type,
+          category: form.value.category ? parseInt(form.value.category, 10) : null,
           account: parseInt(form.value.account, 10),
           comment: form.value.comment
         })
 
-        // Сообщаем страницам, что появилась новая транзакция
         window.dispatchEvent(new CustomEvent('transaction-created'))
 
         showModal.value = false
       } catch (e) {
         console.error('QuickAdd: failed to create transaction', e)
-        // Показываем ошибку валидации от бэкенда, если она есть
         if (e.response?.data) {
-          const firstError = Object.values(e.response.data)[0];
-          error.value = Array.isArray(firstError) ? firstError[0] : firstError;
+          const firstError = Object.values(e.response.data)[0]
+          error.value = Array.isArray(firstError) ? firstError[0] : firstError
         } else {
           error.value = 'Не удалось создать транзакцию. Попробуйте ещё раз.'
         }
@@ -301,7 +302,7 @@ export default {
   color: #ffffff;
   font-size: 1.5rem;
   cursor: pointer;
-  z-index: 90; /* ниже мобильного меню (99) и модалок (1000) */
+  z-index: 90;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -335,7 +336,7 @@ export default {
 
 @media (max-width: 768px) {
   .fab-add-transaction {
-    bottom: 1.25rem;
+    bottom: calc(1.25rem + env(safe-area-inset-bottom));
     right: 1.25rem;
     width: 56px;
     height: 56px;
@@ -345,7 +346,7 @@ export default {
 
 @media (max-width: 480px) {
   .fab-add-transaction {
-    bottom: 1rem;
+    bottom: calc(1rem + env(safe-area-inset-bottom));
     right: 1rem;
     width: 52px;
     height: 52px;
@@ -354,7 +355,7 @@ export default {
 }
 
 /* ============================================================
-   Модалка
+   MODAL: base layout
    ============================================================ */
 .modal {
   position: fixed;
@@ -364,16 +365,20 @@ export default {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1rem;
+  padding: 0;
+  overflow: hidden;
 }
 
 .modal-content {
   background: var(--white);
   border-radius: var(--radius);
-  width: 500px;
-  max-width: 100%;
+  width: 90%;
+  max-width: 500px;
   max-height: 90vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
   animation: fabModalIn 0.2s ease-out;
 }
 
@@ -386,44 +391,97 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--light-color);
+  flex-shrink: 0;
+  min-height: 56px;
+  gap: 0.5rem;
 }
 
 .modal-header h3 {
   margin: 0;
+  font-size: 1.1rem;
   color: var(--dark-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .modal-close {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: 1.75rem;
+  line-height: 1;
   cursor: pointer;
   color: var(--gray-color);
-  transition: color 0.3s;
-  line-height: 1;
+  padding: 0 0.25rem;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  flex-shrink: 0;
+  transition: background-color 0.15s ease;
 }
 
 .modal-close:hover {
   color: var(--dark-color);
+  background: var(--light-color);
 }
 
-.modal-content form {
-  padding: 1rem 1.5rem 1.5rem;
+.modal-body {
+  padding: 0.75rem 1rem;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  overscroll-behavior: contain;
 }
 
+.modal-footer {
+  padding: 0.75rem 1rem;
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--light-color);
+  background: var(--white);
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sheet-handle { display: none; }
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* ============================================================
+   Load states
+   ============================================================ */
 .form-loading,
 .form-load-error {
-  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .form-loading {
-  display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
+  padding: 2rem 1.5rem;
   color: var(--gray-color);
   font-size: 0.9rem;
 }
@@ -433,21 +491,9 @@ export default {
   color: var(--primary-color);
 }
 
-.form-load-error .modal-footer {
-  padding-left: 0;
-  padding-right: 0;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--light-color);
-}
-
-/* Формы */
+/* ============================================================
+   Формы
+   ============================================================ */
 .form-group { margin-bottom: 1rem; }
 
 .form-label {
@@ -472,6 +518,7 @@ export default {
   background: var(--white);
   color: var(--dark-color);
   transition: border-color 0.3s;
+  box-sizing: border-box;
 }
 
 .form-control:focus {
@@ -484,7 +531,9 @@ textarea.form-control {
   min-height: 60px;
 }
 
-/* Кнопки */
+/* ============================================================
+   Кнопки
+   ============================================================ */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -521,15 +570,22 @@ textarea.form-control {
   cursor: not-allowed;
 }
 
-/* Алерты */
+/* ============================================================
+   Алерты
+   ============================================================ */
 .alert {
   padding: 0.75rem 1rem;
   border-radius: var(--radius);
-  margin-bottom: 1rem;
   font-size: 0.875rem;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.5rem;
+  line-height: 1.4;
+}
+
+.alert i {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
 }
 
 .alert-danger {
@@ -538,10 +594,78 @@ textarea.form-control {
   border: 1px solid #fecaca;
 }
 
-/* Тёмная тема */
+.modal-body .alert {
+  margin-top: 0.25rem;
+}
+
 :global(:root[data-theme="dark"]) .alert-danger {
   background: rgba(239, 68, 68, 0.15);
   color: #fca5a5;
   border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* ============================================================
+   BOTTOM-SHEET на мобильных
+   ============================================================ */
+@media (max-width: 768px) {
+  .modal.modal-bottom-sheet {
+    align-items: flex-end;
+    justify-content: flex-start;
+  }
+
+  .modal.modal-bottom-sheet .modal-content {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    max-height: 92dvh;
+    animation: slideUp 0.25s ease;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .modal.modal-bottom-sheet .sheet-handle {
+    display: block;
+    width: 40px;
+    height: 4px;
+    background: #cbd5e1;
+    border-radius: 2px;
+    margin: 8px auto 2px;
+    flex-shrink: 0;
+  }
+
+  /* Компактнее формы */
+  .modal-body .form-group {
+    margin-bottom: 0.55rem;
+  }
+
+  .modal-body .form-label {
+    font-size: 0.8rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .modal-body .form-control {
+    min-height: 42px;
+    padding: 0.5rem 0.7rem;
+    font-size: 16px; /* iOS не зумит */
+  }
+
+  .modal-footer {
+    justify-content: stretch;
+  }
+
+  .modal-footer .btn {
+    flex: 1;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-footer {
+    flex-direction: column;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+  }
 }
 </style>
