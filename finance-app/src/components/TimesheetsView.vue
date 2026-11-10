@@ -158,8 +158,8 @@
           </div>
         </div>
 
-        <!-- Итого за месяц -->
-        <div class="modern-stat-card" @click="openStatsModal('total')">
+        <!-- Итого за месяц (Добавлен класс total-card) -->
+        <div class="modern-stat-card total-card" @click="openStatsModal('total')">
           <div class="modern-stat-inner bg-blue">
             <div class="modern-icon">
               <i class="fas fa-chart-pie"></i>
@@ -2062,15 +2062,45 @@ export default {
 
 .modern-stats-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr; /* По умолчанию 1 колонка (мобилки) */
   gap: 0.75rem;
 }
 
-/* Для планшетов и десктопа */
-@media (min-width: 768px) {
+/* Планшетный вид: 2 колонки сверху, 1 широкая снизу */
+@media (min-width: 600px) and (max-width: 1023px) {
+  .modern-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .modern-stat-card.total-card {
+    grid-column: span 2; /* Карточка "Итого" растягивается на 2 колонки */
+  }
+
+  /* Немного уменьшаем отступы и шрифты, чтобы точно всё влезло */
+  .modern-stat-inner {
+    padding: 0.85rem;
+  }
+  .modern-title {
+    font-size: 0.85rem;
+  }
+  .modern-amount {
+    font-size: 1.1rem;
+  }
+  .modern-sub {
+    display: none; /* Скрываем подписи (1-15) и (16-31) */
+  }
+}
+
+/* Десктопный вид: 3 колонки в ряд */
+@media (min-width: 1024px) {
   .modern-stats-grid {
     grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
+    gap: 1.25rem;
+  }
+
+  .modern-stat-card.total-card {
+    grid-column: auto; /* Возвращаем карточку "Итого" в общий ряд */
   }
 }
 
@@ -2096,7 +2126,7 @@ export default {
   gap: 0.75rem;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 599px) {
   .modern-stat-inner {
     padding: 0.85rem 1rem;
   }
@@ -2125,7 +2155,7 @@ export default {
 
 @media (max-width: 360px) {
   .modern-icon {
-    display: none; /* На самых узких экранах скрываем иконку */
+    display: none;
   }
 }
 
@@ -2133,7 +2163,7 @@ export default {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-width: 0; /* Чтобы текст мог сжиматься */
+  min-width: 0;
 }
 
 .modern-title {
@@ -2167,31 +2197,6 @@ export default {
 .modern-stat-card:hover .modern-arrow {
   transform: translateX(3px);
   opacity: 1;
-}
-
-/* Специфичные стили для планшетов (убираем лишнее, чтобы текст помещался) */
-@media (min-width: 768px) and (max-width: 1024px) {
-  .modern-stat-inner {
-    padding: 0.75rem;
-    gap: 0.5rem;
-  }
-  .modern-icon {
-    width: 32px;
-    height: 32px;
-    font-size: 1rem;
-  }
-  .modern-sub {
-    display: none; /* Скрываем (1-15) на планшетах */
-  }
-  .modern-arrow {
-    display: none; /* Скрываем стрелку на планшетах, чтобы не мешала */
-  }
-  .modern-amount {
-    font-size: 1.05rem;
-  }
-  .modern-title {
-    font-size: 0.85rem;
-  }
 }
 
 /* ================================================================
