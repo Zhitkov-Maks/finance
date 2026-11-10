@@ -2061,18 +2061,16 @@ export default {
 }
 
 .modern-stats-grid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 0.75rem;
 }
 
+/* Для планшетов и десктопа */
 @media (min-width: 768px) {
   .modern-stats-grid {
-    flex-direction: row;
-    gap: 1.25rem;
-  }
-  .modern-stat-card {
-    flex: 1;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
   }
 }
 
@@ -2169,6 +2167,31 @@ export default {
 .modern-stat-card:hover .modern-arrow {
   transform: translateX(3px);
   opacity: 1;
+}
+
+/* Специфичные стили для планшетов (убираем лишнее, чтобы текст помещался) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .modern-stat-inner {
+    padding: 0.75rem;
+    gap: 0.5rem;
+  }
+  .modern-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+  .modern-sub {
+    display: none; /* Скрываем (1-15) на планшетах */
+  }
+  .modern-arrow {
+    display: none; /* Скрываем стрелку на планшетах, чтобы не мешала */
+  }
+  .modern-amount {
+    font-size: 1.05rem;
+  }
+  .modern-title {
+    font-size: 0.85rem;
+  }
 }
 
 /* ================================================================
