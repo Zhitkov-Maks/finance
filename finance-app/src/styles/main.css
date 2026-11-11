@@ -217,8 +217,7 @@ table {
   border-collapse: collapse;
 }
 
-th,
-td {
+th, td {
   padding: 0.75rem;
   text-align: left;
   border-bottom: 1px solid var(--light-color);
@@ -343,8 +342,8 @@ th {
 
 @keyframes spin {
   to {
-      transform: rotate(360deg);
-    }
+    transform: rotate(360deg);
+  }
 }
 
 .badge {
@@ -393,9 +392,6 @@ th {
   line-height: 1.4;
 }
 
-/* ================================================================
-     ГЛОБАЛЬНЫЕ СТИЛИ ДЛЯ МОДАЛЬНЫХ ОКОН
-   ================================================================ */
 .modal {
   position: fixed;
   top: 0;
@@ -432,7 +428,6 @@ th {
   flex-shrink: 0;
 }
 
-/* Прокручиваемая область контента */
 .modal-body {
   padding: 1.5rem;
   flex: 1;
@@ -493,14 +488,13 @@ th {
 
   .modal-header {
     padding-top: 0.5rem;
-  
+  }
 }
 
 @keyframes slideUp {
   from {
     transform: translateY(100%);
   }
-
   to {
     transform: translateY(0);
   }
