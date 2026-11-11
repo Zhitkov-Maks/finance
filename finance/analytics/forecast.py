@@ -18,8 +18,6 @@ CACHE_TTL = 60 * 60 * 24  # 24 часа
 # Кэш recurring-статистики — с запасом на смену суток и сигналы инвалидации
 RECURRING_CACHE_TTL = 60 * 60 * 25  # 25 часов
 
-# Префикс комментария у транзакций, созданных Celery из регулярных операций.
-# Используется, чтобы отделить обязательные расходы от переменных.
 RECURRING_AUTO_PREFIX = "[Авто]"
 
 
@@ -32,10 +30,6 @@ class ForecastService:
             self.start_of_month + relativedelta(months=1) - timedelta(days=1)
         )
         self.days_left = (self.end_of_month - self.today).days + 1
-
-    # -------------------------------------------------------------------------
-    # Публичный API
-    # -------------------------------------------------------------------------
 
     def calculate(self) -> dict:
         cache_key = f"forecast:{self.user.id}:{self.today.isoformat()}"
@@ -91,15 +85,11 @@ class ForecastService:
         — для отображения отдельной строкой в UI.
         """
         return Transaction.objects.filter(
-            self._recurring_q(),
+            recurring_source__isnull=False,
             user=self.user,
             type_transaction=Transaction.TYPE_EXPENSE,
             create_at__date=self.today,
         ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
-
-    # -------------------------------------------------------------------------
-    # Баланс
-    # -------------------------------------------------------------------------
 
     def _get_liquid_balance(self) -> Decimal:
         return Account.objects.filter(
@@ -109,10 +99,6 @@ class ForecastService:
         ).exclude(account_type=Account.TYPE_CREDIT).aggregate(total=Sum("balance"))[
             "total"
         ] or Decimal("0.00")
-
-    # -------------------------------------------------------------------------
-    # Статистика по транзакциям (без кэша — инвалидируется на каждую транзакцию)
-    # -------------------------------------------------------------------------
 
     def _get_transaction_stats(self) -> dict:
         six_months_ago = self.today - relativedelta(months=6)
@@ -226,7 +212,6 @@ class ForecastService:
                     rec_expense += rec.amount
 
                 next_curr = rec.calculate_next_run(curr)
-                # Защита от зацикливания, если calculate_next_run вернёт ту же/прошлую дату
                 if next_curr <= curr:
                     logger.warning(
                         "RecurringTransaction id=%s calculate_next_run "
