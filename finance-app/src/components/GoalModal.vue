@@ -7,27 +7,29 @@
       </div>
 
       <form @submit.prevent="save">
-        <div class="form-group">
-          <label class="form-label required">Тип цели</label>
-          <select v-model="form.goal_type" class="form-control" @change="onTypeChange">
-            <option value="save">💰 Сэкономить (доходы минус расходы)</option>
-            <option value="limit">🚫 Не превысить лимит расходов</option>
-          </select>
-        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label required">Тип цели</label>
+            <select v-model="form.goal_type" class="form-control" @change="onTypeChange">
+              <option value="save">💰 Сэкономить (доходы минус расходы)</option>
+              <option value="limit">🚫 Не превысить лимит расходов</option>
+            </select>
+          </div>
 
-        <div class="form-group">
-          <label class="form-label required">Сумма (₽)</label>
-          <input type="number" v-model.number="form.amount" class="form-control" step="any" min="1" required />
-        </div>
+          <div class="form-group">
+            <label class="form-label required">Сумма (₽)</label>
+            <input type="number" v-model.number="form.amount" class="form-control" step="any" min="1" required />
+          </div>
 
-        <div class="form-group" v-if="form.goal_type === 'limit'">
-          <label class="form-label">Категория (если не выбрана — все расходы)</label>
-          <select v-model="form.category" class="form-control">
-            <option :value="null">Все расходы</option>
-            <option v-for="cat in categories" :key="cat.id" :value="cat.id">
-              {{ cat.name }}
-            </option>
-          </select>
+          <div class="form-group" v-if="form.goal_type === 'limit'">
+            <label class="form-label">Категория (если не выбрана — все расходы)</label>
+            <select v-model="form.category" class="form-control">
+              <option :value="null">Все расходы</option>
+              <option v-for="cat in categories" :key="cat.id" :value="cat.id">
+                {{ cat.name }}
+              </option>
+            </select>
+          </div>
         </div>
 
         <div class="modal-footer">
@@ -79,7 +81,6 @@ export default {
     const save = async () => {
       saving.value = true
       try {
-        // ✅ Переименовано: saveGoal → saveGoalCurrent
         await apiService.saveGoalCurrent(form.value)
         emit('saved')
         emit('close')
@@ -99,47 +100,18 @@ export default {
 </script>
 
 <style scoped>
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.modal-content {
-  background: var(--white);
-  border-radius: var(--radius);
-  padding: 1.5rem;
-  width: 100%;
-  max-width: 400px;
-}
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: var(--gray-color);
-}
+/* Оставлены только стили для элементов формы */
 .form-group {
   margin-bottom: 1rem;
 }
+
 .form-label {
   display: block;
   margin-bottom: 0.5rem;
   font-size: 0.9rem;
   color: var(--dark-color);
 }
+
 .form-control {
   width: 100%;
   padding: 0.5rem;
@@ -148,10 +120,29 @@ export default {
   background: var(--white);
   color: var(--dark-color);
 }
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
+
+/* Стили для кнопок, если они не переопределены глобально */
+.btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: var(--radius);
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: var(--light-color);
+  color: var(--dark-color);
+}
+
+.btn-primary {
+  background: var(--primary-color);
+  color: #fff;
 }
 </style>

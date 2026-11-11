@@ -4,9 +4,6 @@
   box-sizing: border-box;
 }
 
-/* ============================================================
-   СВЕТЛАЯ ТЕМА (по умолчанию)
-   ============================================================ */
 :root {
   --primary-color: #000000;
   --primary-dark: hwb(246 2% 27%);
@@ -14,40 +11,24 @@
   --danger-color: #ef4444;
   --warning-color: #f59e0b;
   --dark-color: #1e1c37;
-    /* Основной текст */
-    --light-color: #f3f4f6;
-    /* Фон полей, ховеры, бордеры */
-    --gray-color: #6b7280;
-    /* Второстепенный текст */
-    --white: #ffffff;
-    /* Фон карточек и сайдбара */
+  --light-color: #f3f4f6;
+  --gray-color: #6b7280;
+  --white: #ffffff;
   --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   --radius: 0.5rem;
-/* Переменная для фона страницы */
   --bg-body: linear-gradient(135deg, #faf5ff 0%, #b7b7b7 100%);
 }
 
-/* ============================================================
-   ТЕМНАЯ ТЕМА (переопределяем переменные)
-   ============================================================ */
 :root[data-theme="dark"] {
   --primary-color: #3b82f6;
-  /* Делаем кнопки синими, чтобы были видны на темном фоне */
   --primary-dark: #2563eb;
   --dark-color: #f3f4f6;
-  /* Текст становится светлым */
   --light-color: #374151;
-  /* Бордеры и легкие фоны становятся темно-серыми */
   --gray-color: #9ca3af;
-  /* Второстепенный текст светлее */
   --white: #1f2937;
-  /* Карточки становятся темно-серыми */
-
   --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-
-  /* Темный фон страницы вместо градиента */
   --bg-body: #111827;
 }
 
@@ -59,12 +40,10 @@ body {
   transition: background 0.3s ease, color 0.3s ease;
 }
 
-/* App Layout */
 .app {
   min-height: 100vh;
 }
 
-/* Sidebar */
 .sidebar {
   position: fixed;
   left: 0;
@@ -82,7 +61,6 @@ body {
   padding: 2rem 1.5rem;
   background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
   color: #ffffff;
-    /* В шапке сайдбара текст всегда белый */
 }
 
 .sidebar-header h2 {
@@ -134,13 +112,11 @@ body {
   color: var(--danger-color);
 }
 
-/* Main Content */
 .main-content {
   margin-left: 280px;
   padding: 2rem;
 }
 
-/* Cards */
 .card {
   background: var(--white);
   border-radius: var(--radius);
@@ -165,7 +141,6 @@ body {
   color: var(--dark-color);
 }
 
-/* Forms */
 .form-group {
   margin-bottom: 1rem;
 }
@@ -185,7 +160,7 @@ body {
   font-size: 0.875rem;
   transition: all 0.3s;
   background: var(--white);
-    color: var(--dark-color);
+  color: var(--dark-color);
 }
 
 .form-control:focus {
@@ -194,7 +169,6 @@ body {
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
 }
 
-/* Buttons */
 .btn {
   padding: 0.625rem 1.25rem;
   border: none;
@@ -233,7 +207,6 @@ body {
   color: #ffffff;
 }
 
-/* Tables */
 .table {
   width: 100%;
   overflow-x: auto;
@@ -244,7 +217,8 @@ table {
   border-collapse: collapse;
 }
 
-th, td {
+th,
+td {
   padding: 0.75rem;
   text-align: left;
   border-bottom: 1px solid var(--light-color);
@@ -257,7 +231,6 @@ th {
   background: var(--light-color);
 }
 
-/* Alerts */
 .alert {
   padding: 1rem;
   border-radius: var(--radius);
@@ -282,7 +255,6 @@ th {
   border: 1px solid #bfdbfe;
 }
 
-/* Stats Grid */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -310,50 +282,6 @@ th {
   color: var(--dark-color);
 }
 
-/* Modal */
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-}
-
-.modal-content {
-  background: var(--white);
-  border-radius: var(--radius);
-  padding: 2rem;
-  max-width: 500px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
-  transition: background-color 0.3s ease;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: var(--gray-color);
-}
-
-.modal-close:hover {
-  color: var(--dark-color);
-}
-/* Login Page */
 .login-container {
   min-height: 100vh;
   display: flex;
@@ -383,7 +311,6 @@ th {
   margin-bottom: 0.5rem;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .sidebar {
     transform: translateX(-100%);
@@ -404,7 +331,6 @@ th {
   }
 }
 
-/* Loading Spinner */
 .spinner {
   display: inline-block;
   width: 40px;
@@ -416,10 +342,11 @@ th {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+      transform: rotate(360deg);
+    }
 }
 
-/* Badges */
 .badge {
   display: inline-block;
   padding: 0.25rem 0.5rem;
@@ -443,7 +370,6 @@ th {
   color: #1e40af;
 }
 
-/* Animations */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s;
@@ -465,4 +391,117 @@ th {
   min-width: 20px;
   text-align: center;
   line-height: 1.4;
+}
+
+/* ================================================================
+     ГЛОБАЛЬНЫЕ СТИЛИ ДЛЯ МОДАЛЬНЫХ ОКОН
+   ================================================================ */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 0;
+  margin: 0;
+}
+
+.modal-content {
+  background: var(--white, #fff);
+  border-radius: var(--radius, 12px);
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--light-color, #e5e7eb);
+  flex-shrink: 0;
+}
+
+/* Прокручиваемая область контента */
+.modal-body {
+  padding: 1.5rem;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  overscroll-behavior: contain;
+  display: block;
+}
+
+.modal-footer {
+  padding: 1rem 1.5rem;
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--light-color, #e5e7eb);
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--gray-color);
+}
+
+.modal-close:hover {
+  color: var(--dark-color);
+}
+
+@media (max-width: 768px) {
+  .modal {
+    align-items: flex-end;
+    justify-content: stretch;
+  }
+
+  .modal-content {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 24px 24px 0 0;
+    max-height: 92dvh;
+    animation: slideUp 0.25s ease;
+    margin: 0;
+  }
+
+  .modal-content::before {
+    content: '';
+    display: block;
+    width: 44px;
+    height: 5px;
+    background: #cbd5e1;
+    border-radius: 9999px;
+    margin: 10px auto 0;
+    flex-shrink: 0;
+  }
+
+  .modal-header {
+    padding-top: 0.5rem;
+  
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
 }

@@ -749,12 +749,11 @@
     <!-- Модальное окно создания/редактирования счета -->
     <div v-if="showAccountModal" class="modal modal-bottom-sheet" @click.self="closeModal">
       <div class="modal-content">
-        <div class="sheet-handle"></div>
         <div class="modal-header">
           <h3>{{ editingAccount ? 'Редактировать счет' : 'Создать счет' }}</h3>
           <button class="modal-close" @click="closeModal">&times;</button>
         </div>
-        <form @submit.prevent="saveAccount" class="modal-form">
+        <form @submit.prevent="saveAccount">
           <div class="modal-body">
             <div class="form-group">
               <label class="form-label required">Название счета</label>
@@ -849,12 +848,11 @@
     <!-- Модальное окно изменения баланса -->
     <div v-if="showBalanceModal" class="modal modal-bottom-sheet" @click.self="showBalanceModal = false">
       <div class="modal-content">
-        <div class="sheet-handle"></div>
         <div class="modal-header">
           <h3>Изменить баланс счёта "{{ balanceAccount?.name }}"</h3>
           <button class="modal-close" @click="showBalanceModal = false">&times;</button>
         </div>
-        <form @submit.prevent="updateBalance" class="modal-form">
+        <form @submit.prevent="updateBalance">
           <div class="modal-body">
             <div class="form-group">
               <label class="form-label required">Текущий баланс</label>
@@ -876,12 +874,11 @@
     <!-- Модальное окно редактирования перевода -->
     <div v-if="showEditTransferModal" class="modal modal-bottom-sheet" @click.self="closeEditTransferModal">
       <div class="modal-content">
-        <div class="sheet-handle"></div>
         <div class="modal-header">
           <h3>Редактировать перевод</h3>
           <button class="modal-close" @click="closeEditTransferModal">&times;</button>
         </div>
-        <form @submit.prevent="updateTransfer" class="modal-form">
+        <form @submit.prevent="updateTransfer">
           <div class="modal-body">
             <div class="form-group">
               <label class="form-label required">Счет списания</label>
@@ -921,7 +918,6 @@
     <!-- Модальное окно подтверждения архивации счета -->
     <div v-if="showDeleteModal" class="modal modal-bottom-sheet" @click.self="showDeleteModal = false">
       <div class="modal-content">
-        <div class="sheet-handle"></div>
         <div class="modal-header">
           <h3>Удалить счёт?</h3>
           <button class="modal-close" @click="showDeleteModal = false">&times;</button>
@@ -946,7 +942,6 @@
     <!-- Модальное окно подтверждения удаления перевода -->
     <div v-if="showDeleteTransferModal" class="modal modal-bottom-sheet" @click.self="showDeleteTransferModal = false">
       <div class="modal-content">
-        <div class="sheet-handle"></div>
         <div class="modal-header">
           <h3>Подтверждение удаления</h3>
           <button class="modal-close" @click="showDeleteTransferModal = false">&times;</button>
@@ -2382,210 +2377,6 @@ export default {
 }
 .table tbody tr:hover:not(:has(td[colspan])) td:first-child {
   box-shadow: inset 3px 0 0 var(--primary-color);
-}
-
-/* ============================================================
-   MODAL: base layout
-   ============================================================ */
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  overflow: hidden;
-  padding: 0;
-}
-
-.modal-content {
-  background: var(--white);
-  border-radius: var(--radius);
-  width: 90%;
-  max-width: 500px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 0;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--light-color);
-  flex-shrink: 0;
-  min-height: 56px;
-  gap: 0.5rem;
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 1.1rem;
-  color: var(--dark-color);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 1.75rem;
-  line-height: 1;
-  cursor: pointer;
-  color: var(--gray-color);
-  padding: 0 0.25rem;
-  min-width: 44px;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius);
-  flex-shrink: 0;
-  transition: background-color 0.15s ease;
-}
-
-.modal-close:hover {
-  color: var(--dark-color);
-  background: var(--light-color);
-}
-
-.modal-body {
-  padding: 0.75rem 1rem;
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-  overscroll-behavior: contain;
-}
-
-.modal-footer {
-  padding: 0.75rem 1rem;
-  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--light-color);
-  background: var(--white);
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  justify-content: flex-end;
-  flex-shrink: 0;
-}
-
-.modal-form {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.sheet-handle { display: none; }
-
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
-}
-
-/* ============================================================
-   BOTTOM-SHEET + компактность на мобильных
-   ============================================================ */
-@media (max-width: 768px) {
-  .modal.modal-bottom-sheet {
-    align-items: flex-end;
-    justify-content: flex-start;
-  }
-
-  .modal.modal-bottom-sheet .modal-content {
-    width: 100%;
-    max-width: 100%;
-    margin: 0;
-    border-radius: 16px 16px 0 0;
-    max-height: 92dvh;
-    animation: slideUp 0.25s ease;
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-
-  .modal.modal-bottom-sheet .sheet-handle {
-    display: block;
-    width: 40px;
-    height: 4px;
-    background: #cbd5e1;
-    border-radius: 2px;
-    margin: 8px auto 2px;
-    flex-shrink: 0;
-  }
-
-  /* Компактнее формы в модалках */
-  .modal-body .form-group {
-    margin-bottom: 0.55rem;
-  }
-
-  .modal-body .form-label {
-    font-size: 0.8rem;
-    margin-bottom: 0.3rem;
-  }
-
-  .modal-body .form-control {
-    min-height: 42px;
-    padding: 0.5rem 0.7rem;
-    font-size: 16px;
-  }
-
-  .modal-body .form-hint {
-    font-size: 0.7rem;
-    margin-top: 0.2rem;
-  }
-
-  .modal-footer {
-    justify-content: stretch;
-  }
-
-  .modal-footer .btn {
-    flex: 1;
-    min-height: 44px;
-  }
-
-  /* Компактнее карточки счетов */
-  .account-compact {
-    padding: 0.55rem 0.75rem;
-  }
-
-  .account-expanded {
-    padding: 0.75rem;
-  }
-
-  .account-actions-expanded .btn-sm {
-    min-width: calc(50% - 0.25rem);
-  }
-}
-
-@media (max-width: 480px) {
-  .modal-footer {
-    flex-direction: column;
-  }
-
-  .modal-footer .btn {
-    width: 100%;
-  }
-
-  .account-compact {
-    padding: 0.5rem 0.65rem;
-  }
-
-  .account-balance-compact {
-    font-size: 0.9rem;
-  }
-
-  .compact-right {
-    gap: 0.5rem;
-  }
 }
 
 /* ============================================================

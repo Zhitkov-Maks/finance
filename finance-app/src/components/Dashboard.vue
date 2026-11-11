@@ -36,17 +36,13 @@
       </div>
     </div>
 
-    <!-- ============================================================
-         БЕЗОПАСНО ТРАТИТЬ В ДЕНЬ — полностью переработанная карточка
-         ============================================================ -->
+    <!-- БЕЗОПАСНО ТРАТИТЬ В ДЕНЬ -->
     <div class="card safe-to-spend-card hoverable-card" v-if="forecastData">
       <div class="safe-content">
-        <!-- Левая колонка: иконка -->
         <div class="safe-icon" :class="safeIconClass">
           <i class="fas" :class="safeIcon"></i>
         </div>
 
-        <!-- Центральная колонка: текст + прогресс -->
         <div class="safe-text">
           <h3>Безопасно тратить в день</h3>
 
@@ -58,7 +54,6 @@
             ⚠️ Лимит на сегодня исчерпан! Дальнейшие траты приведут к кассовому разрыву.
           </p>
 
-          <!-- Разбивка трат за сегодня -->
           <div class="safe-today-breakdown">
             <div class="breakdown-row">
               <span class="breakdown-label">
@@ -84,7 +79,6 @@
             </div>
           </div>
 
-          <!-- Прогресс-бар переменных трат от дневного лимита -->
           <div class="safe-daily-progress" v-if="displaySafeDaily > 0">
             <div class="safe-progress-label">
               <span>Из дневного лимита</span>
@@ -100,7 +94,6 @@
           </div>
         </div>
 
-        <!-- Правая колонка: сумма -->
         <div class="safe-amount-block">
           <div class="safe-amount-label">Осталось на сегодня</div>
           <div
@@ -591,7 +584,7 @@
       @saved="onGoalSaved"
     />
 
-    <!-- FAB быстрого добавления транзакции (bottom-sheet на мобиле) -->
+    <!-- FAB быстрого добавления транзакции -->
     <QuickAddTransaction />
   </div>
 </template>
@@ -675,10 +668,6 @@ export default {
 
     const forecastData = ref(null)
 
-    // -------------------------------------------------------------------------
-    // Производные данные о прогнозе
-    // -------------------------------------------------------------------------
-
     const displaySafeToSpend = computed(() => {
       if (!forecastData.value) return 0
       if (forecastData.value.remaining_safe_today !== undefined) {
@@ -700,12 +689,10 @@ export default {
       return guaranteed > 0 ? guaranteed / days : 0
     })
 
-    /** Сколько регулярных списаний прошло сегодня (уже учтено в obligatory) */
     const recurringPaidToday = computed(() => {
       return Number(forecastData.value?.recurring_paid_today) || 0
     })
 
-    /** Прогресс-бар: только переменные траты от дневного лимита */
     const progressPercent = computed(() => {
       const spent = Number(forecastData.value?.spent_today) || 0
       const daily = displaySafeDaily.value
@@ -1662,7 +1649,7 @@ export default {
   line-height: 1.1;
 }
 
-/* ---- Планшет (768-1024) — amount переезжает под текст, во всю ширину ---- */
+/* ---- Планшет (768-1024) ---- */
 @media (max-width: 1024px) {
   .safe-content {
     grid-template-columns: auto 1fr;
@@ -1687,7 +1674,7 @@ export default {
   }
 }
 
-/* ---- Мобилка (<768) — полностью стек, центр ---- */
+/* ---- Мобилка (<768) ---- */
 @media (max-width: 768px) {
   .safe-to-spend-card { padding: 1.25rem; }
   .safe-content {
@@ -1722,7 +1709,7 @@ export default {
 }
 
 /* ============================================================
-   ПРОГРЕСС-БАРЫ (переиспользуемые классы)
+   ПРОГРЕСС-БАРЫ
    ============================================================ */
 .progress-bar {
   height: 8px;
@@ -1748,12 +1735,6 @@ export default {
 .text-success { color: var(--secondary-color); }
 .text-danger  { color: var(--danger-color); }
 .text-warning { color: var(--warning-color); }
-
-/* ============================================================
-   ОСТАЛЬНОЕ — базовые стили из предыдущей версии
-   (карточки, статистика, курсы, прогноз, сравнение, геймификация,
-    бюджет, история баланса, hover-эффекты — без изменений)
-   ============================================================ */
 
 /* Курсы валют */
 .actions-panel {

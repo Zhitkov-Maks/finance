@@ -355,118 +355,6 @@ export default {
 }
 
 /* ============================================================
-   MODAL: base layout
-   ============================================================ */
-.modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 0;
-  overflow: hidden;
-}
-
-.modal-content {
-  background: var(--white);
-  border-radius: var(--radius);
-  width: 90%;
-  max-width: 500px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 0;
-  animation: fabModalIn 0.2s ease-out;
-}
-
-@keyframes fabModalIn {
-  from { opacity: 0; transform: translateY(10px) scale(0.98); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--light-color);
-  flex-shrink: 0;
-  min-height: 56px;
-  gap: 0.5rem;
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 1.1rem;
-  color: var(--dark-color);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 1.75rem;
-  line-height: 1;
-  cursor: pointer;
-  color: var(--gray-color);
-  padding: 0 0.25rem;
-  min-width: 44px;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius);
-  flex-shrink: 0;
-  transition: background-color 0.15s ease;
-}
-
-.modal-close:hover {
-  color: var(--dark-color);
-  background: var(--light-color);
-}
-
-.modal-body {
-  padding: 0.75rem 1rem;
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-  overscroll-behavior: contain;
-}
-
-.modal-footer {
-  padding: 0.75rem 1rem;
-  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--light-color);
-  background: var(--white);
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  justify-content: flex-end;
-  flex-shrink: 0;
-}
-
-.modal-form {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.sheet-handle { display: none; }
-
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
-}
-
-/* ============================================================
    Load states
    ============================================================ */
 .form-loading,
@@ -605,34 +493,9 @@ textarea.form-control {
 }
 
 /* ============================================================
-   BOTTOM-SHEET на мобильных
+   Мобильные правки для контента (без глобальных модалок)
    ============================================================ */
 @media (max-width: 768px) {
-  .modal.modal-bottom-sheet {
-    align-items: flex-end;
-    justify-content: flex-start;
-  }
-
-  .modal.modal-bottom-sheet .modal-content {
-    width: 100%;
-    max-width: 100%;
-    margin: 0;
-    border-radius: 16px 16px 0 0;
-    max-height: 92dvh;
-    animation: slideUp 0.25s ease;
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-
-  .modal.modal-bottom-sheet .sheet-handle {
-    display: block;
-    width: 40px;
-    height: 4px;
-    background: #cbd5e1;
-    border-radius: 2px;
-    margin: 8px auto 2px;
-    flex-shrink: 0;
-  }
-
   /* Компактнее формы */
   .modal-body .form-group {
     margin-bottom: 0.55rem;
@@ -646,11 +509,7 @@ textarea.form-control {
   .modal-body .form-control {
     min-height: 42px;
     padding: 0.5rem 0.7rem;
-    font-size: 16px; /* iOS не зумит */
-  }
-
-  .modal-footer {
-    justify-content: stretch;
+    font-size: 16px; /* iOS не зумит при фокусе */
   }
 
   .modal-footer .btn {
@@ -663,7 +522,6 @@ textarea.form-control {
   .modal-footer {
     flex-direction: column;
   }
-
   .modal-footer .btn {
     width: 100%;
   }

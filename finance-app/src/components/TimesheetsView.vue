@@ -179,7 +179,6 @@
     <!-- ============================================================ -->
     <div v-if="showStatsModal" class="modal modal-bottom-sheet" @click.self="closeStatsModal">
       <div class="modal-content">
-        <div class="sheet-handle"></div>
         <div class="modal-header" :class="selectedStatsType === 'total' ? 'total-header' : ''">
           <h3>
             <i class="fas" :class="selectedStatsType === 'total' ? 'fa-chart-bar' : 'fa-calendar-week'"></i>
@@ -360,7 +359,6 @@
     <!-- ============================================================ -->
     <div v-if="showGoalModal" class="modal modal-bottom-sheet" @click.self="closeGoalModal">
       <div class="modal-content">
-        <div class="sheet-handle"></div>
         <div class="modal-header">
           <h3><i class="fas fa-bullseye"></i> Цель по мотивации</h3>
           <button class="modal-close" @click="closeGoalModal">&times;</button>
@@ -392,11 +390,10 @@
     <!-- ============================================================ -->
     <div v-if="showAddManyModal" class="modal modal-bottom-sheet" @click.self="closeAddManyModal">
       <div class="modal-content">
-        <div class="sheet-handle"></div>
         <div class="modal-header">
           <h3>
             <i class="fas fa-layer-group"></i>
-            Отметить смены
+            Смены
           </h3>
           <div class="header-tools">
             <button class="btn-compact btn-success" @click="selectAllDatesInMonth" title="Выбрать все">
@@ -471,7 +468,6 @@
     <!-- ============================================================ -->
     <div v-if="showShiftModal" class="modal modal-bottom-sheet" @click.self="closeShiftModal">
       <div class="modal-content">
-        <div class="sheet-handle"></div>
         <div class="modal-header">
           <h3>
             <i class="fas fa-calendar-day"></i>
@@ -524,7 +520,7 @@
               <div class="day-breakdown-header">📋 Из чего складывается:</div>
 
               <div v-if="shiftDetails.earned_hours" class="simple-line">
-                <span class="simple-line-label">⏳ За отработанные часы</span>
+                <span class="simple-line-label">⏳ За часы</span>
                 <span class="simple-line-value">
                   {{ formatNumber(shiftDetails.earned_hours) }} ₽
                   <span class="percent-badge hours-percent-badge">{{ getHoursPercent(shiftDetails.earned_hours, shiftDetails.earned) }}%</span>
@@ -532,7 +528,7 @@
               </div>
 
               <div v-if="shiftDetails.earned_cold" class="simple-line">
-                <span class="simple-line-label">❄️ Доплата за холод</span>
+                <span class="simple-line-label">❄️ Холод</span>
                 <span class="simple-line-value">
                   {{ formatNumber(shiftDetails.earned_cold) }} ₽
                   <span class="percent-badge cold-percent-badge">{{ getColdPercent(shiftDetails.earned_cold, shiftDetails.earned) }}%</span>
@@ -540,7 +536,7 @@
               </div>
 
               <div v-if="shiftDetails.earned_overtime" class="simple-line">
-                <span class="simple-line-label">⏱️ Доплата за переработку</span>
+                <span class="simple-line-label">⏱️ Переработка</span>
                 <span class="simple-line-value">
                   {{ formatNumber(shiftDetails.earned_overtime) }} ₽
                   <span class="percent-badge overtime-percent-badge">{{ getOvertimePercent(shiftDetails.earned_overtime, shiftDetails.earned) }}%</span>
@@ -550,7 +546,7 @@
               <div v-if="getMotivationTotal(shiftDetails) > 0" class="accordion-item">
                 <div class="accordion-header" @click="toggleDaySection('motivation')">
                   <span class="accordion-icon">🏆</span>
-                  <span class="accordion-title">Мотивация / доп. работы</span>
+                  <span class="accordion-title">Мотивация</span>
                   <span class="accordion-value">
                     {{ formatNumber(getMotivationTotal(shiftDetails)) }} ₽
                     <span class="percent-badge award-percent-badge">{{ getAwardPercent(getMotivationTotal(shiftDetails), shiftDetails.earned) }}%</span>
@@ -559,19 +555,19 @@
                 </div>
                 <div v-show="openDaySections.motivation" class="accordion-body">
                   <div v-if="shiftDetails.motivation_collect" class="stat-line sub-line">
-                    <span class="stat-label">— Набор:</span>
+                    <span class="stat-label">Набор:</span>
                     <span class="stat-number">{{ formatNumber(shiftDetails.motivation_collect) }} ₽ ({{ shiftDetails.count_operations_collect || 0 }} оп)</span>
                   </div>
                   <div v-if="shiftDetails.motivation_replenishment" class="stat-line sub-line">
-                    <span class="stat-label">— Пополнение:</span>
+                    <span class="stat-label">Пополнение:</span>
                     <span class="stat-number">{{ formatNumber(shiftDetails.motivation_replenishment) }} ₽ ({{ shiftDetails.count_operations_replenishment || 0 }} оп)</span>
                   </div>
                   <div v-if="shiftDetails.motivation_placement" class="stat-line sub-line">
-                    <span class="stat-label">— Размещение:</span>
+                    <span class="stat-label">Размещение:</span>
                     <span class="stat-number">{{ formatNumber(shiftDetails.motivation_placement) }} ₽ ({{ shiftDetails.count_operations_placement || 0 }} оп)</span>
                   </div>
                   <div v-if="shiftDetails.earned_for_non_productive_work" class="stat-line sub-line">
-                    <span class="stat-label">— Непроизводственные:</span>
+                    <span class="stat-label">Непроиз-е:</span>
                     <span class="stat-number">{{ formatNumber(shiftDetails.earned_for_non_productive_work) }} ₽ ({{ formatNumber(shiftDetails.hours_non_productive) }} ч)</span>
                   </div>
                 </div>
@@ -646,7 +642,6 @@
     <!-- ============================================================ -->
     <div v-if="showMotivationModal" class="modal modal-bottom-sheet" @click.self="closeMotivationModal">
       <div class="modal-content">
-        <div class="sheet-handle"></div>
         <div class="modal-header">
           <h3>
             <i class="fas fa-star"></i>
@@ -690,7 +685,6 @@
     <!-- ============================================================ -->
     <div v-if="showSettingsModal" class="modal modal-bottom-sheet" @click.self="closeSettingsModal">
       <div class="modal-content">
-        <div class="sheet-handle"></div>
         <div class="modal-header">
           <h3>
             <i class="fas fa-cog"></i>
@@ -782,7 +776,6 @@
     <!-- ============================================================ -->
     <div v-if="showYearStatsModal" class="modal modal-bottom-sheet" @click.self="closeYearStatsModal">
       <div class="modal-content">
-        <div class="sheet-handle"></div>
         <div class="modal-header">
           <h3>
             <i class="fas fa-chart-line"></i>
@@ -880,7 +873,6 @@
     <!-- ============================================================ -->
     <div v-if="showVacationModal" class="modal modal-bottom-sheet" @click.self="closeVacationModal">
       <div class="modal-content">
-        <div class="sheet-handle"></div>
         <div class="modal-header">
           <h3>
             <i class="fas fa-umbrella-beach"></i>
@@ -2200,105 +2192,6 @@ export default {
 }
 
 /* ================================================================
-   БАЗОВЫЙ LAYOUT МОДАЛОК: flex-column + sticky header/footer
-   ================================================================ */
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  overflow: hidden;
-  padding: 0;
-}
-
-.modal-content {
-  background: var(--white);
-  border-radius: var(--radius);
-  max-width: 500px;
-  width: 90%;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 0;
-  margin: 0;
-}
-
-/* ================================================================
-   BOTTOM-SHEET (mobile) / центрированная (desktop)
-   ================================================================ */
-@media (max-width: 768px) {
-  .modal.modal-bottom-sheet {
-    align-items: flex-end;
-    justify-content: stretch;
-  }
-
-  .modal.modal-bottom-sheet .modal-content {
-    width: 100%;
-    max-width: 100%;
-    border-radius: 16px 16px 0 0;
-    max-height: 92dvh;
-    animation: slideUp 0.25s ease;
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-
-  .sheet-handle {
-    display: block;
-    width: 40px;
-    height: 4px;
-    background: #cbd5e1;
-    border-radius: 2px;
-    margin: 8px auto 2px;
-    flex-shrink: 0;
-  }
-}
-
-.sheet-handle {
-  display: none;
-}
-
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
-}
-
-/* ================================================================
-   HEADER BUTTONS: (Иконки в ряд на мобилке)
-   ================================================================ */
-@media (max-width: 768px) {
-  .header-actions {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.5rem;
-    width: 100%;
-  }
-
-  .header-actions .btn {
-    width: 100%;
-    padding: 0.5rem 0;
-    min-height: 44px;
-    font-size: 0.8rem;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .header-actions .btn .btn-text {
-    display: none;
-  }
-
-  .header-actions .btn i {
-    font-size: 1.25rem;
-    margin: 0;
-  }
-}
-
-/* ================================================================
    КОМПАКТНЫЙ ТУЛБАР (для группового проставления)
    ================================================================ */
 .header-tools {
@@ -2514,71 +2407,10 @@ export default {
 }
 
 /* ================================================================
-   БАЗОВЫЙ LAYOUT
+   СПЕЦИФИЧНЫЕ ЗАГОЛОВКИ
    ================================================================ */
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--light-color);
-  flex-shrink: 0;
-  min-height: 56px;
-  gap: 0.5rem;
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 1.1rem;
-  color: var(--dark-color);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
 .modal-header.total-header h3 {
   color: #3b82f6;
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 1.75rem;
-  line-height: 1;
-  cursor: pointer;
-  color: var(--gray-color);
-  padding: 0 0.25rem;
-  min-width: 44px;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius);
-  flex-shrink: 0;
-}
-
-.modal-close:hover {
-  color: var(--dark-color);
-  background: var(--light-color);
-}
-
-.modal-body {
-  padding: 0.75rem 1rem;
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-  overscroll-behavior: contain;
-}
-
-.modal-footer {
-  padding: 0.75rem 1rem;
-  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--light-color);
-  background: var(--white);
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  flex-shrink: 0;
 }
 
 /* ================================================================
@@ -2686,11 +2518,9 @@ export default {
   flex-shrink: 0;
 }
 
-/* ================================================================
-   STICKY SUMMARY BAR (модалка дня)
-   ================================================================ */
 .day-summary-bar {
   display: flex;
+  flex-wrap: wrap; /* Позволяет чипсам переноситься на новую строку, если не влезают */
   gap: 0.4rem;
   padding: 0.6rem 1rem;
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
@@ -2698,6 +2528,9 @@ export default {
   flex-shrink: 0;
   overflow-x: auto;
   scrollbar-width: none;
+  /* Добавляем отступы, чтобы блок не прилипал к краям, и скругления */
+  margin: 1rem 1.5rem 0;
+  border-radius: 12px;
 }
 
 .day-summary-bar::-webkit-scrollbar { display: none; }
@@ -2950,23 +2783,29 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .goal-progress-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 0.75rem;
-  font-size: 0.9rem;
-  padding-right: 1.5rem;
+  padding-right: 2rem; /* Место под абсолютную кнопку редактирования */
+  gap: 0.5rem;
 }
 
 .goal-title {
+  flex: 1;
   font-weight: 600;
   color: var(--dark-color);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.5rem;
+  line-height: 1.3;
+  min-width: 0;
 }
 
 .goal-values {
   font-weight: 500;
   color: var(--gray-color);
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-align: right;
 }
 
 .goal-values strong {
@@ -3118,7 +2957,35 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   .calendar-day { min-height: 65px; }
   .day-number { font-size: 0.875rem; }
   .day-earned { font-size: 0.625rem; }
-  .header-actions { flex-wrap: nowrap; }
+
+  /* Исправление кнопок шапки (сетка) */
+  .header-actions {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+    width: 100%;
+    flex-wrap: initial;
+  }
+
+  .header-actions .btn {
+    width: 100%;
+    padding: 0.5rem 0;
+    min-height: 44px;
+    font-size: 0.8rem;
+    flex-direction: column;
+    gap: 0.25rem;
+    border-radius: 8px;
+  }
+
+  .header-actions .btn .btn-text {
+    display: none;
+  }
+
+  .header-actions .btn i {
+    font-size: 1.25rem;
+    margin: 0;
+  }
+
   .goal-progress-card { padding: 0.75rem; }
   .goal-values { font-size: 0.8rem; }
   .goal-values strong { font-size: 0.9rem; }
@@ -3136,7 +3003,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   .summary-chip { font-size: 0.78rem; padding: 0.3rem 0.6rem; }
   .summary-chip-extra { display: none; }
   .selected-month { min-width: 100px; font-size: 0.85rem; }
-  .header-actions { flex-wrap: nowrap; }
+  .header-actions { flex-wrap: initial; }
   .goal-edit-btn { top: 0.5rem; right: 0.5rem; }
 }
 
