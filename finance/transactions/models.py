@@ -28,8 +28,7 @@ class Category(models.Model):
         verbose_name="Родительская категория"
     )
     type_transaction = models.CharField(
-        max_length=20,
-        verbose_name="Тип операции"
+        max_length=20, verbose_name="Тип операции", default="expense"
     )
     level = models.PositiveIntegerField(
         default=0,
@@ -110,12 +109,6 @@ class Category(models.Model):
         ordering = ("level", "name")
 
 
-from app_user.models import CustomUser
-from django.db import models
-
-# ... (Category оставляем без изменений) ...
-
-
 class Transaction(models.Model):
     """
     Модель для представления транзакций пользователя.
@@ -147,6 +140,14 @@ class Transaction(models.Model):
         choices=TYPE_CHOICES,
         db_index=True,
         verbose_name="Тип операции",
+    )
+    recurring_source = models.ForeignKey(
+        "recurring.RecurringTransaction",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="generated_transactions",
+        verbose_name="Источник (регулярная операция)",
     )
 
     category = models.ForeignKey(

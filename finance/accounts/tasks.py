@@ -1,19 +1,27 @@
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from app_user.models import CustomUser
 from celery import shared_task
-from django.db import transaction
+from django.db import transaction as db_transaction
 from django.db.models import F
 from django.utils import timezone
 from notifications.models import Notification
 from notifications.services import create_notification
 from transactions.models import Category, Transaction
 
+from accounts.cache import invalidate_balance_history_cache
+
 from .models import Account
 
 DEFAULT_CREDIT_RATE = Decimal("30.0")
+DAILY_INTEREST_COMMENT = "Ежедневное начисление процентов по вкладу"
 MONTHLY_INTEREST_COMMENT = "Ежемесячное начисление процентов по вкладу"
+
+
+# =============================================================================
+# HELPERS
+# =============================================================================
 
 
 def _get_credit_rate(account: Account) -> Decimal:
@@ -22,17 +30,19 @@ def _get_credit_rate(account: Account) -> Decimal:
 
 
 def _get_transaction_time() -> datetime:
-    """Возвращает timezone-aware время (23:59) для корректной записи в историю."""
-    tz = timezone.get_current_timezone()
-    return timezone.make_aware(
-        datetime.combine(date.today(), time(hour=23, minute=59)), tz
-    )
+    """
+    Возвращает timezone-aware время (23:59) текущего дня в локальной TZ.
+
+    Используем timezone.localtime() вместо date.today(), чтобы не получить
+    смещение суток при TIME_ZONE ≠ UTC.
+    """
+    return timezone.localtime().replace(hour=23, minute=59, second=0, microsecond=0)
 
 
 def _get_or_create_category(
     user: CustomUser, name: str, category_type: str
 ) -> Category:
-    """Ищет или создает системную категорию (доход/расход)."""
+    """Ищет или создаёт системную категорию (income/expense)."""
     category, _ = Category.objects.get_or_create(
         user=user, name=name, type_transaction=category_type
     )
@@ -48,17 +58,24 @@ def _apply_balance_operation(
     is_income: bool,
 ) -> None:
     """
-    Атомарно создает транзакцию и обновляет баланс счета.
-    is_income: True - прибавить, False - вычесть.
+    Атомарно создаёт транзакцию и обновляет баланс счёта.
+
+    :param is_income: True — прибавить к балансу, False — вычесть.
+    :param create_at: должен быть timezone-aware (для корректной истории и статистики).
+
+    Инвалидация кэша истории баланса выполняется строго после коммита,
+    чтобы при откате транзакции кэш не тронулся, а конкурентные читатели
+    не закэшировали «промежуточное» состояние.
     """
-    with transaction.atomic():
+    with db_transaction.atomic():
         Transaction.objects.create(
-            user=account.user,
+            user_id=account.user_id,
             account=account,
             category=category,
             amount=amount,
             create_at=create_at,
             comment=comment,
+            type_transaction="income" if is_income else "expense",
         )
 
         balance_delta = amount if is_income else -amount
@@ -66,9 +83,14 @@ def _apply_balance_operation(
             balance=F("balance") + balance_delta
         )
 
+        user_id = account.user_id
+        db_transaction.on_commit(
+            lambda uid=user_id: invalidate_balance_history_cache(uid)
+        )
+
 
 def _notification_exists(
-    user, notification_type: str, account_id: int, today: date
+    user: CustomUser, notification_type: str, account_id: int, today: date
 ) -> bool:
     """Проверяет, было ли уже отправлено уведомление за сегодня."""
     return Notification.objects.filter(
@@ -79,9 +101,29 @@ def _notification_exists(
     ).exists()
 
 
+# =============================================================================
+# ЕЖЕДНЕВНЫЕ ПРОЦЕНТЫ ПО ВКЛАДАМ
+# =============================================================================
+
+
+def _daily_interest_already_accrued(account: Account, today: date) -> bool:
+    """
+    Идемпотентность: одна транзакция начисления в календарный день на счёт.
+
+    Защищает от двойного начисления при повторном запуске celery beat,
+    retry задач или ручном перезапуске.
+    """
+    return Transaction.objects.filter(
+        user_id=account.user_id,
+        account=account,
+        comment=DAILY_INTEREST_COMMENT,
+        create_at__date=today,
+    ).exists()
+
+
 def _accrue_interest_for_account(account: Account, create_at: datetime) -> None:
     """
-    Начисляет ежедневный процент для одного вклада(Ежедневный процент).
+    Начисляет ежедневный процент для одного вклада.
     Формула: Баланс * (Ставка / 100) / 365 дней.
     """
     daily_rate = account.interest_rate / Decimal("100") / Decimal("365")
@@ -97,15 +139,41 @@ def _accrue_interest_for_account(account: Account, create_at: datetime) -> None:
         amount=interest_amount,
         category=category,
         create_at=create_at,
-        comment="Ежедневное начисление процентов по вкладу",
+        comment=DAILY_INTEREST_COMMENT,
         is_income=True,
     )
 
 
-def _reset_grace_period(account: Account) -> None:
-    """Сбрасывает таймер льготного периода, если долг погашен."""
-    account.grace_period_start = None
-    account.save(update_fields=["grace_period_start"])
+@shared_task
+def accrue_deposit_interest(create_at: datetime | None = None) -> None:
+    """
+    Ежедневная задача: начисляет проценты по всем активным вкладам.
+
+    :param create_at: опциональное время транзакции (для backfill/тестов).
+                      По умолчанию — «23:59 сегодня» в локальной TZ.
+    """
+    if create_at is None:
+        create_at = _get_transaction_time()
+    today = timezone.localtime(create_at).date()
+
+    deposits = (
+        Account.objects.filter(
+            account_type=Account.TYPE_DEPOSIT,
+            deleted_at__isnull=True,
+            balance__gt=0,
+            interest_rate__gt=0,
+        ).select_related("user")  # избегаем N+1 при обращении к account.user
+    )
+
+    for account in deposits:
+        if _daily_interest_already_accrued(account, today):
+            continue
+        _accrue_interest_for_account(account, create_at)
+
+
+# =============================================================================
+# КРЕДИТНЫЕ КАРТЫ: ЛЬГОТНЫЙ ПЕРИОД
+# =============================================================================
 
 
 def _notify_grace_period_ending(account: Account, today: date) -> None:
@@ -169,12 +237,14 @@ def _apply_late_penalty(account: Account, today: date, create_at: datetime) -> N
         amount=penalty,
         category=category,
         create_at=create_at,
-        comment=f"Начисление процентов по кредитной карте "
-        f"({rate}% годовых после льготного периода)",
+        comment=(
+            f"Начисление процентов по кредитной карте "
+            f"({rate}% годовых после льготного периода)"
+        ),
         is_income=False,
     )
 
-    # Уведомление раз в день
+    # Уведомление — не чаще раза в день
     if not _notification_exists(account.user, "budget_warning", account.id, today):
         monthly_estimate = (debt * rate / Decimal("100") / Decimal("12")).quantize(
             Decimal("0.01")
@@ -198,44 +268,26 @@ def _apply_late_penalty(account: Account, today: date, create_at: datetime) -> N
         )
 
 
-# =============================================================================
-# CELERY TASKS (Оркестраторы)
-# =============================================================================
-
-
 @shared_task
-def accrue_deposit_interest():
-    """Ежедневная задача: начисляет проценты по всем активным вкладам."""
-    create_at = _get_transaction_time()
-
-    deposits = Account.objects.filter(
-        account_type=Account.TYPE_DEPOSIT,
-        deleted_at__isnull=True,
-        balance__gt=0,
-        interest_rate__gt=0,
-    )
-
-    for account in deposits:
-        _accrue_interest_for_account(account, create_at)
-
-
-@shared_task
-def check_credit_card_overdue():
+def check_credit_card_overdue(create_at: datetime | None = None) -> None:
     """
     Ежедневная задача: проверяет кредитные карты.
     Управляет льготным периодом, начисляет пени, отправляет уведомления.
+
+    :param create_at: опциональное время транзакции (для backfill/тестов).
     """
-    today = date.today()
-    create_at = _get_transaction_time()
+    if create_at is None:
+        create_at = _get_transaction_time()
+    today = timezone.localtime(create_at).date()
 
     credit_cards = Account.objects.filter(
         account_type=Account.TYPE_CREDIT,
         deleted_at__isnull=True,
         grace_period_start__isnull=False,
-    )
+    ).select_related("user")
 
     for account in credit_cards:
-        # 1. Если баланс >= 0, долг погашен
+        # Долг погашен — выходим
         if account.balance >= 0:
             continue
 
@@ -244,22 +296,25 @@ def check_credit_card_overdue():
         )
         days_left = (end_date - today).days
 
-        # 2. Напоминаем за 3 дня до конца
         if days_left == 3:
             _notify_grace_period_ending(account, today)
-
-        # 3. Льготный период истек! Начисляем пеню
         elif today > end_date:
             _apply_late_penalty(account, today, create_at)
+
+
+# =============================================================================
+# ЕЖЕМЕСЯЧНЫЕ ПРОЦЕНТЫ ПО ВКЛАДАМ
+# =============================================================================
 
 
 def _monthly_interest_already_accrued(account: Account, today: date) -> bool:
     """
     Идемпотентность: одна транзакция начисления в календарный месяц на счёт.
+
     Защищает от двойного запуска celery beat / ручного перезапуска.
     """
     return Transaction.objects.filter(
-        user=account.user,
+        user_id=account.user_id,
         account=account,
         comment=MONTHLY_INTEREST_COMMENT,
         create_at__year=today.year,
@@ -292,26 +347,29 @@ def _accrue_monthly_interest_for_account(account: Account, create_at: datetime) 
 
 
 @shared_task
-def accrue_monthly_deposit_interest():
+def accrue_monthly_deposit_interest(create_at: datetime | None = None) -> None:
     """
     Ежемесячная задача: начисляет проценты по вкладам с ежемесячной капитализацией.
 
     Запускается celery beat 1-го числа каждого месяца в 00:05.
     Начисление идёт за прошедший месяц по текущему балансу счёта
     (т.е. по балансу на конец предыдущего месяца).
+
+    :param create_at: опциональное время транзакции (для backfill/тестов).
     """
-    today = date.today()
+    if create_at is None:
+        create_at = _get_transaction_time()
+    today = timezone.localtime(create_at).date()
+
     if today.day != 1:
         return
-
-    create_at = _get_transaction_time()
 
     deposits = Account.objects.filter(
         account_type=Account.TYPE_DEPOSIT_MONTHLY,
         deleted_at__isnull=True,
         balance__gt=0,
         interest_rate__gt=0,
-    )
+    ).select_related("user")
 
     for account in deposits:
         if _monthly_interest_already_accrued(account, today):

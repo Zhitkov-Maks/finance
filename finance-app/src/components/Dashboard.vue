@@ -2,7 +2,7 @@
   <div class="dashboard-container">
     <h1 class="dashboard-title">Дашборд</h1>
 
-    <!-- Статистика: стек карточек на мобилке, сетка на десктопе -->
+    <!-- Статистика -->
     <div class="stats-carousel" :class="{ 'is-mobile': isMobileView }">
       <div
         class="stats-carousel-track"
@@ -25,7 +25,6 @@
         </div>
       </div>
 
-      <!-- Точки-индикаторы -->
       <div class="stats-dots" :class="{ 'is-mobile': isMobileView }">
         <span
           v-for="i in 3"
@@ -37,39 +36,79 @@
       </div>
     </div>
 
+    <!-- ============================================================
+         БЕЗОПАСНО ТРАТИТЬ В ДЕНЬ — полностью переработанная карточка
+         ============================================================ -->
     <div class="card safe-to-spend-card hoverable-card" v-if="forecastData">
       <div class="safe-content">
-        <div class="safe-icon" :class="displaySafeToSpend > 0 ? 'bg-success-light' : 'bg-danger-light'">
-          <i class="fas" :class="displaySafeToSpend > 0 ? 'fa-shield-alt' : 'fa-exclamation-triangle'"></i>
+        <!-- Левая колонка: иконка -->
+        <div class="safe-icon" :class="safeIconClass">
+          <i class="fas" :class="safeIcon"></i>
         </div>
 
+        <!-- Центральная колонка: текст + прогресс -->
         <div class="safe-text">
           <h3>Безопасно тратить в день</h3>
-          <p v-if="displaySafeToSpend > 0">
-            Чтобы дожить до конца месяца ({{ forecastData.days_left }} дн.) и без проблем оплатить обязательные платежи.
+
+          <p v-if="displaySafeToSpend > 0" class="safe-description">
+            Чтобы дожить до конца месяца ({{ forecastData.days_left }} дн.)
+            и без проблем оплатить обязательные платежи.
           </p>
-          <p v-else class="text-danger">
+          <p v-else class="text-danger safe-description">
             ⚠️ Лимит на сегодня исчерпан! Дальнейшие траты приведут к кассовому разрыву.
           </p>
 
-          <!-- ПРОГРЕСС-БАР ТРАТ ЗА СЕГОДНЯ -->
+          <!-- Разбивка трат за сегодня -->
+          <div class="safe-today-breakdown">
+            <div class="breakdown-row">
+              <span class="breakdown-label">
+                <i class="fas fa-shopping-basket"></i>
+                Переменные траты:
+              </span>
+              <span class="breakdown-value">
+                {{ formatCurrency(forecastData.spent_today || 0) }}
+              </span>
+            </div>
+
+            <div v-if="recurringPaidToday > 0" class="breakdown-row breakdown-row-recurring">
+              <span class="breakdown-label">
+                <i class="fas fa-sync-alt"></i>
+                Регулярные списания:
+              </span>
+              <span class="breakdown-value">
+                {{ formatCurrency(recurringPaidToday) }}
+                <span class="breakdown-note" title="Уже учтено в обязательных расходах, не влияет на дневной лимит">
+                  <i class="fas fa-info-circle"></i> учтено
+                </span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Прогресс-бар переменных трат от дневного лимита -->
           <div class="safe-daily-progress" v-if="displaySafeDaily > 0">
             <div class="safe-progress-label">
-              <span>Потрачено сегодня: {{ formatCurrency(forecastData.spent_today || 0) }}</span>
-              <span>из {{ formatCurrency(displaySafeDaily) }}</span>
+              <span>Из дневного лимита</span>
+              <span>{{ formatCurrency(displaySafeDaily) }}</span>
             </div>
             <div class="progress-bar">
               <div
                 class="progress-fill"
-                :class="(forecastData.spent_today || 0) > displaySafeDaily ? 'progress-danger' : 'progress-success'"
-                :style="{ width: Math.min(100, ((forecastData.spent_today || 0) / displaySafeDaily) * 100) + '%' }"
+                :class="progressBarClass"
+                :style="{ width: progressPercent + '%' }"
               ></div>
             </div>
           </div>
         </div>
 
-        <div class="safe-amount" :class="displaySafeToSpend > 0 ? 'text-success' : 'text-danger'">
-          {{ formatCurrency(displaySafeToSpend) }}
+        <!-- Правая колонка: сумма -->
+        <div class="safe-amount-block">
+          <div class="safe-amount-label">Осталось на сегодня</div>
+          <div
+            class="safe-amount"
+            :class="displaySafeToSpend > 0 ? 'text-success' : 'text-danger'"
+          >
+            {{ formatCurrency(displaySafeToSpend) }}
+          </div>
         </div>
       </div>
     </div>
@@ -102,9 +141,9 @@
       ></div>
     </div>
 
-    <!-- Финансовые метрики и прогноз -->
+    <!-- Финансовые метрики -->
     <div class="insights-grid">
-      <!-- Умный прогноз (на основе данных с бэкенда) -->
+      <!-- Умный прогноз -->
       <div class="card forecast-card hoverable-card" v-if="forecastData">
         <div class="card-header">
           <h3 class="card-title">📈 Умный прогноз</h3>
@@ -112,15 +151,16 @@
         </div>
 
         <div class="forecast-content">
-          <!-- ГЛАВНАЯ ЦИФРА -->
           <div class="forecast-main">
-            <div class="forecast-value" :class="forecastData.expected_balance >= 0 ? 'text-success' : 'text-danger'">
+            <div
+              class="forecast-value"
+              :class="forecastData.expected_balance >= 0 ? 'text-success' : 'text-danger'"
+            >
               {{ formatCurrency(forecastData.expected_balance) }}
             </div>
-            <div class="forecast-label">Ожидаемый остаток (с учетом трат)</div>
+            <div class="forecast-label">Ожидаемый остаток (с учётом трат)</div>
           </div>
 
-          <!-- ДЕТАЛИЗАЦИЯ -->
           <div class="forecast-details">
             <div class="forecast-item">
               <span class="forecast-item-label">Гарантированный остаток</span>
@@ -138,16 +178,24 @@
               <span>{{ formatCurrency(forecastData.expected_income) }}</span>
             </div>
             <div class="forecast-line expense-line">
-              <span>- Обязательные траты:</span>
+              <span>
+                − Обязательные траты:
+                <span
+                  v-if="recurringPaidToday > 0"
+                  class="inline-recurring-badge"
+                  title="В том числе регулярные списания"
+                >
+                  <i class="fas fa-sync-alt"></i> авто
+                </span>
+              </span>
               <span>{{ formatCurrency(forecastData.obligatory_expenses) }}</span>
             </div>
             <div class="forecast-line variable-line">
-              <span>- Переменные траты ({{ forecastData.days_left }} дн.):</span>
+              <span>− Переменные траты ({{ forecastData.days_left }} дн.):</span>
               <span>{{ formatCurrency(forecastData.variable_expenses) }}</span>
             </div>
           </div>
 
-          <!-- ПРОГРЕСС -->
           <div class="daily-progress">
             <div class="progress-label">
               <span>Прогресс месяца</span>
@@ -162,20 +210,29 @@
             </div>
           </div>
 
-          <div class="forecast-status" :class="forecastData.expected_balance >= 0 ? 'status-positive' : 'status-negative'">
-            <i :class="forecastData.expected_balance >= 0 ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle'"></i>
-            {{ forecastData.expected_balance >= 0 ? 'Бюджет сходится. Можно тратить спокойно.' : 'Внимание! Траты превышают доходы.' }}
+          <div
+            class="forecast-status"
+            :class="forecastData.expected_balance >= 0 ? 'status-positive' : 'status-negative'"
+          >
+            <i
+              :class="forecastData.expected_balance >= 0
+                ? 'fas fa-check-circle'
+                : 'fas fa-exclamation-triangle'"
+            ></i>
+            {{
+              forecastData.expected_balance >= 0
+                ? 'Бюджет сходится. Можно тратить спокойно.'
+                : 'Внимание! Траты превышают доходы.'
+            }}
           </div>
         </div>
       </div>
 
-      <!-- Карточка сравнения с прошлым месяцем -->
+      <!-- Сравнение с прошлым месяцем -->
       <div class="card comparison-card hoverable-card">
         <div class="card-header">
           <h3 class="card-title">📊 Сравнение с прошлым месяцем</h3>
-          <span class="comparison-period">
-            {{ formatMonthYear(previousMonth) }}
-          </span>
+          <span class="comparison-period">{{ formatMonthYear(previousMonth) }}</span>
         </div>
 
         <div class="comparison-content">
@@ -224,102 +281,124 @@
       </div>
     </div>
 
+    <!-- Геймификация -->
     <div v-if="gamification" class="gamification-grid">
-        <!-- 1. Цель месяца -->
-        <div class="card goal-card hoverable-card">
-            <div class="card-header">
-                <h3 class="card-title">🎯 Цель месяца</h3>
-                <button v-if="gamification.goal" @click="showGoalModal = true" class="btn-icon" title="Редактировать">
-                    <i class="fas fa-edit"></i>
-                </button>
-            </div>
-
-            <div v-if="gamification.goal && goalProgress" class="goal-content">
-                <div class="goal-amounts">
-                    <span class="goal-current" :class="goalProgress.is_negative ? 'text-danger' : ''">
-                        {{ formatCurrency(goalProgress.current) }}
-                    </span>
-                    <span class="goal-separator">из</span>
-                    <span class="goal-target">{{ formatCurrency(gamification.goal.amount) }}</span>
-                </div>
-
-                <div class="goal-subtitle" v-if="gamification.goal.goal_type === 'save'">
-                    прогноз экономии на конец месяца
-                </div>
-                <div class="goal-subtitle" v-else>
-                    потрачено из лимита
-                </div>
-
-                <div class="progress-bar" style="margin-top: 0.5rem;">
-                    <div
-                        class="progress-fill"
-                        :class="goalProgress.is_completed ? 'progress-success' : 'progress-warning'"
-                        :style="{ width: goalProgress.percent + '%' }"
-                    ></div>
-                </div>
-
-                <!-- Прогноз для лимита (показывает, сколько потратится к концу месяца) -->
-                <div v-if="gamification.goal.goal_type === 'limit' && goalProgress.projected && forecastData" style="margin-top: 0.75rem; font-size: 0.8rem; background: var(--light-color); padding: 0.5rem; border-radius: 0.5rem; color: var(--gray-color);">
-                  <i class="fas fa-chart-line"></i> Прогноз трат: <strong :class="goalProgress.projected > gamification.goal.amount ? 'text-danger' : 'text-success'">{{ formatCurrency(goalProgress.projected) }}</strong>
-                </div>
-
-                <p class="goal-status" :class="goalProgress.is_negative ? 'text-danger' : ''">
-                    {{ goalProgress.status_text }}
-                </p>
-
-                <button @click="deleteGoal" class="btn btn-sm btn-outline-danger" style="margin-top: auto;">
-                    Удалить цель
-                </button>
-            </div>
-
-            <div v-else class="goal-empty">
-                <p>У вас нет цели на этот месяц.</p>
-                <button @click="showGoalModal = true" class="btn btn-primary btn-sm">Установить цель</button>
-            </div>
+      <div class="card goal-card hoverable-card">
+        <div class="card-header">
+          <h3 class="card-title">🎯 Цель месяца</h3>
+          <button
+            v-if="gamification.goal"
+            @click="showGoalModal = true"
+            class="btn-icon"
+            title="Редактировать"
+          >
+            <i class="fas fa-edit"></i>
+          </button>
         </div>
 
-        <!-- 2. Уровень грамотности -->
-        <div class="card literacy-card hoverable-card">
-            <div class="card-header">
-                <h3 class="card-title">🏆 Уровень {{ gamification.level.score }} / 10</h3>
-                <button
-                    @click="showBreakdown = !showBreakdown"
-                    class="btn-icon"
-                    title="За что начислены баллы?"
-                >
-                    <i class="fas" :class="showBreakdown ? 'fa-chevron-up' : 'fa-info-circle'"></i>
-                </button>
-            </div>
+        <div v-if="gamification.goal && goalProgress" class="goal-content">
+          <div class="goal-amounts">
+            <span
+              class="goal-current"
+              :class="goalProgress.is_negative ? 'text-danger' : ''"
+            >
+              {{ formatCurrency(goalProgress.current) }}
+            </span>
+            <span class="goal-separator">из</span>
+            <span class="goal-target">{{ formatCurrency(gamification.goal.amount) }}</span>
+          </div>
 
-            <div class="literacy-content">
-                <div class="literacy-stars">
-                    <i v-for="i in 10" :key="i"
-                      class="fas fa-star"
-                      :class="{ active: i <= gamification.level.score }"></i>
-                </div>
+          <div class="goal-subtitle" v-if="gamification.goal.goal_type === 'save'">
+            прогноз экономии на конец месяца
+          </div>
+          <div class="goal-subtitle" v-else>потрачено из лимита</div>
 
-                <div class="literacy-hint" :class="gamification.level.raw_score < 0 ? 'hint-danger' : ''">
-                    <i class="fas fa-lightbulb"></i> {{ gamification.level.hint }}
-                </div>
+          <div class="progress-bar" style="margin-top: 0.5rem;">
+            <div
+              class="progress-fill"
+              :class="goalProgress.is_completed ? 'progress-success' : 'progress-warning'"
+              :style="{ width: goalProgress.percent + '%' }"
+            ></div>
+          </div>
 
-                <!-- Расшифровка баллов (показывается по клику) -->
-                <div v-if="showBreakdown" class="literacy-breakdown">
-                    <div
-                        v-for="item in gamification.level.breakdown"
-                        :key="item.action"
-                        class="breakdown-item"
-                        :class="item.type"
-                    >
-                        <span class="breakdown-action">{{ item.action }}</span>
-                        <span class="breakdown-points">
-                            {{ item.points > 0 ? '+' : '' }}{{ item.points }}
-                        </span>
-                    </div>
-                </div>
-            </div>
+          <div
+            v-if="gamification.goal.goal_type === 'limit' && goalProgress.projected && forecastData"
+            class="goal-projection"
+          >
+            <i class="fas fa-chart-line"></i> Прогноз трат:
+            <strong
+              :class="goalProgress.projected > gamification.goal.amount
+                ? 'text-danger'
+                : 'text-success'"
+            >
+              {{ formatCurrency(goalProgress.projected) }}
+            </strong>
+          </div>
+
+          <p class="goal-status" :class="goalProgress.is_negative ? 'text-danger' : ''">
+            {{ goalProgress.status_text }}
+          </p>
+
+          <button @click="deleteGoal" class="btn btn-sm btn-outline-danger">
+            Удалить цель
+          </button>
         </div>
+
+        <div v-else class="goal-empty">
+          <p>У вас нет цели на этот месяц.</p>
+          <button @click="showGoalModal = true" class="btn btn-primary btn-sm">
+            Установить цель
+          </button>
+        </div>
+      </div>
+
+      <div class="card literacy-card hoverable-card">
+        <div class="card-header">
+          <h3 class="card-title">🏆 Уровень {{ gamification.level.score }} / 10</h3>
+          <button
+            @click="showBreakdown = !showBreakdown"
+            class="btn-icon"
+            title="За что начислены баллы?"
+          >
+            <i class="fas" :class="showBreakdown ? 'fa-chevron-up' : 'fa-info-circle'"></i>
+          </button>
+        </div>
+
+        <div class="literacy-content">
+          <div class="literacy-stars">
+            <i
+              v-for="i in 10"
+              :key="i"
+              class="fas fa-star"
+              :class="{ active: i <= gamification.level.score }"
+            ></i>
+          </div>
+
+          <div
+            class="literacy-hint"
+            :class="gamification.level.raw_score < 0 ? 'hint-danger' : ''"
+          >
+            <i class="fas fa-lightbulb"></i> {{ gamification.level.hint }}
+          </div>
+
+          <div v-if="showBreakdown" class="literacy-breakdown">
+            <div
+              v-for="item in gamification.level.breakdown"
+              :key="item.action"
+              class="breakdown-item"
+              :class="item.type"
+            >
+              <span class="breakdown-action">{{ item.action }}</span>
+              <span class="breakdown-points">
+                {{ item.points > 0 ? '+' : '' }}{{ item.points }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
+    <!-- Бюджет месяца -->
     <div
       v-if="budgetSummary && budgetSummary.total_budget"
       class="card budget-widget hoverable-card"
@@ -358,13 +437,18 @@
           <span
             :class="budgetSummary.total_budget.remaining >= 0 ? 'text-success' : 'text-danger'"
           >
-            {{ budgetSummary.total_budget.remaining >= 0 ? 'Осталось' : 'Перерасход' }}:
+            {{
+              budgetSummary.total_budget.remaining >= 0 ? 'Осталось' : 'Перерасход'
+            }}:
             {{ formatCurrency(Math.abs(budgetSummary.total_budget.remaining)) }}
           </span>
         </div>
       </div>
     </div>
+
     <SubscriptionWidget class="hoverable-card" />
+
+    <!-- История баланса -->
     <div v-if="activeAccounts.length > 0" class="card balance-history-card hoverable-card">
       <div class="card-header">
         <h3 class="card-title">
@@ -449,7 +533,10 @@
             </div>
           </div>
 
-          <div v-if="historyMode === 'all' && historyAccounts.length > 0" class="history-legend">
+          <div
+            v-if="historyMode === 'all' && historyAccounts.length > 0"
+            class="history-legend"
+          >
             <button
               v-for="acc in historyAccounts"
               :key="acc.id"
@@ -490,21 +577,22 @@
                 </span>
               </div>
             </div>
-            <div class="history-period-label">
-              {{ historyPeriodLabel }}
-            </div>
+            <div class="history-period-label">{{ historyPeriodLabel }}</div>
           </div>
         </template>
       </div>
     </div>
 
-    <!-- Modal: Установка цели -->
+    <!-- Модалка цели -->
     <GoalModal
-        v-if="showGoalModal"
-        :existingGoal="gamification?.goal"
-        @close="showGoalModal = false"
-        @saved="onGoalSaved"
+      v-if="showGoalModal"
+      :existingGoal="gamification?.goal"
+      @close="showGoalModal = false"
+      @saved="onGoalSaved"
     />
+
+    <!-- FAB быстрого добавления транзакции (bottom-sheet на мобиле) -->
+    <QuickAddTransaction />
   </div>
 </template>
 
@@ -514,6 +602,7 @@ import apiService from '../services/api.js'
 import InsightsWidget from './InsightsWidget.vue'
 import GoalModal from './GoalModal.vue'
 import SubscriptionWidget from './SubscriptionWidget.vue'
+import QuickAddTransaction from './QuickAddTransaction.vue'
 
 const DISTRIBUTION_COLORS = [
   '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -553,7 +642,7 @@ const setupCanvas = (canvas, cssWidth, cssHeight) => {
 
 export default {
   name: 'Dashboard',
-  components: { InsightsWidget, GoalModal, SubscriptionWidget },
+  components: { InsightsWidget, GoalModal, SubscriptionWidget, QuickAddTransaction },
   setup() {
     const accounts = ref([])
     const loading = ref(false)
@@ -575,10 +664,7 @@ export default {
     const budgetSummary = ref(null)
     const budgetLoading = ref(false)
 
-    const previousMonthData = ref({
-      income: 0,
-      expense: 0
-    })
+    const previousMonthData = ref({ income: 0, expense: 0 })
 
     const currentStatIndex = ref(0)
     const touchStartX = ref(0)
@@ -589,11 +675,9 @@ export default {
 
     const forecastData = ref(null)
 
-    const safeToSpend = computed(() => {
-      if (!forecastData.value || forecastData.value.days_left <= 0) return 0
-      const dailyLimit = forecastData.value.guaranteed_balance / forecastData.value.days_left
-      return Math.max(0, dailyLimit)
-    })
+    // -------------------------------------------------------------------------
+    // Производные данные о прогнозе
+    // -------------------------------------------------------------------------
 
     const displaySafeToSpend = computed(() => {
       if (!forecastData.value) return 0
@@ -603,7 +687,7 @@ export default {
       const guaranteed = forecastData.value.guaranteed_balance || 0
       const days = forecastData.value.days_left || 1
       const spent = forecastData.value.spent_today || 0
-      return guaranteed > 0 ? Math.max(0, (guaranteed / days) - spent) : 0
+      return guaranteed > 0 ? Math.max(0, guaranteed / days - spent) : 0
     })
 
     const displaySafeDaily = computed(() => {
@@ -613,8 +697,36 @@ export default {
       }
       const guaranteed = forecastData.value.guaranteed_balance || 0
       const days = forecastData.value.days_left || 1
-      return guaranteed > 0 ? (guaranteed / days) : 0
+      return guaranteed > 0 ? guaranteed / days : 0
     })
+
+    /** Сколько регулярных списаний прошло сегодня (уже учтено в obligatory) */
+    const recurringPaidToday = computed(() => {
+      return Number(forecastData.value?.recurring_paid_today) || 0
+    })
+
+    /** Прогресс-бар: только переменные траты от дневного лимита */
+    const progressPercent = computed(() => {
+      const spent = Number(forecastData.value?.spent_today) || 0
+      const daily = displaySafeDaily.value
+      if (daily <= 0) return 0
+      return Math.min(100, (spent / daily) * 100)
+    })
+
+    const progressBarClass = computed(() => {
+      const pct = progressPercent.value
+      if (pct >= 100) return 'progress-danger'
+      if (pct >= 70) return 'progress-warning'
+      return 'progress-success'
+    })
+
+    const safeIconClass = computed(() =>
+      displaySafeToSpend.value > 0 ? 'bg-success-light' : 'bg-danger-light'
+    )
+
+    const safeIcon = computed(() =>
+      displaySafeToSpend.value > 0 ? 'fa-shield-alt' : 'fa-exclamation-triangle'
+    )
 
     const loadForecast = async () => {
       try {
@@ -629,24 +741,9 @@ export default {
     }
 
     const statCards = computed(() => [
-      {
-        key: 'balance',
-        title: 'Свободные средства',
-        value: totalBalance.value,
-        class: 'stat-card-balance'
-      },
-      {
-        key: 'expense',
-        title: 'Расходы (месяц)',
-        value: monthlyExpense.value,
-        class: 'stat-card-expense'
-      },
-      {
-        key: 'income',
-        title: 'Доходы (месяц)',
-        value: monthlyIncome.value,
-        class: 'stat-card-income'
-      }
+      { key: 'balance', title: 'Свободные средства', value: totalBalance.value, class: 'stat-card-balance' },
+      { key: 'expense', title: 'Расходы (месяц)', value: monthlyExpense.value, class: 'stat-card-expense' },
+      { key: 'income', title: 'Доходы (месяц)', value: monthlyIncome.value, class: 'stat-card-income' }
     ])
 
     const cardPosition = (index) => {
@@ -713,9 +810,7 @@ export default {
       }
     }
 
-    const onGoalSaved = () => {
-      loadGamification()
-    }
+    const onGoalSaved = () => loadGamification()
 
     const deleteGoal = async () => {
       if (!confirm('Вы уверены, что хотите удалить текущую цель?')) return
@@ -732,10 +827,7 @@ export default {
 
     const formatCurrency = (value) => {
       if (value === null || value === undefined || isNaN(value)) return '0 ₽'
-      return new Intl.NumberFormat('ru-RU', {
-        style: 'currency',
-        currency: 'RUB'
-      }).format(value)
+      return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(value)
     }
 
     const formatCompactCurrency = (value) => {
@@ -756,13 +848,11 @@ export default {
 
     const previousMonth = computed(() => {
       const nowDate = new Date()
-      const currentMonth = nowDate.getMonth() + 1
-      const currentYear = nowDate.getFullYear()
-      let prevMonth = currentMonth - 1
-      let prevYear = currentYear
+      let prevMonth = nowDate.getMonth()
+      let prevYear = nowDate.getFullYear()
       if (prevMonth === 0) {
         prevMonth = 12
-        prevYear = currentYear - 1
+        prevYear -= 1
       }
       return { month: prevMonth, year: prevYear }
     })
@@ -777,13 +867,13 @@ export default {
 
     const totalBalance = computed(() => {
       return accounts.value
-        .filter(acc => acc.is_active && acc.account_type !== 'credit_card' && !acc.deleted_at)
+        .filter((acc) => acc.is_active && acc.account_type !== 'credit_card' && !acc.deleted_at)
         .reduce((sum, acc) => sum + parseFloat(acc.balance || 0), 0)
     })
 
-    const activeAccounts = computed(() => {
-      return accounts.value.filter(acc => acc.is_active && !acc.deleted_at)
-    })
+    const activeAccounts = computed(() =>
+      accounts.value.filter((acc) => acc.is_active && !acc.deleted_at)
+    )
 
     const budgetPercentClass = computed(() => {
       const p = budgetSummary.value?.total_budget?.percent || 0
@@ -797,8 +887,7 @@ export default {
       try {
         const nowDate = new Date()
         const dateParam = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, '0')}-01`
-        const data = await apiService.getBudgetSummary('monthly', dateParam)
-        budgetSummary.value = data
+        budgetSummary.value = await apiService.getBudgetSummary('monthly', dateParam)
       } catch (error) {
         console.error('Error loading budget summary:', error)
         budgetSummary.value = null
@@ -807,6 +896,7 @@ export default {
       }
     }
 
+    // ------------------------- История баланса -------------------------------
     const historyCanvas = ref(null)
     const historyRange = ref(30)
     const historyRanges = [
@@ -824,9 +914,7 @@ export default {
       paddingLeft: 60, paddingRight: 20, paddingTop: 20, paddingBottom: 40
     })
 
-    const historyTooltip = ref({
-      visible: false, x: 0, y: 0, date: '', rows: [], total: 0
-    })
+    const historyTooltip = ref({ visible: false, x: 0, y: 0, date: '', rows: [], total: 0 })
 
     const historyAccounts = computed(() => {
       if (!historyRawData.value?.accounts) return []
@@ -1076,16 +1164,12 @@ export default {
         historyAccounts.value.forEach((acc) => {
           if (!visibleHistoryAccounts.value.has(acc.id)) return
           const p = acc.series[clampedIdx]
-          if (p) {
-            rows.push({ id: acc.id, name: acc.name, color: acc.color, value: p.value })
-          }
+          if (p) rows.push({ id: acc.id, name: acc.name, color: acc.color, value: p.value })
         })
       }
 
       historyTooltip.value = {
-        visible: true,
-        x,
-        y,
+        visible: true, x, y,
         date: new Date(point.date).toLocaleDateString('ru-RU', {
           day: '2-digit', month: '2-digit', year: 'numeric'
         }),
@@ -1109,12 +1193,10 @@ export default {
         const dateTo = new Date()
         const dateFrom = new Date()
         dateFrom.setDate(dateFrom.getDate() - historyRange.value + 1)
-
-        const data = await apiService.getBalanceHistory(
+        historyRawData.value = await apiService.getBalanceHistory(
           formatDateKey(dateFrom),
           formatDateKey(dateTo)
         )
-        historyRawData.value = data
         scheduleHistoryDraw()
       } catch (error) {
         console.error('Error loading balance history:', error)
@@ -1137,18 +1219,15 @@ export default {
       const nowDate = new Date()
       const currentMonth = nowDate.getMonth() + 1
       const currentYear = nowDate.getFullYear()
-
       let prevMonth = currentMonth - 1
       let prevYear = currentYear
       if (prevMonth === 0) {
         prevMonth = 12
         prevYear = currentYear - 1
       }
-
       try {
         const expenseStats = await apiService.getMonthStatistics(prevMonth, prevYear, 'expense')
         previousMonthData.value.expense = parseFloat(expenseStats.total_amount) || 0
-
         const incomeStats = await apiService.getMonthStatistics(prevMonth, prevYear, 'income')
         previousMonthData.value.income = parseFloat(incomeStats.total_amount) || 0
       } catch (error) {
@@ -1165,7 +1244,6 @@ export default {
       try {
         const expenseStats = await apiService.getMonthStatistics(month, year, 'expense')
         monthlyExpense.value = parseFloat(expenseStats.total_amount) || 0
-
         const incomeStats = await apiService.getMonthStatistics(month, year, 'income')
         monthlyIncome.value = parseFloat(incomeStats.total_amount) || 0
       } catch (error) {
@@ -1182,9 +1260,9 @@ export default {
 
     const daysPassed = computed(() => new Date().getDate())
 
-    const dailyProgress = computed(() => {
-      return Math.min(100, Math.round((daysPassed.value / daysInMonth.value) * 100))
-    })
+    const dailyProgress = computed(() =>
+      Math.min(100, Math.round((daysPassed.value / daysInMonth.value) * 100))
+    )
 
     const progressClass = computed(() => {
       if (dailyProgress.value < 30) return 'progress-low'
@@ -1195,60 +1273,59 @@ export default {
     const goalProgress = computed(() => {
       if (!gamification.value?.goal) return null
       const g = gamification.value.goal
-
       if (g.is_motivation_goal || g.goal_type === 'motivation') return null
       const amount = g.amount
 
-      // 1. ЦЕЛЬ: ПОТРАТИТЬ НЕ БОЛЬШЕ ЛИМИТА
       if (g.goal_type === 'limit') {
         const currentSpent = g.spent_on_backend || 0
-
-        // Если есть прогноз, считаем сколько мы потратим к концу месяца
         let projectedSpent = currentSpent
         if (forecastData.value) {
           projectedSpent += forecastData.value.obligatory_expenses + forecastData.value.variable_expenses
         }
-
         const percent = amount > 0 ? Math.min(100, (currentSpent / amount) * 100) : 0
         const isOverLimit = projectedSpent > amount
-
         return {
           current: currentSpent,
           projected: projectedSpent,
-          percent: percent,
+          percent,
           is_completed: !isOverLimit,
           status_text: isOverLimit
             ? `⚠️ Риск перерасхода! Прогноз: ${formatCurrency(projectedSpent)}`
-            : (currentSpent > amount ? '⚠️ Лимит превышен!' : `Потрачено ${percent.toFixed(1)}% от лимита`),
+            : currentSpent > amount
+              ? '⚠️ Лимит превышен!'
+              : `Потрачено ${percent.toFixed(1)}% от лимита`,
           is_negative: currentSpent > amount
         }
       }
 
-      // 2. ЦЕЛЬ: НАКОПИТЬ (СЭКОНОМИТЬ) ОПРЕДЕЛЁННУЮ СУММУ
       let projectedSavings = 0
-
       if (forecastData.value) {
-        // Умный прогноз: (Доходы текущие + Ожидаемые доходы) - (Траты текущие + Обяз. траты + Переменные траты)
         const totalIncome = monthlyIncome.value + forecastData.value.expected_income
-        const totalExpense = monthlyExpense.value + forecastData.value.obligatory_expenses + forecastData.value.variable_expenses
+        const totalExpense =
+          monthlyExpense.value +
+          forecastData.value.obligatory_expenses +
+          forecastData.value.variable_expenses
         projectedSavings = totalIncome - totalExpense
       } else {
-        // Фоллбэк на старую логику (если прогноз не загрузился)
         const avgDailyExpense = daysPassed.value > 0 ? monthlyExpense.value / daysPassed.value : 0
         const projectedExpense = avgDailyExpense * daysInMonth.value
         projectedSavings = monthlyIncome.value - projectedExpense
       }
 
-      const percent = amount > 0 ? Math.min(100, Math.max(0, (projectedSavings / amount) * 100)) : 0
+      const percent = amount > 0
+        ? Math.min(100, Math.max(0, (projectedSavings / amount) * 100))
+        : 0
       const isCompleted = projectedSavings >= amount
 
       return {
         current: projectedSavings,
-        percent: percent,
+        percent,
         is_completed: isCompleted,
         status_text: projectedSavings < 0
-          ? '⚠️ При текущем темпе трат вы уйдете в минус'
-          : (isCompleted ? '🎉 По прогнозу цель будет достигнута!' : `Выполнено на ${percent.toFixed(1)}%`),
+          ? '⚠️ При текущем темпе трат вы уйдёте в минус'
+          : isCompleted
+            ? '🎉 По прогнозу цель будет достигнута!'
+            : `Выполнено на ${percent.toFixed(1)}%`,
         is_negative: projectedSavings < 0
       }
     })
@@ -1262,9 +1339,7 @@ export default {
 
     const incomeChangeClass = computed(() => {
       if (previousMonthData.value.income === 0) return ''
-      return monthlyIncome.value > previousMonthData.value.income
-        ? 'text-success'
-        : 'text-danger'
+      return monthlyIncome.value > previousMonthData.value.income ? 'text-success' : 'text-danger'
     })
 
     const expenseChange = computed(() => {
@@ -1276,9 +1351,7 @@ export default {
 
     const expenseChangeClass = computed(() => {
       if (previousMonthData.value.expense === 0) return ''
-      return monthlyExpense.value < previousMonthData.value.expense
-        ? 'text-success'
-        : 'text-danger'
+      return monthlyExpense.value < previousMonthData.value.expense ? 'text-success' : 'text-danger'
     })
 
     const savingsChange = computed(() => {
@@ -1304,7 +1377,6 @@ export default {
         const response = await fetch('https://www.cbr-xml-daily.ru/daily_json.js')
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
         const data = await response.json()
-
         const CURRENCIES_TO_SHOW = ['USD', 'EUR', 'CNY']
         const rates = []
         for (const code of CURRENCIES_TO_SHOW) {
@@ -1320,7 +1392,6 @@ export default {
           }
         }
         exchangeRates.value = rates
-        exchangeRatesError.value = false
       } catch (error) {
         console.error('Failed to fetch exchange rates:', error)
         exchangeRatesError.value = true
@@ -1357,17 +1428,13 @@ export default {
       }
     }
 
-    watch(
-      historyAccounts,
-      (list) => {
-        if (list.length === 0) return
-        const ids = list.map((a) => a.id)
-        const currentIds = Array.from(visibleHistoryAccounts.value)
-        const sameSet = currentIds.length === ids.length && ids.every((id) => currentIds.includes(id))
-        if (!sameSet) visibleHistoryAccounts.value = new Set(ids)
-      },
-      { immediate: true }
-    )
+    watch(historyAccounts, (list) => {
+      if (list.length === 0) return
+      const ids = list.map((a) => a.id)
+      const currentIds = Array.from(visibleHistoryAccounts.value)
+      const sameSet = currentIds.length === ids.length && ids.every((id) => currentIds.includes(id))
+      if (!sameSet) visibleHistoryAccounts.value = new Set(ids)
+    }, { immediate: true })
 
     watch(historyRange, () => loadBalanceHistory())
     watch(historyMode, () => scheduleHistoryDraw())
@@ -1395,7 +1462,6 @@ export default {
       loadGamification()
       fetchExchangeRates()
       ratesUpdateInterval = setInterval(fetchExchangeRates, 3600000)
-
       insightsRefreshInterval = setInterval(() => {
         insightsWidgetRef.value?.loadInsights?.()
       }, 5 * 60 * 1000)
@@ -1407,81 +1473,36 @@ export default {
       window.removeEventListener('transaction-created', onTransactionCreated)
       themeObserver.disconnect()
       if (ratesUpdateInterval) clearInterval(ratesUpdateInterval)
-      if (insightsRefreshInterval) {
-        clearInterval(insightsRefreshInterval)
-        insightsRefreshInterval = null
-      }
+      if (insightsRefreshInterval) clearInterval(insightsRefreshInterval)
     })
 
     return {
-      accounts,
-      loading,
-      showGoalModal,
-      totalBalance,
-      activeAccounts,
-      monthlyIncome,
-      monthlyExpense,
-      exchangeRates,
-      exchangeRatesLoading,
-      exchangeRatesError,
-      now,
-      previousMonth,
-      previousMonthData,
-      dailyProgress,
-      progressClass,
-      incomeChange,
-      incomeChangeClass,
-      expenseChange,
-      expenseChangeClass,
-      savingsChange,
-      savingsChangeClass,
-      formatCurrency,
-      formatCompactCurrency,
-      formatDate,
-      formatMonthYear,
-      gamification,
-      goalProgress,
-      onGoalSaved,
-      deleteGoal,
-      currentStatIndex,
-      isMobileView,
-      statCards,
-      cardPosition,
-      onTouchStart,
-      onTouchMove,
-      onTouchEnd,
-      onMouseDown,
-      budgetSummary,
-      budgetLoading,
-      budgetPercentClass,
-      historyCanvas,
-      historyRange,
-      historyRanges,
-      historyMode,
-      historyLoading,
-      historyError,
-      historyAccounts,
-      visibleHistoryAccounts,
-      historyTotalSeries,
-      historyStartBalance,
-      historyEndBalance,
-      historyChange,
-      historyChangePercent,
-      historyChangeClass,
-      historyMinTotal,
-      historyMaxTotal,
-      historyPeriodLabel,
-      historyTooltip,
-      loadBalanceHistory,
-      toggleHistoryAccount,
-      onHistoryMouseMove,
-      onHistoryMouseLeave,
-      insightsWidgetRef,
-      showBreakdown,
+      accounts, loading, showGoalModal,
+      totalBalance, activeAccounts,
+      monthlyIncome, monthlyExpense,
+      exchangeRates, exchangeRatesLoading, exchangeRatesError,
+      now, previousMonth, previousMonthData,
+      dailyProgress, progressClass,
+      incomeChange, incomeChangeClass, expenseChange, expenseChangeClass,
+      savingsChange, savingsChangeClass,
+      formatCurrency, formatCompactCurrency, formatDate, formatMonthYear,
+      gamification, goalProgress, onGoalSaved, deleteGoal,
+      currentStatIndex, isMobileView, statCards, cardPosition,
+      onTouchStart, onTouchMove, onTouchEnd, onMouseDown,
+      budgetSummary, budgetLoading, budgetPercentClass,
+      historyCanvas, historyRange, historyRanges, historyMode,
+      historyLoading, historyError, historyAccounts, visibleHistoryAccounts,
+      historyTotalSeries, historyStartBalance, historyEndBalance,
+      historyChange, historyChangePercent, historyChangeClass,
+      historyMinTotal, historyMaxTotal, historyPeriodLabel,
+      historyTooltip, loadBalanceHistory, toggleHistoryAccount,
+      onHistoryMouseMove, onHistoryMouseLeave,
+      insightsWidgetRef, showBreakdown,
       forecastData,
-      safeToSpend,
-      displaySafeToSpend,
-      displaySafeDaily
+      displaySafeToSpend, displaySafeDaily,
+      recurringPaidToday,
+      progressPercent, progressBarClass,
+      safeIconClass, safeIcon
     }
   }
 }
@@ -1489,14 +1510,111 @@ export default {
 
 <style scoped>
 /* ============================================================
-   БАЗОВЫЕ СТИЛИ
+   БАЗА
    ============================================================ */
+.dashboard-container { padding-top: 0.5rem; }
+.dashboard-title { margin-bottom: 2rem; margin-top: 0; color: var(--dark-color); }
 
-.safe-daily-progress {
-  margin-top: 0.75rem;
-  width: 100%;
-  max-width: 400px;
+/* ============================================================
+   SAFE-TO-SPEND — полностью переработанная карточка
+   ============================================================ */
+.safe-to-spend-card {
+  background: linear-gradient(135deg, var(--white) 0%, var(--light-color) 100%);
+  border-left: 4px solid var(--secondary-color);
+  margin-bottom: 2rem;
+  padding: 1.5rem;
 }
+
+.safe-content {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: "icon text amount";
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.safe-icon {
+  grid-area: icon;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+.bg-success-light { background: rgba(16, 185, 129, 0.15); color: var(--secondary-color); }
+.bg-danger-light { background: rgba(239, 68, 68, 0.15); color: var(--danger-color); }
+
+.safe-text { grid-area: text; min-width: 0; }
+
+.safe-text h3 {
+  margin: 0 0 0.35rem 0;
+  font-size: 1.15rem;
+  color: var(--dark-color);
+}
+
+.safe-description {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.85rem;
+  color: var(--gray-color);
+  line-height: 1.4;
+}
+
+/* Разбивка трат за сегодня */
+.safe-today-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+}
+:global(:root[data-theme="dark"]) .safe-today-breakdown {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--dark-color);
+}
+
+.breakdown-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--gray-color);
+}
+
+.breakdown-value {
+  font-weight: 600;
+  color: var(--dark-color);
+  white-space: nowrap;
+}
+
+.breakdown-row-recurring .breakdown-label i {
+  color: var(--primary-color);
+}
+
+.breakdown-note {
+  font-weight: 400;
+  font-size: 0.7rem;
+  color: var(--gray-color);
+  margin-left: 0.25rem;
+  cursor: help;
+}
+
+/* Прогресс-бар */
+.safe-daily-progress { width: 100%; }
+
 .safe-progress-label {
   display: flex;
   justify-content: space-between;
@@ -1504,1232 +1622,504 @@ export default {
   color: var(--gray-color);
   margin-bottom: 0.25rem;
 }
+
 .safe-daily-progress .progress-bar {
   height: 6px;
   background: var(--light-color);
   border-radius: 9999px;
   overflow: hidden;
 }
+
 .safe-daily-progress .progress-fill {
   height: 100%;
   border-radius: 9999px;
   transition: width 0.4s ease;
 }
 
-.dashboard-container {
-  padding-top: 0.5rem;
-}
-
-.dashboard-title {
-  margin-bottom: 2rem;
-  margin-top: 0;
-  color: var(--dark-color);
-}
-
-/* ---------- Панель курсов валют ---------- */
-.actions-panel {
+/* Сумма */
+.safe-amount-block {
+  grid-area: amount;
   display: flex;
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  min-width: 160px;
 }
 
-.exchange-rates {
-  display: flex;
-  gap: 1rem;
-  background: var(--light-color);
-  padding: 0.5rem 1rem;
-  border-radius: 9999px;
-  flex-wrap: wrap;
-}
-
-.rate-item {
-  display: inline-flex;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.rate-currency {
+.safe-amount-label {
+  font-size: 0.75rem;
   color: var(--gray-color);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 0.25rem;
 }
 
-.rate-value {
-  color: var(--dark-color);
-  font-weight: 600;
+.safe-amount {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  white-space: nowrap;
+  line-height: 1.1;
 }
 
-.rate-error {
-  cursor: help;
-  font-size: 1rem;
+/* ---- Планшет (768-1024) — amount переезжает под текст, во всю ширину ---- */
+@media (max-width: 1024px) {
+  .safe-content {
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "icon text"
+      "amount amount";
+    row-gap: 1rem;
+  }
+  .safe-amount-block {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    width: 100%;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    padding-top: 0.75rem;
+  }
+  :global(:root[data-theme="dark"]) .safe-amount-block {
+    border-top-color: rgba(255, 255, 255, 0.08);
+  }
+  .safe-amount {
+    font-size: 1.8rem;
+  }
 }
 
-.exchange-rates-placeholder {
-  min-width: 180px;
-}
-
-/* ---------- Карточки ---------- */
-.card {
-  background: var(--white);
-  border-radius: var(--radius, 12px);
-  padding: 1.25rem;
-  box-shadow: var(--shadow);
-  margin-bottom: 1.5rem;
-}
-
-.card:last-child {
-  margin-bottom: 0;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid var(--light-color);
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.card-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--dark-color);
-}
-
-.comparison-period {
-  font-size: 0.875rem;
-  color: var(--gray-color);
-  font-weight: 500;
-}
-
-.hoverable-card {
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
-  will-change: transform;
-}
-
-.hoverable-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg), 0 8px 24px rgba(0, 0, 0, 0.08);
-}
-
-/* В темной теме тень должна быть глубже и темнее, чтобы карточка не сливалась с фоном */
-:global(:root[data-theme="dark"]) .hoverable-card:hover {
-  box-shadow: var(--shadow-lg), 0 8px 24px rgba(0, 0, 0, 0.4);
-}
-
-/* Карточка подписок (дочерний компонент) */
-:deep(.subscription-card) {
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
-}
-:deep(.subscription-card:hover) {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg), 0 8px 24px rgba(0, 0, 0, 0.08);
-}
-:global(:root[data-theme="dark"]) :deep(.subscription-card:hover) {
-  box-shadow: var(--shadow-lg), 0 8px 24px rgba(0, 0, 0, 0.4);
+/* ---- Мобилка (<768) — полностью стек, центр ---- */
+@media (max-width: 768px) {
+  .safe-to-spend-card { padding: 1.25rem; }
+  .safe-content {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "icon"
+      "amount"
+      "text";
+    text-align: center;
+    justify-items: center;
+    row-gap: 0.75rem;
+  }
+  .safe-icon { justify-self: center; align-self: center; }
+  .safe-amount-block {
+    flex-direction: column;
+    align-items: center;
+    border-top: none;
+    padding-top: 0;
+  }
+  .safe-amount-label { text-align: center; }
+  .safe-amount { font-size: 2.4rem; text-align: center; }
+  .safe-text { text-align: center; }
+  .safe-text h3 { font-size: 1rem; }
+  .safe-description { font-size: 0.8rem; }
+  .safe-today-breakdown {
+    text-align: left;
+    max-width: 100%;
+    width: 100%;
+  }
+  .safe-daily-progress { text-align: left; }
+  .safe-progress-label { text-align: left; }
 }
 
 /* ============================================================
-   СТАТИСТИКА
+   ПРОГРЕСС-БАРЫ (переиспользуемые классы)
    ============================================================ */
-.stats-carousel {
-  margin-bottom: 2rem;
-}
-
-.stats-carousel-track {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.5rem;
-}
-
-.stat-card {
-  border-radius: var(--radius, 12px);
-  padding: 1.25rem 1.5rem;
-  box-shadow: var(--shadow);
-  box-sizing: border-box;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 110px;
-  color: white;
-}
-
-.stat-title {
-  font-size: 0.85rem;
-  margin-bottom: 0.4rem;
-}
-
-.stat-value {
-  font-size: 1.6rem;
-  font-weight: 700;
-  line-height: 1.2;
-  word-break: break-word;
-}
-
-.stat-card-balance {
-  background: linear-gradient(135deg, var(--white) 0%, var(--light-color) 100%);
-  border: 1px solid var(--light-color);
-}
-
-.stat-card-balance .stat-title {
-  color: var(--gray-color);
-}
-
-.stat-card-balance .stat-value {
-  color: var(--dark-color);
-}
-
-.stat-card-expense {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-}
-
-.stat-card-expense .stat-title {
-  color: #ffffff;
-}
-.stat-card-expense .stat-value {
-  color: #ffffff;
-}
-
-.stat-card-income {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-}
-
-.stat-card-income .stat-title {
-  color: #ffffff;
-}
-.stat-card-income .stat-value {
-  color: #ffffff;
-}
-
-.stats-dots {
-  display: none;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-.stats-dots.is-mobile {
-  display: flex;
-}
-
-.stats-dot {
-  width: 8px;
+.progress-bar {
   height: 8px;
-  border-radius: 50%;
-  background: var(--gray-color);
-  transition: all 0.25s ease;
-  cursor: pointer;
-}
-
-.stats-dot.active {
-  width: 24px;
-  border-radius: 4px;
-  background: var(--primary-color);
-}
-
-.stats-carousel.is-mobile {
-  position: relative;
-  height: 150px;
-  overflow: visible;
-}
-
-.stats-carousel-track.is-mobile {
-  position: relative;
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.stats-carousel-track.is-mobile .stat-card {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: calc(100% - 24px);
-  height: 100%;
-  transform: translateX(-50%);
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.35s ease;
-  will-change: transform;
-}
-
-.text-success {
-  color: var(--secondary-color);
-}
-
-.text-danger {
-  color: var(--danger-color);
-}
-
-.text-warning {
-  color: var(--warning-color);
-}
-
-.insights-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-  align-items: stretch;
-}
-
-.insights-grid > .card {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 0;
-}
-
-.forecast-card {
-  background: linear-gradient(135deg, var(--white) 0%, rgba(99, 102, 241, 0.05) 100%);
-  color: var(--dark-color);
-  border: 1px solid var(--light-color);
-  border-top: 4px solid var(--primary-color);
-}
-
-:global(:root[data-theme="dark"]) .forecast-card {
-  background: linear-gradient(135deg, #1f2937 0%, rgba(99, 102, 241, 0.1) 100%);
-  border-color: #374151;
-}
-
-.forecast-card .card-header {
-  border-bottom-color: var(--light-color);
-}
-
-.forecast-card .card-title {
-  color: var(--dark-color);
-}
-
-.forecast-date {
-  font-size: 0.875rem;
-  color: var(--gray-color);
-}
-
-.forecast-content {
-  padding: 0.5rem 0;
-}
-
-.forecast-main {
-  text-align: center;
-  margin-bottom: 1.5rem;
-}
-
-.forecast-value {
-  font-size: 2.5rem;
-  font-weight: 700;
-  margin-bottom: 0.25rem;
-}
-
-.forecast-label {
-  font-size: 0.875rem;
-  color: var(--gray-color);
-}
-
-.forecast-details {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.forecast-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   background: var(--light-color);
-  padding: 0.75rem;
-  border-radius: 0.5rem;
-  font-weight: 600;
+  border-radius: 9999px;
+  overflow: hidden;
 }
-
-.forecast-item-label {
-  font-size: 0.85rem;
-  color: var(--dark-color);
-}
-
-.forecast-item-value {
-  font-size: 1.1rem;
-  font-weight: 700;
-}
-
-.forecast-line {
-  font-size: 0.8rem;
-  display: flex;
-  justify-content: space-between;
-  color: var(--gray-color);
-}
-
-.forecast-line.income-line { color: var(--secondary-color); }
-.forecast-line.expense-line { color: var(--danger-color); }
-.forecast-line.variable-line { color: var(--warning-color); }
-
-.daily-progress {
-  margin-bottom: 1rem;
-}
-
-.progress-label {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.875rem;
-  margin-bottom: 0.25rem;
-  color: var(--gray-color);
-}
-
-.progress-bar.bg-light {
-  background: var(--light-color);
-}
-
 .progress-fill {
   height: 100%;
   border-radius: 9999px;
   transition: width 0.6s ease;
 }
-
-.progress-fill.progress-low { background: #34d399; }
-.progress-fill.progress-medium { background: #fbbf24; }
-.progress-fill.progress-high { background: #f87171; }
-
-.forecast-status {
-  padding: 0.75rem;
-  border-radius: 0.5rem;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-weight: 500;
-}
-
-.forecast-status.status-positive {
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--secondary-color);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-}
-
-.forecast-status.status-negative {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--danger-color);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-}
-
-.gamification-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
-  align-items: stretch;
-}
-
-.gamification-grid > .card {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 0;
-}
-
-.goal-content,
-.literacy-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.goal-content .btn-outline-danger {
-  margin-top: auto;
-}
-
-.goal-card, .literacy-card {
-  background: var(--white);
-  min-width: 0;
-}
-
-.goal-content {
-  padding: 0.5rem 0;
-}
-
-.goal-amounts {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.goal-current {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--dark-color);
-}
-
-.goal-target {
-  color: var(--gray-color);
-}
-
-.goal-subtitle {
-  font-size: 0.75rem;
-  color: var(--gray-color);
-  margin-bottom: 0.25rem;
-}
-
-.goal-status {
-  font-size: 0.8rem;
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
-  color: var(--gray-color);
-}
-
-.goal-empty {
-  text-align: center;
-  padding: 1rem 0;
-  color: var(--gray-color);
-}
-
-.goal-empty p {
-  margin-bottom: 1rem;
-}
-
-.literacy-stars {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  font-size: 1.1rem;
-  color: #d1d5db;
-  margin-bottom: 1rem;
-}
-
-.literacy-stars .active {
-  color: #fbbf24;
-}
-
-.literacy-hint {
-  background: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
-  padding: 0.75rem;
-  border-radius: var(--radius);
-  font-size: 0.85rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  word-break: break-word;
-}
-
-.literacy-hint.hint-danger {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--danger-color);
-}
-
-.literacy-breakdown {
-  margin-top: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  font-size: 0.8rem;
-  border-top: 1px dashed var(--light-color);
-  padding-top: 0.75rem;
-}
-
-.breakdown-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-}
-
-.breakdown-item.positive {
-  background: rgba(16, 185, 129, 0.1);
-  color: #059669;
-}
-
-.breakdown-item.negative {
-  background: rgba(239, 68, 68, 0.1);
-  color: #dc2626;
-}
-
-:global(:root[data-theme="dark"]) .breakdown-item.positive {
-  color: #6ee7b7;
-}
-:global(:root[data-theme="dark"]) .breakdown-item.negative {
-  color: #fca5a5;
-}
-
-.breakdown-action {
-  flex: 1;
-}
-
-.breakdown-points {
-  font-weight: 700;
-}
-
-/* Карточка сравнения */
-.comparison-card {
-  background: var(--white);
-}
-
-.comparison-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-evenly;
-}
-
-.comparison-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem;
-  border-radius: 0.5rem;
-  background: var(--light-color);
-  color: var(--dark-color);
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.comparison-item:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-.comparison-item.highlight {
-  background: var(--light-color);
-  border: 2px solid var(--primary-color);
-}
-
-.comparison-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 500;
-}
-
-.comparison-values {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.comparison-current {
-  font-weight: 600;
-}
-
-.comparison-change {
-  font-size: 0.875rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 9999px;
-  background: rgba(0, 0, 0, 0.05);
-}
-
-:global(:root[data-theme="dark"]) .comparison-change {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-/* ============================================================
-   ВИДЖЕТ БЮДЖЕТА
-   ============================================================ */
-.budget-widget {
-  cursor: pointer;
-  background: var(--white);
-}
-
-.budget-widget-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.75rem;
-}
-
-.budget-widget-header .card-title {
-  font-size: 1.1rem;
-}
-
-.budget-widget-arrow {
-  color: var(--gray-color);
-  font-size: 0.875rem;
-}
-
-.budget-widget-amounts {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.budget-widget-spent {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--dark-color);
-}
-
-.budget-widget-sep {
-  color: var(--gray-color);
-  font-size: 0.875rem;
-}
-
-.budget-widget-limit {
-  color: var(--gray-color);
-  font-size: 1rem;
-}
-
-.budget-widget-progress .progress-bar {
-  height: 8px;
-  background: var(--light-color);
-  border-radius: 9999px;
-  overflow: hidden;
-  margin-bottom: 0.5rem;
-}
-
-.budget-widget-progress .progress-fill {
-  height: 100%;
-  border-radius: 9999px;
-  transition: width 0.4s ease;
-}
-
 .progress-success { background: #10b981; }
 .progress-warning { background: #f59e0b; }
 .progress-danger  { background: #ef4444; }
-
-.budget-widget-info {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.75rem;
-  color: var(--gray-color);
-  font-weight: 500;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
+.progress-low     { background: #34d399; }
+.progress-medium  { background: #fbbf24; }
+.progress-high    { background: #f87171; }
 
 /* ============================================================
-   ДИНАМИКА БАЛАНСА
+   ЦВЕТА
    ============================================================ */
-.balance-history-card {
-  background: var(--white);
+.text-success { color: var(--secondary-color); }
+.text-danger  { color: var(--danger-color); }
+.text-warning { color: var(--warning-color); }
+
+/* ============================================================
+   ОСТАЛЬНОЕ — базовые стили из предыдущей версии
+   (карточки, статистика, курсы, прогноз, сравнение, геймификация,
+    бюджет, история баланса, hover-эффекты — без изменений)
+   ============================================================ */
+
+/* Курсы валют */
+.actions-panel {
+  display: flex; gap: 1.5rem; margin-bottom: 2rem;
+  flex-wrap: wrap; align-items: center; justify-content: flex-end;
+}
+.exchange-rates {
+  display: flex; gap: 1rem; background: var(--light-color);
+  padding: 0.5rem 1rem; border-radius: 9999px; flex-wrap: wrap;
+}
+.rate-item { display: inline-flex; gap: 0.5rem; font-size: 0.875rem; font-weight: 500; }
+.rate-currency { color: var(--gray-color); }
+.rate-value { color: var(--dark-color); font-weight: 600; }
+.rate-error { cursor: help; font-size: 1rem; }
+.exchange-rates-placeholder { min-width: 180px; }
+
+/* Карточки */
+.card {
+  background: var(--white); border-radius: var(--radius, 12px);
+  padding: 1.25rem; box-shadow: var(--shadow); margin-bottom: 1.5rem;
+}
+.card:last-child { margin-bottom: 0; }
+.card-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 1rem; padding-bottom: 1rem;
+  border-bottom: 2px solid var(--light-color);
+  flex-wrap: wrap; gap: 1rem;
+}
+.card-title {
+  font-size: 1.25rem; font-weight: 600; margin: 0;
+  display: flex; align-items: center; gap: 0.5rem; color: var(--dark-color);
+}
+.comparison-period { font-size: 0.875rem; color: var(--gray-color); font-weight: 500; }
+
+.hoverable-card { transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease; will-change: transform; }
+.hoverable-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg), 0 8px 24px rgba(0, 0, 0, 0.08); }
+:global(:root[data-theme="dark"]) .hoverable-card:hover {
+  box-shadow: var(--shadow-lg), 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
-.history-controls {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+/* Статистика */
+.stats-carousel { margin-bottom: 2rem; }
+.stats-carousel-track { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; }
+.stat-card {
+  border-radius: var(--radius, 12px); padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow); box-sizing: border-box; min-width: 0;
+  display: flex; flex-direction: column; justify-content: center;
+  min-height: 110px; color: white;
+}
+.stat-title { font-size: 0.85rem; margin-bottom: 0.4rem; }
+.stat-value { font-size: 1.6rem; font-weight: 700; line-height: 1.2; word-break: break-word; }
+.stat-card-balance { background: linear-gradient(135deg, var(--white) 0%, var(--light-color) 100%); border: 1px solid var(--light-color); }
+.stat-card-balance .stat-title { color: var(--gray-color); }
+.stat-card-balance .stat-value { color: var(--dark-color); }
+.stat-card-expense { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+.stat-card-expense .stat-title, .stat-card-expense .stat-value { color: #fff; }
+.stat-card-income { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+.stat-card-income .stat-title, .stat-card-income .stat-value { color: #fff; }
+
+.stats-dots { display: none; justify-content: center; gap: 0.5rem; margin-top: 1rem; }
+.stats-dots.is-mobile { display: flex; }
+.stats-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--gray-color); transition: all 0.25s ease; cursor: pointer;
+}
+.stats-dot.active { width: 24px; border-radius: 4px; background: var(--primary-color); }
+.stats-carousel.is-mobile { position: relative; height: 150px; overflow: visible; }
+.stats-carousel-track.is-mobile { position: relative; display: block; width: 100%; height: 100%; }
+.stats-carousel-track.is-mobile .stat-card {
+  position: absolute; top: 0; left: 50%;
+  width: calc(100% - 24px); height: 100%; transform: translateX(-50%);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease;
+  will-change: transform;
 }
 
-.history-range,
-.history-mode {
-  display: flex;
-  gap: 0.25rem;
-  background: var(--light-color);
-  padding: 0.25rem;
-  border-radius: var(--radius);
+/* Прогноз / сравнение */
+.insights-grid {
+  display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 1.5rem; margin-bottom: 2rem; align-items: stretch;
+}
+.insights-grid > .card { height: 100%; display: flex; flex-direction: column; margin-bottom: 0; }
+
+.forecast-card {
+  background: linear-gradient(135deg, var(--white) 0%, rgba(99, 102, 241, 0.05) 100%);
+  border: 1px solid var(--light-color); border-top: 4px solid var(--primary-color);
+}
+:global(:root[data-theme="dark"]) .forecast-card {
+  background: linear-gradient(135deg, #1f2937 0%, rgba(99, 102, 241, 0.1) 100%);
+  border-color: #374151;
+}
+.forecast-card .card-title { color: var(--dark-color); }
+.forecast-date { font-size: 0.875rem; color: var(--gray-color); }
+.forecast-content { padding: 0.5rem 0; }
+.forecast-main { text-align: center; margin-bottom: 1.5rem; }
+.forecast-value { font-size: 2.5rem; font-weight: 700; margin-bottom: 0.25rem; }
+.forecast-label { font-size: 0.875rem; color: var(--gray-color); }
+.forecast-details { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem; }
+.forecast-item {
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--light-color); padding: 0.75rem; border-radius: 0.5rem; font-weight: 600;
+}
+.forecast-item-label { font-size: 0.85rem; color: var(--dark-color); }
+.forecast-item-value { font-size: 1.1rem; font-weight: 700; }
+.forecast-line { font-size: 0.8rem; display: flex; justify-content: space-between; color: var(--gray-color); }
+.forecast-line.income-line { color: var(--secondary-color); }
+.forecast-line.expense-line { color: var(--danger-color); }
+.forecast-line.variable-line { color: var(--warning-color); }
+
+.inline-recurring-badge {
+  display: inline-flex; align-items: center; gap: 0.2rem;
+  background: rgba(59, 130, 246, 0.12); color: var(--primary-color);
+  font-size: 0.65rem; font-weight: 600; padding: 0.1rem 0.4rem;
+  border-radius: 4px; margin-left: 0.35rem; text-transform: uppercase;
 }
 
+.daily-progress { margin-bottom: 1rem; }
+.progress-label {
+  display: flex; justify-content: space-between;
+  font-size: 0.875rem; margin-bottom: 0.25rem; color: var(--gray-color);
+}
+
+.forecast-status {
+  padding: 0.75rem; border-radius: 0.5rem; text-align: center;
+  display: flex; align-items: center; justify-content: center;
+  gap: 0.5rem; font-weight: 500;
+}
+.forecast-status.status-positive { background: rgba(16, 185, 129, 0.1); color: var(--secondary-color); border: 1px solid rgba(16, 185, 129, 0.2); }
+.forecast-status.status-negative { background: rgba(239, 68, 68, 0.1); color: var(--danger-color); border: 1px solid rgba(239, 68, 68, 0.2); }
+
+/* Сравнение */
+.comparison-content { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; }
+.comparison-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.75rem; border-radius: 0.5rem; background: var(--light-color);
+  color: var(--dark-color); flex-wrap: wrap; gap: 0.5rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.comparison-item:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.comparison-item.highlight { border: 2px solid var(--primary-color); }
+.comparison-label { display: flex; align-items: center; gap: 0.5rem; font-weight: 500; }
+.comparison-values { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.comparison-current { font-weight: 600; }
+.comparison-change {
+  font-size: 0.875rem; padding: 0.25rem 0.5rem;
+  border-radius: 9999px; background: rgba(0, 0, 0, 0.05);
+}
+:global(:root[data-theme="dark"]) .comparison-change { background: rgba(255, 255, 255, 0.1); }
+
+/* Геймификация */
+.gamification-grid {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem; margin-bottom: 1.5rem; align-items: stretch;
+}
+.gamification-grid > .card { height: 100%; display: flex; flex-direction: column; margin-bottom: 0; }
+.goal-content, .literacy-content { flex: 1; display: flex; flex-direction: column; }
+.goal-content .btn-outline-danger { margin-top: auto; }
+.goal-content { padding: 0.5rem 0; }
+.goal-amounts { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+.goal-current { font-size: 1.5rem; font-weight: 700; color: var(--dark-color); }
+.goal-target { color: var(--gray-color); }
+.goal-subtitle { font-size: 0.75rem; color: var(--gray-color); margin-bottom: 0.25rem; }
+.goal-status { font-size: 0.8rem; margin-top: 0.5rem; margin-bottom: 0.5rem; color: var(--gray-color); }
+.goal-projection {
+  margin-top: 0.75rem; font-size: 0.8rem; background: var(--light-color);
+  padding: 0.5rem; border-radius: 0.5rem; color: var(--gray-color);
+}
+.goal-empty { text-align: center; padding: 1rem 0; color: var(--gray-color); }
+.goal-empty p { margin-bottom: 1rem; }
+
+.literacy-stars { display: flex; flex-wrap: wrap; gap: 0.25rem; font-size: 1.1rem; color: #d1d5db; margin-bottom: 1rem; }
+.literacy-stars .active { color: #fbbf24; }
+.literacy-hint {
+  background: rgba(59, 130, 246, 0.1); color: #3b82f6;
+  padding: 0.75rem; border-radius: var(--radius);
+  font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;
+  word-break: break-word;
+}
+.literacy-hint.hint-danger { background: rgba(239, 68, 68, 0.1); color: var(--danger-color); }
+.literacy-breakdown {
+  margin-top: 1rem; display: flex; flex-direction: column; gap: 0.4rem;
+  font-size: 0.8rem; border-top: 1px dashed var(--light-color);
+  padding-top: 0.75rem;
+}
+.breakdown-item {
+  display: flex; justify-content: space-between;
+  padding: 0.25rem 0.5rem; border-radius: 4px;
+}
+.breakdown-item.positive { background: rgba(16, 185, 129, 0.1); color: #059669; }
+.breakdown-item.negative { background: rgba(239, 68, 68, 0.1); color: #dc2626; }
+:global(:root[data-theme="dark"]) .breakdown-item.positive { color: #6ee7b7; }
+:global(:root[data-theme="dark"]) .breakdown-item.negative { color: #fca5a5; }
+.breakdown-action { flex: 1; }
+.breakdown-points { font-weight: 700; }
+
+/* Бюджет */
+.budget-widget { cursor: pointer; }
+.budget-widget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+.budget-widget-header .card-title { font-size: 1.1rem; }
+.budget-widget-arrow { color: var(--gray-color); font-size: 0.875rem; }
+.budget-widget-amounts { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+.budget-widget-spent { font-size: 1.75rem; font-weight: 700; color: var(--dark-color); }
+.budget-widget-sep { color: var(--gray-color); font-size: 0.875rem; }
+.budget-widget-limit { color: var(--gray-color); font-size: 1rem; }
+.budget-widget-progress .progress-bar { height: 8px; margin-bottom: 0.5rem; }
+.budget-widget-info {
+  display: flex; justify-content: space-between;
+  font-size: 0.75rem; color: var(--gray-color);
+  font-weight: 500; flex-wrap: wrap; gap: 0.5rem;
+}
+
+/* История баланса */
+.history-controls { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.history-range, .history-mode {
+  display: flex; gap: 0.25rem; background: var(--light-color);
+  padding: 0.25rem; border-radius: var(--radius);
+}
 .range-btn {
-  padding: 0.375rem 0.75rem;
-  border: none;
-  background: transparent;
-  border-radius: calc(var(--radius) - 2px);
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--gray-color);
-  cursor: pointer;
+  padding: 0.375rem 0.75rem; border: none; background: transparent;
+  border-radius: calc(var(--radius) - 2px); font-size: 0.75rem;
+  font-weight: 500; color: var(--gray-color); cursor: pointer;
   transition: all 0.2s;
 }
-
-.range-btn:hover {
-  color: var(--dark-color);
-}
-
+.range-btn:hover { color: var(--dark-color); }
 .range-btn.active {
-  background: var(--white);
-  color: var(--primary-color);
-  font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: var(--white); color: var(--primary-color);
+  font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
-
-.history-body {
-  padding: 0.5rem 0;
+.history-body { padding: 0.5rem 0; }
+.history-loading, .history-error {
+  display: flex; align-items: center; justify-content: center;
+  gap: 0.75rem; padding: 3rem 1rem; color: var(--gray-color); font-size: 0.9rem;
 }
-
-.history-loading,
-.history-error {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 3rem 1rem;
-  color: var(--gray-color);
-  font-size: 0.9rem;
-}
-
-.history-error {
-  flex-direction: column;
-  color: var(--danger-color);
-}
-
-.history-error i {
-  font-size: 2rem;
-}
-
-.history-chart-wrapper {
-  position: relative;
-  width: 100%;
-  overflow: hidden;
-}
-
-.history-canvas {
-  display: block;
-  width: 100%;
-  cursor: crosshair;
-}
-
+.history-error { flex-direction: column; color: var(--danger-color); }
+.history-error i { font-size: 2rem; }
+.history-chart-wrapper { position: relative; width: 100%; overflow: hidden; }
+.history-canvas { display: block; width: 100%; cursor: crosshair; }
 .history-tooltip {
-  position: absolute;
-  z-index: 10;
-  background: rgba(17, 24, 39, 0.95);
-  color: white;
-  border-radius: var(--radius);
-  padding: 0.625rem 0.75rem;
-  font-size: 0.75rem;
-  pointer-events: none;
-  transform: translate(-50%, -100%);
-  margin-top: -10px;
-  min-width: 180px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  position: absolute; z-index: 10; background: rgba(17, 24, 39, 0.95);
+  color: white; border-radius: var(--radius); padding: 0.625rem 0.75rem;
+  font-size: 0.75rem; pointer-events: none; transform: translate(-50%, -100%);
+  margin-top: -10px; min-width: 180px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);
 }
-
 .history-tooltip::after {
-  content: '';
-  position: absolute;
-  bottom: -6px;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: rgba(17, 24, 39, 0.95);
-  border-bottom: none;
+  content: ''; position: absolute; bottom: -6px; left: 50%;
+  transform: translateX(-50%); border: 6px solid transparent;
+  border-top-color: rgba(17, 24, 39, 0.95); border-bottom: none;
 }
-
 .history-tooltip-date {
-  font-weight: 700;
-  font-size: 0.8rem;
-  margin-bottom: 0.4rem;
-  padding-bottom: 0.4rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  font-weight: 700; font-size: 0.8rem; margin-bottom: 0.4rem;
+  padding-bottom: 0.4rem; border-bottom: 1px solid rgba(255,255,255,0.15);
 }
-
 .history-tooltip-row {
-  display: grid;
-  grid-template-columns: 10px 1fr auto;
-  gap: 0.5rem;
-  align-items: center;
-  margin-bottom: 0.25rem;
+  display: grid; grid-template-columns: 10px 1fr auto;
+  gap: 0.5rem; align-items: center; margin-bottom: 0.25rem;
 }
-
-.history-tooltip-color {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-}
-
-.history-tooltip-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.history-tooltip-value {
-  font-weight: 600;
-  white-space: nowrap;
-}
-
+.history-tooltip-color { width: 10px; height: 10px; border-radius: 2px; }
+.history-tooltip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-tooltip-value { font-weight: 600; white-space: nowrap; }
 .history-tooltip-total {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-top: 0.4rem;
-  padding-top: 0.4rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
-  font-weight: 700;
+  display: flex; justify-content: space-between; gap: 0.5rem;
+  margin-top: 0.4rem; padding-top: 0.4rem;
+  border-top: 1px solid rgba(255,255,255,0.15); font-weight: 700;
 }
-
 .history-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
+  display: flex; flex-wrap: wrap; gap: 0.5rem;
+  margin-top: 1rem; padding-top: 1rem;
   border-top: 1px solid var(--light-color);
 }
-
 .history-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.375rem 0.75rem;
-  border-radius: 9999px;
-  background: var(--white);
-  border: 1px solid var(--light-color);
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s;
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.375rem 0.75rem; border-radius: 9999px;
+  background: var(--white); border: 1px solid var(--light-color);
+  font-size: 0.8rem; cursor: pointer; transition: all 0.2s;
   color: var(--dark-color);
 }
-
 .history-legend-item:hover {
   border-color: var(--primary-color);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
   transform: translateY(-1px);
 }
-
-.history-legend-item.is-off {
-  opacity: 0.4;
-  text-decoration: line-through;
-}
-
-.history-legend-color {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  flex-shrink: 0;
-}
-
-.history-legend-name {
-  font-weight: 500;
-}
-
-.history-legend-value {
-  color: var(--gray-color);
-  font-size: 0.75rem;
-}
-
+.history-legend-item.is-off { opacity: 0.4; text-decoration: line-through; }
+.history-legend-color { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+.history-legend-name { font-weight: 500; }
+.history-legend-value { color: var(--gray-color); font-size: 0.75rem; }
 .history-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--light-color);
-  flex-wrap: wrap;
-  gap: 1rem;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 1rem; padding-top: 1rem;
+  border-top: 1px solid var(--light-color); flex-wrap: wrap; gap: 1rem;
 }
-
-.history-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-}
-
-.history-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
+.history-stats { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+.history-stat { display: flex; flex-direction: column; gap: 0.25rem; }
 .history-stat-label {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  color: var(--gray-color);
-  font-weight: 500;
+  font-size: 0.7rem; text-transform: uppercase;
+  letter-spacing: 0.3px; color: var(--gray-color); font-weight: 500;
 }
+.history-stat-value { font-size: 0.95rem; font-weight: 700; color: var(--dark-color); }
+.history-stat-value small { font-size: 0.75rem; font-weight: 500; color: var(--gray-color); }
+.history-period-label { font-size: 0.8rem; color: var(--gray-color); font-style: italic; }
 
-.history-stat-value {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--dark-color);
-}
-
-.history-stat-value small {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--gray-color);
-}
-
-.history-period-label {
-  font-size: 0.8rem;
-  color: var(--gray-color);
-  font-style: italic;
-}
-
-/* ============================================================
-   КНОПКИ / УТИЛИТЫ
-   ============================================================ */
+/* Кнопки-утилиты */
 .btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: var(--radius);
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: 500;
+  padding: 0.5rem 1rem; border: none; border-radius: var(--radius);
+  cursor: pointer; font-size: 1rem; font-weight: 500;
 }
-
-.btn-primary {
-  background: var(--primary-color);
-  color: white;
-}
-
-.btn-secondary {
-  background: var(--light-color);
-  color: var(--dark-color);
-}
-
-.btn-success {
-  background: var(--secondary-color);
-  color: white;
-}
-
-.btn-sm {
-  padding: 0.375rem 0.75rem;
-  font-size: 0.875rem;
-}
-
+.btn-primary { background: var(--primary-color); color: white; }
+.btn-secondary { background: var(--light-color); color: var(--dark-color); }
+.btn-sm { padding: 0.375rem 0.75rem; font-size: 0.875rem; }
 .btn-outline-danger {
-  background: transparent;
-  color: var(--danger-color);
+  background: transparent; color: var(--danger-color);
   border: 1px solid var(--danger-color);
 }
-.btn-outline-danger:hover {
-  background: var(--danger-color);
-  color: white;
-}
-
+.btn-outline-danger:hover { background: var(--danger-color); color: white; }
 .btn-icon {
-  background: none;
-  border: none;
-  color: var(--gray-color);
-  cursor: pointer;
-  font-size: 1rem;
-  transition: color 0.2s;
+  background: none; border: none; color: var(--gray-color);
+  cursor: pointer; font-size: 1rem; transition: color 0.2s;
 }
-.btn-icon:hover {
-  color: var(--primary-color);
-}
+.btn-icon:hover { color: var(--primary-color); }
 
-.safe-to-spend-card {
-  background: linear-gradient(135deg, var(--white) 0%, var(--light-color) 100%);
-  border-left: 4px solid var(--secondary-color);
-  margin-bottom: 2rem;
-  padding: 1.25rem 1.5rem;
-}
-
-.safe-content {
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-}
-
-.safe-icon {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  flex-shrink: 0;
-}
-
-.bg-success-light {
-  background: rgba(16, 185, 129, 0.15);
-  color: var(--secondary-color);
-}
-
-.bg-danger-light {
-  background: rgba(239, 68, 68, 0.15);
-  color: var(--danger-color);
-}
-
-.safe-text {
-  flex: 1;
-}
-
-.safe-text h3 {
-  margin: 0 0 0.25rem 0;
-  font-size: 1.1rem;
-  color: var(--dark-color);
-}
-
-.safe-text p {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--gray-color);
-  line-height: 1.4;
-}
-
-.safe-amount {
-  font-size: 2.2rem;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  white-space: nowrap;
-}
-
-@media (max-width: 768px) {
-  .safe-content {
-    flex-direction: column;
-    text-align: center;
-    gap: 1rem;
-  }
-  .safe-amount {
-    font-size: 2.5rem;
-  }
-}
+/* Адаптив для остальных секций */
 @media (max-width: 1024px) {
-  .insights-grid {
-    grid-template-columns: 1fr;
-  }
-  .gamification-grid {
-    grid-template-columns: 1fr;
-  }
+  .insights-grid { grid-template-columns: 1fr; }
+  .gamification-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {
-  .dashboard-title {
-    text-align: center;
-  }
-
-  .forecast-value {
-    font-size: 2rem;
-  }
-
-  .comparison-item {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.5rem;
-  }
-
-  .comparison-values {
-    justify-content: space-between;
-  }
-
-  .budget-widget-spent {
-    font-size: 1.5rem;
-  }
-
-  .history-controls {
-    flex-direction: column;
-    width: 100%;
-  }
-
-  .history-range,
-  .history-mode {
-    width: 100%;
-  }
-
-  .range-btn {
-    flex: 1;
-    font-size: 0.7rem;
-    padding: 0.375rem 0.25rem;
-  }
-
-  .history-stats {
-    gap: 1rem;
-  }
-
-  .history-stat-value {
-    font-size: 0.85rem;
-  }
-
-  .history-footer {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+  .dashboard-title { text-align: center; }
+  .forecast-value { font-size: 2rem; }
+  .comparison-item { flex-direction: column; align-items: stretch; gap: 0.5rem; }
+  .comparison-values { justify-content: space-between; }
+  .budget-widget-spent { font-size: 1.5rem; }
+  .history-controls { flex-direction: column; width: 100%; }
+  .history-range, .history-mode { width: 100%; }
+  .range-btn { flex: 1; font-size: 0.7rem; padding: 0.375rem 0.25rem; }
+  .history-stats { gap: 1rem; }
+  .history-stat-value { font-size: 0.85rem; }
+  .history-footer { flex-direction: column; align-items: flex-start; }
 }
 
 @media (max-width: 480px) {
-  .forecast-value {
-    font-size: 1.5rem;
-  }
-
-  .actions-panel {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .exchange-rates {
-    justify-content: center;
-  }
-
-  .history-legend {
-    gap: 0.375rem;
-  }
-
-  .history-legend-item {
-    font-size: 0.7rem;
-    padding: 0.25rem 0.5rem;
-  }
-
-  .history-stats {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .history-tooltip {
-    min-width: 150px;
-    font-size: 0.7rem;
-  }
+  .forecast-value { font-size: 1.5rem; }
+  .actions-panel { flex-direction: column; align-items: stretch; }
+  .exchange-rates { justify-content: center; }
+  .history-legend { gap: 0.375rem; }
+  .history-legend-item { font-size: 0.7rem; padding: 0.25rem 0.5rem; }
+  .history-stats { flex-direction: column; gap: 0.5rem; }
+  .history-tooltip { min-width: 150px; font-size: 0.7rem; }
 }
 
-/* ============================================================
-   HOVER-ЭФФЕКТЫ
-   ============================================================ */
-
+/* Hover-эффекты статистики */
 .stats-carousel:not(.is-mobile) .stat-card {
-  position: relative;
-  overflow: hidden;
-  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
-              box-shadow 0.28s ease;
+  position: relative; overflow: hidden;
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.28s ease;
 }
 .stats-carousel:not(.is-mobile) .stat-card:hover {
-  transform: translateY(-6px) scale(1.03);
-  z-index: 5;
+  transform: translateY(-6px) scale(1.03); z-index: 5;
 }
 .stats-carousel:not(.is-mobile) .stat-card:active {
-  transform: translateY(-3px) scale(1.01);
-  transition-duration: 0.1s;
+  transform: translateY(-3px) scale(1.01); transition-duration: 0.1s;
 }
 .stats-carousel:not(.is-mobile) .stat-card-balance:hover {
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.15), 0 6px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 16px 32px rgba(0,0,0,0.15), 0 6px 12px rgba(0,0,0,0.08);
 }
 .stats-carousel:not(.is-mobile) .stat-card-expense:hover {
   box-shadow: 0 16px 32px rgba(239, 68, 68, 0.45), 0 6px 12px rgba(220, 38, 38, 0.3);
 }
 .stats-carousel:not(.is-mobile) .stat-card-income:hover {
   box-shadow: 0 16px 32px rgba(59, 130, 246, 0.45), 0 6px 12px rgba(37, 99, 235, 0.3);
-}
-
-@keyframes shimmer-sweep {
-  from { transform: translateX(-100%) skewX(-12deg); }
-  to   { transform: translateX(100%) skewX(-12deg); }
-}
-
-.stats-carousel:not(.is-mobile) .stat-card-expense::after,
-.stats-carousel:not(.is-mobile) .stat-card-income::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    120deg,
-    transparent 35%,
-    rgba(255, 255, 255, 0.35) 50%,
-    transparent 65%
-  );
-  transform: translateX(-100%) skewX(-12deg);
-  pointer-events: none;
-  border-radius: inherit;
-  will-change: transform;
-}
-
-.stats-carousel:not(.is-mobile) .stat-card-expense:hover::after,
-.stats-carousel:not(.is-mobile) .stat-card-income:hover::after {
-  animation: shimmer-sweep 0.85s ease-out;
 }
 </style>

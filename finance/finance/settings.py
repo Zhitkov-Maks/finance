@@ -441,6 +441,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "insights.tasks.detect_budget_reallocation_all",
         "schedule": crontab(hour=18, minute=0),
     },
+    "warm-recurring-cache": {
+        "task": "forecast.tasks.warm_recurring_cache",
+        "schedule": crontab(hour=1, minute=0),
+    },
 }
 
 

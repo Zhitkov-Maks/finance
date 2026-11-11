@@ -58,7 +58,9 @@ class TransactionSerializer(serializers.ModelSerializer):
             "account",
             "type_transaction",
             "comment",
+            "recurring_source",
         ]
+        read_only_fields = ["recurring_source"]
 
 
 class TransactionSerializersAdd(serializers.ModelSerializer):
@@ -82,6 +84,7 @@ class TransactionSerializersAdd(serializers.ModelSerializer):
                 "allow_null": True,
             }
         }
+        read_only_fields = ["recurring_source"]
 
     def validate(self, attrs):
         account = attrs.get("account")
@@ -107,6 +110,7 @@ class TransactionSerializerGet(serializers.ModelSerializer):
             "type_transaction",
             "comment",
         ]
+        read_only_fields = ["recurring_source"]
 
 
 class TransactionSerializersPatch(serializers.ModelSerializer):
@@ -114,6 +118,7 @@ class TransactionSerializersPatch(serializers.ModelSerializer):
     class Meta:
         model = Transaction
         fields = ["amount"]
+        read_only_fields = ["recurring_source"]
 
 
 class ChildCategorySerializer(serializers.Serializer):
