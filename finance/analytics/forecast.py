@@ -119,8 +119,9 @@ class ForecastService:
         thirty_days_ago = self.today - timedelta(days=1) - relativedelta(months=1)
 
         # Общий фильтр «не recurring» — чтобы не задваивать обязательные платежи
-        not_recurring = ~Q(recurring_source__isnull=False) | Q(
-            comment__startswith=RECURRING_AUTO_PREFIX
+        not_recurring = ~(
+            Q(recurring_source__isnull=False)
+            | Q(comment__startswith=RECURRING_AUTO_PREFIX)
         )
 
         return Transaction.objects.filter(user=self.user).aggregate(
@@ -269,11 +270,11 @@ class ForecastService:
         expected = avg_monthly_income - current_month_income
         return max(Decimal("0.00"), expected)
 
-def _calculate_variable_expenses(self, tx_stats: dict) -> Decimal:
-    """
-    Прогноз переменных расходов до конца месяца.
-    Recurring здесь не участвуют — они уже в obligatory_expenses.
-    """
-    pure_variable_30d = tx_stats["past_30d_variable_expense"] or Decimal("0.00")
-    daily_variable = pure_variable_30d / Decimal("30.0")
-    return daily_variable * Decimal(self.days_left)
+    def _calculate_variable_expenses(self, tx_stats: dict) -> Decimal:
+        """
+        Прогноз переменных расходов до конца месяца.
+        Recurring здесь не участвуют — они уже в obligatory_expenses.
+        """
+        pure_variable_30d = tx_stats["past_30d_variable_expense"] or Decimal("0.00")
+        daily_variable = pure_variable_30d / Decimal("30.0")
+        return daily_variable * Decimal(self.days_left)
