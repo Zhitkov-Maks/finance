@@ -52,7 +52,7 @@ class ForecastService:
 
         spent_today = tx_stats["today_variable_expense"] or Decimal("0.00")
         safe_daily = (
-            guaranteed_balance / Decimal(self.days_left)
+            (guaranteed_balance + spent_today) / Decimal(self.days_left)
             if self.days_left > 0
             else Decimal("0.00")
         )
