@@ -874,7 +874,7 @@ export default {
 
     // --------- графика ---------
     const getCanvasColors = () => ({
-      stroke: isDarkTheme.value ? '#252936' : '#ffffff', // Привязано к цвету карточек
+      stroke: isDarkTheme.value ? '#252936' : '#ffffff',
       text: isDarkTheme.value ? '#9ca3af' : '#666666',
       grid: isDarkTheme.value ? '#374151' : '#ccc'
     })
@@ -927,7 +927,7 @@ export default {
         ctx.closePath()
         ctx.fill()
         ctx.strokeStyle = colors.stroke
-        ctx.lineWidth = 3 // Чуть толще разделитель для красоты
+        ctx.lineWidth = 3
         ctx.stroke()
 
         startAngle = endAngle
@@ -1025,7 +1025,6 @@ export default {
 
         if (value > 0) {
           ctx.fillStyle = currentType.value === 'income' ? '#10b981' : '#ef4444'
-          // Скругление сверху для баров
           const radius = Math.min(3, w / 2)
           ctx.beginPath()
           ctx.moveTo(x, y + barHeight)
@@ -1162,7 +1161,6 @@ export default {
 
       if (myId !== loadRequestId) return
 
-      // Безопасная загрузка
       const [previous, lastYear, dailyRaw] = await Promise.all([
         apiService.getMonthStatistics(prevMonth, prevYear, curType).catch(() => null),
         apiService.getMonthStatistics(curMonth, curYear - 1, curType).catch(() => null),
@@ -1383,25 +1381,21 @@ export default {
     watch([currentType, selectedPeriod, selectedYear, selectedMonth], () => loadStatistics())
 
     return {
-      // базовое
       statistics, sortedStatistics, monthlyAnalytics, totalAmount, transactionCount, currentType,
       selectedPeriod, selectedYear, selectedMonth, years, months, averageAmount, showFilters, isMobile, isTablet,
       expandedCategories, sortOrder, maxMonthAmount, maxMonthName, minMonthAmount, minMonthName,
       averageMonthlyAmount, medianMonthlyAmount, standardDeviation, coefficientOfVariation,
       loading,
 
-      // новое для месяца
       previousMonthStats, sameMonthLastYearStats, dailyStatistics, maxTransaction,
       monthComparison, yearComparison, topCategories, maxOrTop, hasDailyData,
       isCurrentMonth, periodHint, shiftMonth,
 
-      // методы
       loadStatistics, toggleCategory, sortCategories, sortedChildren,
       getPercentage, getSubPercentage, getMonthPercentOfMax,
       getTrendClass, getTrendBadgeClass, getDeltaClass, getDeltaColor,
       formatCurrency, formatDelta, formatDeltaAbs, getCategoryColor,
 
-      // модалка
       showCategoryModal, modalCategory, modalParentCategoryName,
       modalTransactions, modalLoading, modalError, modalTotalSum,
       modalCurrentPage, modalTotalPages, modalTotalItems,
@@ -1418,8 +1412,14 @@ export default {
   max-width: 1400px;
   margin: 0 auto;
   padding: 1rem;
+  /* Отступ снизу, чтобы кнопка "+" (FAB) не перекрывала контент */
+  padding-bottom: 90px;
   min-height: 100vh;
   transition: opacity 0.3s ease;
+  /* Защита от горизонтального скролла */
+  overflow-x: hidden;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .statistics-page.is-loading .stats-grid,
@@ -1463,6 +1463,7 @@ export default {
   margin-bottom: 1rem;
   overflow: hidden;
   border: 1px solid var(--light-color);
+  box-sizing: border-box;
 }
 .card-header {
   display: flex;
@@ -1526,6 +1527,7 @@ export default {
   flex-direction: column;
   align-items: center;
   line-height: 1.3;
+  text-align: center;
 }
 .period-label strong {
   font-size: 1.1rem;
@@ -1589,6 +1591,7 @@ export default {
   color: var(--dark-color);
   width: 100%;
   outline: none;
+  box-sizing: border-box;
 }
 .form-control:focus {
   border-color: var(--primary-color);
@@ -1609,6 +1612,10 @@ export default {
   text-align: center;
   border: 1px solid var(--light-color);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+  box-sizing: border-box;
+  /* Убираем возможное вылезание контента */
+  overflow: hidden;
+  min-width: 0;
 }
 .stat-card.stat-main { grid-column: span 2; }
 .stat-card-title {
@@ -1656,6 +1663,7 @@ export default {
   position: relative;
   overflow: hidden;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+  box-sizing: border-box;
 }
 .top-card.top-rank-1 { border-left: 4px solid #f59e0b; }
 .top-card.top-rank-2 { border-left: 4px solid #94a3b8; }
@@ -1721,6 +1729,7 @@ export default {
   border-radius: 12px;
   padding: 0.75rem;
   border: 1px solid var(--light-color);
+  box-sizing: border-box;
 }
 .legend-item {
   display: flex;
@@ -1756,6 +1765,7 @@ export default {
   border: 1px solid var(--light-color);
   position: relative;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+  box-sizing: border-box;
 }
 .category-item.is-expanded {
   border-color: var(--primary-color);
@@ -1768,6 +1778,7 @@ export default {
   cursor: pointer;
   user-select: none;
   gap: 0.75rem;
+  flex-wrap: wrap; /* Позволяет переносить сумму на новую строку, если не влезает */
 }
 .category-left {
   display: flex;
@@ -1904,6 +1915,7 @@ export default {
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
+  flex-wrap: wrap;
 }
 .subcategory-left {
   display: flex;
@@ -1963,6 +1975,7 @@ export default {
   border-radius: 12px;
   text-align: center;
   box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  box-sizing: border-box;
 }
 .comparison-label { font-size: 0.75rem; font-weight: 600; color: var(--gray-color); margin-bottom: 0.35rem; }
 .comparison-value { font-weight: 800; font-size: 1rem; color: var(--dark-color); }
@@ -1977,6 +1990,7 @@ export default {
   text-align: center;
   font-weight: 800;
   box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  box-sizing: border-box;
 }
 .comparison-change-percent { font-size: 1.1rem; }
 .comparison-change-abs { font-size: 0.75rem; color: var(--gray-color); margin-top: 0.35rem; font-weight: 600; }
@@ -1990,6 +2004,7 @@ export default {
   margin-bottom: 1rem;
   border: 1px solid var(--light-color);
   box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+  box-sizing: border-box;
 }
 .mobile-month-card:last-child { margin-bottom: 0; }
 .mobile-month-header {
@@ -2115,6 +2130,7 @@ export default {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--light-color);
+  box-sizing: border-box;
 }
 .modal-content.modal-wide { max-width: 720px; }
 .modal-header {
@@ -2263,7 +2279,7 @@ export default {
 }
 
 @media (min-width: 1025px) {
-  .statistics-page { padding: 2rem; }
+  .statistics-page { padding: 2rem 2rem 90px; }
   .period-nav-card { padding: 1rem 2rem; }
   .stats-grid { gap: 1.5rem; }
   .stat-card { padding: 1.5rem; }
@@ -2279,25 +2295,55 @@ export default {
   .mobile-months-grid { display: none; }
 }
 
+/* ============================================================
+   МОБИЛЬНЫЕ (≤ 768px)
+   ============================================================ */
 @media (max-width: 768px) {
-  .statistics-page { padding: 0.75rem; }
+  .statistics-page { padding: 0.75rem 0.75rem 90px; }
+
+  /* Уменьшаем отступы карточек, чтобы влезало 2 колонки */
+  .stats-grid { gap: 0.5rem; }
+  .stat-card { border-radius: 12px; padding: 0.75rem 0.5rem; }
+  .stat-card-title { font-size: 0.65rem; letter-spacing: 0.2px; margin-bottom: 0.25rem; }
+  .stat-card-value { font-size: 1.15rem; }
+
+  /* Разрешаем перенос текста в подзаголовках (убираем обрезку) */
+  .stat-card-subtitle {
+    white-space: normal;
+    font-size: 0.65rem;
+    line-height: 1.2;
+    margin-top: 0.25rem;
+  }
+  .stat-compare .stat-card-value { font-size: 1.1rem; }
+
   .card { border-radius: 12px; margin-bottom: 0.75rem; }
-  .card-header { padding: 1rem; }
+  .card-header { padding: 1rem; flex-direction: column; align-items: flex-start; gap: 0.5rem; }
   .filters-header { padding: 1rem; border-radius: 12px; }
   .filters-body { padding: 1rem; }
-  .stat-card { border-radius: 12px; padding: 1rem; }
-  .stat-card-value { font-size: 1.35rem; }
-  .top-card { border-radius: 12px; padding: 1rem; }
+
+  .top-card { border-radius: 12px; padding: 0.75rem 1rem; }
+  .top-rank { min-width: 24px; font-size: 0.9rem; }
+  .top-name { font-size: 0.85rem; }
+  .top-share { font-size: 0.85rem; }
+
   .categories-list { padding: 1rem; }
   .category-item { border-radius: 12px; padding: 1rem; }
-  .category-name-text { font-size: 0.85rem; }
+
+  /* Карточка категории: перенос суммы под название, если не влезает */
+  .category-header { flex-wrap: wrap; gap: 0.5rem; }
+  .category-right { width: 100%; justify-content: space-between; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--light-color); }
+
+  .category-name-text { font-size: 0.85rem; max-width: 140px; }
   .category-total { font-size: 0.9rem; }
-  .category-right { gap: 0.5rem; }
-  .category-percent { min-width: auto; padding: 0.15rem 0.4rem; font-size: 0.75rem; }
+  .category-percent { min-width: auto; padding: 0.15rem 0.5rem; font-size: 0.75rem; }
+
   .subcategories { padding-left: 1rem; }
   .subcategories::before { left: 0.25rem; }
+
   .comparison-section { padding: 1rem; gap: 0.75rem; }
-  .comparison-item, .comparison-change { border-radius: 10px; padding: 0.75rem; }
+  .comparison-item, .comparison-change { border-radius: 10px; padding: 0.75rem; min-width: 100px; }
+  .comparison-change-abs { font-size: 0.7rem; }
+
   .daily-chart-section { padding: 1rem; }
   .year-summary { padding: 1rem; gap: 0.75rem; }
   .summary-card { border-radius: 10px; padding: 0.75rem; }
