@@ -39,3 +39,15 @@ class MonthlyAnalyticsService:
         return SQLQueryService.execute_query(
             "monthly_analytics", [user_id, type_tr, year, year]
         )
+
+
+class DailyAnalyticsService:
+    """A service for daily analytics."""
+
+    @staticmethod
+    def get_analytics(user_id, year, month, type_tr='expense'):
+        # Передаем параметры строго в том порядке, в котором они идут в SQL (%s)
+        return SQLQueryService.execute_query(
+            "daily_analytics",
+            [user_id, type_tr, year, month]
+        )

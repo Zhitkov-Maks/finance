@@ -1,13 +1,38 @@
 <template>
-  <div class="statistics-page">
+  <div class="statistics-page" :class="{ 'is-loading': loading }">
+    <!-- Шапка -->
     <div class="page-header">
       <h1 class="page-title">Аналитика</h1>
     </div>
 
-    <!-- Фильтры -->
+    <!-- Навигация по месяцам -->
+    <div class="card period-nav-card" v-if="selectedPeriod === 'month'">
+      <div class="period-nav">
+        <button class="nav-arrow" @click="shiftMonth(-1)" aria-label="Предыдущий месяц">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        <div class="period-label">
+          <strong>{{ months[selectedMonth - 1] }} {{ selectedYear }}</strong>
+          <span class="period-hint">{{ periodHint }}</span>
+        </div>
+        <button
+          class="nav-arrow"
+          :disabled="isCurrentMonth"
+          @click="shiftMonth(1)"
+          aria-label="Следующий месяц"
+        >
+          <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Фильтры (скрыты по умолчанию) -->
     <div class="card filters-card">
       <div class="filters-header" @click="showFilters = !showFilters">
-        <h3 class="filters-title">Фильтры</h3>
+        <h3 class="filters-title">
+          <i class="fas fa-sliders-h"></i>
+          Фильтры
+        </h3>
         <i :class="showFilters ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
       </div>
 
@@ -49,61 +74,119 @@
               <option v-for="year in years" :key="year" :value="year">{{ year }}</option>
             </select>
           </div>
-
-          <div class="filter-actions">
-            <button @click="loadStatistics" class="btn btn-primary">Применить</button>
-          </div>
         </div>
       </div>
     </div>
 
-    <!-- Карточки статистики -->
-    <div class="stats-grid">
-      <div class="stat-card">
+    <!-- ============================================================ -->
+    <!-- Карточки статистики — МЕСЯЦ                                   -->
+    <!-- ============================================================ -->
+    <div class="stats-grid" v-if="selectedPeriod === 'month'">
+      <div class="stat-card stat-main hover-lift">
         <div class="stat-card-title">Общая сумма</div>
         <div class="stat-card-value" :class="currentType === 'income' ? 'text-success' : 'text-danger'">
           {{ formatCurrency(totalAmount) }}
         </div>
       </div>
 
-      <div class="stat-card" v-if="selectedPeriod === 'year'">
+      <div class="stat-card hover-lift">
         <div class="stat-card-title">Транзакций</div>
         <div class="stat-card-value">{{ transactionCount }}</div>
       </div>
 
-      <div class="stat-card" v-if="selectedPeriod === 'year'">
+      <div class="stat-card hover-lift">
+        <div class="stat-card-title">Средний чек</div>
+        <div class="stat-card-value">{{ formatCurrency(averageAmount) }}</div>
+      </div>
+
+      <div class="stat-card hover-lift" v-if="maxOrTop">
+        <div class="stat-card-title">Крупнейшая</div>
+        <div class="stat-card-value">{{ formatCurrency(maxOrTop.amount) }}</div>
+        <div class="stat-card-subtitle" :title="maxOrTop.label">{{ maxOrTop.label }}</div>
+      </div>
+
+      <div class="stat-card stat-compare hover-lift" v-if="previousMonthStats">
+        <div class="stat-card-title">vs прошлый месяц</div>
+        <div class="stat-card-value" :class="getDeltaClass(monthComparison.percent)">
+          {{ formatDelta(monthComparison.percent) }}
+        </div>
+        <div class="stat-card-subtitle">
+          {{ formatDeltaAbs(monthComparison.absolute) }} к {{ formatCurrency(monthComparison.previous) }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Карточки статистики — ГОД -->
+    <div class="stats-grid" v-else>
+      <div class="stat-card hover-lift">
+        <div class="stat-card-title">Общая сумма</div>
+        <div class="stat-card-value" :class="currentType === 'income' ? 'text-success' : 'text-danger'">
+          {{ formatCurrency(totalAmount) }}
+        </div>
+      </div>
+
+      <div class="stat-card hover-lift">
+        <div class="stat-card-title">Транзакций</div>
+        <div class="stat-card-value">{{ transactionCount }}</div>
+      </div>
+
+      <div class="stat-card hover-lift">
         <div class="stat-card-title">Средняя сумма</div>
         <div class="stat-card-value">{{ formatCurrency(averageAmount) }}</div>
       </div>
 
-      <div class="stat-card" v-if="selectedPeriod === 'year' && monthlyAnalytics.length > 0">
+      <div class="stat-card hover-lift" v-if="monthlyAnalytics.length > 0">
         <div class="stat-card-title">Максимум</div>
         <div class="stat-card-value text-success">{{ formatCurrency(maxMonthAmount) }}</div>
         <div class="stat-card-subtitle">{{ maxMonthName }}</div>
       </div>
 
-      <div class="stat-card" v-if="selectedPeriod === 'year' && monthlyAnalytics.length > 0">
+      <div class="stat-card hover-lift" v-if="monthlyAnalytics.length > 0">
         <div class="stat-card-title">Минимум</div>
         <div class="stat-card-value text-danger">{{ formatCurrency(minMonthAmount) }}</div>
         <div class="stat-card-subtitle">{{ minMonthName }}</div>
       </div>
     </div>
 
-    <!-- Месячная статистика -->
+    <!-- ============================================================ -->
+    <!-- Топ-3 категории плитками (только месяц)                       -->
+    <!-- ============================================================ -->
+    <div class="top-categories" v-if="selectedPeriod === 'month' && topCategories.length > 0">
+      <div
+        v-for="(cat, i) in topCategories"
+        :key="cat.id"
+        class="top-card hover-lift"
+        :class="`top-rank-${i + 1}`"
+        @click="openCategoryTransactions(cat)"
+        title="Показать транзакции категории"
+      >
+        <div class="top-rank">#{{ i + 1 }}</div>
+        <div class="top-color" :style="{ backgroundColor: getCategoryColor(cat.id) }"></div>
+        <div class="top-info">
+          <div class="top-name">{{ cat.name }}</div>
+          <div class="top-amount">{{ formatCurrency(cat.total) }}</div>
+        </div>
+        <div class="top-share">{{ getPercentage(cat.total) }}%</div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- Разбивка по категориям (только месяц)                         -->
+    <!-- ============================================================ -->
     <div class="card full-width-card" v-if="selectedPeriod === 'month'">
       <div class="card-header">
         <h3 class="card-title">Разбивка по категориям</h3>
         <div class="sort-buttons">
           <button @click="sortCategories('desc')" class="btn-sort" :class="{ active: sortOrder === 'desc' }">
-            <i class="fas fa-sort-amount-down"></i> По убыванию
+            <i class="fas fa-sort-amount-down"></i> Убыв.
           </button>
           <button @click="sortCategories('asc')" class="btn-sort" :class="{ active: sortOrder === 'asc' }">
-            <i class="fas fa-sort-amount-up-alt"></i> По возрастанию
+            <i class="fas fa-sort-amount-up-alt"></i> Возр.
           </button>
         </div>
       </div>
 
-      <!-- Круговая диаграмма -->
+      <!-- Donut-диаграмма -->
       <div class="pie-chart-section" v-if="statistics.length > 0">
         <div class="pie-chart-wrapper">
           <canvas id="pieChartCanvas" class="pie-chart-canvas"></canvas>
@@ -117,99 +200,153 @@
         </div>
       </div>
 
-      <!-- Список категорий -->
+      <!-- Компактный список категорий -->
       <div class="categories-list full-width">
-        <div v-for="category in sortedStatistics" :key="category.id" class="category-item full-width-item">
-          <div class="category-header">
-            <div class="category-name">
+        <div
+          v-for="category in sortedStatistics"
+          :key="category.id"
+          class="category-item full-width-item hover-lift"
+          :class="{ 'is-expanded': expandedCategories[category.id] }"
+        >
+          <div class="category-header" @click="category.children?.length ? toggleCategory(category.id) : openCategoryTransactions(category)">
+            <div class="category-left">
               <button
                 v-if="category.children?.length"
                 class="expand-icon-btn"
-                @click.stop="toggleCategory(category.id)"
                 :aria-expanded="!!expandedCategories[category.id]"
+                @click.stop="toggleCategory(category.id)"
               >
                 <i :class="expandedCategories[category.id] ? 'fas fa-chevron-down' : 'fas fa-chevron-right'"></i>
               </button>
-              <i v-else class="fas fa-folder placeholder-icon"></i>
-              <i class="fas fa-folder"></i>
+              <div v-else class="expand-icon-placeholder"></div>
+
+              <span class="category-dot" :style="{ backgroundColor: getCategoryColor(category.id) }"></span>
+
+              <span class="category-name-text" :title="category.name">{{ category.name }}</span>
+
               <span
-                class="category-name-text"
-                @click="openCategoryTransactions(category)"
-                title="Показать транзакции категории"
+                v-if="category.trend !== undefined && category.trend !== 0"
+                class="trend-badge small"
+                :class="getTrendBadgeClass({ change_vs_prev_percent: category.trend })"
               >
-                {{ category.name }}
+                <i :class="category.trend > 0 ? 'fas fa-arrow-trend-up' : 'fas fa-arrow-trend-down'"></i>
+                {{ Math.abs(category.trend).toFixed(0) }}%
               </span>
             </div>
-            <div
-              class="category-total category-total-clickable"
-              @click="openCategoryTransactions(category)"
-              title="Показать транзакции категории"
-            >
-              {{ formatCurrency(category.total) }}
+
+            <div class="category-right">
+              <span
+                class="category-total category-total-clickable"
+                @click.stop="openCategoryTransactions(category)"
+              >
+                {{ formatCurrency(category.total) }}
+              </span>
+              <span class="category-percent">{{ getPercentage(category.total) }}%</span>
             </div>
           </div>
 
+          <!-- Тонкий прогресс-бар -->
           <div class="progress-wrapper">
             <div class="progress-bar">
-              <div class="progress-fill" :style="{ width: getPercentage(category.total) + '%' }" :class="currentType === 'income' ? 'progress-income' : 'progress-expense'">
-                <span class="progress-text">{{ getPercentage(category.total) }}%</span>
-              </div>
-            </div>
-            <div class="progress-percent-info">{{ getPercentage(category.total) }}% от общей суммы</div>
-          </div>
-
-          <!-- Подкатегории -->
-          <div v-if="category.children?.length" class="subcategories" v-show="expandedCategories[category.id]">
-            <div v-for="child in sortedChildren(category.children)" :key="child.id" class="subcategory-item">
-              <div class="subcategory-header">
-                <div class="subcategory-name">
-                  <i class="fas fa-level-down-alt"></i>
-                  <span
-                    class="category-name-text"
-                    @click="openCategoryTransactions(child, category.name)"
-                    title="Показать транзакции подкатегории"
-                  >
-                    {{ child.name }}
-                  </span>
-                </div>
-                <div
-                  class="subcategory-total category-total-clickable"
-                  @click="openCategoryTransactions(child, category.name)"
-                  title="Показать транзакции подкатегории"
-                >
-                  {{ formatCurrency(child.total) }}
-                </div>
-              </div>
-              <div class="progress-bar subcategory-progress">
-                <div class="progress-fill progress-subcategory" :style="{ width: getSubPercentage(category.total, child.total) + '%' }">
-                  <span class="progress-text-small">{{ getSubPercentage(category.total, child.total) }}%</span>
-                </div>
-              </div>
-              <div class="subcategory-percent">{{ getSubPercentage(category.total, child.total) }}% от категории</div>
+              <div
+                class="progress-fill"
+                :style="{ width: getPercentage(category.total) + '%' }"
+                :class="currentType === 'income' ? 'progress-income' : 'progress-expense'"
+              ></div>
             </div>
           </div>
 
-          <div v-if="category.children?.length && !expandedCategories[category.id]" class="expand-hint" @click="toggleCategory(category.id)">
-            <i class="fas fa-eye"></i> Показать подкатегории ({{ category.children.length }})
-          </div>
+          <!-- Подкатегории (с анимацией) -->
+          <transition name="slide-fade">
+            <div v-if="category.children?.length && expandedCategories[category.id]" class="subcategories">
+              <div v-for="child in sortedChildren(category.children)" :key="child.id" class="subcategory-item">
+                <div class="subcategory-header" @click="openCategoryTransactions(child, category.name)">
+                  <div class="subcategory-left">
+                    <i class="fas fa-level-up-alt fa-rotate-90 subcategory-icon"></i>
+                    <span class="subcategory-name">{{ child.name }}</span>
+                  </div>
+                  <div class="subcategory-right">
+                    <span class="subcategory-total">{{ formatCurrency(child.total) }}</span>
+                    <span class="subcategory-percent">{{ getSubPercentage(category.total, child.total) }}%</span>
+                  </div>
+                </div>
+                <div class="progress-bar subcategory-progress">
+                  <div
+                    class="progress-fill progress-subcategory"
+                    :style="{ width: getSubPercentage(category.total, child.total) + '%' }"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </transition>
         </div>
 
         <div v-if="statistics.length === 0" class="empty-state">
-          <i class="fas fa-chart-bar"></i>
+          <i class="fas fa-chart-pie"></i>
           <p>Нет данных за выбранный период</p>
         </div>
       </div>
     </div>
 
-    <!-- Годовая статистика -->
+    <!-- ============================================================ -->
+    <!-- График по дням месяца                                         -->
+    <!-- ============================================================ -->
+    <div class="card full-width-card" v-if="selectedPeriod === 'month'">
+      <div class="card-header">
+        <h3 class="card-title">По дням месяца</h3>
+        <span class="chart-mini-note">сумма транзакций в день</span>
+      </div>
+      <div class="daily-chart-section">
+        <canvas v-show="hasDailyData" id="dailyChartCanvas" class="daily-chart-canvas"></canvas>
+        <div v-if="!hasDailyData" class="empty-state" style="padding: 1.5rem 0;">
+          <i class="fas fa-chart-bar"></i>
+          <p>Нет данных за этот месяц</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- Сравнение с тем же месяцем прошлого года                      -->
+    <!-- ============================================================ -->
+    <div class="card full-width-card" v-if="selectedPeriod === 'month' && sameMonthLastYearStats">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-history"></i>
+          Сравнение с {{ months[selectedMonth - 1] }} {{ selectedYear - 1 }}
+        </h3>
+      </div>
+      <div class="comparison-section">
+        <div class="comparison-item hover-lift">
+          <div class="comparison-label">{{ months[selectedMonth - 1] }} {{ selectedYear - 1 }}</div>
+          <div class="comparison-value">{{ formatCurrency(sameMonthLastYearStats.total_amount) }}</div>
+        </div>
+        <div class="comparison-arrow">
+          <i
+            :class="yearComparison.percent >= 0 ? 'fas fa-arrow-trend-up' : 'fas fa-arrow-trend-down'"
+            :style="{ color: getDeltaColor(yearComparison.percent) }"
+          ></i>
+        </div>
+        <div class="comparison-item hover-lift">
+          <div class="comparison-label">{{ months[selectedMonth - 1] }} {{ selectedYear }}</div>
+          <div class="comparison-value">{{ formatCurrency(totalAmount) }}</div>
+        </div>
+        <div class="comparison-change hover-lift" :class="getDeltaClass(yearComparison.percent)">
+          <div class="comparison-change-percent">{{ formatDelta(yearComparison.percent) }}</div>
+          <div class="comparison-change-abs">{{ formatDeltaAbs(yearComparison.absolute) }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- Годовая статистика                                            -->
+    <!-- ============================================================ -->
     <div class="card full-width-card" v-if="selectedPeriod === 'year'">
       <div class="card-header">
         <h3 class="card-title">Аналитика по месяцам</h3>
       </div>
 
-      <!-- Мобильные карточки (планшеты вертикально + мобильные) -->
       <div class="mobile-months-grid">
-        <div v-for="item in monthlyAnalytics" :key="item.period" class="mobile-month-card">
+        <div v-for="item in monthlyAnalytics" :key="item.period" class="mobile-month-card hover-lift">
           <div class="mobile-month-header">
             <div class="mobile-month-name">
               <span class="month-name-text">{{ item.month_name }} {{ item.year }}</span>
@@ -246,7 +383,11 @@
           <div class="mobile-progress">
             <div class="progress-label">Доля от максимума</div>
             <div class="progress-bar small">
-              <div class="progress-fill" :style="{ width: getMonthPercentOfMax(item.total_amount) + '%' }" :class="currentType === 'income' ? 'progress-income' : 'progress-expense'">
+              <div
+                class="progress-fill"
+                :style="{ width: getMonthPercentOfMax(item.total_amount) + '%' }"
+                :class="currentType === 'income' ? 'progress-income' : 'progress-expense'"
+              >
                 <span class="progress-text-small">{{ getMonthPercentOfMax(item.total_amount) }}%</span>
               </div>
             </div>
@@ -254,7 +395,6 @@
         </div>
       </div>
 
-      <!-- Десктоп таблица -->
       <div class="desktop-table-wrapper">
         <table class="analytics-table">
           <thead>
@@ -288,7 +428,11 @@
               <td>
                 <div class="table-progress">
                   <div class="progress-bar small">
-                    <div class="progress-fill" :style="{ width: getMonthPercentOfMax(item.total_amount) + '%' }" :class="currentType === 'income' ? 'progress-income' : 'progress-expense'"></div>
+                    <div
+                      class="progress-fill"
+                      :style="{ width: getMonthPercentOfMax(item.total_amount) + '%' }"
+                      :class="currentType === 'income' ? 'progress-income' : 'progress-expense'"
+                    ></div>
                   </div>
                   <span class="table-progress-value">{{ getMonthPercentOfMax(item.total_amount) }}%</span>
                 </div>
@@ -301,28 +445,27 @@
         </table>
       </div>
 
-      <!-- Годовая сводка -->
       <div class="year-summary" v-if="monthlyAnalytics.length > 0">
-        <div class="summary-card">
+        <div class="summary-card hover-lift">
           <div class="summary-label">Среднее за месяц</div>
           <div class="summary-value">{{ formatCurrency(averageMonthlyAmount) }}</div>
         </div>
-        <div class="summary-card">
+        <div class="summary-card hover-lift">
           <div class="summary-label">Медиана</div>
           <div class="summary-value">{{ formatCurrency(medianMonthlyAmount) }}</div>
         </div>
-        <div class="summary-card">
+        <div class="summary-card hover-lift">
           <div class="summary-label">Стандартное отклонение</div>
           <div class="summary-value">{{ formatCurrency(standardDeviation) }}</div>
         </div>
-        <div class="summary-card">
+        <div class="summary-card hover-lift">
           <div class="summary-label">Коэф. вариации</div>
           <div class="summary-value">{{ coefficientOfVariation.toFixed(1) }}%</div>
         </div>
       </div>
     </div>
 
-    <!-- График -->
+    <!-- График (год) -->
     <div class="card full-width-card" v-if="selectedPeriod === 'year' && monthlyAnalytics.length > 0">
       <div class="card-header">
         <h3 class="card-title">Визуализация</h3>
@@ -407,7 +550,7 @@
 
           <div v-if="modalTotalPages > 1" class="modal-pagination">
             <button
-              class="btn btn-secondary modal-page-btn"
+              class="btn btn-secondary modal-page-btn hover-lift"
               :disabled="modalCurrentPage === 1"
               @click="modalPrevPage"
               aria-label="Предыдущая страница"
@@ -423,7 +566,7 @@
               <span>{{ modalTotalPages }}</span>
             </span>
             <button
-              class="btn btn-secondary modal-page-btn"
+              class="btn btn-secondary modal-page-btn hover-lift"
               :disabled="modalCurrentPage === modalTotalPages"
               @click="modalNextPage"
               aria-label="Следующая страница"
@@ -445,6 +588,7 @@ import apiService from '../services/api.js'
 export default {
   name: 'Statistics',
   setup() {
+    // --------- базовое состояние ---------
     const statistics = ref([])
     const sortedStatistics = ref([])
     const monthlyAnalytics = ref([])
@@ -454,20 +598,27 @@ export default {
     const selectedPeriod = ref('month')
     const selectedYear = ref(new Date().getFullYear())
     const selectedMonth = ref(new Date().getMonth() + 1)
-    const showFilters = ref(true)
+    const showFilters = ref(false)
     const isMobile = ref(false)
     const isTablet = ref(false)
     const expandedCategories = ref({})
     const sortOrder = ref('desc')
     const categoryColors = ref({})
-    let resizeObserver = null
+    const loading = ref(false)
 
-    // --- ТЕМНАЯ ТЕМА ---
+    let resizeObserver = null
+    let loadRequestId = 0
+
+    // --------- состояние для месяца ---------
+    const previousMonthStats = ref(null)
+    const sameMonthLastYearStats = ref(null)
+    const dailyStatistics = ref([])
+    const maxTransaction = ref(null)
+
+    // --------- тема ---------
     const isDarkTheme = ref(document.documentElement.getAttribute('data-theme') === 'dark')
 
-    // =========================================================
-    // Модальное окно транзакций по категории
-    // =========================================================
+    // --------- модалка ---------
     const showCategoryModal = ref(false)
     const modalCategory = ref(null)
     const modalParentCategoryName = ref('')
@@ -480,56 +631,73 @@ export default {
     const modalTotalItems = ref(0)
 
     const modalTotalSum = computed(() => {
-      return modalTransactions.value.reduce(
-        (sum, t) => sum + (parseFloat(t.amount) || 0),
-        0
-      )
+      return modalTransactions.value.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
     })
 
+    // --------- списки ---------
     const years = computed(() => {
       const currentYear = new Date().getFullYear()
       return Array.from({ length: 5 }, (_, i) => currentYear - i)
     })
-
     const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
-
     const colorPalette = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1', '#14b8a6', '#d946ef', '#0ea5e9', '#a855f7', '#22c55e']
 
+    // --------- навигация ---------
+    const isCurrentMonth = computed(() => {
+      const now = new Date()
+      return selectedYear.value === now.getFullYear() && selectedMonth.value === now.getMonth() + 1
+    })
+
+    const periodHint = computed(() => {
+      const now = new Date()
+      const diff = (now.getFullYear() - selectedYear.value) * 12 + (now.getMonth() + 1 - selectedMonth.value)
+      if (diff === 0) return 'текущий месяц'
+      if (diff === 1) return 'прошлый месяц'
+      if (diff < 12) return `${diff} мес. назад`
+      const y = Math.floor(diff / 12)
+      const m = diff % 12
+      return m > 0 ? `${y} г. ${m} мес. назад` : `${y} г. назад`
+    })
+
+    const shiftMonth = (delta) => {
+      let m = selectedMonth.value + delta
+      let y = selectedYear.value
+      if (m < 1)  { m = 12; y-- }
+      if (m > 12) { m = 1;  y++ }
+      selectedMonth.value = m
+      selectedYear.value = y
+    }
+
+    // --------- вычисляемые значения ---------
     const averageAmount = computed(() => transactionCount.value === 0 ? 0 : totalAmount.value / transactionCount.value)
 
     const maxMonthAmount = computed(() => {
       if (monthlyAnalytics.value.length === 0) return 0
       return Math.max(...monthlyAnalytics.value.map(item => parseFloat(item.total_amount)))
     })
-
     const maxMonthName = computed(() => {
       const maxItem = monthlyAnalytics.value.reduce((max, item) => parseFloat(item.total_amount) > parseFloat(max.total_amount) ? item : max, monthlyAnalytics.value[0])
       return maxItem ? `${maxItem.month_name} ${maxItem.year}` : ''
     })
-
     const minMonthAmount = computed(() => {
       if (monthlyAnalytics.value.length === 0) return 0
       return Math.min(...monthlyAnalytics.value.map(item => parseFloat(item.total_amount)))
     })
-
     const minMonthName = computed(() => {
       const minItem = monthlyAnalytics.value.reduce((min, item) => parseFloat(item.total_amount) < parseFloat(min.total_amount) ? item : min, monthlyAnalytics.value[0])
       return minItem ? `${minItem.month_name} ${minItem.year}` : ''
     })
-
     const averageMonthlyAmount = computed(() => {
       if (monthlyAnalytics.value.length === 0) return 0
       const sum = monthlyAnalytics.value.reduce((s, item) => s + parseFloat(item.total_amount), 0)
       return sum / monthlyAnalytics.value.length
     })
-
     const medianMonthlyAmount = computed(() => {
       if (monthlyAnalytics.value.length === 0) return 0
       const amounts = [...monthlyAnalytics.value].map(item => parseFloat(item.total_amount)).sort((a, b) => a - b)
       const mid = Math.floor(amounts.length / 2)
       return amounts.length % 2 === 0 ? (amounts[mid - 1] + amounts[mid]) / 2 : amounts[mid]
     })
-
     const standardDeviation = computed(() => {
       if (monthlyAnalytics.value.length < 2) return 0
       const mean = averageMonthlyAmount.value
@@ -537,12 +705,56 @@ export default {
       const variance = squaredDiffs.reduce((sum, val) => sum + val, 0) / monthlyAnalytics.value.length
       return Math.sqrt(variance)
     })
-
     const coefficientOfVariation = computed(() => {
       if (averageMonthlyAmount.value === 0) return 0
       return (standardDeviation.value / averageMonthlyAmount.value) * 100
     })
 
+    const monthComparison = computed(() => {
+      const cur = totalAmount.value
+      if (!previousMonthStats.value) return { absolute: 0, percent: 0, previous: 0 }
+      const prev = parseFloat(previousMonthStats.value.total_amount) || 0
+      return {
+        absolute: cur - prev,
+        percent: prev === 0 ? (cur > 0 ? 100 : 0) : ((cur - prev) / prev) * 100,
+        previous: prev
+      }
+    })
+
+    const yearComparison = computed(() => {
+      const cur = totalAmount.value
+      if (!sameMonthLastYearStats.value) return { absolute: 0, percent: 0, previous: 0 }
+      const prev = parseFloat(sameMonthLastYearStats.value.total_amount) || 0
+      return {
+        absolute: cur - prev,
+        percent: prev === 0 ? (cur > 0 ? 100 : 0) : ((cur - prev) / prev) * 100,
+        previous: prev
+      }
+    })
+
+    const topCategories = computed(() => {
+      return [...statistics.value].sort((a, b) => parseFloat(b.total) - parseFloat(a.total)).slice(0, 3)
+    })
+
+    const maxOrTop = computed(() => {
+      if (maxTransaction.value && maxTransaction.value.amount) {
+        return { amount: maxTransaction.value.amount, label: maxTransaction.value.category_name || '—' }
+      }
+      if (topCategories.value.length > 0) {
+        return { amount: topCategories.value[0].total, label: `${topCategories.value[0].name} (категория)` }
+      }
+      return null
+    })
+
+    const hasDailyData = computed(() => {
+      if (!Array.isArray(dailyStatistics.value) || dailyStatistics.value.length === 0) return false
+      return dailyStatistics.value.some(d => {
+        const val = parseFloat(d.total_amount)
+        return !isNaN(val) && val > 0
+      })
+    })
+
+    // --------- утилиты ---------
     const getCategoryColor = (categoryId) => categoryColors.value[categoryId] || '#ccc'
 
     const assignColorsToCategories = () => {
@@ -551,131 +763,24 @@ export default {
       })
     }
 
-    const getMonthPercentOfMax = (amount) => {
-      if (maxMonthAmount.value === 0) return 0
-      return ((parseFloat(amount) / maxMonthAmount.value) * 100).toFixed(1)
-    }
-
-    // =========================================================
-    // Отрисовка круговой диаграммы
-    // =========================================================
-    const getCanvasColors = () => ({
-      stroke: isDarkTheme.value ? '#1f2937' : '#ffffff',
-      text: isDarkTheme.value ? '#9ca3af' : '#666666',
-      grid: isDarkTheme.value ? '#374151' : '#ccc'
-    })
-
-    const drawPieChart = () => {
-      const canvas = document.getElementById('pieChartCanvas')
-      if (!canvas) return
-
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
-
-      const container = canvas.parentElement
-      if (!container) return
-
-      const containerWidth = container.clientWidth
-      let size = Math.min(containerWidth - 40, isTablet.value ? 280 : 350)
-
-      canvas.width = size
-      canvas.height = size
-      canvas.style.width = `${size}px`
-      canvas.style.height = `${size}px`
-
-      const centerX = size / 2
-      const centerY = size / 2
-      const radius = size / 2 - 20
-      const colors = getCanvasColors()
-
-      ctx.clearRect(0, 0, size, size)
-
-      if (statistics.value.length === 0) return
-
-      let startAngle = -Math.PI / 2
-
-      statistics.value.forEach((category) => {
-        const percentage = parseFloat(getPercentage(category.total)) / 100
-        const angle = percentage * 2 * Math.PI
-        const endAngle = startAngle + angle
-
-        ctx.beginPath()
-        ctx.fillStyle = categoryColors.value[category.id]
-        ctx.moveTo(centerX, centerY)
-        ctx.arc(centerX, centerY, radius, startAngle, endAngle)
-        ctx.fill()
-        ctx.strokeStyle = colors.stroke
-        ctx.lineWidth = 1.5
-        ctx.stroke()
-
-        if (percentage > 0.08) {
-          const midAngle = startAngle + angle / 2
-          const textRadius = radius * 0.7
-          const x = centerX + Math.cos(midAngle) * textRadius
-          const y = centerY + Math.sin(midAngle) * textRadius
-          ctx.fillStyle = '#ffffff'
-          const fontSize = size < 250 ? 11 : 13
-          ctx.font = `bold ${fontSize}px Arial`
-          ctx.shadowBlur = 0
-          const percentText = `${getPercentage(category.total)}%`
-          ctx.fillText(percentText, x - (fontSize * percentText.length) / 3, y + fontSize / 3)
-        }
-
-        startAngle = endAngle
+    const enrichWithTrends = () => {
+      const prevMap = {}
+      if (previousMonthStats.value?.statistics) {
+        previousMonthStats.value.statistics.forEach(c => {
+          const total = parseFloat(c.total) || 0
+          if (total > 0) prevMap[c.id] = total
+        })
+      }
+      statistics.value.forEach(cat => {
+        const prev = prevMap[cat.id]
+        const cur = parseFloat(cat.total) || 0
+        cat.trend = (prev !== undefined && prev > 0) ? ((cur - prev) / prev) * 100 : undefined
       })
     }
 
-    const sortCategories = (order) => {
-      sortOrder.value = order
-      const sorted = [...statistics.value]
-      sorted.sort((a, b) => sortOrder.value === 'desc' ? parseFloat(b.total) - parseFloat(a.total) : parseFloat(a.total) - parseFloat(b.total))
-      sortedStatistics.value = sorted
-    }
-
-    const sortedChildren = (children) => {
-      return [...children].sort((a, b) => parseFloat(b.total) - parseFloat(a.total))
-    }
-
-    const toggleCategory = (categoryId) => {
-      expandedCategories.value[categoryId] = !expandedCategories.value[categoryId]
-      expandedCategories.value = { ...expandedCategories.value }
-    }
-
-    const checkScreenSize = () => {
-      const width = window.innerWidth
-      isMobile.value = width <= 768
-      isTablet.value = width >= 768 && width <= 1024
-    }
-
-    const loadStatistics = async () => {
-      try {
-        if (selectedPeriod.value === 'month') {
-          const data = await apiService.getMonthStatistics(selectedMonth.value, selectedYear.value, currentType.value)
-          totalAmount.value = parseFloat(data.total_amount) || 0
-          statistics.value = data.statistics || []
-          assignColorsToCategories()
-          sortCategories(sortOrder.value)
-
-          const newExpanded = {}
-          statistics.value.forEach(cat => { newExpanded[cat.id] = false })
-          expandedCategories.value = newExpanded
-
-          await nextTick()
-          setTimeout(() => drawPieChart(), 100)
-        } else {
-          const yearlyData = await apiService.getMonthlyAnalytics(selectedYear.value, currentType.value)
-          monthlyAnalytics.value = yearlyData.results || []
-          totalAmount.value = monthlyAnalytics.value.reduce((sum, item) => sum + parseFloat(item.total_amount), 0)
-          transactionCount.value = monthlyAnalytics.value.reduce((sum, item) => sum + item.transaction_count, 0)
-          statistics.value = []
-          sortedStatistics.value = []
-
-          await nextTick()
-          if (monthlyAnalytics.value.length > 0) setTimeout(() => drawChart(), 100)
-        }
-      } catch (error) {
-        console.error('Error loading statistics:', error)
-      }
+    const getMonthPercentOfMax = (amount) => {
+      if (maxMonthAmount.value === 0) return 0
+      return ((parseFloat(amount) / maxMonthAmount.value) * 100).toFixed(1)
     }
 
     const getPercentage = (total) => {
@@ -700,76 +805,27 @@ export default {
       return 'trend-neutral'
     }
 
-    const drawChart = () => {
-      const canvas = document.getElementById('chartCanvas')
-      if (!canvas) return
+    const getDeltaClass = (percent) => {
+      if (percent > 0) return currentType.value === 'income' ? 'text-success' : 'text-danger'
+      if (percent < 0) return currentType.value === 'income' ? 'text-danger' : 'text-success'
+      return ''
+    }
 
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
+    const getDeltaColor = (percent) => {
+      if (percent > 0) return currentType.value === 'income' ? 'var(--secondary-color)' : 'var(--danger-color)'
+      if (percent < 0) return currentType.value === 'income' ? 'var(--danger-color)' : 'var(--secondary-color)'
+      return 'var(--gray-color)'
+    }
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-      if (monthlyAnalytics.value.length === 0) return
+    const formatDelta = (percent) => {
+      if (!percent || percent === 0) return '—'
+      return (percent > 0 ? '+' : '') + percent.toFixed(1) + '%'
+    }
 
-      const width = canvas.width
-      const height = canvas.height
-      const padding = isMobile.value || isTablet.value ? 50 : 60
-      const chartWidth = width - 2 * padding
-      const chartHeight = height - 2 * padding
-      const maxValue = Math.max(...monthlyAnalytics.value.map(item => parseFloat(item.total_amount)), 0)
-      const colors = getCanvasColors()
-
-      // Оси
-      ctx.beginPath()
-      ctx.strokeStyle = colors.grid
-      ctx.lineWidth = 1
-      ctx.moveTo(padding, padding)
-      ctx.lineTo(padding, height - padding)
-      ctx.moveTo(padding, height - padding)
-      ctx.lineTo(width - padding, height - padding)
-      ctx.stroke()
-
-      // Подписи по оси Y
-      ctx.fillStyle = colors.text
-      ctx.font = isMobile.value || isTablet.value ? '10px Arial' : '12px Arial'
-      for (let i = 0; i <= 5; i++) {
-        const value = (maxValue / 5) * i
-        const y = height - padding - (i / 5) * chartHeight
-        ctx.fillText(formatCurrency(value), 10, y + 4)
-      }
-
-      // Линия графика
-      const step = chartWidth / (monthlyAnalytics.value.length - 1)
-      ctx.beginPath()
-      ctx.strokeStyle = currentType.value === 'income' ? '#10b981' : '#ef4444'
-      ctx.lineWidth = isMobile.value || isTablet.value ? 2 : 3
-
-      monthlyAnalytics.value.forEach((item, index) => {
-        const x = padding + index * step
-        const y = height - padding - (parseFloat(item.total_amount) / maxValue) * chartHeight
-        if (index === 0) ctx.moveTo(x, y)
-        else ctx.lineTo(x, y)
-      })
-      ctx.stroke()
-
-      // Точки и подписи X
-      monthlyAnalytics.value.forEach((item, index) => {
-        const x = padding + index * step
-        const y = height - padding - (parseFloat(item.total_amount) / maxValue) * chartHeight
-        ctx.beginPath()
-        ctx.fillStyle = currentType.value === 'income' ? '#10b981' : '#ef4444'
-        ctx.arc(x, y, isMobile.value || isTablet.value ? 4 : 6, 0, 2 * Math.PI)
-        ctx.fill()
-
-        ctx.beginPath()
-        ctx.fillStyle = isDarkTheme.value ? '#1f2937' : '#ffffff'
-        ctx.arc(x, y, isMobile.value || isTablet.value ? 2 : 3, 0, 2 * Math.PI)
-        ctx.fill()
-
-        ctx.fillStyle = colors.text
-        ctx.font = isMobile.value || isTablet.value ? '10px Arial' : '12px Arial'
-        const monthLabel = item.month_name.substring(0, 3)
-        ctx.fillText(monthLabel, x - (isMobile.value || isTablet.value ? 10 : 15), height - padding + (isMobile.value || isTablet.value ? 15 : 20))
-      })
+    const formatDeltaAbs = (value) => {
+      if (!value || value === 0) return '—'
+      const sign = value > 0 ? '+' : '−'
+      return sign + formatCurrency(Math.abs(value))
     }
 
     const formatCurrency = (value) => {
@@ -777,6 +833,13 @@ export default {
       const numValue = parseFloat(value)
       if (isNaN(numValue)) return '0 ₽'
       return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(numValue)
+    }
+
+    const formatShortCurrency = (value) => {
+      const v = parseFloat(value) || 0
+      if (Math.abs(v) >= 1000000) return (v / 1000000).toFixed(1) + 'M'
+      if (Math.abs(v) >= 1000) return Math.round(v / 1000) + 'k'
+      return Math.round(v).toString()
     }
 
     const formatDateOnly = (date) => {
@@ -790,21 +853,419 @@ export default {
       if (!dateString) return ''
       const d = new Date(dateString)
       if (isNaN(d.getTime())) return ''
-      return d.toLocaleString('ru-RU', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+      return d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    }
+
+    const sortCategories = (order) => {
+      sortOrder.value = order
+      const sorted = [...statistics.value]
+      sorted.sort((a, b) => sortOrder.value === 'desc' ? parseFloat(b.total) - parseFloat(a.total) : parseFloat(a.total) - parseFloat(b.total))
+      sortedStatistics.value = sorted
+    }
+
+    const sortedChildren = (children) => {
+      return [...children].sort((a, b) => parseFloat(b.total) - parseFloat(a.total))
+    }
+
+    const toggleCategory = (categoryId) => {
+      expandedCategories.value[categoryId] = !expandedCategories.value[categoryId]
+      expandedCategories.value = { ...expandedCategories.value }
+    }
+
+    // --------- графика ---------
+    const getCanvasColors = () => ({
+      stroke: isDarkTheme.value ? '#252936' : '#ffffff', // Привязано к цвету карточек
+      text: isDarkTheme.value ? '#9ca3af' : '#666666',
+      grid: isDarkTheme.value ? '#374151' : '#ccc'
+    })
+
+    const drawPieChart = () => {
+      const canvas = document.getElementById('pieChartCanvas')
+      if (!canvas) return
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+
+      const container = canvas.parentElement
+      if (!container) return
+
+      const containerWidth = container.clientWidth
+      const size = Math.min(containerWidth - 40, isTablet.value ? 280 : 350)
+      canvas.width = size
+      canvas.height = size
+      canvas.style.width = `${size}px`
+      canvas.style.height = `${size}px`
+
+      const centerX = size / 2
+      const centerY = size / 2
+      const radius = size / 2 - 20
+      const innerRadius = radius * 0.62
+      const colors = getCanvasColors()
+
+      ctx.clearRect(0, 0, size, size)
+
+      if (statistics.value.length === 0) {
+        ctx.beginPath()
+        ctx.arc(centerX, centerY, (radius + innerRadius) / 2, 0, 2 * Math.PI)
+        ctx.lineWidth = radius - innerRadius
+        ctx.strokeStyle = isDarkTheme.value ? '#374151' : '#e5e7eb'
+        ctx.stroke()
+        return
+      }
+
+      let startAngle = -Math.PI / 2
+
+      statistics.value.forEach((category) => {
+        const percentage = parseFloat(getPercentage(category.total)) / 100
+        const angle = percentage * 2 * Math.PI
+        const endAngle = startAngle + angle
+
+        ctx.beginPath()
+        ctx.fillStyle = categoryColors.value[category.id]
+        ctx.moveTo(centerX + Math.cos(startAngle) * innerRadius, centerY + Math.sin(startAngle) * innerRadius)
+        ctx.arc(centerX, centerY, radius, startAngle, endAngle)
+        ctx.arc(centerX, centerY, innerRadius, endAngle, startAngle, true)
+        ctx.closePath()
+        ctx.fill()
+        ctx.strokeStyle = colors.stroke
+        ctx.lineWidth = 3 // Чуть толще разделитель для красоты
+        ctx.stroke()
+
+        startAngle = endAngle
+      })
+
+      startAngle = -Math.PI / 2
+      statistics.value.forEach((category) => {
+        const percentage = parseFloat(getPercentage(category.total)) / 100
+        const angle = percentage * 2 * Math.PI
+        const endAngle = startAngle + angle
+        if (percentage > 0.08) {
+          const midAngle = startAngle + angle / 2
+          const textRadius = (radius + innerRadius) / 2
+          const x = centerX + Math.cos(midAngle) * textRadius
+          const y = centerY + Math.sin(midAngle) * textRadius
+          ctx.fillStyle = '#ffffff'
+          const fontSize = size < 250 ? 10 : 12
+          ctx.font = `bold ${fontSize}px Arial`
+          ctx.textAlign = 'center'
+          ctx.fillText(`${getPercentage(category.total)}%`, x, y + fontSize / 3)
+        }
+        startAngle = endAngle
+      })
+
+      ctx.fillStyle = isDarkTheme.value ? '#9ca3af' : '#6b7280'
+      ctx.font = '11px Arial'
+      ctx.textAlign = 'center'
+      ctx.fillText('Всего', centerX, centerY - 6)
+
+      ctx.fillStyle = isDarkTheme.value ? '#f3f4f6' : '#111827'
+      ctx.font = `bold ${size < 250 ? 14 : 16}px Arial`
+      ctx.fillText(formatShortCurrency(totalAmount.value), centerX, centerY + 14)
+    }
+
+    const drawDailyChart = () => {
+      const canvas = document.getElementById('dailyChartCanvas')
+      if (!canvas) return
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+
+      const container = canvas.parentElement
+      const width = container ? container.clientWidth : 600
+      if (width < 50) return
+
+      const height = 200
+      const dpr = window.devicePixelRatio || 1
+      canvas.width = width * dpr
+      canvas.height = height * dpr
+      canvas.style.width = `${width}px`
+      canvas.style.height = `${height}px`
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      ctx.clearRect(0, 0, width, height)
+
+      const daysInMonth = new Date(selectedYear.value, selectedMonth.value, 0).getDate()
+      const dailyMap = {}
+      dailyStatistics.value.forEach(d => {
+        if (d.day) dailyMap[d.day] = parseFloat(d.total_amount) || 0
+      })
+
+      const data = []
+      for (let day = 1; day <= daysInMonth; day++) {
+        data.push(dailyMap[day] || 0)
+      }
+
+      const maxValue = Math.max(...data, 1)
+      const padding = { top: 16, right: 12, bottom: 28, left: 44 }
+      const chartWidth = width - padding.left - padding.right
+      const chartHeight = height - padding.top - padding.bottom
+      const colors = getCanvasColors()
+
+      ctx.strokeStyle = isDarkTheme.value ? '#374151' : '#e5e7eb'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(padding.left, padding.top)
+      ctx.lineTo(padding.left, height - padding.bottom)
+      ctx.lineTo(width - padding.right, height - padding.bottom)
+      ctx.stroke()
+
+      ctx.fillStyle = colors.text
+      ctx.font = '10px Arial'
+      ctx.textAlign = 'right'
+      for (let i = 0; i <= 3; i++) {
+        const value = (maxValue / 3) * i
+        const y = height - padding.bottom - (i / 3) * chartHeight
+        ctx.fillText(formatShortCurrency(value), padding.left - 6, y + 3)
+      }
+
+      const barWidth = chartWidth / daysInMonth
+      const gap = Math.max(1, barWidth * 0.3)
+      data.forEach((value, i) => {
+        const barHeight = (value / maxValue) * chartHeight
+        const x = padding.left + i * barWidth + gap / 2
+        const y = height - padding.bottom - barHeight
+        const w = Math.max(1, barWidth - gap)
+
+        if (value > 0) {
+          ctx.fillStyle = currentType.value === 'income' ? '#10b981' : '#ef4444'
+          // Скругление сверху для баров
+          const radius = Math.min(3, w / 2)
+          ctx.beginPath()
+          ctx.moveTo(x, y + barHeight)
+          ctx.lineTo(x, y + radius)
+          ctx.quadraticCurveTo(x, y, x + radius, y)
+          ctx.lineTo(x + w - radius, y)
+          ctx.quadraticCurveTo(x + w, y, x + w, y + radius)
+          ctx.lineTo(x + w, y + barHeight)
+          ctx.fill()
+        } else {
+          ctx.fillStyle = isDarkTheme.value ? '#374151' : '#e5e7eb'
+          ctx.fillRect(x, height - padding.bottom - 2, w, 2)
+        }
+      })
+
+      ctx.fillStyle = colors.text
+      ctx.font = '10px Arial'
+      ctx.textAlign = 'center'
+      const step = daysInMonth <= 10 ? 1 : 5
+      for (let day = 1; day <= daysInMonth; day += step) {
+        const x = padding.left + (day - 0.5) * barWidth
+        ctx.fillText(day, x, height - padding.bottom + 14)
+      }
+    }
+
+    const drawChart = () => {
+      const canvas = document.getElementById('chartCanvas')
+      if (!canvas) return
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      if (monthlyAnalytics.value.length === 0) return
+
+      const width = canvas.width
+      const height = canvas.height
+      const padding = isMobile.value || isTablet.value ? 50 : 60
+      const chartWidth = width - 2 * padding
+      const chartHeight = height - 2 * padding
+      const maxValue = Math.max(...monthlyAnalytics.value.map(item => parseFloat(item.total_amount)), 0)
+      const colors = getCanvasColors()
+
+      ctx.beginPath()
+      ctx.strokeStyle = colors.grid
+      ctx.lineWidth = 1
+      ctx.moveTo(padding, padding)
+      ctx.lineTo(padding, height - padding)
+      ctx.moveTo(padding, height - padding)
+      ctx.lineTo(width - padding, height - padding)
+      ctx.stroke()
+
+      ctx.fillStyle = colors.text
+      ctx.font = isMobile.value || isTablet.value ? '10px Arial' : '12px Arial'
+      for (let i = 0; i <= 5; i++) {
+        const value = (maxValue / 5) * i
+        const y = height - padding - (i / 5) * chartHeight
+        ctx.fillText(formatCurrency(value), 10, y + 4)
+      }
+
+      const step = chartWidth / (monthlyAnalytics.value.length - 1)
+      ctx.beginPath()
+      ctx.strokeStyle = currentType.value === 'income' ? '#10b981' : '#ef4444'
+      ctx.lineWidth = isMobile.value || isTablet.value ? 2 : 3
+
+      monthlyAnalytics.value.forEach((item, index) => {
+        const x = padding + index * step
+        const y = height - padding - (parseFloat(item.total_amount) / maxValue) * chartHeight
+        if (index === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
+      })
+      ctx.stroke()
+
+      monthlyAnalytics.value.forEach((item, index) => {
+        const x = padding + index * step
+        const y = height - padding - (parseFloat(item.total_amount) / maxValue) * chartHeight
+        ctx.beginPath()
+        ctx.fillStyle = currentType.value === 'income' ? '#10b981' : '#ef4444'
+        ctx.arc(x, y, isMobile.value || isTablet.value ? 4 : 6, 0, 2 * Math.PI)
+        ctx.fill()
+
+        ctx.beginPath()
+        ctx.fillStyle = isDarkTheme.value ? '#252936' : '#ffffff'
+        ctx.arc(x, y, isMobile.value || isTablet.value ? 2 : 3, 0, 2 * Math.PI)
+        ctx.fill()
+
+        ctx.fillStyle = colors.text
+        ctx.font = isMobile.value || isTablet.value ? '10px Arial' : '12px Arial'
+        const monthLabel = item.month_name.substring(0, 3)
+        ctx.fillText(monthLabel, x - (isMobile.value || isTablet.value ? 10 : 15), height - padding + (isMobile.value || isTablet.value ? 15 : 20))
       })
     }
 
-    // =========================================================
-    // Модалка: транзакции категории
-    // =========================================================
+    const redrawAllCharts = () => {
+      setTimeout(() => {
+        if (selectedPeriod.value === 'month') {
+          if (statistics.value.length > 0) drawPieChart()
+          if (hasDailyData.value) drawDailyChart()
+        } else {
+          if (monthlyAnalytics.value.length > 0) drawChart()
+        }
+      }, 100)
+    }
+
+    // --------- загрузка данных ---------
+    const resetMonthState = () => {
+      totalAmount.value = 0
+      statistics.value = []
+      sortedStatistics.value = []
+      transactionCount.value = 0
+      previousMonthStats.value = null
+      sameMonthLastYearStats.value = null
+      dailyStatistics.value = []
+      maxTransaction.value = null
+    }
+
+    const loadMonthData = async (myId) => {
+      const curMonth = selectedMonth.value
+      const curYear = selectedYear.value
+      const curType = currentType.value
+      const prevMonth = curMonth === 1 ? 12 : curMonth - 1
+      const prevYear = curMonth === 1 ? curYear - 1 : curYear
+
+      let current
+      try {
+        current = await apiService.getMonthStatistics(curMonth, curYear, curType)
+      } catch (err) {
+        console.error('[stats] current API failed', err)
+        if (myId === loadRequestId) {
+          resetMonthState()
+          await nextTick()
+          redrawAllCharts()
+        }
+        return
+      }
+
+      if (myId !== loadRequestId) return
+
+      // Безопасная загрузка
+      const [previous, lastYear, dailyRaw] = await Promise.all([
+        apiService.getMonthStatistics(prevMonth, prevYear, curType).catch(() => null),
+        apiService.getMonthStatistics(curMonth, curYear - 1, curType).catch(() => null),
+        apiService.getDailyStatistics(curMonth, curYear, curType).catch((e) => {
+          console.warn('Ошибка загрузки дневной статистики:', e)
+          return null
+        })
+      ])
+
+      if (myId !== loadRequestId) return
+
+      totalAmount.value = parseFloat(current.total_amount) || 0
+      statistics.value = current.statistics || []
+      previousMonthStats.value = previous
+      sameMonthLastYearStats.value = lastYear
+
+      const dailyArray = dailyRaw?.results || (Array.isArray(dailyRaw) ? dailyRaw : [])
+      dailyStatistics.value = dailyArray
+
+      maxTransaction.value = current.max_transaction || null
+
+      let count = 0
+      if (typeof current.transaction_count === 'number') count = current.transaction_count
+      else if (typeof current.count === 'number') count = current.count
+      if (!count) count = statistics.value.reduce((s, c) => s + (c.transaction_count || 0), 0)
+      if (!count && dailyStatistics.value.length) count = dailyStatistics.value.reduce((s, d) => s + (d.transaction_count || 0), 0)
+
+      if (!count && totalAmount.value > 0) {
+        try {
+          const firstDay = new Date(curYear, curMonth - 1, 1)
+          const lastDay = new Date(curYear, curMonth, 0)
+          const resp = await apiService.getTransactions({
+            page: 1, page_size: 1, type: curType,
+            create_at_after: formatDateOnly(firstDay),
+            create_at_before: formatDateOnly(lastDay)
+          })
+          count = resp.count || 0
+        } catch (e) { /* ignore */ }
+      }
+
+      if (myId === loadRequestId) transactionCount.value = count
+
+      assignColorsToCategories()
+      enrichWithTrends()
+      sortCategories(sortOrder.value)
+
+      const newExpanded = {}
+      statistics.value.forEach(cat => { newExpanded[cat.id] = false })
+      expandedCategories.value = newExpanded
+
+      if (myId !== loadRequestId) return
+      await nextTick()
+      redrawAllCharts()
+    }
+
+    const loadYearData = async (myId) => {
+      let yearlyData
+      try {
+        yearlyData = await apiService.getMonthlyAnalytics(selectedYear.value, currentType.value)
+      } catch (err) {
+        console.error('[stats] year API failed', err)
+        if (myId === loadRequestId) {
+          monthlyAnalytics.value = []
+          totalAmount.value = 0
+          transactionCount.value = 0
+        }
+        return
+      }
+      if (myId !== loadRequestId) return
+
+      monthlyAnalytics.value = yearlyData.results || []
+      totalAmount.value = monthlyAnalytics.value.reduce((sum, item) => sum + parseFloat(item.total_amount), 0)
+      transactionCount.value = monthlyAnalytics.value.reduce((sum, item) => sum + item.transaction_count, 0)
+      statistics.value = []
+      sortedStatistics.value = []
+      previousMonthStats.value = null
+      sameMonthLastYearStats.value = null
+      dailyStatistics.value = []
+      maxTransaction.value = null
+
+      await nextTick()
+      redrawAllCharts()
+    }
+
+    const loadStatistics = async () => {
+      const myId = ++loadRequestId
+      loading.value = true
+      try {
+        if (selectedPeriod.value === 'month') {
+          await loadMonthData(myId)
+        } else {
+          await loadYearData(myId)
+        }
+      } catch (error) {
+        console.error('[stats] load error', error)
+      } finally {
+        if (myId === loadRequestId) loading.value = false
+      }
+    }
+
+    // --------- модалка ---------
     const openCategoryTransactions = async (category, parentName = '') => {
       if (!category) return
-
       modalCategory.value = category
       modalParentCategoryName.value = parentName
       modalCurrentPage.value = 1
@@ -814,14 +1275,12 @@ export default {
 
     const loadCategoryTransactions = async () => {
       if (!modalCategory.value) return
-
       modalLoading.value = true
       modalError.value = ''
 
       try {
         const year = selectedYear.value
         const month = selectedMonth.value
-
         const firstDay = new Date(year, month - 1, 1)
         const lastDay = new Date(year, month, 0)
 
@@ -830,10 +1289,9 @@ export default {
           page_size: modalPageSize.value,
           type: currentType.value,
           create_at_after: formatDateOnly(firstDay),
-          create_at_before: formatDateOnly(lastDay),
+          create_at_before: formatDateOnly(lastDay)
         }
 
-        // ← НОВАЯ ЛОГИКА: если id === 0, значит это виртуальная "Без категории"
         if (modalCategory.value.id === 0) {
           params.category_isnull = 'true'
         } else {
@@ -841,13 +1299,9 @@ export default {
         }
 
         const response = await apiService.getTransactions(params)
-
         modalTransactions.value = response.results || []
         modalTotalItems.value = response.count || 0
-        modalTotalPages.value = Math.max(
-          1,
-          Math.ceil(modalTotalItems.value / modalPageSize.value)
-        )
+        modalTotalPages.value = Math.max(1, Math.ceil(modalTotalItems.value / modalPageSize.value))
       } catch (error) {
         console.error('Error loading category transactions:', error)
         modalError.value = 'Не удалось загрузить транзакции. Проверьте соединение.'
@@ -884,27 +1338,23 @@ export default {
       }
     }
 
-    const handleResize = () => {
-      checkScreenSize()
-      if (selectedPeriod.value === 'year' && monthlyAnalytics.value.length > 0) {
-        setTimeout(() => drawChart(), 100)
-      }
-      if (selectedPeriod.value === 'month' && statistics.value.length > 0) {
-        setTimeout(() => drawPieChart(), 100)
-      }
+    // --------- ресайз и тема ---------
+    const checkScreenSize = () => {
+      const width = window.innerWidth
+      isMobile.value = width <= 768
+      isTablet.value = width >= 768 && width <= 1024
     }
 
-    // Слушатель изменения темы
+    const handleResize = () => {
+      checkScreenSize()
+      redrawAllCharts()
+    }
+
     const themeObserver = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.attributeName === 'data-theme') {
           isDarkTheme.value = document.documentElement.getAttribute('data-theme') === 'dark'
-          if (selectedPeriod.value === 'year' && monthlyAnalytics.value.length > 0) {
-            setTimeout(() => drawChart(), 100)
-          }
-          if (selectedPeriod.value === 'month' && statistics.value.length > 0) {
-            setTimeout(() => drawPieChart(), 100)
-          }
+          redrawAllCharts()
         }
       })
     })
@@ -917,778 +1367,727 @@ export default {
 
       if (window.ResizeObserver) {
         resizeObserver = new ResizeObserver(() => {
-          if (selectedPeriod.value === 'month' && statistics.value.length > 0) {
-            setTimeout(() => drawPieChart(), 100)
-          }
+          redrawAllCharts()
         })
         const pieWrapper = document.querySelector('.pie-chart-wrapper')
-        if (pieWrapper) {
-          resizeObserver.observe(pieWrapper)
-        }
+        if (pieWrapper) resizeObserver.observe(pieWrapper)
       }
     })
 
     onUnmounted(() => {
       window.removeEventListener('resize', handleResize)
       themeObserver.disconnect()
-      if (resizeObserver) {
-        resizeObserver.disconnect()
-      }
+      if (resizeObserver) resizeObserver.disconnect()
     })
 
     watch([currentType, selectedPeriod, selectedYear, selectedMonth], () => loadStatistics())
 
     return {
+      // базовое
       statistics, sortedStatistics, monthlyAnalytics, totalAmount, transactionCount, currentType,
       selectedPeriod, selectedYear, selectedMonth, years, months, averageAmount, showFilters, isMobile, isTablet,
       expandedCategories, sortOrder, maxMonthAmount, maxMonthName, minMonthAmount, minMonthName,
       averageMonthlyAmount, medianMonthlyAmount, standardDeviation, coefficientOfVariation,
-      loadStatistics, toggleCategory, sortCategories, sortedChildren, getPercentage, getSubPercentage,
-      getMonthPercentOfMax, getTrendClass, getTrendBadgeClass, formatCurrency, getCategoryColor,
+      loading,
 
-      // Модалка
+      // новое для месяца
+      previousMonthStats, sameMonthLastYearStats, dailyStatistics, maxTransaction,
+      monthComparison, yearComparison, topCategories, maxOrTop, hasDailyData,
+      isCurrentMonth, periodHint, shiftMonth,
+
+      // методы
+      loadStatistics, toggleCategory, sortCategories, sortedChildren,
+      getPercentage, getSubPercentage, getMonthPercentOfMax,
+      getTrendClass, getTrendBadgeClass, getDeltaClass, getDeltaColor,
+      formatCurrency, formatDelta, formatDeltaAbs, getCategoryColor,
+
+      // модалка
       showCategoryModal, modalCategory, modalParentCategoryName,
       modalTransactions, modalLoading, modalError, modalTotalSum,
       modalCurrentPage, modalTotalPages, modalTotalItems,
       openCategoryTransactions, closeCategoryModal, modalPrevPage, modalNextPage,
-      formatModalDate,
+      formatModalDate
     }
   }
 }
 </script>
 
 <style scoped>
-/* ========== Общие стили ========== */
+/* ========== Общие стили и переменные ========== */
 .statistics-page {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 0;
+  padding: 1rem;
   min-height: 100vh;
+  transition: opacity 0.3s ease;
+}
+
+.statistics-page.is-loading .stats-grid,
+.statistics-page.is-loading .top-categories {
+  opacity: 0.6;
 }
 
 .page-header {
-  background: transparent;
-  border-bottom: none;
-  padding: 1rem;
-  margin-bottom: 0.5rem;
-}
-
-.page-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin: 0;
-  color: var(--dark-color);
+  padding: 0.5rem 0 1.5rem;
   text-align: center;
 }
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--dark-color);
+  letter-spacing: -0.5px;
+}
 
-/* ========== Карточки ========== */
+/* ========== Эффекты наведения ========== */
+.hover-lift {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.25s ease,
+              border-color 0.25s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  border-color: rgba(99, 102, 241, 0.4);
+}
+.hover-lift:active {
+  transform: translateY(-1px) scale(0.99);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* ========== Универсальные карточки ========== */
 .card {
   background: var(--white);
-  border-radius: 0;
-  box-shadow: none;
-  margin-bottom: 0.5rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+  margin-bottom: 1rem;
   overflow: hidden;
-  border: none;
-  border-bottom: 1px solid var(--light-color);
+  border: 1px solid var(--light-color);
 }
-
-.full-width-card {
-  margin-left: 0;
-  margin-right: 0;
-  border-radius: 0;
-}
-
-.card:last-child {
-  margin-bottom: 0;
-}
-
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 0.75rem;
-  padding: 1rem;
+  padding: 1.25rem 1.5rem;
   border-bottom: 1px solid var(--light-color);
   background: var(--white);
 }
-
 .card-title {
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 1.05rem;
+  font-weight: 700;
   margin: 0;
   color: var(--dark-color);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.card-title i { color: var(--primary-color); }
+
+/* ========== Навигация по месяцам ========== */
+.period-nav-card {
+  padding: 0.75rem 1rem;
+}
+.period-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.nav-arrow {
+  background: var(--light-color);
+  border: none;
+  border-radius: 12px;
+  color: var(--dark-color);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.nav-arrow:hover:not(:disabled) {
+  background: var(--primary-color);
+  color: #fff;
+  transform: scale(1.05);
+}
+.nav-arrow:active:not(:disabled) {
+  transform: scale(0.95);
+}
+.nav-arrow:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.period-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.3;
+}
+.period-label strong {
+  font-size: 1.1rem;
+  color: var(--dark-color);
+}
+.period-hint {
+  font-size: 0.75rem;
+  color: var(--gray-color);
+  font-weight: 500;
 }
 
 /* ========== Фильтры ========== */
-.filters-card {
-  margin-bottom: 0.5rem;
-}
-
+.filters-card { margin-bottom: 1rem; }
 .filters-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.875rem 1rem;
+  padding: 1.25rem 1.5rem;
   cursor: pointer;
   background: var(--light-color);
-  border-bottom: 1px solid var(--light-color);
+  border-radius: 16px;
+  transition: background 0.2s;
 }
-
 .filters-header:hover {
-  filter: brightness(0.95);
+  background: rgba(99, 102, 241, 0.08);
 }
-
 .filters-title {
-  font-size: 0.875rem;
+  font-size: 0.95rem;
   font-weight: 600;
   margin: 0;
   color: var(--dark-color);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
-
 .filters-body {
-  padding: 1rem;
+  padding: 1.5rem;
   background: var(--white);
-  transition: all 0.3s ease;
+  border-top: 1px solid var(--light-color);
 }
-
-.filters-hidden {
-  display: none;
-}
-
+.filters-hidden { display: none; }
 .filters-grid {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
 }
-
-.filter-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
-
 .filter-label {
-  font-size: 0.75rem;
-  font-weight: 500;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: var(--gray-color);
+  margin-bottom: 0.25rem;
+  display: block;
 }
-
-.filter-actions {
-  margin-top: 0.5rem;
-}
-
-/* ========== Формы и кнопки ========== */
 .form-control {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--gray-color);
-  border-radius: 8px;
-  font-size: 0.813rem;
+  padding: 0.65rem 1rem;
+  border: 2px solid var(--light-color);
+  border-radius: 12px;
+  font-size: 0.9rem;
   transition: all 0.2s;
   background: var(--white);
   color: var(--dark-color);
   width: 100%;
-}
-
-.form-control:hover {
-  border-color: var(--dark-color);
-}
-
-.form-control:focus {
   outline: none;
+}
+.form-control:focus {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-}
-
-.btn {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--gray-color);
-  border-radius: 8px;
-  font-size: 0.813rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  background: var(--light-color);
-  color: var(--dark-color);
-  width: 100%;
-}
-
-.btn:hover {
-  filter: brightness(0.95);
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background: var(--primary-color);
-  color: #ffffff;
-  border: 1px solid var(--primary-color);
-}
-
-.btn-primary:hover {
-  filter: brightness(1.1);
-}
-
-.btn-secondary {
-  background: var(--light-color);
-  color: var(--dark-color);
-  border: 1px solid var(--gray-color);
-}
-
-.btn-sort {
-  padding: 0.375rem 0.75rem;
-  background: var(--light-color);
-  border: 1px solid var(--light-color);
-  border-radius: 8px;
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  color: var(--dark-color);
-  width: auto;
-}
-
-.btn-sort:hover {
-  filter: brightness(0.95);
-}
-
-.btn-sort.active {
-  background: var(--primary-color);
-  color: white;
-  border-color: var(--primary-color);
-}
-
-.sort-buttons {
-  display: flex;
-  gap: 0.5rem;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
 }
 
 /* ========== Карточки статистики ========== */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-  padding: 0 0.5rem;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
-
 .stat-card {
   background: var(--white);
-  border-radius: 10px;
-  padding: 0.875rem;
+  border-radius: 16px;
+  padding: 1.25rem;
   text-align: center;
-  box-shadow: var(--shadow);
   border: 1px solid var(--light-color);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
 }
-
-.stat-card:first-child {
-  grid-column: span 2;
-}
-
+.stat-card.stat-main { grid-column: span 2; }
 .stat-card-title {
-  font-size: 0.688rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.5px;
   color: var(--gray-color);
-  margin-bottom: 0.375rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
 }
-
 .stat-card-value {
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: 1.6rem;
+  font-weight: 800;
   color: var(--dark-color);
 }
-
 .stat-card-subtitle {
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   color: var(--gray-color);
-  margin-top: 0.25rem;
+  margin-top: 0.35rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stat-compare .stat-card-value { font-size: 1.4rem; }
+
+.text-success { color: var(--secondary-color) !important; }
+.text-danger { color: var(--danger-color) !important; }
+
+/* ========== Топ-3 категории ========== */
+.top-categories {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.top-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--white);
+  border: 1px solid var(--light-color);
+  border-radius: 16px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+}
+.top-card.top-rank-1 { border-left: 4px solid #f59e0b; }
+.top-card.top-rank-2 { border-left: 4px solid #94a3b8; }
+.top-card.top-rank-3 { border-left: 4px solid #b45309; }
+.top-rank {
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--gray-color);
+  min-width: 30px;
+}
+.top-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.top-info { flex: 1; min-width: 0; }
+.top-name {
+  font-size: 0.9rem;
+  color: var(--dark-color);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.top-amount {
+  font-size: 0.8rem;
+  color: var(--gray-color);
+  margin-top: 2px;
+}
+.top-share {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--dark-color);
+  flex-shrink: 0;
 }
 
-/* ========== Цвета текста ========== */
-.text-success { color: var(--secondary-color); }
-.text-danger { color: var(--danger-color); }
-
-/* ========== Круговая диаграмма ========== */
+/* ========== Donut-диаграмма ========== */
 .pie-chart-section {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
   align-items: center;
-  padding: 1rem;
+  padding: 1.5rem;
   background: var(--light-color);
 }
-
 .pie-chart-wrapper {
   display: flex;
   justify-content: center;
   align-items: center;
   width: 100%;
-  background: transparent;
+  min-height: 260px;
 }
-
 .pie-chart-canvas {
   display: block;
   margin: 0 auto;
-  background: transparent;
 }
-
 .pie-chart-legend {
   width: 100%;
   max-height: 250px;
   overflow-y: auto;
   background: var(--white);
-  border-radius: 8px;
-  padding: 0.5rem;
+  border-radius: 12px;
+  padding: 0.75rem;
   border: 1px solid var(--light-color);
 }
-
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   padding: 0.5rem;
   border-bottom: 1px solid var(--light-color);
 }
-
-.legend-item:last-child {
-  border-bottom: none;
-}
-
-.legend-color {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  flex-shrink: 0;
-}
-
+.legend-item:last-child { border-bottom: none; }
+.legend-color { width: 12px; height: 12px; border-radius: 4px; flex-shrink: 0; }
 .legend-name {
   flex: 1;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   color: var(--dark-color);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+.legend-percent { font-size: 0.85rem; font-weight: 700; color: var(--gray-color); }
 
-.legend-percent {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--gray-color);
-}
-
-/* ========== Список категорий ========== */
+/* ========== Компактный список категорий ========== */
 .categories-list {
-  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
 }
-
-.categories-list.full-width {
-  padding: 0;
-}
-
 .category-item {
-  margin-bottom: 0;
-  padding: 1rem;
   background: var(--white);
-  border-radius: 0;
-  border: none;
-  border-bottom: 1px solid var(--light-color);
+  border-radius: 16px;
+  padding: 1.25rem;
+  border: 1px solid var(--light-color);
+  position: relative;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
 }
-
-.category-item:last-child {
-  border-bottom: none;
+.category-item.is-expanded {
+  border-color: var(--primary-color);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.1);
 }
-
-.category-item.full-width-item {
-  border-radius: 0;
-}
-
 .category-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  gap: 0.75rem;
 }
-
-.category-name {
+.category-left {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-weight: 600;
-  font-size: 0.875rem;
-  color: var(--dark-color);
+  gap: 0.75rem;
+  min-width: 0;
+  flex: 1;
 }
-
-.expand-icon {
-  font-size: 0.688rem;
-  color: var(--gray-color);
+.category-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
 }
-
 .expand-icon-btn {
-  background: none;
+  background: var(--light-color);
   border: none;
   cursor: pointer;
-  padding: 0.125rem;
-  color: var(--gray-color);
-  font-size: 0.688rem;
-  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
+  color: var(--gray-color);
+  font-size: 0.7rem;
   transition: all 0.2s;
 }
-
-.expand-icon-btn:hover {
-  background: var(--light-color);
-  color: var(--dark-color);
+.category-item:hover .expand-icon-btn {
+  background: var(--primary-color);
+  color: #fff;
 }
-
-.placeholder-icon {
+.expand-icon-placeholder { width: 24px; height: 24px; }
+.category-dot {
   width: 12px;
-  visibility: hidden;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px var(--white), 0 0 0 5px rgba(0,0,0,0.03);
 }
-
-.category-total {
-  font-weight: 600;
-  font-size: 0.875rem;
-  color: var(--dark-color);
-}
-
-/* Кликабельные элементы категории */
 .category-name-text {
-  cursor: pointer;
-  transition: color 0.2s;
-  border-bottom: 1px dashed transparent;
-}
-
-.category-name-text:hover {
-  color: var(--primary-color);
-  border-bottom-color: var(--primary-color);
-}
-
-.category-total-clickable {
-  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--dark-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: color 0.2s;
 }
-
-.category-total-clickable:hover {
-  color: var(--primary-color);
+.category-header:hover .category-name-text { color: var(--primary-color); }
+.category-total {
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--dark-color);
+  transition: color 0.2s;
 }
-
-/* ========== Прогресс-бары ========== */
-.progress-wrapper {
-  margin-top: 0.5rem;
-}
-
-.progress-bar {
-  height: 28px;
+.category-total:hover { color: var(--primary-color); }
+.category-percent {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--gray-color);
   background: var(--light-color);
+  padding: 0.2rem 0.6rem;
   border-radius: 8px;
+  min-width: 50px;
+  text-align: center;
+}
+
+/* ========== Тонкие прогресс-бары ========== */
+.progress-wrapper { margin-top: 1rem; }
+.progress-bar {
+  height: 8px;
+  background: var(--light-color);
+  border-radius: 99px;
   overflow: hidden;
   position: relative;
 }
-
-.progress-bar.small {
-  height: 24px;
-}
-
+.progress-bar.small { height: 24px; }
 .progress-fill {
   height: 100%;
+  border-radius: 99px;
+  transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.progress-income {
+  background: linear-gradient(90deg, #10b981, #34d399);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+.progress-expense {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+}
+.progress-subcategory {
+  background: linear-gradient(90deg, #60a5fa, #93c5fd);
+  opacity: 0.9;
+}
+
+.mobile-progress .progress-fill,
+.table-progress .progress-fill {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding-right: 8px;
-  color: white;
-  font-weight: 600;
-  font-size: 0.688rem;
-  transition: width 0.3s ease;
+  padding-right: 10px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.75rem;
 }
-
-.progress-income {
-  background: linear-gradient(90deg, #10b981, #34d399);
-}
-
-.progress-expense {
-  background: linear-gradient(90deg, #ef4444, #f87171);
-}
-
-.progress-subcategory {
-  background: linear-gradient(90deg, #3b82f6, #60a5fa);
-}
-
-.progress-text {
-  font-size: 0.688rem;
-  text-shadow: 0 0 2px rgba(0,0,0,0.3);
-}
-
-.progress-text-small {
-  font-size: 0.625rem;
-  text-shadow: 0 0 2px rgba(0,0,0,0.3);
-}
-
-.progress-percent-info {
-  font-size: 0.625rem;
-  color: var(--gray-color);
-  text-align: right;
-  margin-top: 0.25rem;
-}
+.progress-text-small { font-size: 0.7rem; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
 
 /* ========== Подкатегории ========== */
 .subcategories {
-  margin-top: 0.75rem;
-  padding-left: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  padding-left: 1.5rem;
+  border-top: 1px dashed var(--light-color);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: relative;
 }
-
-.subcategory-item {
-  margin-bottom: 0.75rem;
-  padding: 0.625rem;
+.subcategories::before {
+  content: '';
+  position: absolute;
+  left: 0.5rem;
+  top: 0;
+  bottom: 1rem;
+  width: 2px;
   background: var(--light-color);
-  border-radius: 8px;
-  border: 1px solid var(--light-color);
-  border-left-width: 3px;
+  border-radius: 2px;
 }
-
+.subcategory-item { position: relative; cursor: pointer; }
 .subcategory-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
   gap: 0.5rem;
-  margin-bottom: 0.375rem;
+  margin-bottom: 0.5rem;
 }
-
-.subcategory-name {
+.subcategory-left {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  font-size: 0.75rem;
+  gap: 0.5rem;
+  font-size: 0.85rem;
   color: var(--gray-color);
+  transition: color 0.2s;
 }
-
-.subcategory-total {
-  font-weight: 600;
-  font-size: 0.75rem;
-  color: var(--dark-color);
-}
-
+.subcategory-item:hover .subcategory-left { color: var(--dark-color); }
+.subcategory-icon { font-size: 0.75rem; opacity: 0.6; }
+.subcategory-name { font-weight: 600; }
+.subcategory-right { display: flex; align-items: center; gap: 0.75rem; }
+.subcategory-total { font-weight: 700; font-size: 0.85rem; color: var(--dark-color); }
+.subcategory-percent { font-size: 0.75rem; color: var(--gray-color); font-weight: 600; min-width: 40px; text-align: right; }
 .subcategory-progress {
-  margin: 0.375rem 0;
+  height: 6px;
+  background: var(--white);
+  border: 1px solid var(--light-color);
 }
 
-.subcategory-percent {
-  font-size: 0.625rem;
-  color: var(--gray-color);
-  text-align: right;
+/* ========== Тренд-бейджи ========== */
+.trend-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0.2rem 0.5rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
+.trend-badge.small { font-size: 0.7rem; padding: 0.15rem 0.4rem; }
+.trend-badge.trend-up { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+.trend-badge.trend-down { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+.trend-badge.trend-neutral { background: rgba(107, 114, 128, 0.15); color: var(--gray-color); }
 
-.expand-hint {
-  font-size: 0.688rem;
-  color: var(--primary-color);
-  cursor: pointer;
-  text-align: right;
-  margin-top: 0.375rem;
-  padding: 0.25rem;
+/* ========== Дневной график ========== */
+.daily-chart-section { padding: 1.5rem; background: var(--white); overflow-x: hidden; }
+.daily-chart-canvas { display: block; width: 100%; max-width: 100%; }
+
+/* ========== Сравнение с прошлым годом ========== */
+.comparison-section {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: var(--light-color);
 }
-
-.expand-hint:hover {
-  text-decoration: underline;
+.comparison-item {
+  flex: 1;
+  min-width: 130px;
+  padding: 1rem;
+  background: var(--white);
+  border: 1px solid var(--light-color);
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
 }
-
-/* ========== Мобильные карточки месяцев ========== */
-.mobile-months-grid {
-  display: block;
-  padding: 0;
+.comparison-label { font-size: 0.75rem; font-weight: 600; color: var(--gray-color); margin-bottom: 0.35rem; }
+.comparison-value { font-weight: 800; font-size: 1rem; color: var(--dark-color); }
+.comparison-arrow { font-size: 1.25rem; text-align: center; padding: 0 0.5rem; }
+.comparison-change {
+  flex: 1;
+  min-width: 130px;
+  padding: 1rem;
+  background: var(--white);
+  border: 1px solid var(--light-color);
+  border-radius: 12px;
+  text-align: center;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
 }
+.comparison-change-percent { font-size: 1.1rem; }
+.comparison-change-abs { font-size: 0.75rem; color: var(--gray-color); margin-top: 0.35rem; font-weight: 600; }
 
+/* ========== Мобильные карточки месяцев (год) ========== */
+.mobile-months-grid { display: block; padding: 1rem; }
 .mobile-month-card {
   background: var(--white);
-  border-radius: 0;
-  padding: 1rem;
-  margin-bottom: 0;
-  border: none;
-  border-bottom: 1px solid var(--light-color);
+  border-radius: 16px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--light-color);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.02);
 }
-
-.mobile-month-card:last-child {
-  border-bottom: none;
-}
-
+.mobile-month-card:last-child { margin-bottom: 0; }
 .mobile-month-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--light-color);
 }
-
-.mobile-month-name {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  color: var(--dark-color);
-}
-
-.month-name-text {
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-
-.mobile-month-amount {
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.mobile-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-}
-
-.mobile-stat {
-  text-align: center;
-  padding: 0.5rem;
-  background: var(--light-color);
-  border-radius: 8px;
-  border: 1px solid var(--light-color);
-}
-
-.mobile-stat-label {
-  font-size: 0.625rem;
-  color: var(--gray-color);
-  margin-bottom: 0.25rem;
-}
-
-.mobile-stat-value {
-  font-size: 0.813rem;
-  font-weight: 600;
-  color: var(--dark-color);
-}
-
-.mobile-progress {
-  margin-top: 0.5rem;
-}
-
-.progress-label {
-  font-size: 0.625rem;
-  color: var(--gray-color);
-  margin-bottom: 0.25rem;
-}
+.mobile-month-name { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; color: var(--dark-color); }
+.month-name-text { font-weight: 700; font-size: 0.95rem; }
+.mobile-month-amount { font-size: 1.1rem; font-weight: 800; }
+.mobile-stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
+.mobile-stat { text-align: center; padding: 0.75rem; background: var(--light-color); border-radius: 12px; }
+.mobile-stat-label { font-size: 0.7rem; font-weight: 600; color: var(--gray-color); margin-bottom: 0.35rem; }
+.mobile-stat-value { font-size: 0.9rem; font-weight: 700; color: var(--dark-color); }
+.mobile-progress { margin-top: 0.75rem; }
+.progress-label { font-size: 0.75rem; font-weight: 600; color: var(--gray-color); margin-bottom: 0.35rem; }
 
 /* ========== Десктоп таблица ========== */
-.desktop-table-wrapper {
-  display: none;
-}
-
-/* ========== Тренд бейджи ========== */
-.trend-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.125rem 0.375rem;
-  border-radius: 4px;
-  font-size: 0.688rem;
-  font-weight: 500;
-}
-
-.trend-badge.small {
-  font-size: 0.625rem;
-  padding: 0.125rem 0.375rem;
-  margin-left: 0.375rem;
-}
-
-.trend-badge.trend-up {
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--secondary-color);
-}
-
-.trend-badge.trend-down {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--danger-color);
-}
-
-.trend-badge.trend-neutral {
-  background: rgba(107, 114, 128, 0.1);
+.desktop-table-wrapper { display: none; padding: 0 1.5rem 1.5rem; }
+.analytics-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.analytics-table th {
+  text-align: left;
+  padding: 1rem;
+  background: var(--light-color);
   color: var(--gray-color);
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
+.analytics-table th:first-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+.analytics-table th:last-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+.analytics-table td { padding: 1rem; border-bottom: 1px solid var(--light-color); color: var(--dark-color); }
+.analytics-table tr:last-child td { border-bottom: none; }
+.table-month-cell { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+.table-progress { display: flex; align-items: center; gap: 0.75rem; min-width: 120px; }
+.table-progress .progress-bar { flex: 1; height: 24px; }
+.table-progress-value { font-size: 0.75rem; font-weight: 700; color: var(--gray-color); min-width: 40px; text-align: right; }
 
 /* ========== Годовая сводка ========== */
 .year-summary {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
-  padding: 1rem;
+  gap: 1rem;
+  padding: 1.5rem;
   border-top: 1px solid var(--light-color);
   background: var(--light-color);
 }
-
 .summary-card {
   text-align: center;
-  padding: 0.625rem;
-  background: var(--white);
-  border-radius: 8px;
-  border: 1px solid var(--light-color);
-}
-
-.summary-label {
-  font-size: 0.625rem;
-  color: var(--gray-color);
-  margin-bottom: 0.25rem;
-}
-
-.summary-value {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--dark-color);
-}
-
-/* ========== График ========== */
-.chart-section {
   padding: 1rem;
-  overflow-x: auto;
   background: var(--white);
+  border-radius: 12px;
+  border: 1px solid var(--light-color);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
 }
+.summary-label { font-size: 0.7rem; font-weight: 600; color: var(--gray-color); margin-bottom: 0.35rem; }
+.summary-value { font-size: 0.95rem; font-weight: 800; color: var(--dark-color); }
 
-.chart-canvas {
-  max-width: 100%;
-  height: auto;
-  background: var(--white);
-}
-
+/* ========== Годовой график ========== */
+.chart-section { padding: 1.5rem; overflow-x: auto; background: var(--white); }
+.chart-canvas { max-width: 100%; height: auto; }
 .chart-note {
   text-align: center;
-  padding: 0.5rem;
-  font-size: 0.688rem;
+  padding: 1rem;
+  font-size: 0.75rem;
+  font-weight: 500;
   color: var(--gray-color);
   border-top: 1px solid var(--light-color);
   background: var(--light-color);
 }
 
 /* ========== Пустое состояние ========== */
-.empty-state {
-  text-align: center;
-  padding: 2rem;
-  color: var(--gray-color);
-}
+.empty-state { text-align: center; padding: 2rem; color: var(--gray-color); }
+.empty-state i { font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.4; }
+.empty-state p { font-weight: 500; }
+.text-center { text-align: center; }
 
-.empty-state i {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-  opacity: 0.5;
-}
+/* ========== Анимации ========== */
+.slide-fade-enter-active { transition: all 0.3s ease-out; }
+.slide-fade-leave-active { transition: all 0.2s cubic-bezier(1, 0.5, 0.8, 1); }
+.slide-fade-enter-from,
+.slide-fade-leave-to { transform: translateY(-10px); opacity: 0; max-height: 0; }
 
-.text-center {
-  text-align: center;
+@keyframes pulse-soft {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(0.98); }
+  100% { opacity: 1; transform: scale(1); }
 }
+.is-loading .stat-card-value { animation: pulse-soft 1.5s infinite ease-in-out; }
 
 /* ============================================================
-   Модальное окно транзакций по категории
+   Модальное окно
    ============================================================ */
 .modal {
   position: fixed;
@@ -1696,7 +2095,8 @@ export default {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1704,550 +2104,209 @@ export default {
   padding: 1rem;
   box-sizing: border-box;
 }
-
 .modal-content {
   background: var(--white);
-  border-radius: 12px;
+  border-radius: 20px;
   width: 100%;
   max-width: 560px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   display: flex;
   flex-direction: column;
+  border: 1px solid var(--light-color);
 }
-
-.modal-content.modal-wide {
-  max-width: 720px;
-}
-
+.modal-content.modal-wide { max-width: 720px; }
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 1.25rem 1.5rem;
+  padding: 1.5rem;
   border-bottom: 1px solid var(--light-color);
-  gap: 0.75rem;
+  gap: 1rem;
   position: sticky;
   top: 0;
   background: var(--white);
   z-index: 1;
-  border-radius: 12px 12px 0 0;
+  border-radius: 20px 20px 0 0;
 }
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--dark-color);
-}
-
-.modal-subtitle {
-  margin: 0.25rem 0 0;
-  font-size: 0.813rem;
-  color: var(--gray-color);
-}
-
+.modal-header h3 { margin: 0; font-size: 1.2rem; font-weight: 800; color: var(--dark-color); }
+.modal-subtitle { margin: 0.35rem 0 0; font-size: 0.85rem; font-weight: 500; color: var(--gray-color); }
 .modal-close {
-  background: none;
+  background: var(--light-color);
   border: none;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   line-height: 1;
   cursor: pointer;
   color: var(--gray-color);
   padding: 0;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 50%;
   transition: all 0.2s;
   flex-shrink: 0;
 }
-
-.modal-close:hover {
-  background: var(--light-color);
-  color: var(--dark-color);
-}
-
+.modal-close:hover { background: var(--danger-color); color: #fff; transform: rotate(90deg); }
 .modal-summary {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1.5rem;
+  padding: 1rem 1.5rem;
   background: var(--light-color);
   border-bottom: 1px solid var(--light-color);
-  font-size: 0.813rem;
+  font-size: 0.85rem;
+  font-weight: 600;
   color: var(--gray-color);
   flex-wrap: wrap;
   gap: 0.5rem;
 }
+.modal-summary strong { color: var(--dark-color); font-weight: 800; }
 
-.modal-summary strong {
-  color: var(--dark-color);
-  font-weight: 600;
-}
-
-.modal-summary .text-success { color: var(--secondary-color); }
-.modal-summary .text-danger { color: var(--danger-color); }
-
-/* Список транзакций в модалке */
-.modal-transactions-list {
-  padding: 0.5rem 0;
-  flex: 1;
-}
-
+.modal-transactions-list { padding: 0.5rem 0; flex: 1; }
 .modal-transaction-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1.5rem;
+  padding: 1rem 1.5rem;
   border-bottom: 1px solid var(--light-color);
   gap: 1rem;
   transition: background 0.2s;
 }
-
-.modal-transaction-item:hover {
-  background: var(--light-color);
-}
-
-.modal-transaction-item:last-child {
-  border-bottom: none;
-}
-
-.modal-transaction-left {
-  flex: 1;
-  min-width: 0;
-}
-
+.modal-transaction-item:hover { background: var(--light-color); }
+.modal-transaction-item:last-child { border-bottom: none; }
+.modal-transaction-left { flex: 1; min-width: 0; }
 .modal-transaction-date {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: var(--gray-color);
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  margin-bottom: 0.25rem;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
 }
+.modal-transaction-meta { font-size: 0.85rem; font-weight: 500; color: var(--gray-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modal-transaction-account { color: var(--gray-color); margin-right: 0.5rem; display: inline-flex; align-items: center; gap: 0.35rem; }
+.modal-transaction-comment { color: var(--gray-color); font-style: italic; }
+.modal-transaction-amount { font-size: 1.1rem; font-weight: 800; white-space: nowrap; flex-shrink: 0; }
 
-.modal-transaction-meta {
-  font-size: 0.813rem;
-  color: var(--gray-color);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.modal-transaction-account {
-  color: var(--gray-color);
-  margin-right: 0.375rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.modal-transaction-comment {
-  color: var(--gray-color);
-}
-
-.modal-transaction-amount {
-  font-size: 1rem;
-  font-weight: 700;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.modal-transaction-amount.text-success { color: var(--secondary-color); }
-.modal-transaction-amount.text-danger { color: var(--danger-color); }
-
-/* Пагинация в модалке */
 .modal-pagination {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1rem;
   padding: 1rem 1.5rem;
   border-top: 1px solid var(--light-color);
   flex-wrap: nowrap;
   position: sticky;
   bottom: 0;
   background: var(--white);
-  border-radius: 0 0 12px 12px;
+  border-radius: 0 0 20px 20px;
 }
-
 .modal-pagination .btn {
-  padding: 0.375rem 0.75rem;
-  font-size: 0.813rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
   width: auto;
+  border-radius: 10px;
 }
+.modal-page-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; white-space: nowrap; }
+.modal-pagination-info { font-size: 0.85rem; font-weight: 600; color: var(--gray-color); text-align: center; }
+.modal-page-info-short { display: none; }
 
-.modal-page-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.375rem;
-  white-space: nowrap;
-}
-
-.modal-pagination-info {
-  font-size: 0.813rem;
-  color: var(--gray-color);
-  text-align: center;
-}
-
-.modal-page-info-short {
-  display: none;
-}
-
-/* Состояния внутри модалки */
-.modal-loading,
-.modal-error {
+.modal-loading, .modal-error {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 3rem 1.5rem;
   color: var(--gray-color);
-  gap: 0.75rem;
+  gap: 1rem;
 }
+.modal-loading i, .modal-error i { font-size: 2.5rem; }
+.modal-error { color: var(--danger-color); }
+.modal-loading p, .modal-error p { margin: 0; font-size: 0.9rem; font-weight: 600; }
 
-.modal-loading i,
-.modal-error i {
-  font-size: 2rem;
+.btn {
+  padding: 0.65rem 1.25rem;
+  border: 1px solid var(--gray-color);
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--light-color);
+  color: var(--dark-color);
 }
-
-.modal-error {
-  color: var(--danger-color);
-}
-
-.modal-loading p,
-.modal-error p {
-  margin: 0;
-  font-size: 0.875rem;
-}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-secondary { background: var(--white); color: var(--dark-color); border: 1px solid var(--light-color); }
+.btn-secondary:hover:not(:disabled) { border-color: var(--primary-color); color: var(--primary-color); }
 
 /* ============================================================
-   ПЛАНШЕТЫ (вертикальная ориентация, 768px - 1024px)
+   АДАПТИВ
    ============================================================ */
-@media (min-width: 768px) and (max-width: 1024px) {
-  .page-header {
-    padding: 0.75rem 0;
-    margin-bottom: 1rem;
-  }
-
-  .page-title {
-    font-size: 1.5rem;
-    text-align: center;
-  }
-
-  .card {
-    border-radius: 12px;
-    margin-bottom: 1rem;
-    border: 1px solid var(--light-color);
-  }
-
-  .full-width-card {
-    border-radius: 12px;
-  }
-
-  .card:last-child {
-    margin-bottom: 1rem;
-  }
-
-  .card-header {
-    padding: 1rem;
-  }
-
-  .filters-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 0.75rem;
-    align-items: end;
-  }
-
-  .filter-actions .btn {
-    width: auto;
-    min-width: 120px;
-  }
-
-  .stats-grid {
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 0.75rem;
-    padding: 0;
-    margin-bottom: 1rem;
-  }
-
-  .stat-card:first-child {
-    grid-column: auto;
-  }
-
-  .stat-card {
-    padding: 1rem;
-  }
-
-  .stat-card-value {
-    font-size: 1.125rem;
-  }
-
-  .pie-chart-section {
-    flex-direction: column;
-    padding: 1rem;
-    gap: 1rem;
-  }
-
-  .pie-chart-wrapper {
-    min-height: 280px;
-  }
-
-  .pie-chart-legend {
-    max-width: 100%;
-    max-height: 250px;
-  }
-
-  .categories-list {
-    padding: 1rem;
-  }
-
-  .categories-list.full-width {
-    padding: 1rem;
-  }
-
-  .category-item {
-    margin-bottom: 0.75rem;
-    padding: 0.875rem;
-    background: var(--light-color);
-    border-radius: 10px;
-    border: 1px solid var(--light-color);
-  }
-
-  .category-item.full-width-item {
-    border-radius: 10px;
-  }
-
-  .mobile-months-grid {
-    display: block;
-  }
-
-  .desktop-table-wrapper {
-    display: none;
-  }
-
-  .mobile-month-card {
-    border-radius: 10px;
-    margin-bottom: 0.75rem;
-    border: 1px solid var(--light-color);
-  }
-
-  .year-summary {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
-    padding: 1rem;
-  }
-
-  .chart-section {
-    padding: 1rem;
-  }
-
-  .modal-content,
-  .modal-content.modal-wide {
-    max-width: 90%;
-  }
+@media (min-width: 768px) {
+  .page-title { text-align: left; padding-left: 0.5rem; }
+  .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; align-items: end; }
+  .stats-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+  .stat-card.stat-main { grid-column: auto; }
+  .top-categories { grid-template-columns: repeat(3, 1fr); }
+  .pie-chart-section { flex-direction: row; }
+  .pie-chart-legend { max-width: 300px; max-height: 320px; }
+  .comparison-section { gap: 1.5rem; }
+  .comparison-item, .comparison-change { min-width: 180px; }
+  .year-summary { grid-template-columns: repeat(4, 1fr); }
+  .mobile-months-grid { display: none; }
+  .desktop-table-wrapper { display: block; }
 }
 
-/* ============================================================
-   ДЕСКТОП (широкие экраны, > 1024px)
-   ============================================================ */
 @media (min-width: 1025px) {
-  .page-header {
-    padding: 0;
-    margin-bottom: 1.5rem;
-  }
-
-  .page-title {
-    font-size: 1.75rem;
-    text-align: left;
-  }
-
-  .card {
-    border-radius: 12px;
-    margin-bottom: 1.5rem;
-    border: 1px solid var(--light-color);
-  }
-
-  .full-width-card {
-    border-radius: 12px;
-  }
-
-  .card:last-child {
-    margin-bottom: 1.5rem;
-  }
-
-  .card-header {
-    padding: 1.25rem 1.5rem;
-  }
-
-  .filters-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    align-items: end;
-  }
-
-  .filter-actions .btn {
-    width: auto;
-  }
-
-  .stats-grid {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    padding: 0;
-    margin-bottom: 1.5rem;
-  }
-
-  .stat-card:first-child {
-    grid-column: auto;
-  }
-
-  .stat-card {
-    padding: 1.25rem;
-  }
-
-  .pie-chart-section {
-    flex-direction: row;
-    padding: 1.5rem;
-  }
-
-  .pie-chart-legend {
-    max-width: 280px;
-    max-height: 320px;
-  }
-
-  .categories-list {
-    padding: 1.5rem;
-  }
-
-  .categories-list.full-width {
-    padding: 1.5rem;
-  }
-
-  .category-item {
-    margin-bottom: 1rem;
-    padding: 1rem;
-    background: var(--light-color);
-    border-radius: 10px;
-    border: 1px solid var(--light-color);
-  }
-
-  .category-item.full-width-item {
-    border-radius: 10px;
-  }
-
-  .mobile-months-grid {
-    display: none;
-  }
-
-  .desktop-table-wrapper {
-    display: block;
-    padding: 0 1.5rem 1.5rem 1.5rem;
-  }
-
-  .year-summary {
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    padding: 1.5rem;
-  }
+  .statistics-page { padding: 2rem; }
+  .period-nav-card { padding: 1rem 2rem; }
+  .stats-grid { gap: 1.5rem; }
+  .stat-card { padding: 1.5rem; }
+  .stat-card-value { font-size: 1.8rem; }
+  .top-categories { gap: 1.5rem; }
+  .top-card { padding: 1.25rem 1.5rem; }
+  .category-item { padding: 1.5rem; }
+  .daily-chart-section, .chart-section { padding: 2rem; }
 }
 
-/* Планшет горизонтально (900-1024) — показываем таблицу */
 @media (min-width: 900px) and (max-width: 1024px) and (orientation: landscape) {
-  .desktop-table-wrapper {
-    display: block;
-  }
-
-  .mobile-months-grid {
-    display: none;
-  }
-
-  .analytics-table {
-    font-size: 0.75rem;
-  }
-
-  .analytics-table th,
-  .analytics-table td {
-    padding: 0.5rem;
-  }
+  .desktop-table-wrapper { display: block; }
+  .mobile-months-grid { display: none; }
 }
 
-/* ============================================================
-   МОБИЛЬНЫЕ (≤ 768px)
-   ============================================================ */
 @media (max-width: 768px) {
-  .modal-content,
-  .modal-content.modal-wide {
-    max-width: 100%;
-    max-height: 95vh;
-    border-radius: 12px;
-  }
+  .statistics-page { padding: 0.75rem; }
+  .card { border-radius: 12px; margin-bottom: 0.75rem; }
+  .card-header { padding: 1rem; }
+  .filters-header { padding: 1rem; border-radius: 12px; }
+  .filters-body { padding: 1rem; }
+  .stat-card { border-radius: 12px; padding: 1rem; }
+  .stat-card-value { font-size: 1.35rem; }
+  .top-card { border-radius: 12px; padding: 1rem; }
+  .categories-list { padding: 1rem; }
+  .category-item { border-radius: 12px; padding: 1rem; }
+  .category-name-text { font-size: 0.85rem; }
+  .category-total { font-size: 0.9rem; }
+  .category-right { gap: 0.5rem; }
+  .category-percent { min-width: auto; padding: 0.15rem 0.4rem; font-size: 0.75rem; }
+  .subcategories { padding-left: 1rem; }
+  .subcategories::before { left: 0.25rem; }
+  .comparison-section { padding: 1rem; gap: 0.75rem; }
+  .comparison-item, .comparison-change { border-radius: 10px; padding: 0.75rem; }
+  .daily-chart-section { padding: 1rem; }
+  .year-summary { padding: 1rem; gap: 0.75rem; }
+  .summary-card { border-radius: 10px; padding: 0.75rem; }
 
-  .modal-header {
-    padding: 1rem 1.25rem;
-  }
-
-  .modal-header h3 {
-    font-size: 1rem;
-  }
-
-  .modal-summary {
-    padding: 0.625rem 1.25rem;
-  }
-
-  /* ===== Транзакция: фикс «плывущего» комментария ===== */
-  .modal-transaction-item {
-    padding: 0.625rem 1.25rem;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.375rem;
-  }
-
-  .modal-transaction-left {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .modal-transaction-meta {
-    max-width: 100%;
-  }
-
-  .modal-transaction-amount {
-    align-self: flex-end;
-    font-size: 0.938rem;
-  }
-
-  /* ===== Пагинация: компактный вид ===== */
-  .modal-pagination {
-    padding: 0.75rem 1rem;
-    gap: 0.5rem;
-  }
-
-  .modal-pagination .modal-page-btn {
-    min-width: 40px;
-    padding: 0.5rem 0.625rem;
-  }
-
-  .modal-page-label {
-    display: none;
-  }
-
-  .modal-pagination-info {
-    flex: 1;
-    font-size: 0.813rem;
-  }
-
-  .modal-page-info-full {
-    display: none;
-  }
-
-  .modal-page-info-short {
-    display: inline;
-  }
+  .modal-content { border-radius: 16px; }
+  .modal-header { padding: 1rem 1.25rem; border-radius: 16px 16px 0 0; }
+  .modal-transaction-item { padding: 0.75rem 1.25rem; flex-direction: column; align-items: stretch; gap: 0.5rem; }
+  .modal-transaction-amount { align-self: flex-end; }
+  .modal-pagination { border-radius: 0 0 16px 16px; padding: 0.75rem 1rem; }
+  .modal-page-label { display: none; }
 }
 </style>

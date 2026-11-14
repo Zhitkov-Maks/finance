@@ -11,7 +11,7 @@ from rest_framework.authentication import (
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .filter import MonthlyAnalyticsService
+from .filter import DailyAnalyticsService, MonthlyAnalyticsService
 from .forecast import ForecastService
 from .schemas import transaction_analytic_schema
 from .serializers import FormattedMonthlyAnalyticsSerializer
@@ -75,3 +75,39 @@ class ForecastView(generics.GenericAPIView):
         service = ForecastService(request.user)
         forecast = service.calculate()
         return Response(forecast)
+
+
+@extend_schema(tags=["Analytics"])
+class GetAnalyticForDay(generics.GenericAPIView):
+    """Get daily analytics for a specific month."""
+
+    permission_classes = [IsAuthenticated]
+    authentication_classes = (
+        TokenAuthentication,
+        BasicAuthentication,
+        SessionAuthentication,
+    )
+
+    def get(self, request, *args, **kwargs) -> Response:
+        year = request.query_params.get("year", dt.now(UTC).year)
+        month = request.query_params.get("month", dt.now(UTC).month)
+        type_tr = request.query_params.get("type", "expense")
+
+        try:
+            year = int(year)
+            month = int(month)
+        except ValueError:
+            return Response(
+                {"error": "Year and month must be valid integers."},
+                status=400
+            )
+
+        analytics_service = DailyAnalyticsService()
+        analytics = analytics_service.get_analytics(
+            request.user.id,
+            year,
+            month,
+            type_tr
+        )
+
+        return Response({"results": analytics})

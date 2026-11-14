@@ -413,14 +413,21 @@ class ApiService {
     // АНАЛИТИКА
     // ============================================================
     async getMonthlyAnalytics(year, type) {
-        const response = await this.client.get('/analitycs/month/', {
+        const response = await this.client.get('/analytics/month/', {
             params: { year, type }
         })
         return response.data
     }
 
     async getForecast() {
-        const response = await this.client.get('/analitycs/forecast/')
+        const response = await this.client.get('/analytics/forecast/')
+        return response.data
+    }
+
+    async getDailyStatistics(month, year, type = 'expense') {
+        const response = await this.client.get('/analytics/day/', {
+            params: { month, year, type }
+        })
         return response.data
     }
 

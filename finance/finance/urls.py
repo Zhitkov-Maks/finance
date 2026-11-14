@@ -37,7 +37,7 @@ urlpatterns = [
     path("auth/yandex/", include("yandex_auth.urls")),
     path(f"api/{v}/accounts/", include("accounts.urls")),
     path(f"api/{v}/transaction/", include("transactions.urls")),
-    path(f"api/{v}/analitycs/", include("analytics.urls")),
+    path(f"api/{v}/analytics/", include("analytics.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
         "api/swagger/",

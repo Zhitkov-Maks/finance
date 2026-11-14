@@ -79,7 +79,8 @@ def fetch_transactions_with_categories(
 def aggregate_category_totals(transactions: QuerySet) -> Dict[int, Dict[str, Any]]:
     """
     Агрегирует суммы транзакций по категориям.
-    Транзакции без категории (category_id=None) сваливаем в виртуальную категорию с ID = 0.
+    Транзакции без категории (category_id=None)
+    сваливаем в виртуальную категорию с ID = 0.
     """
     categories = {}
     all_category_ids = set()
